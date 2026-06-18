@@ -1,8 +1,20 @@
+buildscript {
+    repositories {
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.spongepowered:mixingradle:0.7.+'
+    }
+}
+
 plugins {
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
+
+apply plugin: 'org.spongepowered.mixin'
 
 version = mod_version
 group = mod_group_id
@@ -67,6 +79,9 @@ repositories {
     // Architectury API (hard runtime dependency of MCA Reborn's Forge build).
     maven { url = 'https://maven.architectury.dev/' }
 
+    // SpongePowered (Mixin annotation processor for our client menu-injection mixin).
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+
     // MCA Reborn via Modrinth Maven. exclusiveContent keeps this repo scoped to the
     // maven.modrinth group and routes resolution through ForgeGradle's deobf pipeline.
     exclusiveContent {
@@ -91,6 +106,9 @@ dependencies {
     // Architectury API (Forge) — required at runtime by MCA. deobf for dev remapping.
     implementation fg.deobf("dev.architectury:architectury-forge:${architectury_version}")
 
+    // Mixin annotation processor — generates the refmap for our client menu-injection mixin.
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
     // Unit tests for the non-MCA quest engine (spec section 33).
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
@@ -99,6 +117,12 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+// MixinGradle: generate the refmap for our mixin and register the config for reobfuscation.
+mixin {
+    add sourceSets.main, 'mcaquests.refmap.json'
+    config 'mcaquests.mixins.json'
 }
 
 // Expand metadata placeholders into mods.toml / pack.mcmeta at build time.
