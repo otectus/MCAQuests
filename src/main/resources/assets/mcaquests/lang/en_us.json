@@ -23,6 +23,10 @@
   "mcaquests.objective.break_block": "Break %s× %s",
   "mcaquests.objective.visit_biome": "Explore %s",
   "mcaquests.objective.visit_dimension": "Travel to %s",
+  "mcaquests.objective.craft_item": "Craft %s× %s",
+  "mcaquests.objective.place_block": "Place %s× %s",
+  "mcaquests.objective.fish_item": "Fish up %s× %s",
+  "mcaquests.objective.talk_to_profession": "Speak with %s× %s",
 
   "mcaquests.quest.farmer_wheat_request.title": "A Farmer's Shortage",
   "mcaquests.quest.farmer_wheat_request.offer": "The fields have been kind, but I am short on wheat for the next batch of bread. Could you bring me 24 wheat?",

@@ -29,6 +29,14 @@ public final class ObjectiveTypes {
             register(new ResourceLocation(McaQuests.MOD_ID, "visit_biome"), VisitBiomeObjective.CODEC);
     public static final QuestObjectiveType<VisitDimensionObjective> VISIT_DIMENSION =
             register(new ResourceLocation(McaQuests.MOD_ID, "visit_dimension"), VisitDimensionObjective.CODEC);
+    public static final QuestObjectiveType<CraftItemObjective> CRAFT_ITEM =
+            register(new ResourceLocation(McaQuests.MOD_ID, "craft_item"), CraftItemObjective.CODEC);
+    public static final QuestObjectiveType<PlaceBlockObjective> PLACE_BLOCK =
+            register(new ResourceLocation(McaQuests.MOD_ID, "place_block"), PlaceBlockObjective.CODEC);
+    public static final QuestObjectiveType<FishItemObjective> FISH_ITEM =
+            register(new ResourceLocation(McaQuests.MOD_ID, "fish_item"), FishItemObjective.CODEC);
+    public static final QuestObjectiveType<TalkToProfessionObjective> TALK_TO_PROFESSION =
+            register(new ResourceLocation(McaQuests.MOD_ID, "talk_to_profession"), TalkToProfessionObjective.CODEC);
 
     /** Maps a type id to/from its registry entry, failing parsing on an unknown id. */
     public static final Codec<QuestObjectiveType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(

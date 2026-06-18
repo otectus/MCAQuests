@@ -1,18 +1,29 @@
 package dev.otectus.mcaquests.event;
 
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.quest.objective.BreakBlockObjective;
+import dev.otectus.mcaquests.quest.objective.CraftItemObjective;
+import dev.otectus.mcaquests.quest.objective.FishItemObjective;
 import dev.otectus.mcaquests.quest.objective.KillEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
+import dev.otectus.mcaquests.quest.objective.PlaceBlockObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
+import dev.otectus.mcaquests.quest.objective.TalkToProfessionObjective;
 import dev.otectus.mcaquests.quest.objective.VisitBiomeObjective;
 import dev.otectus.mcaquests.quest.objective.VisitDimensionObjective;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.QuestCapabilities;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.ItemFishedEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -76,6 +87,63 @@ public final class QuestProgressEvents {
                 (objective, progress) -> {
                     if (progress.count() == 0 && objective.matches(player)) {
                         progress.setCount(1);
+                    }
+                });
+    }
+
+    @SubscribeEvent
+    public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            ItemStack crafted = event.getCrafting();
+            forActiveObjectives(player, CraftItemObjective.class,
+                    (objective, progress) -> {
+                        if (objective.matches(crafted)) {
+                            progress.add(crafted.getCount());
+                        }
+                    });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            forActiveObjectives(player, PlaceBlockObjective.class,
+                    (objective, progress) -> {
+                        if (objective.matches(event.getPlacedBlock())) {
+                            progress.add(1);
+                        }
+                    });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onItemFished(ItemFishedEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        for (ItemStack drop : event.getDrops()) {
+            forActiveObjectives(player, FishItemObjective.class,
+                    (objective, progress) -> {
+                        if (objective.matches(drop)) {
+                            progress.add(drop.getCount());
+                        }
+                    });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onTalkToVillager(PlayerInteractEvent.EntityInteract event) {
+        if (event.getLevel().isClientSide() || event.getHand() != InteractionHand.MAIN_HAND) {
+            return;
+        }
+        if (!(event.getEntity() instanceof ServerPlayer player) || !McaCompat.isMcaVillager(event.getTarget())) {
+            return;
+        }
+        ResourceLocation profession = McaCompat.getProfessionId(event.getTarget()).orElse(null);
+        forActiveObjectives(player, TalkToProfessionObjective.class,
+                (objective, progress) -> {
+                    if (progress.count() < objective.required() && objective.matches(profession)) {
+                        progress.add(1);
                     }
                 });
     }
