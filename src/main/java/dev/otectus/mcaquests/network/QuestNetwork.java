@@ -27,6 +27,12 @@ public final class QuestNetwork {
     public static void register() {
         CHANNEL.registerMessage(nextId++, OpenQuestMenuC2SPacket.class,
                 OpenQuestMenuC2SPacket::encode, OpenQuestMenuC2SPacket::decode, OpenQuestMenuC2SPacket::handle);
+        CHANNEL.registerMessage(nextId++, QuestDecisionC2SPacket.class,
+                QuestDecisionC2SPacket::encode, QuestDecisionC2SPacket::decode, QuestDecisionC2SPacket::handle);
+        CHANNEL.registerMessage(nextId++, QuestTurnInC2SPacket.class,
+                QuestTurnInC2SPacket::encode, QuestTurnInC2SPacket::decode, QuestTurnInC2SPacket::handle);
+        CHANNEL.registerMessage(nextId++, QuestAbandonC2SPacket.class,
+                QuestAbandonC2SPacket::encode, QuestAbandonC2SPacket::decode, QuestAbandonC2SPacket::handle);
         CHANNEL.registerMessage(nextId++, QuestMenuDataS2CPacket.class,
                 QuestMenuDataS2CPacket::encode, QuestMenuDataS2CPacket::decode, QuestMenuDataS2CPacket::handle);
     }

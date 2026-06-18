@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.data.QuestRegistry;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -35,10 +36,53 @@ public final class McaQuestsCommand {
 
     private static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("mcaquests")
+                .then(Commands.literal("list")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(McaQuestsCommand::listQuests))
+                .then(Commands.literal("validate")
+                        .requires(src -> src.hasPermission(3))
+                        .executes(McaQuestsCommand::validateQuests))
+                .then(Commands.literal("reload")
+                        .requires(src -> src.hasPermission(3))
+                        .executes(McaQuestsCommand::reloadQuests))
                 .then(Commands.literal("debug")
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.literal("villager")
                                 .executes(McaQuestsCommand::debugVillager))));
+    }
+
+    private static int listQuests(CommandContext<CommandSourceStack> ctx) {
+        var quests = QuestRegistry.all();
+        if (quests.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No quests loaded."), false);
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal("Loaded " + quests.size() + " quest(s):"), false);
+        quests.forEach(q -> ctx.getSource().sendSuccess(() -> Component.literal(" - " + q.id()), false));
+        return quests.size();
+    }
+
+    private static int validateQuests(CommandContext<CommandSourceStack> ctx) {
+        var errors = QuestRegistry.lastErrors();
+        if (errors.isEmpty()) {
+            ctx.getSource().sendSuccess(
+                    () -> Component.literal("All " + QuestRegistry.size() + " loaded quest(s) are valid."), false);
+            return 1;
+        }
+        ctx.getSource().sendFailure(Component.literal(errors.size() + " quest error(s) from the last load:"));
+        errors.forEach(e -> ctx.getSource().sendFailure(Component.literal(" - " + e)));
+        return 0;
+    }
+
+    private static int reloadQuests(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        var server = src.getServer();
+        src.sendSuccess(() -> Component.literal("Reloading datapacks (quests)..."), true);
+        server.reloadResources(server.getPackRepository().getSelectedIds())
+                .thenRunAsync(() -> src.sendSuccess(() -> Component.literal(
+                        "Quests reloaded: " + QuestRegistry.size() + " loaded, "
+                                + QuestRegistry.lastErrors().size() + " error(s)."), true), server);
+        return 1;
     }
 
     private static int debugVillager(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

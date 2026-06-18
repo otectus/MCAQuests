@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.network;
 
-import dev.otectus.mcaquests.quest.QuestMenuService;
+import dev.otectus.mcaquests.quest.QuestManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -27,7 +27,7 @@ public record OpenQuestMenuC2SPacket(UUID villagerUuid) {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
-                QuestMenuService.openFromPacket(player, msg.villagerUuid);
+                QuestManager.openFromPacket(player, msg.villagerUuid);
             }
         });
         context.setPacketHandled(true);

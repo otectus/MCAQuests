@@ -2,6 +2,10 @@ package dev.otectus.mcaquests;
 
 import com.mojang.logging.LogUtils;
 import dev.otectus.mcaquests.network.QuestNetwork;
+import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
+import dev.otectus.mcaquests.quest.reward.RewardTypes;
+import dev.otectus.mcaquests.state.QuestCapabilities;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -27,12 +31,17 @@ public final class McaQuests {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, McaQuestsConfig.COMMON_SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, McaQuestsConfig.CLIENT_SPEC);
 
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onCommonSetup);
+        final IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+        modBus.addListener(this::onCommonSetup);
+        modBus.addListener(QuestCapabilities::onRegisterCapabilities);
 
         LOGGER.info("MCA: Quests initialising (mod id '{}')", MOD_ID);
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
+        // Force the built-in objective/reward type registries to populate before any datapack parse.
+        ObjectiveTypes.bootstrap();
+        RewardTypes.bootstrap();
         event.enqueueWork(QuestNetwork::register);
     }
 }

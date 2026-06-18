@@ -2,7 +2,7 @@ package dev.otectus.mcaquests.event;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
-import dev.otectus.mcaquests.quest.QuestMenuService;
+import dev.otectus.mcaquests.quest.QuestManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -35,7 +35,7 @@ public final class QuestEventHandlers {
             return;
         }
         if (event.getEntity() instanceof ServerPlayer player) {
-            QuestMenuService.open(player, event.getTarget());
+            QuestManager.open(player, event.getTarget());
             event.setCanceled(true); // swallow this debug interaction so MCA does not also react
         }
     }

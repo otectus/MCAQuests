@@ -90,6 +90,15 @@ dependencies {
 
     // Architectury API (Forge) — required at runtime by MCA. deobf for dev remapping.
     implementation fg.deobf("dev.architectury:architectury-forge:${architectury_version}")
+
+    // Unit tests for the non-MCA quest engine (spec section 33).
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 // Expand metadata placeholders into mods.toml / pack.mcmeta at build time.

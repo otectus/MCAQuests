@@ -9,9 +9,21 @@
   "mcaquests.status.no_quests": "I do not need anything right now.",
   "mcaquests.status.in_progress": "Quest in progress",
   "mcaquests.status.ready": "Ready to complete",
+  "mcaquests.status.objectives": "Objectives",
+  "mcaquests.status.rewards": "Rewards",
   "mcaquests.label.profession": "Profession: %s",
   "mcaquests.label.favor": "Favor: %s",
   "mcaquests.reward.favor": "+%s favor",
   "mcaquests.reward.item": "%s x%s",
-  "mcaquests.reward.xp": "%s XP"
+  "mcaquests.reward.xp": "%s XP",
+
+  "mcaquests.objective.item_delivery": "Deliver %s× %s",
+
+  "mcaquests.quest.farmer_wheat_request.title": "A Farmer's Shortage",
+  "mcaquests.quest.farmer_wheat_request.offer": "The fields have been kind, but I am short on wheat for the next batch of bread. Could you bring me 24 wheat?",
+  "mcaquests.quest.farmer_wheat_request.accept": "Thank you. Bring it back when you can, and I will make it worth your time.",
+  "mcaquests.quest.farmer_wheat_request.decline": "Another time, then.",
+  "mcaquests.quest.farmer_wheat_request.in_progress": "Still looking for that wheat?",
+  "mcaquests.quest.farmer_wheat_request.ready": "That wheat will help more than you know. Shall we settle up?",
+  "mcaquests.quest.farmer_wheat_request.complete": "You kept your word. I will remember that."
 }
