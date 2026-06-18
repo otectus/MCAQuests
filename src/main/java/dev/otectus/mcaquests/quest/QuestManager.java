@@ -2,6 +2,10 @@ package dev.otectus.mcaquests.quest;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
+import dev.otectus.mcaquests.api.event.QuestAbandonedEvent;
+import dev.otectus.mcaquests.api.event.QuestAcceptedEvent;
+import dev.otectus.mcaquests.api.event.QuestCompletedEvent;
+import dev.otectus.mcaquests.api.event.QuestReadyEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
@@ -9,6 +13,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
+import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
@@ -23,6 +28,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
@@ -180,6 +186,7 @@ public final class QuestManager {
                 player.level().dimension().location(),
                 ((ServerLevel) player.level()).getGameTime(),
                 def.objectives().size()));
+        MinecraftForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, def));
         return true;
     }
 
@@ -245,6 +252,7 @@ public final class QuestManager {
             case REPEATABLE -> { /* immediately available again */ }
         }
         data.remove(active);
+        MinecraftForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
         return true;
     }
 
@@ -254,8 +262,13 @@ public final class QuestManager {
             return false;
         }
         Optional<ActiveQuest> active = dataOpt.get().find(questId, villager.getUUID());
-        active.ifPresent(dataOpt.get()::remove);
-        return active.isPresent();
+        if (active.isEmpty()) {
+            return false;
+        }
+        dataOpt.get().remove(active.get());
+        QuestRegistry.get(questId).ifPresent(def ->
+                MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def)));
+        return true;
     }
 
     // ---------------------------------------------------------------- helpers
@@ -398,6 +411,28 @@ public final class QuestManager {
 
     private static void send(ServerPlayer player, QuestMenuDataS2CPacket packet) {
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    }
+
+    /**
+     * Detects quests whose objectives just became complete and notifies the player once (toast +
+     * {@link QuestReadyEvent}); resets the flag if a possession objective later drops below target.
+     */
+    public static void checkReadyTransitions(ServerPlayer player) {
+        QuestCapabilities.get(player).ifPresent(data -> {
+            for (ActiveQuest active : data.active()) {
+                QuestRegistry.get(active.questId()).ifPresent(def -> {
+                    boolean complete = isComplete(player, def, active);
+                    if (complete && !active.readyNotified()) {
+                        active.setReadyNotified(true);
+                        MinecraftForge.EVENT_BUS.post(new QuestReadyEvent(player, def));
+                        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                                new QuestReadyToastS2CPacket(def.title()));
+                    } else if (!complete && active.readyNotified()) {
+                        active.setReadyNotified(false);
+                    }
+                });
+            }
+        });
     }
 
     /** Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker. */

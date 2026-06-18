@@ -6,6 +6,7 @@
   "mcaquests.screen.log.title": "Quest Log",
   "mcaquests.hud.title": "Quests",
   "mcaquests.status.no_active_quests": "No active quests",
+  "mcaquests.toast.ready": "Quest ready to turn in!",
   "mcaquests.button.accept": "Accept",
   "mcaquests.button.decline": "Decline",
   "mcaquests.button.complete": "Complete",

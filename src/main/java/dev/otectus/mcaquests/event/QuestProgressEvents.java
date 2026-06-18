@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.event;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.quest.QuestManager;
@@ -24,6 +25,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.ItemFishedEvent;
@@ -104,6 +106,7 @@ public final class QuestProgressEvents {
                     }
                 });
         autoCompleteSelfQuests(player);
+        QuestManager.checkReadyTransitions(player);
         // Refresh the client quest log + HUD (~once per second) for players with active quests.
         QuestCapabilities.get(player).ifPresent(data -> {
             if (!data.active().isEmpty()) {
@@ -148,6 +151,10 @@ public final class QuestProgressEvents {
                                 .map(def -> def.turnIn().mode() == TurnInMode.ORIGINAL_GIVER)
                                 .orElse(true))
                         .toList();
+                for (ActiveQuest active : failed) {
+                    QuestRegistry.get(active.questId()).ifPresent(def -> MinecraftForge.EVENT_BUS.post(
+                            new QuestFailedEvent(player, event.getEntity(), def, QuestFailedEvent.Reason.GIVER_DIED)));
+                }
                 failed.forEach(data::remove);
                 if (!failed.isEmpty()) {
                     player.sendSystemMessage(Component.translatable("mcaquests.message.giver_died"));

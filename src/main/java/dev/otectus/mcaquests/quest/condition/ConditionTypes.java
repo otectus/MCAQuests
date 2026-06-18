@@ -121,13 +121,16 @@ public final class ConditionTypes {
     private ConditionTypes() {
     }
 
-    public static <T extends QuestCondition> QuestConditionType<T> register(String path, Codec<T> codec) {
-        ResourceLocation id = new ResourceLocation(McaQuests.MOD_ID, path);
+    public static <T extends QuestCondition> QuestConditionType<T> register(ResourceLocation id, Codec<T> codec) {
         QuestConditionType<T> type = new QuestConditionType<>(id, codec);
         if (BY_ID.putIfAbsent(id, type) != null) {
             throw new IllegalArgumentException("Duplicate condition type id: " + id);
         }
         return type;
+    }
+
+    public static <T extends QuestCondition> QuestConditionType<T> register(String path, Codec<T> codec) {
+        return register(new ResourceLocation(McaQuests.MOD_ID, path), codec);
     }
 
     public static boolean exists(ResourceLocation id) {

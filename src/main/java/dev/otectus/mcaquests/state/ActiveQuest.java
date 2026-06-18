@@ -27,6 +27,7 @@ public final class ActiveQuest {
     private final long startGameTime;
     private final List<ObjectiveProgress> progress;
     private boolean rewardClaimed;
+    private boolean readyNotified;
 
     public ActiveQuest(ResourceLocation questId, UUID villagerUuid, Component villagerName,
                        @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
@@ -88,6 +89,15 @@ public final class ActiveQuest {
         this.rewardClaimed = claimed;
     }
 
+    /** Whether the player has already been notified (toast) that this quest is ready to turn in. */
+    public boolean readyNotified() {
+        return readyNotified;
+    }
+
+    public void setReadyNotified(boolean notified) {
+        this.readyNotified = notified;
+    }
+
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putString("quest", questId.toString());
@@ -99,6 +109,7 @@ public final class ActiveQuest {
         tag.putString("dimension", dimension.toString());
         tag.putLong("start", startGameTime);
         tag.putBoolean("claimed", rewardClaimed);
+        tag.putBoolean("ready_notified", readyNotified);
         ListTag list = new ListTag();
         for (ObjectiveProgress p : progress) {
             list.add(p.save());
@@ -125,6 +136,7 @@ public final class ActiveQuest {
                 tag.getLong("start"),
                 progress);
         quest.rewardClaimed = tag.getBoolean("claimed");
+        quest.readyNotified = tag.getBoolean("ready_notified");
         return quest;
     }
 }
