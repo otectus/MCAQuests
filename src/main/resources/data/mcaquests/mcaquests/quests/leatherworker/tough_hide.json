@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:leatherworker_tough_hide",
+  "weight": 15,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:leatherworker"], "adult_only": true },
+  "title": { "text": "Tough Hide" },
+  "dialogue": {
+    "offer": { "text": "My tannery's run dry. Eight leather would let me get back to my craft." },
+    "accept": { "text": "Good hide makes good boots. Off you go." },
+    "decline": { "text": "Bare feet for the village, then." },
+    "in_progress": { "text": "Have you any leather for me?" },
+    "ready": { "text": "Eight good hides. The tannery lives again." },
+    "complete": { "text": "I'll stitch you something fine one of these days." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:leather", "count": 8, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

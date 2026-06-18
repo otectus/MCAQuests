@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_helping_hand",
+  "weight": 12,
+  "category": "errand",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:none"], "adult_only": true },
+  "title": { "text": "A Helping Hand" },
+  "dialogue": {
+    "offer": { "text": "I haven't found my trade yet, but I do get hungry. Could you spare me 6 bread?" },
+    "accept": { "text": "Truly? That's kinder than most folk bother to be." },
+    "decline": { "text": "No matter. I'm used to going without." },
+    "in_progress": { "text": "Did you bring anything to eat?" },
+    "ready": { "text": "Six whole loaves — I haven't seen so much bread in weeks!" },
+    "complete": { "text": "I won't forget this. One day I'll repay you, I swear it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 12 },
+    { "type": "mcaquests:hearts", "amount": 15 }
+  ]
+}

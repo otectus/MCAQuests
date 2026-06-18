@@ -25,6 +25,7 @@ public record QuestDefinition(
         boolean enabled,
         int weight,
         Optional<String> category,
+        Optional<QuestText> titleOverride,
         RepeatRule repeat,
         GiverSpec giver,
         Map<String, QuestText> dialogue,
@@ -48,6 +49,7 @@ public record QuestDefinition(
             Codec.BOOL.optionalFieldOf("enabled", true).forGetter(QuestDefinition::enabled),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("weight", 1).forGetter(QuestDefinition::weight),
             Codec.STRING.optionalFieldOf("category").forGetter(QuestDefinition::category),
+            QuestText.CODEC.optionalFieldOf("title").forGetter(QuestDefinition::titleOverride),
             RepeatRule.CODEC.optionalFieldOf("repeat", RepeatRule.DEFAULT).forGetter(QuestDefinition::repeat),
             GiverSpec.CODEC.fieldOf("giver").forGetter(QuestDefinition::giver),
             Codec.unboundedMap(Codec.STRING, QuestText.CODEC).fieldOf("dialogue").forGetter(QuestDefinition::dialogue),
@@ -63,7 +65,7 @@ public record QuestDefinition(
     }
 
     public Component title() {
-        return Component.translatable(titleKey());
+        return titleOverride.map(QuestText::resolve).orElseGet(() -> Component.translatable(titleKey()));
     }
 
     /** Resolves a dialogue line for the given state, or {@code fallback} if the quest omits it. */

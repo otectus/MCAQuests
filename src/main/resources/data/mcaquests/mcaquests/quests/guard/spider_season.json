@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_spider_season",
+  "weight": 12,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Spider Season" },
+  "dialogue": {
+    "offer": { "text": "Spiders have nested too close to the fields. Clear out 4 of them before someone gets bitten." },
+    "accept": { "text": "Watch the treeline. They drop when you least expect it." },
+    "decline": { "text": "Then keep clear of the tall grass after dark." },
+    "in_progress": { "text": "How goes the hunt?" },
+    "ready": { "text": "Four spiders dealt with? The farmers can breathe easy." },
+    "complete": { "text": "The watch is glad to have you, soldier." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:spider", "count": 4 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 35 }
+  ]
+}

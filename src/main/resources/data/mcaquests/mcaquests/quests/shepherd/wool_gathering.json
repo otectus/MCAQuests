@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:shepherd_wool_gathering",
+  "weight": 15,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:shepherd"], "adult_only": true },
+  "title": { "text": "A Bit of Wool" },
+  "dialogue": {
+    "offer": { "text": "The flock's been stubborn at shearing time. Bring me 12 wool and I'll make it worth the trouble." },
+    "accept": { "text": "Mind the sheep — they bite when they're cross." },
+    "decline": { "text": "Suit yourself. The looms can wait." },
+    "in_progress": { "text": "Got that wool yet?" },
+    "ready": { "text": "Soft and clean — just what I needed. Let's settle up." },
+    "complete": { "text": "The whole village will be warmer for this." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:white_wool", "count": 12, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 15 },
+    { "type": "mcaquests:hearts", "amount": 15 }
+  ]
+}

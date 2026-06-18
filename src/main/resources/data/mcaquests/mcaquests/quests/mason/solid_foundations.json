@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mason_solid_foundations",
+  "weight": 15,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:mason"], "adult_only": true },
+  "title": { "text": "Solid Foundations" },
+  "dialogue": {
+    "offer": { "text": "There's a wall that won't build itself. Twenty-four stone would set the next course nicely." },
+    "accept": { "text": "Good. A village is only as strong as its walls." },
+    "decline": { "text": "The wall waits. Stone is patient." },
+    "in_progress": { "text": "Got that stone hauled yet?" },
+    "ready": { "text": "Two dozen blocks of good stone. Now we build." },
+    "complete": { "text": "When the wall stands, you'll know you helped raise it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:stone", "count": 24, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ]
+}

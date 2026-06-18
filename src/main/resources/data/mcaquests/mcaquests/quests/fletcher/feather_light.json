@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fletcher_feather_light",
+  "weight": 15,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:fletcher"], "adult_only": true },
+  "title": { "text": "Feather Light" },
+  "dialogue": {
+    "offer": { "text": "No feathers, no fletching, no arrows. Bring me 10 and the quivers stay full." },
+    "accept": { "text": "Chase down a chicken or two. I'll be waiting." },
+    "decline": { "text": "The bowstrings go slack, then." },
+    "in_progress": { "text": "Any feathers for me?" },
+    "ready": { "text": "Ten fine feathers. Now the arrows fly true." },
+    "complete": { "text": "Next bundle of arrows is on me." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:feather", "count": 10, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 15 },
+    { "type": "mcaquests:hearts", "amount": 15 }
+  ]
+}

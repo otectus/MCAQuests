@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fisherman_salmon_run",
+  "weight": 10,
+  "category": "fishing",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:fisherman"], "adult_only": true },
+  "title": { "text": "The Salmon Run" },
+  "dialogue": {
+    "offer": { "text": "Salmon are running upstream. Cast a line and bring me 5 — there's a knack to it." },
+    "accept": { "text": "Patience and a steady hand. You'll get them." },
+    "decline": { "text": "The river will wait for you." },
+    "in_progress": { "text": "Still fishing for those salmon?" },
+    "ready": { "text": "Five salmon, fresh from the hook. Well done." },
+    "complete": { "text": "You've the makings of an angler yet." }
+  },
+  "objectives": [
+    { "type": "mcaquests:fish_item", "item": "minecraft:salmon", "count": 5 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 25 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_well_read",
+  "weight": 10,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "professions": ["minecraft:librarian"], "adult_only": true, "min_hearts": 10 },
+  "title": { "text": "Well Read" },
+  "dialogue": {
+    "offer": { "text": "I am assembling a small library. Three bound books would be a fine start — could you spare them?" },
+    "accept": { "text": "Splendid. A village with books is a village with a future." },
+    "decline": { "text": "Another day, perhaps, when the shelves call to you." },
+    "in_progress": { "text": "Do you have the books?" },
+    "ready": { "text": "Three volumes! These will be read and re-read for years." },
+    "complete": { "text": "You have my lasting gratitude, friend." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:book", "count": 3, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 25 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

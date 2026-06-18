@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_glow_in_the_dark",
+  "weight": 10,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:cleric"], "adult_only": true },
+  "title": { "text": "Glow in the Dark" },
+  "dialogue": {
+    "offer": { "text": "The shrine's lanterns have gone dim. Eight glowstone dust would set them alight again." },
+    "accept": { "text": "Light drives back more than shadow. Go safely." },
+    "decline": { "text": "Then the dark endures a little longer." },
+    "in_progress": { "text": "Found any glowstone dust?" },
+    "ready": { "text": "It shimmers even now. The shrine will glow once more." },
+    "complete": { "text": "May the light you brought return to you tenfold." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:glowstone_dust", "count": 8, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 22 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}
