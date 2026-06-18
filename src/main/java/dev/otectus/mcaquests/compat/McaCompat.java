@@ -57,6 +57,14 @@ public final class McaCompat {
         return Optional.empty();
     }
 
+    /** The villager's localised profession display name (e.g. "Farmer"), as MCA shows it. */
+    public static Component getProfessionName(Entity entity) {
+        if (entity instanceof VillagerLike<?> villager) {
+            return villager.getProfessionText();
+        }
+        return Component.empty();
+    }
+
     public static boolean isAdult(Entity entity) {
         if (entity instanceof VillagerLike<?> villager) {
             return villager.getAgeState() == AgeState.ADULT;

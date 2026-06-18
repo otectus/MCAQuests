@@ -20,7 +20,7 @@ import java.util.function.Supplier;
  */
 public record QuestMenuDataS2CPacket(UUID villagerUuid,
                                      Component villagerName,
-                                     String professionId,
+                                     Component profession,
                                      int hearts,
                                      QuestMenuStatus status,
                                      boolean hasQuest,
@@ -30,13 +30,13 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
                                      List<Component> objectiveLines,
                                      List<Component> rewardLines) {
 
-    public static QuestMenuDataS2CPacket noQuest(UUID villager, Component name, String profession, int hearts,
+    public static QuestMenuDataS2CPacket noQuest(UUID villager, Component name, Component profession, int hearts,
                                                  QuestMenuStatus status) {
         return new QuestMenuDataS2CPacket(villager, name, profession, hearts, status,
                 false, "", Component.empty(), Component.empty(), List.of(), List.of());
     }
 
-    public static QuestMenuDataS2CPacket quest(UUID villager, Component name, String profession, int hearts,
+    public static QuestMenuDataS2CPacket quest(UUID villager, Component name, Component profession, int hearts,
                                                QuestMenuStatus status, ResourceLocation questId, Component title,
                                                Component dialogue, List<Component> objectives, List<Component> rewards) {
         return new QuestMenuDataS2CPacket(villager, name, profession, hearts, status,
@@ -46,7 +46,7 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
     public static void encode(QuestMenuDataS2CPacket msg, FriendlyByteBuf buf) {
         buf.writeUUID(msg.villagerUuid);
         buf.writeComponent(msg.villagerName);
-        buf.writeUtf(msg.professionId);
+        buf.writeComponent(msg.profession);
         buf.writeVarInt(msg.hearts);
         buf.writeEnum(msg.status);
         buf.writeBoolean(msg.hasQuest);
@@ -60,7 +60,7 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
     public static QuestMenuDataS2CPacket decode(FriendlyByteBuf buf) {
         UUID villager = buf.readUUID();
         Component name = buf.readComponent();
-        String profession = buf.readUtf();
+        Component profession = buf.readComponent();
         int hearts = buf.readVarInt();
         QuestMenuStatus status = buf.readEnum(QuestMenuStatus.class);
         boolean hasQuest = buf.readBoolean();

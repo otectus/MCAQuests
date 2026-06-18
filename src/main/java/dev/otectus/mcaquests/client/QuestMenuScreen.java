@@ -92,9 +92,8 @@ public class QuestMenuScreen extends Screen {
         int left = centerX - COLUMN_WIDTH / 2;
 
         graphics.drawCenteredString(this.font, data.villagerName(), centerX, 16, 0xFFFFFF);
-        String professionLabel = data.professionId().isEmpty() ? "-" : data.professionId();
         graphics.drawCenteredString(this.font,
-                Component.translatable("mcaquests.label.profession", professionLabel), centerX, 28, 0x9A9A9A);
+                Component.translatable("mcaquests.label.profession", data.profession()), centerX, 28, 0x9A9A9A);
         graphics.drawCenteredString(this.font,
                 Component.translatable("mcaquests.label.hearts", data.hearts()), centerX, 39, 0x9A9A9A);
 

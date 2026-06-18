@@ -101,7 +101,7 @@ public final class QuestManager {
     public static void sendMenu(ServerPlayer player, Entity villager) {
         UUID villagerUuid = villager.getUUID();
         Component name = McaCompat.getVillagerDisplayName(villager);
-        String profession = McaCompat.getProfessionId(villager).map(ResourceLocation::toString).orElse("");
+        Component profession = McaCompat.getProfessionName(villager);
         int hearts = McaCompat.getHearts(player, villager);
 
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
