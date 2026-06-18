@@ -36,8 +36,9 @@ public class QuestMenuScreen extends Screen {
         this.data = data;
     }
 
-    private boolean fullDialogue() {
-        return data.status() != QuestMenuStatus.OFFER;
+    /** Dialogue wraps to the card, but never wider than the screen allows. */
+    private int wrapWidth() {
+        return Math.min(CARD_WIDTH, this.width - 40);
     }
 
     @Override
@@ -66,8 +67,7 @@ public class QuestMenuScreen extends Screen {
     }
 
     private int dialogueLineCount(QuestCard card) {
-        List<FormattedCharSequence> lines = this.font.split(card.dialogue(), CARD_WIDTH);
-        return fullDialogue() ? lines.size() : Math.min(1, lines.size());
+        return this.font.split(card.dialogue(), wrapWidth()).size();
     }
 
     private void addCardButtons(QuestCard card, int centerX, int buttonY) {
@@ -110,7 +110,7 @@ public class QuestMenuScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
         int centerX = this.width / 2;
-        int left = centerX - CARD_WIDTH / 2;
+        int left = centerX - wrapWidth() / 2;
 
         graphics.drawCenteredString(this.font, data.villagerName(), centerX, 12, 0xFFFFFF);
         graphics.drawCenteredString(this.font,
@@ -134,10 +134,8 @@ public class QuestMenuScreen extends Screen {
         int y = top;
         graphics.drawString(this.font, card.title(), left, y, ready ? 0x5CFF5C : 0xFFE08A);
         y += 12;
-        List<FormattedCharSequence> dialogue = this.font.split(card.dialogue(), CARD_WIDTH);
-        int dialogueLines = fullDialogue() ? dialogue.size() : Math.min(1, dialogue.size());
-        for (int k = 0; k < dialogueLines; k++) {
-            graphics.drawString(this.font, dialogue.get(k), left, y, 0xCFCFCF);
+        for (FormattedCharSequence line : this.font.split(card.dialogue(), wrapWidth())) {
+            graphics.drawString(this.font, line, left, y, 0xCFCFCF);
             y += 10;
         }
         for (Component objective : card.objectives()) {

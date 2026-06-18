@@ -96,6 +96,9 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue showQuestTrackerHud;
         public final ForgeConfigSpec.BooleanValue playQuestSounds;
         public final ForgeConfigSpec.IntValue questTrackerMaxEntries;
+        public final ForgeConfigSpec.EnumValue<HudAnchor> questTrackerAnchor;
+        public final ForgeConfigSpec.IntValue questTrackerX;
+        public final ForgeConfigSpec.IntValue questTrackerY;
 
         Client(ForgeConfigSpec.Builder b) {
             b.push("client");
@@ -105,6 +108,12 @@ public final class McaQuestsConfig {
             showQuestTrackerHud = b.define("showQuestTrackerHud", true);
             playQuestSounds = b.define("playQuestSounds", true);
             questTrackerMaxEntries = b.defineInRange("questTrackerMaxEntries", 3, 1, 10);
+            questTrackerAnchor = b.comment("Screen corner the quest tracker HUD anchors to: TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT.")
+                    .defineEnum("questTrackerAnchor", HudAnchor.TOP_LEFT);
+            questTrackerX = b.comment("Quest tracker horizontal offset in pixels from its anchored corner.")
+                    .defineInRange("questTrackerX", 4, 0, 10000);
+            questTrackerY = b.comment("Quest tracker vertical offset in pixels from its anchored corner.")
+                    .defineInRange("questTrackerY", 4, 0, 10000);
             b.pop();
         }
     }
@@ -114,5 +123,13 @@ public final class McaQuestsConfig {
         STRICT,
         NORMALIZED,
         LOOSE
+    }
+
+    /** Screen corner the quest-tracker HUD anchors to (spec section 21). */
+    public enum HudAnchor {
+        TOP_LEFT,
+        TOP_RIGHT,
+        BOTTOM_LEFT,
+        BOTTOM_RIGHT
     }
 }

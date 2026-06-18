@@ -1,17 +1,27 @@
 package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.McaQuestsConfig.HudAnchor;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/** Small HUD tracker for active MCA quests, pinned top-left (spec section 21). */
+/**
+ * HUD tracker for active MCA quests — each shows its title, giver, and first objective. Position is
+ * fully configurable via {@code questTrackerAnchor} (corner) + {@code questTrackerX/Y} offsets (spec section 21).
+ */
 public class QuestHudOverlay implements IGuiOverlay {
+
+    private static final int LINE_HEIGHT = 10;
 
     @Override
     public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
@@ -23,19 +33,46 @@ public class QuestHudOverlay implements IGuiOverlay {
         if (entries.isEmpty()) {
             return;
         }
+        Font font = minecraft.font;
         int max = Math.min(entries.size(), McaQuestsConfig.CLIENT.questTrackerMaxEntries.get());
-        int x = 4;
-        int y = 4;
-        graphics.drawString(minecraft.font, Component.translatable("mcaquests.hud.title"), x, y, 0xFFE08A);
-        y += 11;
+
+        List<Line> lines = new ArrayList<>();
+        lines.add(new Line(Component.translatable("mcaquests.hud.title"), 0xFFE08A, 0));
         for (int i = 0; i < max; i++) {
             QuestLogEntry entry = entries.get(i);
-            graphics.drawString(minecraft.font, entry.title(), x + 2, y, entry.ready() ? 0x5CFF5C : 0xFFFFFF);
-            y += 10;
+            MutableComponent title = entry.title().copy()
+                    .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
+                    .append(entry.giverName().copy().withStyle(ChatFormatting.GRAY));
+            lines.add(new Line(title, entry.ready() ? 0x5CFF5C : 0xFFFFFF, 2));
             if (!entry.objectives().isEmpty()) {
-                graphics.drawString(minecraft.font, entry.objectives().get(0), x + 6, y, 0xBFBFBF);
-                y += 10;
+                lines.add(new Line(entry.objectives().get(0), 0xBFBFBF, 6));
             }
         }
+
+        int blockWidth = 0;
+        for (Line line : lines) {
+            blockWidth = Math.max(blockWidth, line.indent + font.width(line.text));
+        }
+        int blockHeight = lines.size() * LINE_HEIGHT;
+
+        HudAnchor anchor = McaQuestsConfig.CLIENT.questTrackerAnchor.get();
+        int offsetX = McaQuestsConfig.CLIENT.questTrackerX.get();
+        int offsetY = McaQuestsConfig.CLIENT.questTrackerY.get();
+        boolean right = anchor == HudAnchor.TOP_RIGHT || anchor == HudAnchor.BOTTOM_RIGHT;
+        boolean bottom = anchor == HudAnchor.BOTTOM_LEFT || anchor == HudAnchor.BOTTOM_RIGHT;
+
+        int originX = right ? screenWidth - offsetX - blockWidth : offsetX;
+        int originY = bottom ? screenHeight - offsetY - blockHeight : offsetY;
+        int rightEdge = originX + blockWidth;
+
+        int y = originY;
+        for (Line line : lines) {
+            int x = right ? rightEdge - font.width(line.text) : originX + line.indent;
+            graphics.drawString(font, line.text, x, y, line.color);
+            y += LINE_HEIGHT;
+        }
+    }
+
+    private record Line(Component text, int color, int indent) {
     }
 }

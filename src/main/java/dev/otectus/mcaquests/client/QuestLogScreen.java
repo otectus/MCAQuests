@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.quest.QuestLogEntry;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -37,7 +38,10 @@ public class QuestLogScreen extends Screen {
             int left = centerX - 150;
             int y = 40;
             for (QuestLogEntry entry : entries) {
-                graphics.drawString(this.font, entry.title(), left, y, entry.ready() ? 0x5CFF5C : 0xFFE08A);
+                graphics.drawString(this.font, entry.title().copy()
+                                .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
+                                .append(entry.giverName().copy().withStyle(ChatFormatting.GRAY)),
+                        left, y, entry.ready() ? 0x5CFF5C : 0xFFE08A);
                 y += 11;
                 for (Component objective : entry.objectives()) {
                     graphics.drawString(this.font, Component.literal("  - ").append(objective), left, y, 0xBFBFBF);

@@ -429,7 +429,7 @@ public final class QuestManager {
             List<QuestLogEntry> entries = new ArrayList<>();
             for (ActiveQuest active : data.active()) {
                 QuestRegistry.get(active.questId()).ifPresent(def ->
-                        entries.add(new QuestLogEntry(active.questId(), def.title(),
+                        entries.add(new QuestLogEntry(active.questId(), def.title(), active.villagerName(),
                                 objectiveLines(player, def, active), isComplete(player, def, active))));
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
