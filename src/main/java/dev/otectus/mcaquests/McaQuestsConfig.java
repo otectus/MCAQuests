@@ -43,6 +43,8 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue minHeartsReward;
         public final ForgeConfigSpec.IntValue maxHeartsReward;
         public final ForgeConfigSpec.EnumValue<ProfessionMatchingMode> professionMatchingMode;
+        public final ForgeConfigSpec.BooleanValue followGiverAfterAccept;
+        public final ForgeConfigSpec.BooleanValue questChatMessages;
         public final ForgeConfigSpec.BooleanValue strictJsonValidation;
         public final ForgeConfigSpec.BooleanValue debugLogging;
 
@@ -80,6 +82,15 @@ public final class McaQuestsConfig {
             b.push("matching");
             professionMatchingMode = b.comment("How giver professions are matched: STRICT, NORMALIZED, or LOOSE.")
                     .defineEnum("professionMatchingMode", ProfessionMatchingMode.NORMALIZED);
+            b.pop();
+
+            b.push("behavior");
+            followGiverAfterAccept = b.comment(
+                    "If true, a quest giver follows the player after they accept a quest (escort-style).",
+                    "If false (default), accepting never makes the villager follow you, and an existing auto-follow is cleared.")
+                    .define("followGiverAfterAccept", false);
+            questChatMessages = b.comment("Send a short chat confirmation when a quest is accepted or completed.")
+                    .define("questChatMessages", true);
             b.pop();
 
             b.push("debug");

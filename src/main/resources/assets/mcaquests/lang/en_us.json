@@ -18,6 +18,8 @@
   "mcaquests.status.objectives": "Objectives",
   "mcaquests.status.rewards": "Rewards",
   "mcaquests.message.giver_died": "A villager who gave you a quest has died.",
+  "mcaquests.message.quest_accepted": "Quest accepted: %s",
+  "mcaquests.message.quest_completed": "Quest complete: %s",
   "mcaquests.label.profession": "Profession: %s",
   "mcaquests.label.hearts": "Hearts: %s",
   "mcaquests.reward.hearts": "+%s hearts",

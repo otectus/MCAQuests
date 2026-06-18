@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.compat;
 import forge.net.mca.entity.VillagerEntityMCA;
 import forge.net.mca.entity.VillagerLike;
 import forge.net.mca.entity.ai.Memories;
+import forge.net.mca.entity.ai.MoveState;
 import forge.net.mca.entity.ai.relationship.AgeState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -98,6 +99,21 @@ public final class McaCompat {
         }
         if (villager instanceof VillagerEntityMCA mca) {
             mca.getVillagerBrain().rewardHearts(player, amount);
+        }
+    }
+
+    /**
+     * Controls whether a quest-giver follows the player (MCA {@code MoveState.FOLLOW}). When
+     * {@code follow} is false this only resets a villager that is <em>currently</em> following, so a
+     * player's manual STAY/MOVE choice is left untouched. <b>Server side only.</b>
+     */
+    public static void setQuestGiverFollow(ServerPlayer player, Entity villager, boolean follow) {
+        if (villager instanceof VillagerEntityMCA mca) {
+            if (follow) {
+                mca.getVillagerBrain().setMoveState(MoveState.FOLLOW, player);
+            } else if (mca.getVillagerBrain().getMoveState() == MoveState.FOLLOW) {
+                mca.getVillagerBrain().setMoveState(MoveState.MOVE, player);
+            }
         }
     }
 

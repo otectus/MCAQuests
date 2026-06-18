@@ -12,6 +12,45 @@ Malformed or unknown quests are skipped with a logged error and listed by `/mcaq
 
 ---
 
+## Adding quests with a datapack (walkthrough)
+
+You don't need to make a mod — quests load from any datapack. To add your own pack of quests to a single world:
+
+1. **Make the folder structure** inside the world's `datapacks` directory (`saves/<world>/datapacks/` for singleplayer, `<server>/world/datapacks/` for a server):
+
+   ```
+   datapacks/
+     my_quests/
+       pack.mcmeta
+       data/
+         mypack/                      <- your namespace (pick anything but "mcaquests")
+           mcaquests/
+             quests/
+               errands/wood_run.json
+               combat/rat_problem.json
+   ```
+
+   Use **your own namespace** for the folder under `data/` (here, `mypack`) and for each quest's `id` (`mypack:wood_run`). Don't reuse `mcaquests` — that's the bundled pack, and a same-id quest would collide. Subfolders under `quests/` (like `errands/`) are organizational only.
+
+2. **Add `pack.mcmeta`** (the `pack_format` for 1.20.1 is `15`):
+
+   ```json
+   {
+     "pack": {
+       "pack_format": 15,
+       "description": "My MCA quests"
+     }
+   }
+   ```
+
+3. **Write quest files.** Run `/mcaquests export-schema` to drop a complete, valid example at `config/mcaquests/example_quest.json` — copy it into `quests/`, change its `id` to your namespace, and edit. See the [field reference](#top-level-fields) below.
+
+4. **Load it.** Run `/reload` (or `/mcaquests reload`). Confirm with `/mcaquests list` and `/mcaquests validate`. If a file is wrong, `validate` names it and the reason; the rest still load.
+
+To **disable the built-in quests** entirely and ship only your own, set `enableDefaultQuestPack = false` in the config (see [CONFIG.md](CONFIG.md)). To ship a pack to *every* world, distribute it as a normal datapack zip, or place it in the global pack folder.
+
+---
+
 ## Top-level fields
 
 | Field | Type | Required | Default | Notes |

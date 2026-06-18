@@ -192,6 +192,10 @@ public final class QuestManager {
                 ((ServerLevel) player.level()).getGameTime(),
                 def.objectives().size()));
         MinecraftForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, def));
+        McaCompat.setQuestGiverFollow(player, villager, McaQuestsConfig.COMMON.followGiverAfterAccept.get());
+        if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+            player.sendSystemMessage(Component.translatable("mcaquests.message.quest_accepted", def.title()));
+        }
         return true;
     }
 
@@ -258,6 +262,9 @@ public final class QuestManager {
         }
         data.remove(active);
         MinecraftForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
+        if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+            player.sendSystemMessage(Component.translatable("mcaquests.message.quest_completed", def.title()));
+        }
         return true;
     }
 
