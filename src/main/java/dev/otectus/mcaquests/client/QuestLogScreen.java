@@ -1,0 +1,61 @@
+package dev.otectus.mcaquests.client;
+
+import dev.otectus.mcaquests.quest.QuestLogEntry;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+import java.util.List;
+
+/** Keybind-accessible list of the player's active MCA quests (spec section 21). Read-only. */
+public class QuestLogScreen extends Screen {
+
+    public QuestLogScreen() {
+        super(Component.translatable("mcaquests.screen.log.title"));
+    }
+
+    @Override
+    protected void init() {
+        int centerX = this.width / 2;
+        addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose())
+                .bounds(centerX - 50, this.height - 36, 100, 20)
+                .build());
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(graphics);
+        int centerX = this.width / 2;
+        graphics.drawCenteredString(this.font, getTitle(), centerX, 16, 0xFFFFFF);
+
+        List<QuestLogEntry> entries = ClientQuestData.active();
+        if (entries.isEmpty()) {
+            graphics.drawCenteredString(this.font,
+                    Component.translatable("mcaquests.status.no_active_quests"), centerX, this.height / 2, 0xA0A0A0);
+        } else {
+            int left = centerX - 150;
+            int y = 40;
+            for (QuestLogEntry entry : entries) {
+                graphics.drawString(this.font, entry.title(), left, y, entry.ready() ? 0x5CFF5C : 0xFFE08A);
+                y += 11;
+                for (Component objective : entry.objectives()) {
+                    graphics.drawString(this.font, Component.literal("  - ").append(objective), left, y, 0xBFBFBF);
+                    y += 10;
+                }
+                if (entry.ready()) {
+                    graphics.drawString(this.font,
+                            Component.translatable("mcaquests.status.ready"), left + 6, y, 0x5CFF5C);
+                    y += 10;
+                }
+                y += 6;
+            }
+        }
+        super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+}

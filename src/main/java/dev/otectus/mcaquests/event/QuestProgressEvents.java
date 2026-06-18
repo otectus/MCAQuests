@@ -49,6 +49,13 @@ public final class QuestProgressEvents {
     }
 
     @SubscribeEvent
+    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            QuestManager.syncLog(player);
+        }
+    }
+
+    @SubscribeEvent
     public static void onEntityKilled(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide()) {
             return;
@@ -97,6 +104,12 @@ public final class QuestProgressEvents {
                     }
                 });
         autoCompleteSelfQuests(player);
+        // Refresh the client quest log + HUD (~once per second) for players with active quests.
+        QuestCapabilities.get(player).ifPresent(data -> {
+            if (!data.active().isEmpty()) {
+                QuestManager.syncLog(player);
+            }
+        });
     }
 
     /** Turns in SELF_COMPLETE quests as soon as their objectives are satisfied (spec section 17). */

@@ -1,6 +1,11 @@
 {
   "gui.button.mcaquests.quests": "Quests",
+  "key.categories.mcaquests": "MCA: Quests",
+  "key.mcaquests.quest_log": "Open Quest Log",
   "mcaquests.screen.quests.title": "Quests",
+  "mcaquests.screen.log.title": "Quest Log",
+  "mcaquests.hud.title": "Quests",
+  "mcaquests.status.no_active_quests": "No active quests",
   "mcaquests.button.accept": "Accept",
   "mcaquests.button.decline": "Decline",
   "mcaquests.button.complete": "Complete",

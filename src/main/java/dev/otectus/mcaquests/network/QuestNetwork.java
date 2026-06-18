@@ -35,5 +35,7 @@ public final class QuestNetwork {
                 QuestAbandonC2SPacket::encode, QuestAbandonC2SPacket::decode, QuestAbandonC2SPacket::handle);
         CHANNEL.registerMessage(nextId++, QuestMenuDataS2CPacket.class,
                 QuestMenuDataS2CPacket::encode, QuestMenuDataS2CPacket::decode, QuestMenuDataS2CPacket::handle);
+        CHANNEL.registerMessage(nextId++, QuestLogSyncS2CPacket.class,
+                QuestLogSyncS2CPacket::encode, QuestLogSyncS2CPacket::decode, QuestLogSyncS2CPacket::handle);
     }
 }

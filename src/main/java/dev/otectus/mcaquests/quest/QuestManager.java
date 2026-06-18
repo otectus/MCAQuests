@@ -6,6 +6,7 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
+import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
@@ -67,6 +68,7 @@ public final class QuestManager {
         }
         // decline is a no-op for now (it simply does not create state); both refresh the menu.
         sendMenu(player, villager);
+        syncLog(player);
     }
 
     public static void turnInFromPacket(ServerPlayer player, UUID villagerUuid, ResourceLocation questId) {
@@ -76,6 +78,7 @@ public final class QuestManager {
         }
         turnIn(player, villager, questId);
         sendMenu(player, villager);
+        syncLog(player);
     }
 
     public static void abandonFromPacket(ServerPlayer player, UUID villagerUuid, ResourceLocation questId) {
@@ -85,6 +88,7 @@ public final class QuestManager {
         }
         abandon(player, villager, questId);
         sendMenu(player, villager);
+        syncLog(player);
     }
 
     @Nullable
@@ -204,6 +208,7 @@ public final class QuestManager {
             return;
         }
         completeQuest(player, resolveGiver(player, active), defOpt.get(), active, dataOpt.get());
+        syncLog(player);
     }
 
     /**
@@ -393,5 +398,18 @@ public final class QuestManager {
 
     private static void send(ServerPlayer player, QuestMenuDataS2CPacket packet) {
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    }
+
+    /** Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker. */
+    public static void syncLog(ServerPlayer player) {
+        QuestCapabilities.get(player).ifPresent(data -> {
+            List<QuestLogEntry> entries = new ArrayList<>();
+            for (ActiveQuest active : data.active()) {
+                QuestRegistry.get(active.questId()).ifPresent(def ->
+                        entries.add(new QuestLogEntry(active.questId(), def.title(),
+                                objectiveLines(player, def, active), isComplete(player, def, active))));
+            }
+            QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
+        });
     }
 }
