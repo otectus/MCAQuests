@@ -1,0 +1,144 @@
+package dev.otectus.mcaquests.quest.condition;
+
+import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
+import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
+import dev.otectus.mcaquests.quest.condition.composite.AnyOfCondition;
+import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.AdvancementCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.BiomeCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.FavorCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.ItemHeldCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.PlayerLevelCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.ProfessionCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestNotCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.RandomChanceCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.TimeCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.WeatherCondition;
+import net.minecraft.resources.ResourceLocation;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Registry of leaf condition types plus the top-level {@link Codec} that also understands the
+ * {@code all_of}/{@code any_of}/{@code not} composites (spec section 13). Composites are matched
+ * first; otherwise the {@code "type"} field dispatches to a leaf.
+ */
+public final class ConditionTypes {
+
+    private static final Map<ResourceLocation, QuestConditionType<?>> BY_ID = new LinkedHashMap<>();
+
+    public static final QuestConditionType<FavorCondition> FAVOR = register("favor", FavorCondition.CODEC);
+    public static final QuestConditionType<ProfessionCondition> PROFESSION = register("profession", ProfessionCondition.CODEC);
+    public static final QuestConditionType<BiomeCondition> BIOME = register("biome", BiomeCondition.CODEC);
+    public static final QuestConditionType<DimensionCondition> DIMENSION = register("dimension", DimensionCondition.CODEC);
+    public static final QuestConditionType<TimeCondition> TIME = register("time", TimeCondition.CODEC);
+    public static final QuestConditionType<WeatherCondition> WEATHER = register("weather", WeatherCondition.CODEC);
+    public static final QuestConditionType<ItemHeldCondition> ITEM_HELD = register("item_held", ItemHeldCondition.CODEC);
+    public static final QuestConditionType<AdvancementCondition> ADVANCEMENT = register("advancement", AdvancementCondition.CODEC);
+    public static final QuestConditionType<PlayerLevelCondition> PLAYER_LEVEL = register("player_level", PlayerLevelCondition.CODEC);
+    public static final QuestConditionType<RandomChanceCondition> RANDOM_CHANCE = register("random_chance", RandomChanceCondition.CODEC);
+    public static final QuestConditionType<QuestCompletedCondition> QUEST_COMPLETED = register("quest_completed", QuestCompletedCondition.CODEC);
+    public static final QuestConditionType<QuestNotCompletedCondition> QUEST_NOT_COMPLETED = register("quest_not_completed", QuestNotCompletedCondition.CODEC);
+
+    public static final Codec<QuestConditionType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
+            id -> {
+                QuestConditionType<?> type = BY_ID.get(id);
+                return type != null
+                        ? DataResult.success(type)
+                        : DataResult.error(() -> "Unknown condition type: " + id);
+            },
+            type -> DataResult.success(type.id()));
+
+    // DFU 6.0.8 has no Codec.recursive, so CODEC is a lazy delegate that forwards to DELEGATE; the
+    // composites reference CODEC for nested conditions. DELEGATE is built after CODEC exists.
+    public static final Codec<QuestCondition> CODEC = new Codec<QuestCondition>() {
+        @Override
+        public <T> DataResult<Pair<QuestCondition, T>> decode(DynamicOps<T> ops, T input) {
+            return DELEGATE.decode(ops, input);
+        }
+
+        @Override
+        public <T> DataResult<T> encode(QuestCondition input, DynamicOps<T> ops, T prefix) {
+            return DELEGATE.encode(input, ops, prefix);
+        }
+    };
+
+    private static final Codec<QuestCondition> DELEGATE = buildConditionCodec();
+
+    private static Codec<QuestCondition> buildConditionCodec() {
+        Codec<QuestCondition> self = CODEC;
+        Codec<QuestCondition> leaf = TYPE_CODEC.dispatch("type", QuestCondition::type, QuestConditionType::codec);
+        Codec<QuestCondition> allOf = self.listOf().fieldOf("all_of").codec()
+                .xmap(list -> (QuestCondition) new AllOfCondition(list), c -> ((AllOfCondition) c).conditions());
+        Codec<QuestCondition> anyOf = self.listOf().fieldOf("any_of").codec()
+                .xmap(list -> (QuestCondition) new AnyOfCondition(list), c -> ((AnyOfCondition) c).conditions());
+        Codec<QuestCondition> not = self.fieldOf("not").codec()
+                .xmap(cond -> (QuestCondition) new NotCondition(cond), c -> ((NotCondition) c).condition());
+
+        return new Codec<QuestCondition>() {
+            @Override
+            public <T> DataResult<Pair<QuestCondition, T>> decode(DynamicOps<T> ops, T input) {
+                // Composites first (each fails cleanly when its key is absent), then a leaf "type".
+                DataResult<Pair<QuestCondition, T>> result = allOf.decode(ops, input);
+                if (result.result().isPresent()) {
+                    return result;
+                }
+                result = anyOf.decode(ops, input);
+                if (result.result().isPresent()) {
+                    return result;
+                }
+                result = not.decode(ops, input);
+                if (result.result().isPresent()) {
+                    return result;
+                }
+                return leaf.decode(ops, input);
+            }
+
+            @Override
+            public <T> DataResult<T> encode(QuestCondition input, DynamicOps<T> ops, T prefix) {
+                if (input instanceof AllOfCondition) {
+                    return allOf.encode(input, ops, prefix);
+                }
+                if (input instanceof AnyOfCondition) {
+                    return anyOf.encode(input, ops, prefix);
+                }
+                if (input instanceof NotCondition) {
+                    return not.encode(input, ops, prefix);
+                }
+                return leaf.encode(input, ops, prefix);
+            }
+        };
+    }
+
+    private ConditionTypes() {
+    }
+
+    public static <T extends QuestCondition> QuestConditionType<T> register(String path, Codec<T> codec) {
+        ResourceLocation id = new ResourceLocation(McaQuests.MOD_ID, path);
+        QuestConditionType<T> type = new QuestConditionType<>(id, codec);
+        if (BY_ID.putIfAbsent(id, type) != null) {
+            throw new IllegalArgumentException("Duplicate condition type id: " + id);
+        }
+        return type;
+    }
+
+    public static boolean exists(ResourceLocation id) {
+        return BY_ID.containsKey(id);
+    }
+
+    /** Evaluates an optional top-level condition tree (absent = always eligible). */
+    public static boolean testAll(List<QuestCondition> conditions, QuestContext context) {
+        return conditions.stream().allMatch(c -> c.test(context));
+    }
+
+    public static void bootstrap() {
+    }
+}

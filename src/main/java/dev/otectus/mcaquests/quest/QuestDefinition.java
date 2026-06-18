@@ -2,6 +2,8 @@ package dev.otectus.mcaquests.quest;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.quest.condition.ConditionTypes;
+import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
@@ -28,7 +30,8 @@ public record QuestDefinition(
         Map<String, QuestText> dialogue,
         List<QuestObjective> objectives,
         List<QuestReward> rewards,
-        TurnInMode turnIn) {
+        TurnInMode turnIn,
+        Optional<QuestCondition> conditions) {
 
     /** Dialogue states (spec section 9). */
     public static final String OFFER = "offer";
@@ -55,7 +58,8 @@ public record QuestDefinition(
             Codec.unboundedMap(Codec.STRING, QuestText.CODEC).fieldOf("dialogue").forGetter(QuestDefinition::dialogue),
             ObjectiveTypes.CODEC.listOf().fieldOf("objectives").forGetter(QuestDefinition::objectives),
             RewardTypes.CODEC.listOf().fieldOf("rewards").forGetter(QuestDefinition::rewards),
-            TURN_IN_CODEC.optionalFieldOf("turn_in", TurnInMode.ORIGINAL_GIVER).forGetter(QuestDefinition::turnIn)
+            TURN_IN_CODEC.optionalFieldOf("turn_in", TurnInMode.ORIGINAL_GIVER).forGetter(QuestDefinition::turnIn),
+            ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(QuestDefinition::conditions)
     ).apply(instance, QuestDefinition::new));
 
     /** Translation key for this quest's display title (spec section 32), e.g. {@code mcaquests.quest.<path>.title}. */

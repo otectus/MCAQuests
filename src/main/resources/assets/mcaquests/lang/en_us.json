@@ -16,6 +16,10 @@
   "mcaquests.reward.favor": "+%s favor",
   "mcaquests.reward.item": "%s x%s",
   "mcaquests.reward.xp": "%s XP",
+  "mcaquests.reward.xp_levels": "%s levels",
+  "mcaquests.reward.effect": "Effect: %s",
+  "mcaquests.reward.loot_table": "A surprise reward",
+  "mcaquests.reward.command": "A special reward",
 
   "mcaquests.objective.item_delivery": "Deliver %s× %s",
   "mcaquests.objective.obtain_item": "Obtain %s× %s",

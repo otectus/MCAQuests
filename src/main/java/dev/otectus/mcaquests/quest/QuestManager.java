@@ -1,8 +1,11 @@
 package dev.otectus.mcaquests.quest;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
+import dev.otectus.mcaquests.profession.ProfessionMatcher;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
@@ -248,15 +251,20 @@ public final class QuestManager {
         boolean adult = McaCompat.isAdult(villager);
         int favor = McaCompat.getFavor(player, villager);
         UUID villagerUuid = villager.getUUID();
+        ProfessionMatchingMode mode = McaQuestsConfig.COMMON.professionMatchingMode.get();
         return QuestRegistry.all().stream()
                 .filter(QuestDefinition::enabled)
-                .filter(def -> def.giver().acceptsProfession(profession))
+                .filter(def -> def.giver().isGeneric()
+                        || ProfessionMatcher.matchesAny(def.giver().professions(), profession, mode))
                 .filter(def -> !def.giver().adultOnly() || adult)
                 .filter(def -> def.giver().acceptsFavor(favor))
                 .filter(def -> !data.hasActive(def.id(), villagerUuid))
                 .filter(def -> !data.history().onCooldown(def.id(), villagerUuid, now))
                 .filter(def -> def.repeat().type() != RepeatRule.RepeatType.ONCE
                         || data.history().completionCount(def.id()) == 0)
+                .filter(def -> def.conditions()
+                        .map(condition -> condition.test(new QuestContext(player, villager, data, def.id())))
+                        .orElse(true))
                 .sorted(Comparator.comparing(def -> def.id().toString()))
                 .toList();
     }

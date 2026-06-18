@@ -21,6 +21,14 @@ public final class RewardTypes {
             register(new ResourceLocation(McaQuests.MOD_ID, "xp"), XpReward.CODEC);
     public static final QuestRewardType<FavorReward> FAVOR =
             register(new ResourceLocation(McaQuests.MOD_ID, "favor"), FavorReward.CODEC);
+    public static final QuestRewardType<XpLevelsReward> XP_LEVELS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "xp_levels"), XpLevelsReward.CODEC);
+    public static final QuestRewardType<EffectReward> EFFECT =
+            register(new ResourceLocation(McaQuests.MOD_ID, "effect"), EffectReward.CODEC);
+    public static final QuestRewardType<LootTableReward> LOOT_TABLE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "loot_table"), LootTableReward.CODEC);
+    public static final QuestRewardType<CommandReward> COMMAND =
+            register(new ResourceLocation(McaQuests.MOD_ID, "command"), CommandReward.CODEC);
 
     public static final Codec<QuestRewardType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {
