@@ -10,6 +10,7 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
+import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
@@ -36,7 +37,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -134,10 +134,8 @@ public final class QuestManager {
             QuestDefinition def = defOpt.get();
             boolean ready = isComplete(player, def, active) && canTurnInAt(active, def, villager);
             QuestMenuStatus status = ready ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
-            Component dialogue = def.dialogueOr(ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS, def.title());
-            send(player, QuestMenuDataS2CPacket.quest(villagerUuid, name, profession, hearts, status,
-                    def.id(), def.title(), dialogue,
-                    objectiveLines(player, def, active), rewardLines(def)));
+            QuestCard card = buildCard(player, def, active, ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS);
+            send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, status, List.of(card)));
             return;
         }
 
@@ -152,11 +150,18 @@ public final class QuestManager {
             return;
         }
         long worldDay = ((ServerLevel) player.level()).getDayTime() / 24000L;
-        QuestDefinition chosen = pickDeterministic(eligible, offerSeed(player, villagerUuid, worldDay));
-        Component dialogue = chosen.dialogueOr(QuestDefinition.OFFER, chosen.title());
-        send(player, QuestMenuDataS2CPacket.quest(villagerUuid, name, profession, hearts, QuestMenuStatus.OFFER,
-                chosen.id(), chosen.title(), dialogue,
-                objectiveLines(player, chosen, null), rewardLines(chosen)));
+        List<QuestDefinition> chosen = WeightedPicker.pickMany(eligible, QuestDefinition::weight,
+                offerSeed(player, villagerUuid, worldDay), McaQuestsConfig.COMMON.offersPerVillager.get());
+        List<QuestCard> cards = new ArrayList<>();
+        for (QuestDefinition def : chosen) {
+            cards.add(buildCard(player, def, null, QuestDefinition.OFFER));
+        }
+        send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, QuestMenuStatus.OFFER, cards));
+    }
+
+    private static QuestCard buildCard(ServerPlayer player, QuestDefinition def, ActiveQuest active, String dialogueState) {
+        return new QuestCard(def.id(), def.title(), def.dialogueOr(dialogueState, def.title()),
+                objectiveLines(player, def, active), rewardLines(def));
     }
 
     // ---------------------------------------------------------------- actions
@@ -386,23 +391,6 @@ public final class QuestManager {
 
     private static List<Component> rewardLines(QuestDefinition def) {
         return def.rewards().stream().map(QuestReward::describe).toList();
-    }
-
-    /** Weighted pick seeded so reopening the menu the same day returns the same offer (spec section 18). */
-    private static QuestDefinition pickDeterministic(List<QuestDefinition> eligible, long seed) {
-        int total = eligible.stream().mapToInt(QuestDefinition::weight).sum();
-        if (total <= 0) {
-            return eligible.get(0);
-        }
-        int roll = new Random(seed).nextInt(total);
-        int accumulated = 0;
-        for (QuestDefinition def : eligible) {
-            accumulated += def.weight();
-            if (roll < accumulated) {
-                return def;
-            }
-        }
-        return eligible.get(eligible.size() - 1);
     }
 
     private static long offerSeed(ServerPlayer player, UUID villagerUuid, long worldDay) {

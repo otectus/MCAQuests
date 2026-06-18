@@ -55,7 +55,7 @@ public final class McaQuestsConfig {
             maxActiveQuestsPerVillager = b.comment("Maximum simultaneously-active quests per villager per player.")
                     .defineInRange("maxActiveQuestsPerVillager", 1, 1, 100);
             offersPerVillager = b.comment("How many quest offers a villager presents at once.")
-                    .defineInRange("offersPerVillager", 1, 1, 10);
+                    .defineInRange("offersPerVillager", 3, 1, 10);
             offerRefreshTicks = b.comment("Ticks before a villager's cached offers reroll (24000 = 1 MC day).")
                     .defineInRange("offerRefreshTicks", 24000, 1, Integer.MAX_VALUE);
             defaultQuestCooldownTicks = b.comment("Default cooldown applied to quests that do not specify one.")

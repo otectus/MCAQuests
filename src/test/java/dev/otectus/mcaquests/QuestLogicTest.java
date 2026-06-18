@@ -4,19 +4,23 @@ import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.GiverSpec;
 import dev.otectus.mcaquests.quest.RepeatRule;
+import dev.otectus.mcaquests.quest.WeightedPicker;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestConditionType;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.AnyOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
+import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.state.QuestHistory;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.ToIntFunction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +34,55 @@ class QuestLogicTest {
         assertEquals(RepeatRule.RepeatType.COOLDOWN, RepeatRule.DEFAULT.type());
         assertTrue(RepeatRule.DEFAULT.isRepeatable());
         assertFalse(new RepeatRule(RepeatRule.RepeatType.ONCE, 0).isRepeatable());
+    }
+
+    @Test
+    void weightedPickerIsDeterministicAndDistinct() {
+        List<String> items = List.of("a", "b", "c", "d", "e");
+        ToIntFunction<String> weight = s -> 1;
+        List<String> first = WeightedPicker.pickMany(items, weight, 42L, 3);
+        assertEquals(first, WeightedPicker.pickMany(items, weight, 42L, 3), "same seed + order is stable");
+        assertEquals(3, first.size());
+        assertEquals(3, Set.copyOf(first).size(), "picks are distinct");
+        assertEquals(items.size(), WeightedPicker.pickMany(items, weight, 1L, 99).size(), "count clamps to pool size");
+        assertTrue(WeightedPicker.pickMany(List.of(), weight, 1L, 3).isEmpty(), "empty pool yields nothing");
+    }
+
+    @Test
+    void weightedPickerFavorsHigherWeight() {
+        List<String> items = List.of("light", "heavy");
+        ToIntFunction<String> weight = s -> s.equals("heavy") ? 100 : 1;
+        int heavyFirst = 0;
+        for (int seed = 0; seed < 200; seed++) {
+            if (WeightedPicker.pickMany(items, weight, seed, 1).get(0).equals("heavy")) {
+                heavyFirst++;
+            }
+        }
+        assertTrue(heavyFirst > 150, "the 100:1 weight should dominate the first pick (was " + heavyFirst + "/200)");
+    }
+
+    @Test
+    void objectiveProgressNbtRoundTrip() {
+        ObjectiveProgress progress = new ObjectiveProgress(7);
+        progress.add(3);
+        ObjectiveProgress restored = ObjectiveProgress.load(progress.save());
+        assertEquals(10, restored.count(), "progress count survives an NBT save/load");
+    }
+
+    @Test
+    void questHistoryNbtRoundTrip() {
+        QuestHistory history = new QuestHistory();
+        ResourceLocation quest = new ResourceLocation("mcaquests", "farmer_wheat_request");
+        UUID villager = UUID.randomUUID();
+        history.recordCompletion(quest);
+        history.recordCompletion(quest);
+        history.setCooldownUntil(quest, villager, 5000L);
+
+        QuestHistory restored = new QuestHistory();
+        restored.load(history.save());
+        assertEquals(2, restored.completionCount(quest), "completion count survives save/load");
+        assertTrue(restored.onCooldown(quest, villager, 4000L), "still on cooldown before the deadline");
+        assertFalse(restored.onCooldown(quest, villager, 6000L), "cooldown has expired after the deadline");
     }
 
     @Test

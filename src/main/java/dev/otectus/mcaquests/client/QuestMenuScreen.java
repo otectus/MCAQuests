@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.network.QuestAbandonC2SPacket;
+import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestDecisionC2SPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
@@ -10,70 +11,90 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Conversation-style quest screen (spec sections 8, 9, 21). Renders the villager header and, when a
- * quest is present, its dialogue / objectives / rewards, with state-appropriate response buttons.
- * Every button just sends a C2S packet; the server replies with fresh {@link QuestMenuDataS2CPacket}
- * data, which reopens this screen in the new state.
+ * Conversation / offer screen (spec sections 8, 9, 21). Renders the villager header plus the quest
+ * cards: up to {@code offersPerVillager} offers (each Accept/Decline), or the single active quest
+ * (Complete/Abandon). Every button just sends a C2S packet; the server replies with fresh data,
+ * reopening this screen in the new state.
  */
 public class QuestMenuScreen extends Screen {
 
-    private static final int COLUMN_WIDTH = 260;
+    private static final int CARD_WIDTH = 280;
 
     private final QuestMenuDataS2CPacket data;
+    private final List<Integer> cardTops = new ArrayList<>();
 
     public QuestMenuScreen(QuestMenuDataS2CPacket data) {
         super(Component.translatable("mcaquests.screen.quests.title"));
         this.data = data;
     }
 
+    private boolean fullDialogue() {
+        return data.status() != QuestMenuStatus.OFFER;
+    }
+
     @Override
     protected void init() {
+        cardTops.clear();
         int centerX = this.width / 2;
-        int buttonY = this.height - 36;
+        int y = 52;
+        for (QuestCard card : data.cards()) {
+            cardTops.add(y);
+            int height = cardHeight(card);
+            addCardButtons(card, centerX, y + height - 22);
+            y += height + 4;
+        }
+        addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose())
+                .bounds(centerX - 50, this.height - 26, 100, 20)
+                .build());
+    }
 
-        if (data.hasQuest()) {
-            ResourceLocation questId = new ResourceLocation(data.questId());
-            switch (data.status()) {
-                case OFFER -> {
-                    addRow(centerX, buttonY,
-                            actionButton("mcaquests.button.accept",
-                                    () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, true))),
-                            actionButton("mcaquests.button.decline",
-                                    () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, false))),
-                            backButton());
-                }
-                case READY -> addRow(centerX, buttonY,
-                        actionButton("mcaquests.button.complete",
-                                () -> QuestNetwork.CHANNEL.sendToServer(new QuestTurnInC2SPacket(data.villagerUuid(), questId))),
-                        actionButton("mcaquests.button.abandon",
-                                () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))),
-                        backButton());
-                case IN_PROGRESS -> addRow(centerX, buttonY,
-                        actionButton("mcaquests.button.abandon",
-                                () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))),
-                        backButton());
-                default -> addRow(centerX, buttonY, backButton());
+    private int cardHeight(QuestCard card) {
+        int height = 12; // title
+        height += dialogueLineCount(card) * 10;
+        height += card.objectives().size() * 10;
+        height += 12; // joined rewards line
+        height += 24; // buttons + padding
+        return height;
+    }
+
+    private int dialogueLineCount(QuestCard card) {
+        List<FormattedCharSequence> lines = this.font.split(card.dialogue(), CARD_WIDTH);
+        return fullDialogue() ? lines.size() : Math.min(1, lines.size());
+    }
+
+    private void addCardButtons(QuestCard card, int centerX, int buttonY) {
+        ResourceLocation questId = card.questId();
+        switch (data.status()) {
+            case OFFER -> addRow(centerX, buttonY,
+                    button("mcaquests.button.accept",
+                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, true))),
+                    button("mcaquests.button.decline",
+                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, false))));
+            case READY -> addRow(centerX, buttonY,
+                    button("mcaquests.button.complete",
+                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestTurnInC2SPacket(data.villagerUuid(), questId))),
+                    button("mcaquests.button.abandon",
+                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
+            case IN_PROGRESS -> addRow(centerX, buttonY,
+                    button("mcaquests.button.abandon",
+                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
+            default -> {
             }
-        } else {
-            addRow(centerX, buttonY, backButton());
         }
     }
 
-    private Button.Builder backButton() {
-        return Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose());
-    }
-
-    private Button.Builder actionButton(String key, Runnable action) {
+    private Button.Builder button(String key, Runnable action) {
         return Button.builder(Component.translatable(key), b -> action.run());
     }
 
-    /** Lays out a row of buttons centred under the card; each fires once then waits for the refresh. */
     private void addRow(int centerX, int y, Button.Builder... builders) {
         int width = 90;
         int gap = 6;
@@ -89,45 +110,52 @@ public class QuestMenuScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
         int centerX = this.width / 2;
-        int left = centerX - COLUMN_WIDTH / 2;
+        int left = centerX - CARD_WIDTH / 2;
 
-        graphics.drawCenteredString(this.font, data.villagerName(), centerX, 16, 0xFFFFFF);
+        graphics.drawCenteredString(this.font, data.villagerName(), centerX, 12, 0xFFFFFF);
         graphics.drawCenteredString(this.font,
-                Component.translatable("mcaquests.label.profession", data.profession()), centerX, 28, 0x9A9A9A);
+                Component.translatable("mcaquests.label.profession", data.profession()), centerX, 24, 0x9A9A9A);
         graphics.drawCenteredString(this.font,
-                Component.translatable("mcaquests.label.hearts", data.hearts()), centerX, 39, 0x9A9A9A);
+                Component.translatable("mcaquests.label.hearts", data.hearts()), centerX, 35, 0x9A9A9A);
 
-        int y = 58;
-        if (data.hasQuest()) {
-            graphics.drawCenteredString(this.font, data.title(), centerX, y, 0xFFE08A);
-            y += 16;
-            for (FormattedCharSequence line : this.font.split(data.dialogue(), COLUMN_WIDTH)) {
-                graphics.drawString(this.font, line, left, y, 0xCFCFCF);
-                y += 11;
-            }
-            y += 6;
-            y = drawSection(graphics, left, y, Component.translatable("mcaquests.status.objectives"), data.objectiveLines());
-            y += 2;
-            drawSection(graphics, left, y, Component.translatable("mcaquests.status.rewards"), data.rewardLines());
-        } else {
+        if (data.cards().isEmpty()) {
             graphics.drawCenteredString(this.font,
-                    Component.translatable("mcaquests.status.no_quests"), centerX, y + 10, 0xFFFFFF);
+                    Component.translatable("mcaquests.status.no_quests"), centerX, this.height / 2, 0xFFFFFF);
+        } else {
+            boolean ready = data.status() == QuestMenuStatus.READY;
+            for (int i = 0; i < data.cards().size(); i++) {
+                renderCard(graphics, data.cards().get(i), left, cardTops.get(i), ready);
+            }
         }
-
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
-    private int drawSection(GuiGraphics graphics, int left, int y, Component header, List<Component> lines) {
-        if (lines.isEmpty()) {
-            return y;
+    private void renderCard(GuiGraphics graphics, QuestCard card, int left, int top, boolean ready) {
+        int y = top;
+        graphics.drawString(this.font, card.title(), left, y, ready ? 0x5CFF5C : 0xFFE08A);
+        y += 12;
+        List<FormattedCharSequence> dialogue = this.font.split(card.dialogue(), CARD_WIDTH);
+        int dialogueLines = fullDialogue() ? dialogue.size() : Math.min(1, dialogue.size());
+        for (int k = 0; k < dialogueLines; k++) {
+            graphics.drawString(this.font, dialogue.get(k), left, y, 0xCFCFCF);
+            y += 10;
         }
-        graphics.drawString(this.font, header, left, y, 0xFFFFFF);
-        y += 11;
-        for (Component line : lines) {
-            graphics.drawString(this.font, Component.literal(" - ").append(line), left, y, 0xBFBFBF);
-            y += 11;
+        for (Component objective : card.objectives()) {
+            graphics.drawString(this.font, Component.literal(" - ").append(objective), left, y, 0xBFBFBF);
+            y += 10;
         }
-        return y;
+        graphics.drawString(this.font, joinRewards(card.rewards()), left, y, 0x88CC88);
+    }
+
+    private static Component joinRewards(List<Component> rewards) {
+        MutableComponent joined = Component.empty();
+        for (int i = 0; i < rewards.size(); i++) {
+            if (i > 0) {
+                joined.append(Component.literal(", "));
+            }
+            joined.append(rewards.get(i));
+        }
+        return joined;
     }
 
     @Override
