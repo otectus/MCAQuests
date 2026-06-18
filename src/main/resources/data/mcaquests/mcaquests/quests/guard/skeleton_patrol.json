@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_skeleton_patrol",
+  "weight": 12,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Skeleton Patrol" },
+  "dialogue": {
+    "offer": { "text": "Archers of bone are picking at our patrols from the ruins. Put down 5 and the roads grow safer." },
+    "accept": { "text": "Close the distance fast — they're deadly at range. Go." },
+    "decline": { "text": "Then keep to cover when you travel." },
+    "in_progress": { "text": "How many skeletons still rattle out there?" },
+    "ready": { "text": "Five clattering heaps. The patrols can breathe easier." },
+    "complete": { "text": "Steady aim and a steadier nerve. The watch salutes you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:skeleton", "count": 5 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 28 },
+    { "type": "mcaquests:hearts", "amount": 30 }
+  ]
+}

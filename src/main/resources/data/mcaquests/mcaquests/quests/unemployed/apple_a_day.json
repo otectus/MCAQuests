@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_apple_a_day",
+  "weight": 13,
+  "category": "errand",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "An Apple a Day" },
+  "dialogue": {
+    "offer": { "text": "My old knees can't manage the orchard ladders anymore. Would you pick me 6 apples?" },
+    "accept": { "text": "Bless you, dear. Sweet ones if you can find them." },
+    "decline": { "text": "These old bones will go without, then." },
+    "in_progress": { "text": "Have you found any apples?" },
+    "ready": { "text": "Six rosy apples! You've made an old soul very happy." },
+    "complete": { "text": "Come sit with me sometime. You're always welcome." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:apple", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 12 },
+    { "type": "mcaquests:hearts", "amount": 13 }
+  ]
+}

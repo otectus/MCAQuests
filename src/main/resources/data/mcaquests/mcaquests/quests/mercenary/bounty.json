@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mercenary_bounty",
+  "weight": 10,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:mercenary"], "adult_only": true },
+  "title": { "text": "Bounty: Creepers" },
+  "dialogue": {
+    "offer": { "text": "There's a bounty on those hissing green cowards — they cratered a client's home. Bring me 5 dead creepers." },
+    "accept": { "text": "Watch the fuse and you'll be fine. Mostly. Go collect." },
+    "decline": { "text": "Bounty stays unclaimed. Pity — it pays well." },
+    "in_progress": { "text": "How's the bounty coming? Any booms?" },
+    "ready": { "text": "Five creepers culled and not a scratch on the client's new wall. Nicely handled." },
+    "complete": { "text": "Bounty paid in full. You've got the makings of a fine mercenary." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:creeper", "count": 5 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 32 },
+    { "type": "mcaquests:hearts", "amount": 35 }
+  ]
+}

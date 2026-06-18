@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:shepherd_warm_blankets",
+  "weight": 12,
+  "category": "crafting",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:shepherd"], "adult_only": true },
+  "title": { "text": "Warm Blankets" },
+  "dialogue": {
+    "offer": { "text": "Winter's biting and the elders shiver. Weave me 6 carpets and I'll see them warmed." },
+    "accept": { "text": "Soft and thick, mind. Old bones feel the cold." },
+    "decline": { "text": "They'll huddle closer to the fire, I suppose." },
+    "in_progress": { "text": "Any blankets woven yet?" },
+    "ready": { "text": "Six warm carpets! No elder freezes on my watch — or yours." },
+    "complete": { "text": "You've warmed more than feet today. Thank you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "item": "minecraft:white_carpet", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 16 }
+  ]
+}

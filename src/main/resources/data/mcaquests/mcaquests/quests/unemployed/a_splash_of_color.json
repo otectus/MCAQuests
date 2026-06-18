@@ -4,7 +4,7 @@
   "weight": 12,
   "category": "gathering",
   "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:none"], "adult_only": true },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
   "title": { "text": "A Splash of Color" },
   "dialogue": {
     "offer": { "text": "My windowsill is so drab. Could you pick me 8 wildflowers? Any colors will do." },

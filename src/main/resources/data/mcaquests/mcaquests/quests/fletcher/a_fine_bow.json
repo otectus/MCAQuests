@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fletcher_a_fine_bow",
+  "weight": 10,
+  "category": "crafting",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:fletcher"], "adult_only": true },
+  "title": { "text": "A Fine Bow" },
+  "dialogue": {
+    "offer": { "text": "A hunter's bow snapped clean in two. Craft a new one and I'll see it gets to him." },
+    "accept": { "text": "Good string, springy wood. You know the way of it." },
+    "decline": { "text": "He'll be throwing rocks, then." },
+    "in_progress": { "text": "Is the bow strung yet?" },
+    "ready": { "text": "A fine bow indeed! The hunter eats well this winter." },
+    "complete": { "text": "Craftsmanship like yours is rare. My thanks." }
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "item": "minecraft:bow", "count": 1 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

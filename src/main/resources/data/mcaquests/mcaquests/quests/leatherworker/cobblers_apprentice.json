@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:leatherworker_cobblers_apprentice",
+  "weight": 12,
+  "category": "crafting",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:leatherworker"], "adult_only": true },
+  "title": { "text": "Cobbler's Apprentice" },
+  "dialogue": {
+    "offer": { "text": "A child's gone barefoot through the mud all week. Stitch up a pair of leather boots for the poor thing?" },
+    "accept": { "text": "Snug and dry, mind. Little feet deserve better." },
+    "decline": { "text": "Cold toes it is, then." },
+    "in_progress": { "text": "Are the boots finished?" },
+    "ready": { "text": "Sturdy little boots! That child will dance through puddles now." },
+    "complete": { "text": "Kindness stitched into leather. Bless you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "item": "minecraft:leather_boots", "count": 1 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 16 }
+  ]
+}

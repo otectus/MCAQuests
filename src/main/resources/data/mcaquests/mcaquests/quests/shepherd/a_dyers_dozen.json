@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:shepherd_a_dyers_dozen",
+  "weight": 14,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:shepherd"], "adult_only": true },
+  "title": { "text": "A Dyer's Dozen" },
+  "dialogue": {
+    "offer": { "text": "The weavers want black wool for a mourning shroud. Twelve bales, if you can dye or shear them." },
+    "accept": { "text": "Solemn work, but honest. Thank you." },
+    "decline": { "text": "The loom waits in silence, then." },
+    "in_progress": { "text": "Have you the black wool?" },
+    "ready": { "text": "Twelve bales, dark as a moonless night. The weavers will begin." },
+    "complete": { "text": "A kindness to a grieving family. Bless you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:black_wool", "count": 12, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 16 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_kindling",
+  "weight": 13,
+  "category": "errand",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "Kindling" },
+  "dialogue": {
+    "offer": { "text": "My fire's nearly out and I've no trade to buy wood. Could you gather me 16 sticks?" },
+    "accept": { "text": "Oh, thank you! A warm hearth is all I ask for." },
+    "decline": { "text": "That's all right. I'll manage... somehow." },
+    "in_progress": { "text": "Found any sticks for my fire?" },
+    "ready": { "text": "Sixteen sticks! I'll be warm tonight thanks to you." },
+    "complete": { "text": "You're a good soul. I won't forget this kindness." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:stick", "count": 16 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 10 },
+    { "type": "mcaquests:hearts", "amount": 12 }
+  ]
+}

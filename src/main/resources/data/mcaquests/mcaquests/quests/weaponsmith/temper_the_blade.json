@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:weaponsmith_temper_the_blade",
+  "weight": 14,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:weaponsmith"], "adult_only": true },
+  "title": { "text": "Temper the Blade" },
+  "dialogue": {
+    "offer": { "text": "Good steel starts with good iron. Bring me 6 ingots and I'll forge the village a proper blade." },
+    "accept": { "text": "Folded and tempered, it'll hold an edge for years. My thanks." },
+    "decline": { "text": "Then the militia drills with sticks." },
+    "in_progress": { "text": "Have you the iron for the forge?" },
+    "ready": { "text": "Six honest ingots. The hammer falls tonight." },
+    "complete": { "text": "The next sword off this anvil is half yours." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:iron_ingot", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 22 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

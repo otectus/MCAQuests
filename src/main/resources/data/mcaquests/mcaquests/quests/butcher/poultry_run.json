@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:butcher_poultry_run",
+  "weight": 14,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:butcher"], "adult_only": true },
+  "title": { "text": "Poultry Run" },
+  "dialogue": {
+    "offer": { "text": "Chicken's on the menu tonight. Six cooked birds and the inn won't go hungry." },
+    "accept": { "text": "Pluck 'em, cook 'em, bring 'em. Simple enough." },
+    "decline": { "text": "Soup's off, then." },
+    "in_progress": { "text": "How's the chicken coming along?" },
+    "ready": { "text": "Six golden birds. The cook will be thrilled." },
+    "complete": { "text": "Tender work. My thanks." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:cooked_chicken", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 16 }
+  ]
+}

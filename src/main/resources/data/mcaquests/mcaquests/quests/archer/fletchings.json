@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:archer_fletchings",
+  "weight": 13,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:archer"], "adult_only": true },
+  "title": { "text": "Fletchings" },
+  "dialogue": {
+    "offer": { "text": "An arrow flies no straighter than its feathers. Bring me 16 and I'll keep my quiver true." },
+    "accept": { "text": "Chase down a few birds for me. I'll wait at the range." },
+    "decline": { "text": "Crooked arrows, crooked shots. A shame." },
+    "in_progress": { "text": "Any feathers for the fletching?" },
+    "ready": { "text": "Sixteen fine feathers — every shaft will sing now." },
+    "complete": { "text": "You keep my aim honest. I won't forget it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:feather", "count": 16, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

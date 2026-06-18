@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:butcher_fresh_cuts",
+  "weight": 14,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:butcher"], "adult_only": true },
+  "title": { "text": "Fresh Cuts" },
+  "dialogue": {
+    "offer": { "text": "My block's been bare all week. Round up 12 raw beef and I'll have something to carve." },
+    "accept": { "text": "Mind the horns. Cattle don't give up easy." },
+    "decline": { "text": "The cleaver stays clean, then." },
+    "in_progress": { "text": "Got any beef for the block?" },
+    "ready": { "text": "Twelve good cuts! Now that's a butcher's morning." },
+    "complete": { "text": "You keep the village fed. I won't forget it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:beef", "count": 12 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:shepherd_spin_a_yarn",
+  "weight": 13,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:shepherd"], "adult_only": true },
+  "title": { "text": "Spin a Yarn" },
+  "dialogue": {
+    "offer": { "text": "Can't spin wool without a little string to start the spindle. Bring me 16 lengths?" },
+    "accept": { "text": "Spiders are good for something after all. Mind their bite." },
+    "decline": { "text": "The spindle stays still, then." },
+    "in_progress": { "text": "Gathered any string yet?" },
+    "ready": { "text": "Sixteen good lengths! The wheel can turn again." },
+    "complete": { "text": "You've spun me out of a fix. Thank you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:string", "count": 16 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 15 },
+    { "type": "mcaquests:hearts", "amount": 15 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:leatherworker_rabbit_run",
+  "weight": 12,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:leatherworker"], "adult_only": true },
+  "title": { "text": "Rabbit Run" },
+  "dialogue": {
+    "offer": { "text": "Rabbit hide makes the softest trim. Catch me 6 pelts from the meadow hares?" },
+    "accept": { "text": "Quick little things, mind. You'll earn those pelts." },
+    "decline": { "text": "Plain trim it is, then." },
+    "in_progress": { "text": "Any rabbit hide for me?" },
+    "ready": { "text": "Six soft pelts! The fine collars practically stitch themselves." },
+    "complete": { "text": "You've a hunter's patience. Much obliged." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:rabbit_hide", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

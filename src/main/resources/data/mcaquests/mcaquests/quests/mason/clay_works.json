@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mason_clay_works",
+  "weight": 13,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:mason"], "adult_only": true },
+  "title": { "text": "Clay Works" },
+  "dialogue": {
+    "offer": { "text": "The kiln's cold for want of clay. Dig me 16 lumps from the riverbank and we'll fire some brick." },
+    "accept": { "text": "Wet work, but the kiln pays it back in warmth. Thank you." },
+    "decline": { "text": "No clay, no brick, no business." },
+    "in_progress": { "text": "How much clay have you dug?" },
+    "ready": { "text": "Sixteen good lumps! The kiln roars to life." },
+    "complete": { "text": "Honest, muddy work. The village builds on it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:clay_ball", "count": 16 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 16 }
+  ]
+}

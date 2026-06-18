@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_berry_picking",
+  "weight": 12,
+  "category": "errand",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "Berry Picking" },
+  "dialogue": {
+    "offer": { "text": "The children do love sweet berries, but the bushes scratch so. Could you pick a dozen for them?" },
+    "accept": { "text": "Mind the thorns! The little ones will be over the moon." },
+    "decline": { "text": "No treats for the children today, I suppose." },
+    "in_progress": { "text": "Gathered any sweet berries yet?" },
+    "ready": { "text": "Twelve plump berries! The children will cheer when they see these." },
+    "complete": { "text": "You've made a whole row of little ones smile. Thank you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:sweet_berries", "count": 12 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 13 },
+    { "type": "mcaquests:hearts", "amount": 14 }
+  ]
+}

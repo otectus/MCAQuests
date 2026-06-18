@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:leatherworker_the_tannery",
+  "weight": 14,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:leatherworker"], "adult_only": true },
+  "title": { "text": "The Tannery" },
+  "dialogue": {
+    "offer": { "text": "A big order came in — saddles, satchels, the lot. I'll need 12 leather to fill it." },
+    "accept": { "text": "Good hide makes good coin. Off you go." },
+    "decline": { "text": "I'll tell them it's delayed, then." },
+    "in_progress": { "text": "How's that leather coming?" },
+    "ready": { "text": "Twelve hides! The tannery will run all night." },
+    "complete": { "text": "A fine haul. There's a cut of the profit in it for you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:leather", "count": 12, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 22 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mercenary_contract_killing",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:mercenary"], "adult_only": true },
+  "title": { "text": "A Simple Contract" },
+  "dialogue": {
+    "offer": { "text": "I deal in coin for blood, and right now I'm overbooked. Clear 8 zombies off my contract and the pay's yours." },
+    "accept": { "text": "Smart. No questions, just results. I like that." },
+    "decline": { "text": "More for me, then. Your loss." },
+    "in_progress": { "text": "Contract's still open. How many left?" },
+    "ready": { "text": "Eight bodies, contract closed. You work clean. I respect that." },
+    "complete": { "text": "Pleasure doing business. There's always more work for a pro." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 8 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 32 }
+  ]
+}

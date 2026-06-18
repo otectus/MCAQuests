@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:toolsmith_sharp_and_ready",
+  "weight": 12,
+  "category": "crafting",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:toolsmith"], "adult_only": true },
+  "title": { "text": "Sharp and Ready" },
+  "dialogue": {
+    "offer": { "text": "The woodcutter's axe finally gave out. Forge a new iron axe so the firewood keeps coming." },
+    "accept": { "text": "Good steel, true edge. He'll fell oaks like saplings." },
+    "decline": { "text": "Cold hearths this winter, then." },
+    "in_progress": { "text": "Is the axe forged yet?" },
+    "ready": { "text": "A keen iron axe! The woodpile will never run low." },
+    "complete": { "text": "Solid work. The whole lane stays warm because of it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "item": "minecraft:iron_axe", "count": 1 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

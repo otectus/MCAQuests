@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_wolf_at_the_door",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Wolf at the Door" },
+  "dialogue": {
+    "offer": { "text": "A whole pack of the dead is shambling toward the gate. Thin them out — 8 zombies — before they reach the walls." },
+    "accept": { "text": "Hold the line with me. The village is counting on us." },
+    "decline": { "text": "Then bar your shutters and pray the gate holds." },
+    "in_progress": { "text": "Is the horde thinning at all?" },
+    "ready": { "text": "Eight down at the gate! You fought like a soldier of the watch." },
+    "complete": { "text": "The walls held because you stood at them. Honor to you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 8 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 32 }
+  ]
+}

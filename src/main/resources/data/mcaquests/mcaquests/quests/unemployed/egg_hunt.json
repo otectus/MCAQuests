@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_egg_hunt",
+  "weight": 13,
+  "category": "errand",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "Egg Hunt" },
+  "dialogue": {
+    "offer": { "text": "I'd love to bake a cake but I've nothing to bake with. Could you bring me 6 eggs from the coop?" },
+    "accept": { "text": "Wonderful! It's been an age since I had a treat." },
+    "decline": { "text": "No cake, then. Ah well." },
+    "in_progress": { "text": "Any eggs for my little cake?" },
+    "ready": { "text": "Six whole eggs! I can almost smell it baking already." },
+    "complete": { "text": "I'll save you the first slice, I promise!" }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:egg", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 12 },
+    { "type": "mcaquests:hearts", "amount": 13 }
+  ]
+}

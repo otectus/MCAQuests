@@ -4,7 +4,7 @@
   "weight": 12,
   "category": "errand",
   "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:none"], "adult_only": true },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
   "title": { "text": "A Helping Hand" },
   "dialogue": {
     "offer": { "text": "I haven't found my trade yet, but I do get hungry. Could you spare me 6 bread?" },
