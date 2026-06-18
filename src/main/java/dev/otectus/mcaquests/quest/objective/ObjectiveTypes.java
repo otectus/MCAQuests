@@ -19,6 +19,16 @@ public final class ObjectiveTypes {
 
     public static final QuestObjectiveType<ItemDeliveryObjective> ITEM_DELIVERY =
             register(new ResourceLocation(McaQuests.MOD_ID, "item_delivery"), ItemDeliveryObjective.CODEC);
+    public static final QuestObjectiveType<ObtainItemObjective> OBTAIN_ITEM =
+            register(new ResourceLocation(McaQuests.MOD_ID, "obtain_item"), ObtainItemObjective.CODEC);
+    public static final QuestObjectiveType<KillEntityObjective> KILL_ENTITY =
+            register(new ResourceLocation(McaQuests.MOD_ID, "kill_entity"), KillEntityObjective.CODEC);
+    public static final QuestObjectiveType<BreakBlockObjective> BREAK_BLOCK =
+            register(new ResourceLocation(McaQuests.MOD_ID, "break_block"), BreakBlockObjective.CODEC);
+    public static final QuestObjectiveType<VisitBiomeObjective> VISIT_BIOME =
+            register(new ResourceLocation(McaQuests.MOD_ID, "visit_biome"), VisitBiomeObjective.CODEC);
+    public static final QuestObjectiveType<VisitDimensionObjective> VISIT_DIMENSION =
+            register(new ResourceLocation(McaQuests.MOD_ID, "visit_dimension"), VisitDimensionObjective.CODEC);
 
     /** Maps a type id to/from its registry entry, failing parsing on an unknown id. */
     public static final Codec<QuestObjectiveType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(

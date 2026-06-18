@@ -18,6 +18,11 @@
   "mcaquests.reward.xp": "%s XP",
 
   "mcaquests.objective.item_delivery": "Deliver %s× %s",
+  "mcaquests.objective.obtain_item": "Obtain %s× %s",
+  "mcaquests.objective.kill_entity": "Defeat %s× %s",
+  "mcaquests.objective.break_block": "Break %s× %s",
+  "mcaquests.objective.visit_biome": "Explore %s",
+  "mcaquests.objective.visit_dimension": "Travel to %s",
 
   "mcaquests.quest.farmer_wheat_request.title": "A Farmer's Shortage",
   "mcaquests.quest.farmer_wheat_request.offer": "The fields have been kind, but I am short on wheat for the next batch of bread. Could you bring me 24 wheat?",
@@ -25,5 +30,21 @@
   "mcaquests.quest.farmer_wheat_request.decline": "Another time, then.",
   "mcaquests.quest.farmer_wheat_request.in_progress": "Still looking for that wheat?",
   "mcaquests.quest.farmer_wheat_request.ready": "That wheat will help more than you know. Shall we settle up?",
-  "mcaquests.quest.farmer_wheat_request.complete": "You kept your word. I will remember that."
+  "mcaquests.quest.farmer_wheat_request.complete": "You kept your word. I will remember that.",
+
+  "mcaquests.quest.guard_clear_the_night.title": "Clear the Night",
+  "mcaquests.quest.guard_clear_the_night.offer": "The dead have been restless near the walls. Put down five zombies and the village will sleep easier.",
+  "mcaquests.quest.guard_clear_the_night.accept": "Good. Watch your back out there.",
+  "mcaquests.quest.guard_clear_the_night.decline": "Then keep your blade close. They will not wait.",
+  "mcaquests.quest.guard_clear_the_night.in_progress": "How many of them are left standing?",
+  "mcaquests.quest.guard_clear_the_night.ready": "Five down? The watch owes you a debt.",
+  "mcaquests.quest.guard_clear_the_night.complete": "The village is safer for your work tonight.",
+
+  "mcaquests.quest.cartographer_scout_the_land.title": "Scout the Land",
+  "mcaquests.quest.cartographer_scout_the_land.offer": "My maps grow stale. Travel to a nearby forest and bring back what you see.",
+  "mcaquests.quest.cartographer_scout_the_land.accept": "Wonderful. Mind the treeline and remember the way.",
+  "mcaquests.quest.cartographer_scout_the_land.decline": "Perhaps another expedition, then.",
+  "mcaquests.quest.cartographer_scout_the_land.in_progress": "Have you reached the forest yet?",
+  "mcaquests.quest.cartographer_scout_the_land.ready": "You found it! Tell me everything.",
+  "mcaquests.quest.cartographer_scout_the_land.complete": "These notes will fill in the blank corners of my charts."
 }
