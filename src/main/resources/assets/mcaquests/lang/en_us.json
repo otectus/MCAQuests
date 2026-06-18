@@ -1,0 +1,17 @@
+{
+  "gui.button.mcaquests.quests": "Quests",
+  "mcaquests.screen.quests.title": "Quests",
+  "mcaquests.button.accept": "Accept",
+  "mcaquests.button.decline": "Decline",
+  "mcaquests.button.complete": "Complete",
+  "mcaquests.button.abandon": "Abandon",
+  "mcaquests.button.back": "Back",
+  "mcaquests.status.no_quests": "I do not need anything right now.",
+  "mcaquests.status.in_progress": "Quest in progress",
+  "mcaquests.status.ready": "Ready to complete",
+  "mcaquests.label.profession": "Profession: %s",
+  "mcaquests.label.favor": "Favor: %s",
+  "mcaquests.reward.favor": "+%s favor",
+  "mcaquests.reward.item": "%s x%s",
+  "mcaquests.reward.xp": "%s XP"
+}
