@@ -7,7 +7,7 @@ import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.quest.QuestDefinition;
-import dev.otectus.mcaquests.quest.reward.FavorReward;
+import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -56,7 +56,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
                             recordError(errors, strict, "Duplicate quest id '" + def.id() + "' (from " + fileId + ")");
                             return;
                         }
-                        warnOnFavorRange(def, errors);
+                        warnOnHeartsRange(def);
                         loaded.put(def.id(), def);
                     });
         }
@@ -73,15 +73,15 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         }
     }
 
-    /** Non-fatal: warn when a favor reward exceeds the configured clamp (it will be capped at grant). */
-    private static void warnOnFavorRange(QuestDefinition def, List<String> errors) {
-        int max = McaQuestsConfig.COMMON.maxFavorReward.get();
+    /** Non-fatal: warn when a hearts reward exceeds the configured clamp (it will be capped at grant). */
+    private static void warnOnHeartsRange(QuestDefinition def) {
+        int max = McaQuestsConfig.COMMON.maxHeartsReward.get();
         def.rewards().stream()
-                .filter(r -> r instanceof FavorReward)
-                .map(r -> ((FavorReward) r).amount())
+                .filter(r -> r instanceof HeartsReward)
+                .map(r -> ((HeartsReward) r).amount())
                 .filter(amount -> amount > max)
                 .forEach(amount -> McaQuests.LOGGER.warn(
-                        "[MCA: Quests] Quest '{}' favor reward {} exceeds maxFavorReward {}; it will be clamped.",
+                        "[MCA: Quests] Quest '{}' hearts reward {} exceeds maxHeartsReward {}; it will be clamped.",
                         def.id(), amount, max));
     }
 }

@@ -11,7 +11,7 @@ import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AdvancementCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.BiomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
-import dev.otectus.mcaquests.quest.condition.leaf.FavorCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.HeartsCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ItemHeldCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.PlayerLevelCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ProfessionCondition;
@@ -35,7 +35,7 @@ public final class ConditionTypes {
 
     private static final Map<ResourceLocation, QuestConditionType<?>> BY_ID = new LinkedHashMap<>();
 
-    public static final QuestConditionType<FavorCondition> FAVOR = register("favor", FavorCondition.CODEC);
+    public static final QuestConditionType<HeartsCondition> HEARTS = register("hearts", HeartsCondition.CODEC);
     public static final QuestConditionType<ProfessionCondition> PROFESSION = register("profession", ProfessionCondition.CODEC);
     public static final QuestConditionType<BiomeCondition> BIOME = register("biome", BiomeCondition.CODEC);
     public static final QuestConditionType<DimensionCondition> DIMENSION = register("dimension", DimensionCondition.CODEC);

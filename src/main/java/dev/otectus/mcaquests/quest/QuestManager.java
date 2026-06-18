@@ -9,7 +9,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
-import dev.otectus.mcaquests.quest.reward.FavorReward;
+import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.PlayerQuestData;
@@ -102,11 +102,11 @@ public final class QuestManager {
         UUID villagerUuid = villager.getUUID();
         Component name = McaCompat.getVillagerDisplayName(villager);
         String profession = McaCompat.getProfessionId(villager).map(ResourceLocation::toString).orElse("");
-        int favor = McaCompat.getFavor(player, villager);
+        int hearts = McaCompat.getHearts(player, villager);
 
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
         if (dataOpt.isEmpty()) {
-            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, favor, QuestMenuStatus.NO_QUESTS));
+            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
         }
         PlayerQuestData data = dataOpt.get();
@@ -118,14 +118,14 @@ public final class QuestManager {
             Optional<QuestDefinition> defOpt = QuestRegistry.get(active.questId());
             if (defOpt.isEmpty()) {
                 // The definition disappeared on a datapack reload — fail gracefully (spec section 36).
-                send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, favor, QuestMenuStatus.BLOCKED));
+                send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.BLOCKED));
                 return;
             }
             QuestDefinition def = defOpt.get();
             boolean ready = isComplete(player, def, active) && canTurnInAt(active, def, villager);
             QuestMenuStatus status = ready ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
             Component dialogue = def.dialogueOr(ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS, def.title());
-            send(player, QuestMenuDataS2CPacket.quest(villagerUuid, name, profession, favor, status,
+            send(player, QuestMenuDataS2CPacket.quest(villagerUuid, name, profession, hearts, status,
                     def.id(), def.title(), dialogue,
                     objectiveLines(player, def, active), rewardLines(def)));
             return;
@@ -133,18 +133,18 @@ public final class QuestManager {
 
         // 2) Otherwise offer an eligible quest (if any and the player is under the active cap).
         if (data.activeCount() >= McaQuestsConfig.COMMON.maxActiveQuestsPerPlayer.get()) {
-            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, favor, QuestMenuStatus.NO_QUESTS));
+            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
         }
         List<QuestDefinition> eligible = eligibleOffers(player, villager, data);
         if (eligible.isEmpty()) {
-            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, favor, QuestMenuStatus.NO_QUESTS));
+            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
         }
         long worldDay = ((ServerLevel) player.level()).getDayTime() / 24000L;
         QuestDefinition chosen = pickDeterministic(eligible, offerSeed(player, villagerUuid, worldDay));
         Component dialogue = chosen.dialogueOr(QuestDefinition.OFFER, chosen.title());
-        send(player, QuestMenuDataS2CPacket.quest(villagerUuid, name, profession, favor, QuestMenuStatus.OFFER,
+        send(player, QuestMenuDataS2CPacket.quest(villagerUuid, name, profession, hearts, QuestMenuStatus.OFFER,
                 chosen.id(), chosen.title(), dialogue,
                 objectiveLines(player, chosen, null), rewardLines(chosen)));
     }
@@ -208,8 +208,8 @@ public final class QuestManager {
 
     /**
      * Atomic, idempotent completion. Claims the reward slot first (blocks packet-spam dup), consumes
-     * objective items, then grants rewards (favor last), records cooldown/completion, and removes the
-     * quest. {@code grantVillager} receives favor (may be null if the giver is gone).
+     * objective items, then grants rewards (hearts last), records cooldown/completion, and removes the
+     * quest. {@code grantVillager} receives the hearts reward (may be null if the giver is gone).
      */
     private static boolean completeQuest(ServerPlayer player, Entity grantVillager,
                                          QuestDefinition def, ActiveQuest active, PlayerQuestData data) {
@@ -222,12 +222,12 @@ public final class QuestManager {
             def.objectives().get(i).consumeOnTurnIn(player, active.progress(i));
         }
         for (QuestReward reward : def.rewards()) {
-            if (!(reward instanceof FavorReward)) {
+            if (!(reward instanceof HeartsReward)) {
                 reward.grant(player, grantVillager);
             }
         }
         for (QuestReward reward : def.rewards()) {
-            if (reward instanceof FavorReward) {
+            if (reward instanceof HeartsReward) {
                 reward.grant(player, grantVillager);
             }
         }
@@ -330,7 +330,7 @@ public final class QuestManager {
         long now = ((ServerLevel) player.level()).getGameTime();
         ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
         boolean adult = McaCompat.isAdult(villager);
-        int favor = McaCompat.getFavor(player, villager);
+        int hearts = McaCompat.getHearts(player, villager);
         UUID villagerUuid = villager.getUUID();
         ProfessionMatchingMode mode = McaQuestsConfig.COMMON.professionMatchingMode.get();
         return QuestRegistry.all().stream()
@@ -338,7 +338,7 @@ public final class QuestManager {
                 .filter(def -> def.giver().isGeneric()
                         || ProfessionMatcher.matchesAny(def.giver().professions(), profession, mode))
                 .filter(def -> !def.giver().adultOnly() || adult)
-                .filter(def -> def.giver().acceptsFavor(favor))
+                .filter(def -> def.giver().acceptsHearts(hearts))
                 .filter(def -> !data.hasActive(def.id(), villagerUuid))
                 .filter(def -> !data.history().onCooldown(def.id(), villagerUuid, now))
                 .filter(def -> def.repeat().type() != RepeatRule.RepeatType.ONCE

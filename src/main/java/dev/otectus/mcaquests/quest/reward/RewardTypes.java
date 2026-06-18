@@ -19,8 +19,8 @@ public final class RewardTypes {
             register(new ResourceLocation(McaQuests.MOD_ID, "item"), ItemReward.CODEC);
     public static final QuestRewardType<XpReward> XP =
             register(new ResourceLocation(McaQuests.MOD_ID, "xp"), XpReward.CODEC);
-    public static final QuestRewardType<FavorReward> FAVOR =
-            register(new ResourceLocation(McaQuests.MOD_ID, "favor"), FavorReward.CODEC);
+    public static final QuestRewardType<HeartsReward> HEARTS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "hearts"), HeartsReward.CODEC);
     public static final QuestRewardType<XpLevelsReward> XP_LEVELS =
             register(new ResourceLocation(McaQuests.MOD_ID, "xp_levels"), XpLevelsReward.CODEC);
     public static final QuestRewardType<EffectReward> EFFECT =

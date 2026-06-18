@@ -11,7 +11,7 @@
   "giver": {
     "professions": ["minecraft:farmer"],
     "adult_only": true,
-    "min_favor": -100
+    "min_hearts": -100
   },
   "dialogue": {
     "offer": { "translate": "mcaquests.quest.farmer_wheat_request.offer" },
@@ -32,6 +32,6 @@
   "rewards": [
     { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
     { "type": "mcaquests:xp", "amount": 25 },
-    { "type": "mcaquests:favor", "amount": 25 }
+    { "type": "mcaquests:hearts", "amount": 25 }
   ]
 }

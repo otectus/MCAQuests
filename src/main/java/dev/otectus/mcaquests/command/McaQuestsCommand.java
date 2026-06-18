@@ -93,7 +93,7 @@ public final class McaQuestsCommand {
             return 0;
         }
 
-        int favor = McaCompat.getFavor(player, target);
+        int hearts = McaCompat.getHearts(player, target);
         String profession = McaCompat.getProfessionId(target)
                 .map(net.minecraft.resources.ResourceLocation::toString)
                 .orElse("<none>");
@@ -102,7 +102,7 @@ public final class McaQuestsCommand {
                 + "\n  name=" + McaCompat.getVillagerDisplayName(target).getString()
                 + "\n  profession=" + profession
                 + "\n  adult=" + McaCompat.isAdult(target)
-                + "\n  favor(hearts)=" + favor;
+                + "\n  hearts=" + hearts;
         ctx.getSource().sendSuccess(() -> Component.literal(message), false);
         return 1;
     }

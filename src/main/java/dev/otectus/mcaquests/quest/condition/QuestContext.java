@@ -28,8 +28,8 @@ public record QuestContext(ServerPlayer player, Entity villager, PlayerQuestData
         return dayTime() / 24000L;
     }
 
-    public int favor() {
-        return McaCompat.getFavor(player, villager);
+    public int hearts() {
+        return McaCompat.getHearts(player, villager);
     }
 
     public Optional<ResourceLocation> profession() {

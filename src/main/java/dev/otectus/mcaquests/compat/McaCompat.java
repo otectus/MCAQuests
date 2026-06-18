@@ -68,11 +68,11 @@ public final class McaCompat {
     }
 
     /**
-     * Reads the player's current hearts/favor with this villager. Server-authoritative; returns 0
-     * for non-MCA entities. Safe to call on a synced client entity for display, but favor changes
-     * must only happen server-side (see {@link #addFavor}).
+     * Reads the player's current relationship hearts with this villager. Server-authoritative;
+     * returns 0 for non-MCA entities. Safe to call on a synced client entity for display, but hearts
+     * changes must only happen server-side (see {@link #addHearts}).
      */
-    public static int getFavor(ServerPlayer player, Entity villager) {
+    public static int getHearts(ServerPlayer player, Entity villager) {
         if (villager instanceof VillagerEntityMCA mca) {
             Memories memories = mca.getVillagerBrain().getMemoriesForPlayer(player);
             return memories == null ? 0 : memories.getHearts();
@@ -80,16 +80,16 @@ public final class McaCompat {
         return 0;
     }
 
-    /** Adds (or subtracts) hearts/favor. <b>Server side only</b> — call after reward delivery. */
-    public static void addFavor(ServerPlayer player, Entity villager, int amount) {
+    /**
+     * Adds relationship hearts with this villager via MCA's own {@code VillagerBrain.rewardHearts}
+     * (the same path MCA's gifting uses). <b>Server side only</b> — call after reward delivery.
+     */
+    public static void addHearts(ServerPlayer player, Entity villager, int amount) {
         if (amount == 0) {
             return;
         }
         if (villager instanceof VillagerEntityMCA mca) {
-            Memories memories = mca.getVillagerBrain().getMemoriesForPlayer(player);
-            if (memories != null) {
-                memories.modHearts(amount);
-            }
+            mca.getVillagerBrain().rewardHearts(player, amount);
         }
     }
 

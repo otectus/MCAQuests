@@ -39,9 +39,9 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue failQuestIfGiverDies;
         public final ForgeConfigSpec.BooleanValue allowCommandRewards;
         public final ForgeConfigSpec.BooleanValue allowLootTableRewards;
-        public final ForgeConfigSpec.DoubleValue favorRewardMultiplier;
-        public final ForgeConfigSpec.IntValue minFavorReward;
-        public final ForgeConfigSpec.IntValue maxFavorReward;
+        public final ForgeConfigSpec.DoubleValue heartsRewardMultiplier;
+        public final ForgeConfigSpec.IntValue minHeartsReward;
+        public final ForgeConfigSpec.IntValue maxHeartsReward;
         public final ForgeConfigSpec.EnumValue<ProfessionMatchingMode> professionMatchingMode;
         public final ForgeConfigSpec.BooleanValue strictJsonValidation;
         public final ForgeConfigSpec.BooleanValue debugLogging;
@@ -72,9 +72,9 @@ public final class McaQuestsConfig {
             allowCommandRewards = b.comment("Command rewards are disabled by default for safety (spec section 26).")
                     .define("allowCommandRewards", false);
             allowLootTableRewards = b.define("allowLootTableRewards", true);
-            favorRewardMultiplier = b.defineInRange("favorRewardMultiplier", 1.0, 0.0, 100.0);
-            minFavorReward = b.defineInRange("minFavorReward", 0, -1000, 1000);
-            maxFavorReward = b.defineInRange("maxFavorReward", 100, 0, 10000);
+            heartsRewardMultiplier = b.defineInRange("heartsRewardMultiplier", 1.0, 0.0, 100.0);
+            minHeartsReward = b.defineInRange("minHeartsReward", 0, -1000, 1000);
+            maxHeartsReward = b.defineInRange("maxHeartsReward", 100, 0, 10000);
             b.pop();
 
             b.push("matching");

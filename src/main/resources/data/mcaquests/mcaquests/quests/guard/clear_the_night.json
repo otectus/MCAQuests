@@ -30,6 +30,6 @@
   "rewards": [
     { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
     { "type": "mcaquests:xp", "amount": 35 },
-    { "type": "mcaquests:favor", "amount": 35 }
+    { "type": "mcaquests:hearts", "amount": 35 }
   ]
 }

@@ -96,7 +96,7 @@ public class QuestMenuScreen extends Screen {
         graphics.drawCenteredString(this.font,
                 Component.translatable("mcaquests.label.profession", professionLabel), centerX, 28, 0x9A9A9A);
         graphics.drawCenteredString(this.font,
-                Component.translatable("mcaquests.label.favor", data.favor()), centerX, 39, 0x9A9A9A);
+                Component.translatable("mcaquests.label.hearts", data.hearts()), centerX, 39, 0x9A9A9A);
 
         int y = 58;
         if (data.hasQuest()) {

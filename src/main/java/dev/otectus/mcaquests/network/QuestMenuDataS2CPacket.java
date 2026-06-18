@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 public record QuestMenuDataS2CPacket(UUID villagerUuid,
                                      Component villagerName,
                                      String professionId,
-                                     int favor,
+                                     int hearts,
                                      QuestMenuStatus status,
                                      boolean hasQuest,
                                      String questId,
@@ -30,16 +30,16 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
                                      List<Component> objectiveLines,
                                      List<Component> rewardLines) {
 
-    public static QuestMenuDataS2CPacket noQuest(UUID villager, Component name, String profession, int favor,
+    public static QuestMenuDataS2CPacket noQuest(UUID villager, Component name, String profession, int hearts,
                                                  QuestMenuStatus status) {
-        return new QuestMenuDataS2CPacket(villager, name, profession, favor, status,
+        return new QuestMenuDataS2CPacket(villager, name, profession, hearts, status,
                 false, "", Component.empty(), Component.empty(), List.of(), List.of());
     }
 
-    public static QuestMenuDataS2CPacket quest(UUID villager, Component name, String profession, int favor,
+    public static QuestMenuDataS2CPacket quest(UUID villager, Component name, String profession, int hearts,
                                                QuestMenuStatus status, ResourceLocation questId, Component title,
                                                Component dialogue, List<Component> objectives, List<Component> rewards) {
-        return new QuestMenuDataS2CPacket(villager, name, profession, favor, status,
+        return new QuestMenuDataS2CPacket(villager, name, profession, hearts, status,
                 true, questId.toString(), title, dialogue, objectives, rewards);
     }
 
@@ -47,7 +47,7 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
         buf.writeUUID(msg.villagerUuid);
         buf.writeComponent(msg.villagerName);
         buf.writeUtf(msg.professionId);
-        buf.writeVarInt(msg.favor);
+        buf.writeVarInt(msg.hearts);
         buf.writeEnum(msg.status);
         buf.writeBoolean(msg.hasQuest);
         buf.writeUtf(msg.questId);
@@ -61,7 +61,7 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
         UUID villager = buf.readUUID();
         Component name = buf.readComponent();
         String profession = buf.readUtf();
-        int favor = buf.readVarInt();
+        int hearts = buf.readVarInt();
         QuestMenuStatus status = buf.readEnum(QuestMenuStatus.class);
         boolean hasQuest = buf.readBoolean();
         String questId = buf.readUtf();
@@ -69,7 +69,7 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
         Component dialogue = buf.readComponent();
         List<Component> objectives = buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent);
         List<Component> rewards = buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent);
-        return new QuestMenuDataS2CPacket(villager, name, profession, favor, status,
+        return new QuestMenuDataS2CPacket(villager, name, profession, hearts, status,
                 hasQuest, questId, title, dialogue, objectives, rewards);
     }
 

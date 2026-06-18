@@ -15,12 +15,12 @@ public interface QuestReward {
 
     QuestRewardType<?> type();
 
-    /** One-line summary for the quest card, e.g. "3x Emerald" or "+25 favor". */
+    /** One-line summary for the quest card, e.g. "3x Emerald" or "+25 hearts". */
     Component describe();
 
     /**
      * Deliver the reward. {@code villager} is the quest giver (may be null if it has gone missing);
-     * favor rewards require it.
+     * hearts rewards require it.
      */
     void grant(ServerPlayer player, @Nullable Entity villager);
 }

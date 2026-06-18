@@ -43,12 +43,12 @@ class QuestLogicTest {
     }
 
     @Test
-    void giverFavorBounds() {
+    void giverHeartsBounds() {
         GiverSpec spec = new GiverSpec(List.of(), true, 50, 200);
-        assertFalse(spec.acceptsFavor(49));
-        assertTrue(spec.acceptsFavor(50));
-        assertTrue(spec.acceptsFavor(200));
-        assertFalse(spec.acceptsFavor(201));
+        assertFalse(spec.acceptsHearts(49));
+        assertTrue(spec.acceptsHearts(50));
+        assertTrue(spec.acceptsHearts(200));
+        assertFalse(spec.acceptsHearts(201));
     }
 
     @Test
