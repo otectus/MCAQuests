@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:armorer_coal_for_winter",
+  "weight": 14,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:armorer"], "adult_only": true },
+  "title": { "text": "Coal for Winter" },
+  "dialogue": {
+    "offer": { "text": "Cold months mean a hungry forge. Lay in 24 coal and I'll keep every hearth in the village lit." },
+    "accept": { "text": "Good. A warm village is a living village." },
+    "decline": { "text": "We'll shiver through it, then." },
+    "in_progress": { "text": "How's the coal stockpile?" },
+    "ready": { "text": "Two dozen lumps — that'll see us to spring." },
+    "complete": { "text": "You've kept the cold from a lot of doors today." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:coal", "count": 24 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ]
+}

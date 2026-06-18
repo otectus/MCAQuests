@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:armorer_forge_ahead",
+  "weight": 10,
+  "category": "crafting",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:armorer"], "adult_only": true },
+  "title": { "text": "Forge Ahead" },
+  "dialogue": {
+    "offer": { "text": "The militia needs shields and my hands are full. Craft 2 of them and I'll pay for the labour." },
+    "accept": { "text": "Plank and iron — you know the pattern. Good." },
+    "decline": { "text": "The recruits will have to duck, then." },
+    "in_progress": { "text": "Got those shields hammered out?" },
+    "ready": { "text": "Two sturdy shields. The watch will stand a little safer." },
+    "complete": { "text": "Fine craftsmanship. There's a place for you at this anvil." }
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "item": "minecraft:shield", "count": 2 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 25 },
+    { "type": "mcaquests:hearts", "amount": 25 }
+  ]
+}

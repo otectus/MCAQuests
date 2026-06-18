@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:weaponsmith_creeper_cull",
+  "weight": 10,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:weaponsmith"], "adult_only": true },
+  "title": { "text": "Creeper Cull" },
+  "dialogue": {
+    "offer": { "text": "Creepers keep blowing craters in my walls. Cull 3 of the hissing things and bring me peace and quiet." },
+    "accept": { "text": "Strike fast and step back — you know how they end conversations." },
+    "decline": { "text": "Boom. That'll be the wall again. Sure you won't help?" },
+    "in_progress": { "text": "How many creepers left out there?" },
+    "ready": { "text": "Three fewer walking bombs. My masonry thanks you." },
+    "complete": { "text": "Quiet at last. Take this — you've earned every bit." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:creeper", "count": 3 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 28 },
+    { "type": "mcaquests:hearts", "amount": 30 }
+  ]
+}

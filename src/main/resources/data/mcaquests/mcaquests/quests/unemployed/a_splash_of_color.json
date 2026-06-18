@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_a_splash_of_color",
+  "weight": 12,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:none"], "adult_only": true },
+  "title": { "text": "A Splash of Color" },
+  "dialogue": {
+    "offer": { "text": "My windowsill is so drab. Could you pick me 8 wildflowers? Any colors will do." },
+    "accept": { "text": "Oh, how lovely of you! The meadows are full this time of year." },
+    "decline": { "text": "Ah well. Grey days suit me, I suppose." },
+    "in_progress": { "text": "Found any pretty flowers?" },
+    "ready": { "text": "Eight blooms! My window will be the cheeriest on the lane." },
+    "complete": { "text": "You've brightened more than the sill, friend." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "tag": "minecraft:small_flowers", "count": 8 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 12 },
+    { "type": "mcaquests:hearts", "amount": 14 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cartographer_edge_of_the_world",
+  "weight": 6,
+  "category": "exploration",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
+  "giver": { "professions": ["minecraft:cartographer"], "adult_only": true, "min_hearts": 20 },
+  "title": { "text": "Edge of the World" },
+  "dialogue": {
+    "offer": { "text": "Every map I draw ends at the same void. Reach the End itself and tell me what lies past the edge." },
+    "accept": { "text": "No cartographer has charted it and returned. Be the first." },
+    "decline": { "text": "The blank space at the world's rim will have to wait." },
+    "in_progress": { "text": "Have you found the way to the End?" },
+    "ready": { "text": "You stood at the edge of everything! Quickly — before you forget the shape of it." },
+    "complete": { "text": "This map will bear your name at its farthest corner. Legendary." }
+  },
+  "objectives": [
+    { "type": "mcaquests:visit_dimension", "dimension": "minecraft:the_end" }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 8 },
+    { "type": "mcaquests:xp", "amount": 50 },
+    { "type": "mcaquests:hearts", "amount": 45 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_take_the_census",
+  "weight": 12,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:librarian"], "adult_only": true },
+  "title": { "text": "Take the Census" },
+  "dialogue": {
+    "offer": { "text": "My records are out of date. Go and speak with 3 of our farmers and note who's still working the fields." },
+    "accept": { "text": "Accuracy above all. Knock politely." },
+    "decline": { "text": "The ledger will gather dust a while longer." },
+    "in_progress": { "text": "How many farmers have you counted?" },
+    "ready": { "text": "Three accounted for — the census is whole again. Splendid." },
+    "complete": { "text": "Tidy work. The archive thanks you, as do I." }
+  },
+  "objectives": [
+    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:farmer", "count": 3 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

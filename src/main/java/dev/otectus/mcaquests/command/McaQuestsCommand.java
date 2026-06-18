@@ -15,7 +15,11 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLPaths;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 
@@ -45,6 +49,9 @@ public final class McaQuestsCommand {
                 .then(Commands.literal("reload")
                         .requires(src -> src.hasPermission(3))
                         .executes(McaQuestsCommand::reloadQuests))
+                .then(Commands.literal("export-schema")
+                        .requires(src -> src.hasPermission(3))
+                        .executes(McaQuestsCommand::exportSchema))
                 .then(Commands.literal("debug")
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.literal("villager")
@@ -84,6 +91,62 @@ public final class McaQuestsCommand {
                                 + QuestRegistry.lastErrors().size() + " error(s)."), true), server);
         return 1;
     }
+
+    private static int exportSchema(CommandContext<CommandSourceStack> ctx) {
+        Path dir = FMLPaths.CONFIGDIR.get().resolve(McaQuests.MOD_ID);
+        Path file = dir.resolve("example_quest.json");
+        try {
+            Files.createDirectories(dir);
+            Files.writeString(file, EXAMPLE_QUEST);
+        } catch (IOException e) {
+            ctx.getSource().sendFailure(Component.literal("Failed to write example quest: " + e.getMessage()));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "Wrote an annotated example quest to " + file + " (see DATAPACK.md for the full field reference)."), false);
+        return 1;
+    }
+
+    /** A representative, valid quest covering the common fields — emitted by {@code /mcaquests export-schema}. */
+    private static final String EXAMPLE_QUEST = """
+            {
+              "format_version": 1,
+              "id": "mcaquests:example_quest",
+              "enabled": true,
+              "weight": 10,
+              "category": "delivery",
+              "title": { "text": "An Example Quest" },
+              "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+              "giver": {
+                "professions": ["minecraft:farmer", "minecraft:fisherman"],
+                "adult_only": true,
+                "min_hearts": 0
+              },
+              "dialogue": {
+                "offer": { "text": "Could you bring me 10 wheat?" },
+                "accept": { "text": "Thank you kindly!" },
+                "decline": { "text": "Maybe another time." },
+                "in_progress": { "text": "Any luck with that wheat?" },
+                "ready": { "text": "You have it all? Wonderful!" },
+                "complete": { "text": "Bless you, friend." }
+              },
+              "objectives": [
+                { "type": "mcaquests:item_delivery", "item": "minecraft:wheat", "count": 10, "consume": true }
+              ],
+              "rewards": [
+                { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+                { "type": "mcaquests:xp", "amount": 20 },
+                { "type": "mcaquests:hearts", "amount": 20 }
+              ],
+              "turn_in": { "mode": "original_giver" },
+              "conditions": {
+                "all_of": [
+                  { "type": "mcaquests:time", "period": "DAY" },
+                  { "type": "mcaquests:hearts", "min": 0 }
+                ]
+              }
+            }
+            """;
 
     private static int debugVillager(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();

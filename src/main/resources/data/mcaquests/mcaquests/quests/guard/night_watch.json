@@ -1,0 +1,26 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_night_watch",
+  "weight": 12,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Night Watch" },
+  "dialogue": {
+    "offer": { "text": "The dead walk thick tonight. Stand the watch with me — put down 4 zombies before dawn." },
+    "accept": { "text": "Keep your back to the wall and your blade up." },
+    "decline": { "text": "Then bar your door and let the watch handle it." },
+    "in_progress": { "text": "How many have you dropped tonight?" },
+    "ready": { "text": "Four down before sunrise. The village slept safe and never knew." },
+    "complete": { "text": "You'd make a fine soldier of the watch. Well held." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 4 }
+  ],
+  "conditions": { "type": "mcaquests:time", "period": "NIGHT" },
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 28 },
+    { "type": "mcaquests:hearts", "amount": 30 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mason_lay_the_path",
+  "weight": 12,
+  "category": "building",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:mason"], "adult_only": true },
+  "title": { "text": "Lay the Path" },
+  "dialogue": {
+    "offer": { "text": "The market road is all mud. Lay 32 stone bricks and folk can keep their boots clean." },
+    "accept": { "text": "Straight and level, mind you. A crooked path shames us all." },
+    "decline": { "text": "Mud it stays, then." },
+    "in_progress": { "text": "How far has the path come?" },
+    "ready": { "text": "Thirty-two bricks down — a fine, firm road." },
+    "complete": { "text": "The whole village walks easier for your work." }
+  },
+  "objectives": [
+    { "type": "mcaquests:place_block", "block": "minecraft:stone_bricks", "count": 32 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

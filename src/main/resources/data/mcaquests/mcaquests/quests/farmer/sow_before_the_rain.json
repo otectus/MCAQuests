@@ -1,0 +1,26 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_sow_before_the_rain",
+  "weight": 10,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
+  "title": { "text": "Sow Before the Rain" },
+  "dialogue": {
+    "offer": { "text": "Rain's the best time to plant! Quick, gather me 16 seeds while the soil's soft." },
+    "accept": { "text": "Hurry now — a good shower won't wait for slow hands." },
+    "decline": { "text": "The rain will pass and the chance with it." },
+    "in_progress": { "text": "Got those seeds while it's still wet?" },
+    "ready": { "text": "Sixteen seeds, ready for the drills. The fields will thank you." },
+    "complete": { "text": "Planted in the rain, harvested in the sun. That's farming." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:wheat_seeds", "count": 16 }
+  ],
+  "conditions": { "type": "mcaquests:weather", "weather": "RAIN" },
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 14 },
+    { "type": "mcaquests:hearts", "amount": 15 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_brave_the_nether",
+  "weight": 8,
+  "category": "exploration",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": { "professions": ["minecraft:cleric"], "adult_only": true, "min_hearts": 10 },
+  "title": { "text": "Brave the Nether" },
+  "dialogue": {
+    "offer": { "text": "My faith says there is fire beneath the world. Step through a portal and bear witness for me." },
+    "accept": { "text": "Go with courage. Return with truth." },
+    "decline": { "text": "Perhaps the abyss is best left unseen." },
+    "in_progress": { "text": "Have you crossed into the fire yet?" },
+    "ready": { "text": "You have walked among the flames and lived. Tell me everything." },
+    "complete": { "text": "Your courage humbles me. The temple is in your debt." }
+  },
+  "objectives": [
+    { "type": "mcaquests:visit_dimension", "dimension": "minecraft:the_nether" }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 40 },
+    { "type": "mcaquests:hearts", "amount": 40 }
+  ]
+}

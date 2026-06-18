@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:toolsmith_a_proper_kit",
+  "weight": 10,
+  "category": "crafting",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": { "professions": ["minecraft:toolsmith"], "adult_only": true },
+  "title": { "text": "A Proper Kit" },
+  "dialogue": {
+    "offer": { "text": "A young miner's heading out green. Craft an iron pickaxe so he doesn't dig with his fingers." },
+    "accept": { "text": "Good iron, good haft. He'll thank you for it." },
+    "decline": { "text": "He'll learn the hard way, then." },
+    "in_progress": { "text": "Is that pickaxe forged yet?" },
+    "ready": { "text": "A proper pickaxe! He'll mine for years with this." },
+    "complete": { "text": "You've set a lad on a good path today." }
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "item": "minecraft:iron_pickaxe", "count": 1 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ]
+}

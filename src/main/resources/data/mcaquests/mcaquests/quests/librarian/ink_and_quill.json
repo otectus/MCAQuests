@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_ink_and_quill",
+  "weight": 12,
+  "category": "gathering",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:librarian"], "adult_only": true },
+  "title": { "text": "Ink and Quill" },
+  "dialogue": {
+    "offer": { "text": "My inkwell has run dry mid-sentence. Bring me 4 ink sacs from the squid in the bay?" },
+    "accept": { "text": "Mind the deep water. Knowledge isn't worth drowning for." },
+    "decline": { "text": "The page stays blank a while longer." },
+    "in_progress": { "text": "Any luck finding ink?" },
+    "ready": { "text": "Four sacs of good dark ink — the chronicle resumes!" },
+    "complete": { "text": "You've quite literally written yourself into our history." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:ink_sac", "count": 4 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}
