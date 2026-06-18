@@ -14,8 +14,11 @@ import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -108,10 +111,10 @@ public final class QuestManager {
         }
         PlayerQuestData data = dataOpt.get();
 
-        // 1) An active quest with this villager takes priority (in-progress or ready to turn in).
-        List<ActiveQuest> activeHere = data.byVillager(villagerUuid);
-        if (!activeHere.isEmpty()) {
-            ActiveQuest active = activeHere.get(0);
+        // 1) Active quests relevant here: given by this villager, or turn-in-able here per their mode.
+        List<ActiveQuest> relevant = relevantActiveQuests(player, villager, data);
+        if (!relevant.isEmpty()) {
+            ActiveQuest active = relevant.get(0);
             Optional<QuestDefinition> defOpt = QuestRegistry.get(active.questId());
             if (defOpt.isEmpty()) {
                 // The definition disappeared on a datapack reload — fail gracefully (spec section 36).
@@ -119,7 +122,7 @@ public final class QuestManager {
                 return;
             }
             QuestDefinition def = defOpt.get();
-            boolean ready = isComplete(player, def, active);
+            boolean ready = isComplete(player, def, active) && canTurnInAt(active, def, villager);
             QuestMenuStatus status = ready ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
             Component dialogue = def.dialogueOr(ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS, def.title());
             send(player, QuestMenuDataS2CPacket.quest(villagerUuid, name, profession, favor, status,
@@ -184,39 +187,56 @@ public final class QuestManager {
         }
         PlayerQuestData data = dataOpt.get();
         QuestDefinition def = defOpt.get();
-        Optional<ActiveQuest> activeOpt = data.find(questId, villager.getUUID());
-        if (activeOpt.isEmpty()) {
-            return false;
-        }
-        ActiveQuest active = activeOpt.get();
+        // Find a completable copy of this quest that may be turned in at THIS villager (mode-aware).
+        Optional<ActiveQuest> activeOpt = data.active().stream()
+                .filter(aq -> aq.questId().equals(questId) && !aq.rewardClaimed()
+                        && canTurnInAt(aq, def, villager) && isComplete(player, def, aq))
+                .findFirst();
+        return activeOpt.filter(active -> completeQuest(player, villager, def, active, data)).isPresent();
+    }
 
-        // Idempotency: claim the reward slot first so duplicate/spam packets can't double-grant.
-        if (active.rewardClaimed() || !isComplete(player, def, active)) {
+    /** Auto-completion for {@link TurnInMode#SELF_COMPLETE} quests; called from the progress tick. */
+    public static void selfComplete(ServerPlayer player, ActiveQuest active) {
+        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<QuestDefinition> defOpt = QuestRegistry.get(active.questId());
+        if (dataOpt.isEmpty() || defOpt.isEmpty() || active.rewardClaimed()
+                || !isComplete(player, defOpt.get(), active)) {
+            return;
+        }
+        completeQuest(player, resolveGiver(player, active), defOpt.get(), active, dataOpt.get());
+    }
+
+    /**
+     * Atomic, idempotent completion. Claims the reward slot first (blocks packet-spam dup), consumes
+     * objective items, then grants rewards (favor last), records cooldown/completion, and removes the
+     * quest. {@code grantVillager} receives favor (may be null if the giver is gone).
+     */
+    private static boolean completeQuest(ServerPlayer player, Entity grantVillager,
+                                         QuestDefinition def, ActiveQuest active, PlayerQuestData data) {
+        if (active.rewardClaimed()) {
             return false;
         }
         active.setRewardClaimed(true);
 
-        List<QuestObjective> objectives = def.objectives();
-        for (int i = 0; i < objectives.size(); i++) {
-            objectives.get(i).consumeOnTurnIn(player, active.progress(i));
+        for (int i = 0; i < def.objectives().size(); i++) {
+            def.objectives().get(i).consumeOnTurnIn(player, active.progress(i));
         }
-        // Non-favor rewards first; favor last so it only lands after a successful delivery (spec section 15).
         for (QuestReward reward : def.rewards()) {
             if (!(reward instanceof FavorReward)) {
-                reward.grant(player, villager);
+                reward.grant(player, grantVillager);
             }
         }
         for (QuestReward reward : def.rewards()) {
             if (reward instanceof FavorReward) {
-                reward.grant(player, villager);
+                reward.grant(player, grantVillager);
             }
         }
 
         long now = ((ServerLevel) player.level()).getGameTime();
-        data.history().recordCompletion(questId);
+        data.history().recordCompletion(def.id());
         switch (def.repeat().type()) {
-            case COOLDOWN -> data.history().setCooldownUntil(questId, villager.getUUID(), now + def.cooldownTicks());
-            case ONCE -> data.history().setCooldownUntil(questId, villager.getUUID(), Long.MAX_VALUE);
+            case COOLDOWN -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), now + def.cooldownTicks());
+            case ONCE -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), Long.MAX_VALUE);
             case REPEATABLE -> { /* immediately available again */ }
         }
         data.remove(active);
@@ -235,7 +255,7 @@ public final class QuestManager {
 
     // ---------------------------------------------------------------- helpers
 
-    static boolean isComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+    public static boolean isComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
             if (!objectives.get(i).isSatisfied(player, active.progress(i))) {
@@ -243,6 +263,67 @@ public final class QuestManager {
             }
         }
         return true;
+    }
+
+    /** Whether {@code active} may be turned in at {@code villager}, honouring its turn-in mode (spec section 17). */
+    public static boolean canTurnInAt(ActiveQuest active, QuestDefinition def, Entity villager) {
+        if (!McaCompat.isMcaVillager(villager)) {
+            return false;
+        }
+        boolean isGiver = villager.getUUID().equals(active.villagerUuid());
+        return switch (def.turnIn().mode()) {
+            case ORIGINAL_GIVER -> isGiver
+                    || (McaQuestsConfig.COMMON.allowTurnInToSameProfessionIfOriginalMissing.get()
+                        && sameProfessionAsGiver(active, villager));
+            case ANY_VILLAGER -> true;
+            case SAME_PROFESSION -> isGiver || sameProfessionAsGiver(active, villager);
+            case SPECIFIED_PROFESSION -> ProfessionMatcher.matchesAny(def.turnIn().professions(),
+                    McaCompat.getProfessionId(villager).orElse(null), profMode());
+            case SELF_COMPLETE -> false; // completed automatically, never via the menu
+        };
+    }
+
+    private static boolean sameProfessionAsGiver(ActiveQuest active, Entity villager) {
+        ResourceLocation giverProfession = active.villagerProfession();
+        ResourceLocation actual = McaCompat.getProfessionId(villager).orElse(null);
+        return giverProfession != null && actual != null
+                && ProfessionMatcher.matches(giverProfession, actual, profMode());
+    }
+
+    private static ProfessionMatchingMode profMode() {
+        return McaQuestsConfig.COMMON.professionMatchingMode.get();
+    }
+
+    /** Active quests worth showing at this villager: ones it gave, or ones ready and turn-in-able here. */
+    private static List<ActiveQuest> relevantActiveQuests(ServerPlayer player, Entity villager, PlayerQuestData data) {
+        List<ActiveQuest> relevant = new ArrayList<>();
+        for (ActiveQuest active : data.active()) {
+            QuestDefinition def = QuestRegistry.get(active.questId()).orElse(null);
+            if (def == null) {
+                continue;
+            }
+            boolean isGiver = active.villagerUuid().equals(villager.getUUID());
+            boolean turnInableHere = isComplete(player, def, active) && canTurnInAt(active, def, villager);
+            if (isGiver || turnInableHere) {
+                relevant.add(active);
+            }
+        }
+        // Surface a ready, turn-in-able quest ahead of an in-progress one.
+        relevant.sort(Comparator.comparingInt(active -> {
+            QuestDefinition def = QuestRegistry.get(active.questId()).orElse(null);
+            boolean ready = def != null && isComplete(player, def, active) && canTurnInAt(active, def, villager);
+            return ready ? 0 : 1;
+        }));
+        return relevant;
+    }
+
+    private static Entity resolveGiver(ServerPlayer player, ActiveQuest active) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return null;
+        }
+        ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, active.dimension()));
+        return level != null ? level.getEntity(active.villagerUuid()) : null;
     }
 
     static List<QuestDefinition> eligibleOffers(ServerPlayer player, Entity villager, PlayerQuestData data) {

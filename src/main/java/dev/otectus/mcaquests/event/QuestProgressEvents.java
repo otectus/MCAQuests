@@ -1,8 +1,11 @@
 package dev.otectus.mcaquests.event;
 
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
+import dev.otectus.mcaquests.quest.QuestManager;
+import dev.otectus.mcaquests.quest.TurnInMode;
 import dev.otectus.mcaquests.quest.objective.BreakBlockObjective;
 import dev.otectus.mcaquests.quest.objective.CraftItemObjective;
 import dev.otectus.mcaquests.quest.objective.FishItemObjective;
@@ -15,7 +18,9 @@ import dev.otectus.mcaquests.quest.objective.VisitBiomeObjective;
 import dev.otectus.mcaquests.quest.objective.VisitDimensionObjective;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.QuestCapabilities;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -28,7 +33,9 @@ import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 
 /**
@@ -89,6 +96,51 @@ public final class QuestProgressEvents {
                         progress.setCount(1);
                     }
                 });
+        autoCompleteSelfQuests(player);
+    }
+
+    /** Turns in SELF_COMPLETE quests as soon as their objectives are satisfied (spec section 17). */
+    private static void autoCompleteSelfQuests(ServerPlayer player) {
+        QuestCapabilities.get(player).ifPresent(data -> {
+            List<ActiveQuest> ready = new ArrayList<>();
+            for (ActiveQuest active : data.active()) {
+                QuestRegistry.get(active.questId()).ifPresent(def -> {
+                    if (def.turnIn().mode() == TurnInMode.SELF_COMPLETE && !active.rewardClaimed()
+                            && QuestManager.isComplete(player, def, active)) {
+                        ready.add(active);
+                    }
+                });
+            }
+            ready.forEach(active -> QuestManager.selfComplete(player, active));
+        });
+    }
+
+    /** When a quest giver dies, fail its original-giver quests if configured (spec section 17). */
+    @SubscribeEvent
+    public static void onGiverDeath(LivingDeathEvent event) {
+        if (event.getEntity().level().isClientSide()
+                || !McaCompat.isMcaVillager(event.getEntity())
+                || !McaQuestsConfig.COMMON.failQuestIfGiverDies.get()) {
+            return;
+        }
+        MinecraftServer server = event.getEntity().getServer();
+        if (server == null) {
+            return;
+        }
+        UUID giver = event.getEntity().getUUID();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            QuestCapabilities.get(player).ifPresent(data -> {
+                List<ActiveQuest> failed = data.byVillager(giver).stream()
+                        .filter(active -> QuestRegistry.get(active.questId())
+                                .map(def -> def.turnIn().mode() == TurnInMode.ORIGINAL_GIVER)
+                                .orElse(true))
+                        .toList();
+                failed.forEach(data::remove);
+                if (!failed.isEmpty()) {
+                    player.sendSystemMessage(Component.translatable("mcaquests.message.giver_died"));
+                }
+            });
+        }
     }
 
     @SubscribeEvent

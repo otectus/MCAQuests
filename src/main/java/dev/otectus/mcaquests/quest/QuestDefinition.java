@@ -30,7 +30,7 @@ public record QuestDefinition(
         Map<String, QuestText> dialogue,
         List<QuestObjective> objectives,
         List<QuestReward> rewards,
-        TurnInMode turnIn,
+        TurnInSpec turnIn,
         Optional<QuestCondition> conditions) {
 
     /** Dialogue states (spec section 9). */
@@ -43,11 +43,6 @@ public record QuestDefinition(
     public static final String COOLDOWN = "cooldown";
     public static final String LOCKED = "locked";
 
-    // Single-field nested codec for {"turn_in": {"mode": "..."}}; defaults to original_giver.
-    private static final Codec<TurnInMode> TURN_IN_CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            TurnInMode.CODEC.optionalFieldOf("mode", TurnInMode.ORIGINAL_GIVER).forGetter(mode -> mode)
-    ).apply(instance, mode -> mode));
-
     public static final Codec<QuestDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("id").forGetter(QuestDefinition::id),
             Codec.BOOL.optionalFieldOf("enabled", true).forGetter(QuestDefinition::enabled),
@@ -58,7 +53,7 @@ public record QuestDefinition(
             Codec.unboundedMap(Codec.STRING, QuestText.CODEC).fieldOf("dialogue").forGetter(QuestDefinition::dialogue),
             ObjectiveTypes.CODEC.listOf().fieldOf("objectives").forGetter(QuestDefinition::objectives),
             RewardTypes.CODEC.listOf().fieldOf("rewards").forGetter(QuestDefinition::rewards),
-            TURN_IN_CODEC.optionalFieldOf("turn_in", TurnInMode.ORIGINAL_GIVER).forGetter(QuestDefinition::turnIn),
+            TurnInSpec.CODEC.optionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(QuestDefinition::turnIn),
             ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(QuestDefinition::conditions)
     ).apply(instance, QuestDefinition::new));
 
