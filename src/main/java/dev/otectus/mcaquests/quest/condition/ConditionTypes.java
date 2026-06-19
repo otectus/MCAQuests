@@ -15,7 +15,9 @@ import dev.otectus.mcaquests.quest.condition.leaf.HeartsCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ItemHeldCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.PlayerLevelCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ProfessionCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestAbandonedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestFailedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestNotCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.RandomChanceCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TimeCondition;
@@ -47,6 +49,8 @@ public final class ConditionTypes {
     public static final QuestConditionType<RandomChanceCondition> RANDOM_CHANCE = register("random_chance", RandomChanceCondition.CODEC);
     public static final QuestConditionType<QuestCompletedCondition> QUEST_COMPLETED = register("quest_completed", QuestCompletedCondition.CODEC);
     public static final QuestConditionType<QuestNotCompletedCondition> QUEST_NOT_COMPLETED = register("quest_not_completed", QuestNotCompletedCondition.CODEC);
+    public static final QuestConditionType<QuestFailedCondition> QUEST_FAILED = register("quest_failed", QuestFailedCondition.CODEC);
+    public static final QuestConditionType<QuestAbandonedCondition> QUEST_ABANDONED = register("quest_abandoned", QuestAbandonedCondition.CODEC);
 
     public static final Codec<QuestConditionType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

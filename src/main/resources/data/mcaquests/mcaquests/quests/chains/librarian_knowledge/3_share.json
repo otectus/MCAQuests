@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_knowledge_3_share",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:librarian"], "adult_only": true },
+  "title": { "text": "The Chronicle" },
+  "dialogue": {
+    "offer": { "text": "The chronicle is finished, and I want it shared, not shelved. Bring 3 bookshelves and we'll open a reading room for the whole village." },
+    "accept": { "text": "A library the village can call its own — at last!" },
+    "decline": { "text": "Knowledge hoarded is knowledge lost. But as you wish." },
+    "in_progress": { "text": "Are the shelves on their way?" },
+    "ready": { "text": "Three shelves — the reading room is ready to open!" },
+    "complete": { "text": "Generations will read what we made together. Take this, with my deepest thanks — and my friendship." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:bookshelf", "count": 3, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:item", "item": "minecraft:enchanted_book", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 36 },
+    { "type": "mcaquests:hearts", "amount": 36 }
+  ],
+  "chain": {
+    "chain": "mcaquests:librarian_knowledge",
+    "stage": 3,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Chronicle" },
+    "chapter": { "text": "A Reading Room for All" },
+    "prerequisites": ["mcaquests:librarian_knowledge_2_lost_book"]
+  },
+  "conditions": {
+    "type": "mcaquests:hearts",
+    "min": 40
+  }
+}

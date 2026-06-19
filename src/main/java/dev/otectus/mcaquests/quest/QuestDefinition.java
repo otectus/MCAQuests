@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
+import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
@@ -12,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ExtraCodecs;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +35,8 @@ public record QuestDefinition(
         List<QuestObjective> objectives,
         List<QuestReward> rewards,
         TurnInSpec turnIn,
-        Optional<QuestCondition> conditions) {
+        Optional<QuestCondition> conditions,
+        Optional<ChainSpec> chain) {
 
     /** Dialogue states (spec section 9). */
     public static final String OFFER = "offer";
@@ -56,7 +60,8 @@ public record QuestDefinition(
             ObjectiveTypes.CODEC.listOf().fieldOf("objectives").forGetter(QuestDefinition::objectives),
             RewardTypes.CODEC.listOf().fieldOf("rewards").forGetter(QuestDefinition::rewards),
             TurnInSpec.CODEC.optionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(QuestDefinition::turnIn),
-            ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(QuestDefinition::conditions)
+            ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(QuestDefinition::conditions),
+            ChainSpec.CODEC.optionalFieldOf("chain").forGetter(QuestDefinition::chain)
     ).apply(instance, QuestDefinition::new));
 
     /** Translation key for this quest's display title (spec section 32), e.g. {@code mcaquests.quest.<path>.title}. */
@@ -76,5 +81,24 @@ public record QuestDefinition(
 
     public int cooldownTicks() {
         return repeat.cooldownTicks();
+    }
+
+    /**
+     * The condition gate actually used for offer eligibility: the author's {@code conditions} AND a
+     * {@code quest_completed} requirement for each chain {@code prerequisite}. This is the single
+     * desugaring point for prerequisites — they reuse the existing condition system, so offer
+     * filtering needs no chain-specific logic.
+     */
+    public Optional<QuestCondition> effectiveConditions() {
+        List<ResourceLocation> prerequisites = chain.map(ChainSpec::prerequisites).orElse(List.of());
+        if (prerequisites.isEmpty()) {
+            return conditions;
+        }
+        List<QuestCondition> all = new ArrayList<>();
+        conditions.ifPresent(all::add);
+        for (ResourceLocation prerequisite : prerequisites) {
+            all.add(new QuestCompletedCondition(prerequisite));
+        }
+        return Optional.of(new AllOfCondition(all));
     }
 }

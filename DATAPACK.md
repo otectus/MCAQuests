@@ -68,6 +68,7 @@ To **disable the built-in quests** entirely and ship only your own, set `enableD
 | `rewards` | array | **yes** | — | Granted on turn-in. See [Rewards](#rewards). |
 | `turn_in` | object | no | `original_giver` | Where/how to hand in. See [Turn-in](#turn-in). |
 | `conditions` | object | no | none | Extra gate on being offered. See [Conditions](#conditions). |
+| `chain` | object | no | none | Relationship-arc metadata: stage, prerequisites, time limit. See [Quest chains](#quest-chains). |
 
 ### Text values
 
@@ -178,6 +179,8 @@ An extra gate on whether the quest is **offered**. A single condition object, wh
 | `mcaquests:random_chance` | `chance` (0.0–1.0) |
 | `mcaquests:quest_completed` | `quest` (resource location) |
 | `mcaquests:quest_not_completed` | `quest` (resource location) |
+| `mcaquests:quest_failed` | `quest` (resource location) — true once that quest has failed (giver died / timed out) |
+| `mcaquests:quest_abandoned` | `quest` (resource location) — true once the player abandoned that quest |
 
 ### Composites
 
@@ -227,6 +230,56 @@ Composites nest other conditions (any depth):
 
 ---
 
+## Quest chains
+
+The optional `chain` block turns a set of standalone quests into a **relationship arc**: one quest
+unlocks the next, the UI shows "Part 2 of 4", and follow-ups can branch on whether you completed,
+failed, or abandoned an earlier step. Quests with no `chain` block are unaffected.
+
+```json
+"chain": {
+  "chain": "mcaquests:farmer_family",
+  "stage": 2,
+  "stage_total": 4,
+  "relationship_arc": { "text": "The Family Farm" },
+  "chapter": { "text": "Breaking New Ground" },
+  "prerequisites": ["mcaquests:farmer_family_1_wheat"],
+  "unlocks": ["mcaquests:farmer_family_3_apprentice"],
+  "time_limit_ticks": 12000
+}
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `chain` | string | **yes** | Arc id grouping the stages. The villager only ever offers the **furthest unlocked** stage of a chain at once. |
+| `stage` | int (≥1) | `1` | Position in the arc; drives the "Part N" label and offer ordering. Branches may share a stage number. |
+| `stage_total` | int | — | Total stages, for the "Part 2 of 4" label. |
+| `relationship_arc` | text | — | Arc name shown in the menu / quest log. |
+| `chapter` | text | — | This stage's subtitle, shown after the part number. |
+| `prerequisites` | list of quest ids | `[]` | The arc gate: every listed quest must be **completed** before this one is offered. Compiles into `quest_completed` conditions and is merged with any `conditions` block. |
+| `unlocks` | list of quest ids | `[]` | Forward pointers to the quests this one leads to. Used for validation (reachability, cycle detection); the actual gating lives on the downstream quest's `prerequisites`/`conditions`. |
+| `time_limit_ticks` | int | — | If set, the quest **fails** this many ticks after acceptance (the deadline survives logout/restart). A failure is recorded for `quest_failed`. |
+
+### Linear vs. branching
+
+- **Linear** chains use `prerequisites` — "must have completed the previous stage." That's the common case.
+- **Branching** uses the explicit outcome conditions in a `conditions` block. A redemption quest gated on
+  `{ "type": "mcaquests:quest_failed", "quest": "..." }` only appears after the player fails that quest; a
+  "no hard feelings" follow-up can use `mcaquests:quest_abandoned`. To let two branches converge on the same
+  finale, gate the finale with `any_of` over the `quest_completed` of each branch (leave `prerequisites` empty
+  and list it in each branch's `unlocks` so validation still sees it as reachable).
+
+### Validation
+
+`/mcaquests validate` reports chain problems, each naming the quest and field: unknown or disabled
+`prerequisites`/`unlocks` targets, `stage` below 1, circular `unlocks`, and later stages that nothing
+can reach. Fix these and `/mcaquests reload`.
+
+The four built-in arcs under `data/mcaquests/mcaquests/quests/chains/` (farmer, guard, librarian, jobless)
+are complete worked examples — copy one as a starting point.
+
+---
+
 ## Complete example
 
 `/mcaquests export-schema` writes this to `config/mcaquests/example_quest.json`:
@@ -257,7 +310,16 @@ Composites nest other conditions (any depth):
     { "type": "mcaquests:hearts", "amount": 20 }
   ],
   "turn_in": { "mode": "original_giver" },
-  "conditions": { "all_of": [ { "type": "mcaquests:time", "period": "DAY" } ] }
+  "conditions": { "all_of": [ { "type": "mcaquests:time", "period": "DAY" } ] },
+  "chain": {
+    "chain": "mcaquests:example_arc",
+    "stage": 2,
+    "stage_total": 4,
+    "relationship_arc": { "text": "An Example Arc" },
+    "chapter": { "text": "Chapter Two" },
+    "prerequisites": ["mcaquests:example_arc_stage1"],
+    "unlocks": ["mcaquests:example_arc_stage3"]
+  }
 }
 ```
 

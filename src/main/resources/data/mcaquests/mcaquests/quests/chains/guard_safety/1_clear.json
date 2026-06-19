@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_safety_1_clear",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Keeping the Peace" },
+  "dialogue": {
+    "offer": { "text": "The dead crowd our walls each night. Cut down 6 zombies and give the watch a night's rest." },
+    "accept": { "text": "Stay sharp out there. I'll hold the gate." },
+    "decline": { "text": "Then we stand the wall alone, as ever." },
+    "in_progress": { "text": "How many have you put down?" },
+    "ready": { "text": "Six fewer shamblers. The watch thanks you." },
+    "complete": { "text": "You've a steady hand. I could use you again." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 25 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "chain": {
+    "chain": "mcaquests:guard_safety",
+    "stage": 1,
+    "stage_total": 3,
+    "relationship_arc": { "text": "Keeping the Peace" },
+    "chapter": { "text": "Hold the Wall" },
+    "unlocks": ["mcaquests:guard_safety_2_patrol"]
+  }
+}

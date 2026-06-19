@@ -11,7 +11,8 @@ public class QuestFailedEvent extends QuestEvent {
 
     /** Why the quest failed. */
     public enum Reason {
-        GIVER_DIED
+        GIVER_DIED,
+        TIME_LIMIT
     }
 
     private final Reason reason;

@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_knowledge_1_ink",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:librarian"], "adult_only": true },
+  "title": { "text": "The Chronicle" },
+  "dialogue": {
+    "offer": { "text": "I'm beginning a chronicle of this village, but my inkwell is dry. Could you bring me 4 ink sacs to start?" },
+    "accept": { "text": "Splendid. The first page awaits." },
+    "decline": { "text": "The story will keep, I suppose." },
+    "in_progress": { "text": "Any ink for the chronicle yet?" },
+    "ready": { "text": "Fine dark ink — now we may truly begin." },
+    "complete": { "text": "You've a curious mind. Stay a while; there is more to this work." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:ink_sac", "count": 4 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "chain": {
+    "chain": "mcaquests:librarian_knowledge",
+    "stage": 1,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Chronicle" },
+    "chapter": { "text": "A Dry Inkwell" },
+    "unlocks": ["mcaquests:librarian_knowledge_2_lost_book"]
+  }
+}

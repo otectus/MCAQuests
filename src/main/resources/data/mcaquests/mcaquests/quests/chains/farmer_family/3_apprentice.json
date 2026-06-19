@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_family_3_apprentice",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
+  "title": { "text": "The Family Farm" },
+  "dialogue": {
+    "offer": { "text": "My young apprentice works through lunch and forgets to eat. Take them 6 bread before sundown, would you?" },
+    "accept": { "text": "Quick now — a hungry helper makes careless cuts." },
+    "decline": { "text": "I'll holler at them myself, then." },
+    "in_progress": { "text": "Has the apprentice been fed?" },
+    "ready": { "text": "Fed and grinning, I'll wager. Good of you." },
+    "complete": { "text": "They look up to you now, you know. As do I." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 25 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "chain": {
+    "chain": "mcaquests:farmer_family",
+    "stage": 3,
+    "stage_total": 4,
+    "relationship_arc": { "text": "The Family Farm" },
+    "chapter": { "text": "Mind the Apprentice" },
+    "prerequisites": ["mcaquests:farmer_family_2_expand"],
+    "unlocks": ["mcaquests:farmer_family_4_feast"],
+    "time_limit_ticks": 12000
+  }
+}

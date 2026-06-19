@@ -61,6 +61,11 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
                     });
         }
 
+        QuestChainValidator.validate(loaded, errors);
+        if (strict && !errors.isEmpty()) {
+            throw new QuestValidationException(errors.get(errors.size() - 1));
+        }
+
         QuestRegistry.replaceAll(loaded, errors);
         McaQuests.LOGGER.info("Loaded {} MCA quest(s) with {} error(s).", loaded.size(), errors.size());
     }

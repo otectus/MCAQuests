@@ -105,12 +105,45 @@ public final class QuestProgressEvents {
                         progress.setCount(1);
                     }
                 });
+        failExpiredQuests(player);
         autoCompleteSelfQuests(player);
         QuestManager.checkReadyTransitions(player);
         // Refresh the client quest log + HUD (~once per second) for players with active quests.
         QuestCapabilities.get(player).ifPresent(data -> {
             if (!data.active().isEmpty()) {
                 QuestManager.syncLog(player);
+            }
+        });
+    }
+
+    /**
+     * Fails active quests whose {@code chain.time_limit_ticks} has elapsed since acceptance. The deadline
+     * is derived from the persisted {@code startGameTime}, so it survives logout / restart. Records a
+     * FAILED outcome so {@code quest_failed}-gated follow-ups can branch on it.
+     */
+    private static void failExpiredQuests(ServerPlayer player) {
+        QuestCapabilities.get(player).ifPresent(data -> {
+            long now = player.level().getGameTime();
+            List<ActiveQuest> expired = new ArrayList<>();
+            for (ActiveQuest active : data.active()) {
+                QuestRegistry.get(active.questId()).ifPresent(def -> def.chain()
+                        .flatMap(chain -> chain.timeLimitTicks())
+                        .ifPresent(limit -> {
+                            if (now - active.startGameTime() > limit) {
+                                expired.add(active);
+                            }
+                        }));
+            }
+            for (ActiveQuest active : expired) {
+                QuestRegistry.get(active.questId()).ifPresent(def -> {
+                    data.history().recordOutcome(def.id(), dev.otectus.mcaquests.state.QuestHistory.Outcome.FAILED);
+                    MinecraftForge.EVENT_BUS.post(
+                            new QuestFailedEvent(player, null, def, QuestFailedEvent.Reason.TIME_LIMIT));
+                    if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+                        player.sendSystemMessage(Component.translatable("mcaquests.message.quest_failed", def.title()));
+                    }
+                });
+                data.remove(active);
             }
         });
     }
@@ -152,8 +185,11 @@ public final class QuestProgressEvents {
                                 .orElse(true))
                         .toList();
                 for (ActiveQuest active : failed) {
-                    QuestRegistry.get(active.questId()).ifPresent(def -> MinecraftForge.EVENT_BUS.post(
-                            new QuestFailedEvent(player, event.getEntity(), def, QuestFailedEvent.Reason.GIVER_DIED)));
+                    QuestRegistry.get(active.questId()).ifPresent(def -> {
+                        data.history().recordOutcome(def.id(), dev.otectus.mcaquests.state.QuestHistory.Outcome.FAILED);
+                        MinecraftForge.EVENT_BUS.post(
+                                new QuestFailedEvent(player, event.getEntity(), def, QuestFailedEvent.Reason.GIVER_DIED));
+                    });
                 }
                 failed.forEach(data::remove);
                 if (!failed.isEmpty()) {

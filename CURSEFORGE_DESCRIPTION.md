@@ -12,6 +12,7 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 
 - **A Quests button right in the villager menu** — no commands, no clunky extra screens. If you can talk to a villager, you can quest for them.
 - **69 hand-written quests across every profession** — farmers, fishers, shepherds, librarians, clerics, armorers, weaponsmiths, toolsmiths, masons, butchers, fletchers, leatherworkers, cartographers, the town guard, and even **jobless villagers and nitwits** with simple, charming errands.
+- **Relationship quest chains** — quests remember what you've done and grow into ongoing stories. A farmer asks for wheat, then to expand the farm, then to help an apprentice, then invites you to a village feast. Chains even branch on whether you came through or let someone down — and the menu shows "Part 2 of 4" so you always know where the story stands. Four sample arcs are built in.
 - **Real variety** — deliver and gather, craft and fish, hunt monsters, mine and build, and explore distant biomes and dimensions. Some quests only appear at night, or in the rain.
 - **Earn hearts that matter** — rewards feed directly into MCA's relationship system, alongside emeralds, XP, and more.
 - **Track everything** — a toggleable Quest Log, an on-screen tracker you can place in any corner, and a satisfying chime when a quest is ready to hand in.

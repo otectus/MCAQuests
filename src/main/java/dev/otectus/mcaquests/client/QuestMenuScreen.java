@@ -59,6 +59,9 @@ public class QuestMenuScreen extends Screen {
 
     private int cardHeight(QuestCard card) {
         int height = 12; // title
+        if (hasChainLabel(card)) {
+            height += 10; // arc / "Part 2 of 4" line
+        }
         height += dialogueLineCount(card) * 10;
         height += card.objectives().size() * 10;
         height += 12; // joined rewards line
@@ -68,6 +71,10 @@ public class QuestMenuScreen extends Screen {
 
     private int dialogueLineCount(QuestCard card) {
         return this.font.split(card.dialogue(), wrapWidth()).size();
+    }
+
+    private static boolean hasChainLabel(QuestCard card) {
+        return !card.chainLabel().getString().isEmpty();
     }
 
     private void addCardButtons(QuestCard card, int centerX, int buttonY) {
@@ -134,6 +141,10 @@ public class QuestMenuScreen extends Screen {
         int y = top;
         graphics.drawString(this.font, card.title(), left, y, ready ? 0x5CFF5C : 0xFFE08A);
         y += 12;
+        if (hasChainLabel(card)) {
+            graphics.drawString(this.font, card.chainLabel(), left, y, 0x9A9A9A);
+            y += 10;
+        }
         for (FormattedCharSequence line : this.font.split(card.dialogue(), wrapWidth())) {
             graphics.drawString(this.font, line, left, y, 0xCFCFCF);
             y += 10;

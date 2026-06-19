@@ -1,0 +1,34 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:jobless_friendship_2_favor",
+  "weight": 13,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "An Unlikely Friend" },
+  "dialogue": {
+    "offer": { "text": "It's... a strange thing to ask. Someone I loved is buried past the hill. Would you lay 3 poppies there for me? My legs won't carry me that far anymore." },
+    "accept": { "text": "Thank you. Tell them — no, just lay the flowers. They'll know." },
+    "decline": { "text": "Of course. It's too much to ask a near-stranger." },
+    "in_progress": { "text": "Have you been to the hill yet?" },
+    "ready": { "text": "You did it. You actually did it. Bless you." },
+    "complete": { "text": "I haven't trusted anyone with that in years. You're not a stranger anymore." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:poppy", "count": 3, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "chain": {
+    "chain": "mcaquests:jobless_friendship",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": { "text": "An Unlikely Friend" },
+    "chapter": { "text": "A Quiet Favour" },
+    "prerequisites": ["mcaquests:jobless_friendship_1_errand"],
+    "unlocks": ["mcaquests:jobless_friendship_3_friend", "mcaquests:jobless_friendship_2b_understanding"]
+  }
+}

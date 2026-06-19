@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests;
 
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
+import dev.otectus.mcaquests.data.QuestChainValidator;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.GiverSpec;
 import dev.otectus.mcaquests.quest.RepeatRule;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToIntFunction;
@@ -151,6 +153,40 @@ class QuestLogicTest {
         assertFalse(new AnyOfCondition(List.of(f, f)).test(null));
         assertTrue(new NotCondition(f).test(null));
         assertFalse(new NotCondition(t).test(null));
+    }
+
+    @Test
+    void questHistoryOutcomesRoundTrip() {
+        QuestHistory history = new QuestHistory();
+        ResourceLocation quest = new ResourceLocation("mcaquests", "farmer_help_apprentice");
+        history.recordOutcome(quest, QuestHistory.Outcome.FAILED);
+        history.recordOutcome(quest, QuestHistory.Outcome.FAILED);
+        history.recordOutcome(quest, QuestHistory.Outcome.ABANDONED);
+        history.recordOutcome(quest, QuestHistory.Outcome.COMPLETED); // routes to completion count
+
+        QuestHistory restored = new QuestHistory();
+        restored.load(history.save());
+        assertEquals(2, restored.outcomeCount(quest, QuestHistory.Outcome.FAILED), "failures survive save/load");
+        assertEquals(1, restored.outcomeCount(quest, QuestHistory.Outcome.ABANDONED), "abandons survive save/load");
+        assertEquals(1, restored.outcomeCount(quest, QuestHistory.Outcome.COMPLETED), "completion shares the count map");
+    }
+
+    @Test
+    void unlockCycleDetection() {
+        ResourceLocation a = new ResourceLocation("mcaquests", "a");
+        ResourceLocation b = new ResourceLocation("mcaquests", "b");
+        ResourceLocation c = new ResourceLocation("mcaquests", "c");
+
+        // a -> b -> c is a clean linear chain: no cycle.
+        assertTrue(QuestChainValidator.findUnlockCycle(
+                Map.of(a, List.of(b), b, List.of(c), c, List.of())).isEmpty());
+
+        // a -> b -> c -> a closes a loop: a cycle is reported.
+        assertTrue(QuestChainValidator.findUnlockCycle(
+                Map.of(a, List.of(b), b, List.of(c), c, List.of(a))).isPresent());
+
+        // Self-unlock is the smallest cycle.
+        assertTrue(QuestChainValidator.findUnlockCycle(Map.of(a, List.of(a))).isPresent());
     }
 
     /** A leaf condition that ignores context and returns a fixed value (for composite tests). */

@@ -21,6 +21,7 @@ import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestHistory;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -35,7 +36,9 @@ import net.minecraftforge.network.PacketDistributor;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -150,8 +153,17 @@ public final class QuestManager {
             return;
         }
         long worldDay = ((ServerLevel) player.level()).getDayTime() / 24000L;
-        List<QuestDefinition> chosen = WeightedPicker.pickMany(eligible, QuestDefinition::weight,
-                offerSeed(player, villagerUuid, worldDay), McaQuestsConfig.COMMON.offersPerVillager.get());
+        int slots = McaQuestsConfig.COMMON.offersPerVillager.get();
+        long seed = offerSeed(player, villagerUuid, worldDay);
+        // Prioritize relationship-arc continuations (stage > 1): fill slots from those first, then the
+        // rest. Deterministic — same player/villager/day yields the same offers.
+        List<QuestDefinition> continuations = eligible.stream().filter(QuestManager::isChainContinuation).toList();
+        List<QuestDefinition> standalone = eligible.stream().filter(def -> !isChainContinuation(def)).toList();
+        List<QuestDefinition> chosen = new ArrayList<>(
+                WeightedPicker.pickMany(continuations, QuestDefinition::weight, seed, slots));
+        if (chosen.size() < slots) {
+            chosen.addAll(WeightedPicker.pickMany(standalone, QuestDefinition::weight, seed, slots - chosen.size()));
+        }
         List<QuestCard> cards = new ArrayList<>();
         for (QuestDefinition def : chosen) {
             cards.add(buildCard(player, def, null, QuestDefinition.OFFER));
@@ -160,8 +172,17 @@ public final class QuestManager {
     }
 
     private static QuestCard buildCard(ServerPlayer player, QuestDefinition def, ActiveQuest active, String dialogueState) {
-        return new QuestCard(def.id(), def.title(), def.dialogueOr(dialogueState, def.title()),
+        return new QuestCard(def.id(), def.title(), chainLabel(def), def.dialogueOr(dialogueState, def.title()),
                 objectiveLines(player, def, active), rewardLines(def));
+    }
+
+    /** The relationship-arc context line for the UI (arc / "Part 2 of 4" / chapter), or empty for standalone quests. */
+    private static Component chainLabel(QuestDefinition def) {
+        return def.chain().flatMap(ChainSpec::label).orElse(Component.empty());
+    }
+
+    private static boolean isChainContinuation(QuestDefinition def) {
+        return def.chain().map(chain -> chain.stage() > 1).orElse(false);
     }
 
     // ---------------------------------------------------------------- actions
@@ -278,8 +299,10 @@ public final class QuestManager {
             return false;
         }
         dataOpt.get().remove(active.get());
-        QuestRegistry.get(questId).ifPresent(def ->
-                MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def)));
+        QuestRegistry.get(questId).ifPresent(def -> {
+            dataOpt.get().history().recordOutcome(def.id(), QuestHistory.Outcome.ABANDONED);
+            MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
+        });
         return true;
     }
 
@@ -363,7 +386,7 @@ public final class QuestManager {
         int hearts = McaCompat.getHearts(player, villager);
         UUID villagerUuid = villager.getUUID();
         ProfessionMatchingMode mode = McaQuestsConfig.COMMON.professionMatchingMode.get();
-        return QuestRegistry.all().stream()
+        List<QuestDefinition> filtered = QuestRegistry.all().stream()
                 .filter(QuestDefinition::enabled)
                 .filter(def -> def.giver().isGeneric()
                         || ProfessionMatcher.matchesAny(def.giver().professions(), profession, mode))
@@ -373,10 +396,30 @@ public final class QuestManager {
                 .filter(def -> !data.history().onCooldown(def.id(), villagerUuid, now))
                 .filter(def -> def.repeat().type() != RepeatRule.RepeatType.ONCE
                         || data.history().completionCount(def.id()) == 0)
-                .filter(def -> def.conditions()
+                // effectiveConditions() folds chain prerequisites into the condition gate, so a later
+                // stage can never be offered before its prerequisites are completed.
+                .filter(def -> def.effectiveConditions()
                         .map(condition -> condition.test(new QuestContext(player, villager, data, def.id())))
                         .orElse(true))
                 .sorted(Comparator.comparing(def -> def.id().toString()))
+                .toList();
+        return collapseChainsToFurthestStage(filtered);
+    }
+
+    /**
+     * Within each chain, keep only the furthest unlocked stage so a villager never offers an earlier
+     * and a later stage of the same arc at once (e.g. a still-on-cooldown stage 1 alongside stage 2).
+     * Standalone quests and same-stage branches pass through unchanged. Deterministic.
+     */
+    private static List<QuestDefinition> collapseChainsToFurthestStage(List<QuestDefinition> defs) {
+        Map<String, Integer> maxStage = new HashMap<>();
+        for (QuestDefinition def : defs) {
+            def.chain().ifPresent(chain -> maxStage.merge(chain.chain(), chain.stage(), Math::max));
+        }
+        return defs.stream()
+                .filter(def -> def.chain()
+                        .map(chain -> chain.stage() == maxStage.get(chain.chain()))
+                        .orElse(true))
                 .toList();
     }
 
@@ -437,7 +480,7 @@ public final class QuestManager {
             for (ActiveQuest active : data.active()) {
                 QuestRegistry.get(active.questId()).ifPresent(def ->
                         entries.add(new QuestLogEntry(active.questId(), def.title(), active.villagerName(),
-                                objectiveLines(player, def, active), isComplete(player, def, active))));
+                                chainLabel(def), objectiveLines(player, def, active), isComplete(player, def, active))));
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
         });

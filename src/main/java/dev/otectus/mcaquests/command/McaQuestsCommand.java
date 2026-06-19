@@ -144,6 +144,15 @@ public final class McaQuestsCommand {
                   { "type": "mcaquests:time", "period": "DAY" },
                   { "type": "mcaquests:hearts", "min": 0 }
                 ]
+              },
+              "chain": {
+                "chain": "mcaquests:example_arc",
+                "stage": 2,
+                "stage_total": 4,
+                "relationship_arc": { "text": "An Example Arc" },
+                "chapter": { "text": "Chapter Two" },
+                "prerequisites": ["mcaquests:example_arc_stage1"],
+                "unlocks": ["mcaquests:example_arc_stage3"]
               }
             }
             """;

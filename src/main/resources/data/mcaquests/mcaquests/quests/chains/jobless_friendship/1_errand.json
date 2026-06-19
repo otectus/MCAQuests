@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:jobless_friendship_1_errand",
+  "weight": 13,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "An Unlikely Friend" },
+  "dialogue": {
+    "offer": { "text": "Oh — hello! Nobody asks me for much. My knees ache too badly for the orchard, though. Could you fetch me 6 apples?" },
+    "accept": { "text": "Truly? How kind. Sweet ones, if you can." },
+    "decline": { "text": "That's alright. People are busy. I understand." },
+    "in_progress": { "text": "Did you find any apples, friend?" },
+    "ready": { "text": "Six lovely apples! You remembered an old soul." },
+    "complete": { "text": "Sit with me sometime, won't you? It gets quiet out here." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:apple", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 12 },
+    { "type": "mcaquests:hearts", "amount": 16 }
+  ],
+  "chain": {
+    "chain": "mcaquests:jobless_friendship",
+    "stage": 1,
+    "stage_total": 3,
+    "relationship_arc": { "text": "An Unlikely Friend" },
+    "chapter": { "text": "Nobody Asks" },
+    "unlocks": ["mcaquests:jobless_friendship_2_favor"]
+  }
+}

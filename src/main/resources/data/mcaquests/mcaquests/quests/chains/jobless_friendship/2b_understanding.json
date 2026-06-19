@@ -1,0 +1,37 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:jobless_friendship_2b_understanding",
+  "weight": 15,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "An Unlikely Friend" },
+  "dialogue": {
+    "offer": { "text": "You set that favour aside — it's alright, truly. It was a heavy thing to ask. If you'd still like to help, just share a meal with me: 4 sweet berries from the bushes?" },
+    "accept": { "text": "Something small. That's all I ever really wanted." },
+    "decline": { "text": "I understand. I always do." },
+    "in_progress": { "text": "No rush at all, friend. Whenever you can." },
+    "ready": { "text": "Berries! And company. That's plenty for an old heart." },
+    "complete": { "text": "You came back even after setting it down. That means more than the flowers would have." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:sweet_berries", "count": 4 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 14 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "chain": {
+    "chain": "mcaquests:jobless_friendship",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": { "text": "An Unlikely Friend" },
+    "chapter": { "text": "No Hard Feelings" },
+    "unlocks": ["mcaquests:jobless_friendship_3_friend"]
+  },
+  "conditions": {
+    "type": "mcaquests:quest_abandoned",
+    "quest": "mcaquests:jobless_friendship_2_favor"
+  }
+}

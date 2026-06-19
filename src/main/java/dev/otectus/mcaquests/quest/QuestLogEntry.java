@@ -12,12 +12,13 @@ import java.util.List;
  * Built server-side from {@code ActiveQuest} + its definition, including objective progress text.
  */
 public record QuestLogEntry(ResourceLocation questId, Component title, Component giverName,
-                            List<Component> objectives, boolean ready) {
+                            Component chainLabel, List<Component> objectives, boolean ready) {
 
     public static void encode(FriendlyByteBuf buf, QuestLogEntry entry) {
         buf.writeResourceLocation(entry.questId);
         buf.writeComponent(entry.title);
         buf.writeComponent(entry.giverName);
+        buf.writeComponent(entry.chainLabel);
         buf.writeCollection(entry.objectives, FriendlyByteBuf::writeComponent);
         buf.writeBoolean(entry.ready);
     }
@@ -25,6 +26,7 @@ public record QuestLogEntry(ResourceLocation questId, Component title, Component
     public static QuestLogEntry decode(FriendlyByteBuf buf) {
         return new QuestLogEntry(
                 buf.readResourceLocation(),
+                buf.readComponent(),
                 buf.readComponent(),
                 buf.readComponent(),
                 buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),

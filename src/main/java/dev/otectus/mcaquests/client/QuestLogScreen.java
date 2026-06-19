@@ -43,6 +43,10 @@ public class QuestLogScreen extends Screen {
                                 .append(entry.giverName().copy().withStyle(ChatFormatting.GRAY)),
                         left, y, entry.ready() ? 0x5CFF5C : 0xFFE08A);
                 y += 11;
+                if (!entry.chainLabel().getString().isEmpty()) {
+                    graphics.drawString(this.font, entry.chainLabel(), left + 2, y, 0x9A9A9A);
+                    y += 10;
+                }
                 for (Component objective : entry.objectives()) {
                     graphics.drawString(this.font, Component.literal("  - ").append(objective), left, y, 0xBFBFBF);
                     y += 10;

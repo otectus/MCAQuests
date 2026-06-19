@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_family_1_wheat",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
+  "title": { "text": "The Family Farm" },
+  "dialogue": {
+    "offer": { "text": "You have a kind face. My harvest came up short this year — could you spare me 16 wheat to see us through?" },
+    "accept": { "text": "Thank you. A full granary makes for an easy winter." },
+    "decline": { "text": "No matter. The fields will keep." },
+    "in_progress": { "text": "Still gathering that wheat?" },
+    "ready": { "text": "Sixteen golden bundles — wonderful!" },
+    "complete": { "text": "You've a friend in this family now. Come back soon; there's always more to do." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:wheat", "count": 16, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "chain": {
+    "chain": "mcaquests:farmer_family",
+    "stage": 1,
+    "stage_total": 4,
+    "relationship_arc": { "text": "The Family Farm" },
+    "chapter": { "text": "A Lean Harvest" },
+    "unlocks": ["mcaquests:farmer_family_2_expand"]
+  }
+}
