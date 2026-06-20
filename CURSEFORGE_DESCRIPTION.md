@@ -13,6 +13,8 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 - **A Quests button right in the villager menu** — no commands, no clunky extra screens. If you can talk to a villager, you can quest for them.
 - **69 hand-written quests across every profession** — farmers, fishers, shepherds, librarians, clerics, armorers, weaponsmiths, toolsmiths, masons, butchers, fletchers, leatherworkers, cartographers, the town guard, and even **jobless villagers and nitwits** with simple, charming errands.
 - **Relationship quest chains** — quests remember what you've done and grow into ongoing stories. A farmer asks for wheat, then to expand the farm, then to help an apprentice, then invites you to a village feast. Chains even branch on whether you came through or let someone down — and the menu shows "Part 2 of 4" so you always know where the story stands. Four sample arcs are built in.
+- **Village projects you build together** — sometimes a whole town needs a hand. A sponsor villager rallies the village toward a shared, multi-stage goal — repair the well, restock the guardhouse, restore the library, recover after a raid — and **everyone pitches in**. Progress is shared and saved with the world, so on a server your friends' donations, kills, and builds all count toward the same prize. Finish a stage and rewards go out to the people who helped — the top contributor, every participant, or the village itself — along with a lift to your standing in town. Six community projects ship in the box, and pack makers can write their own. *(Great fun on multiplayer; works solo too.)*
+- **Quests that know your villagers** — offers can react to MCA life-sim state: a spouse asks for a small favor, your child begs for cookies, a sick villager needs a golden apple, the town guard calls for a patrol, a grieving parent pleads for help finding a missing child. All optional and datapack-driven, with six sample quests built in.
 - **Real variety** — deliver and gather, craft and fish, hunt monsters, mine and build, and explore distant biomes and dimensions. Some quests only appear at night, or in the rain.
 - **Earn hearts that matter** — rewards feed directly into MCA's relationship system, alongside emeralds, XP, and more.
 - **Track everything** — a toggleable Quest Log, an on-screen tracker you can place in any corner, and a satisfying chime when a quest is ready to hand in.
@@ -28,6 +30,7 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 ## 🛠️ For pack makers
 
 - Add your own quests via datapack: `data/<namespace>/mcaquests/quests/**.json`. Run `/mcaquests export-schema` for a ready-to-edit example.
+- Author shared **village projects** the same way, from `data/<namespace>/mcaquests/projects/**.json` — pick a scope, lay out the phases, and reward your contributors.
 - Full schema reference and config docs are on the [GitHub repository](https://github.com/otectus/MCAQuests).
 - A Java API + Forge events let other mods register custom objective/reward/condition types and react to quest progress.
 

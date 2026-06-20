@@ -2,6 +2,7 @@ package dev.otectus.mcaquests;
 
 import com.mojang.logging.LogUtils;
 import dev.otectus.mcaquests.network.QuestNetwork;
+import dev.otectus.mcaquests.project.objective.ProjectObjectiveTypes;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
 import dev.otectus.mcaquests.quest.reward.RewardTypes;
@@ -44,6 +45,7 @@ public final class McaQuests {
         ObjectiveTypes.bootstrap();
         RewardTypes.bootstrap();
         ConditionTypes.bootstrap();
+        ProjectObjectiveTypes.bootstrap();
         event.enqueueWork(QuestNetwork::register);
     }
 }

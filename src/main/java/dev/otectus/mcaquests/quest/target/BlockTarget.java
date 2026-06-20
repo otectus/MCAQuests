@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.target;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -27,6 +28,6 @@ public record BlockTarget(Optional<Block> block, Optional<TagKey<Block>> tag) {
         if (block.isPresent()) {
             return block.get().getName();
         }
-        return tag.map(t -> (Component) Component.literal("#" + t.location())).orElse(Component.literal("?"));
+        return tag.map(t -> DisplayNames.tagName(t.location())).orElse(Component.literal("?"));
     }
 }

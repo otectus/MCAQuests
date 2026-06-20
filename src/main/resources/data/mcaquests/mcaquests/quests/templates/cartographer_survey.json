@@ -1,0 +1,34 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_cartographer_survey",
+  "weight": 12,
+  "category": "exploration",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:cartographer"], "adult_only": true },
+  "turn_in": { "mode": "self_complete" },
+  "title": { "text": "Survey: {place_name}" },
+  "dialogue": {
+    "offer": { "text": "My maps have a blank corner where the {place_name} should be. Travel there and bring back what you see?" },
+    "accept": { "text": "Mark the landmarks well. A map is only as honest as its surveyor." },
+    "decline": { "text": "The blank stays blank, then. Another day, perhaps." },
+    "in_progress": { "text": "Still bound for the {place_name}? The ink is waiting." },
+    "ready": { "text": "You've stood in the {place_name} — I can see it in your boots. The map is richer for it." },
+    "complete": { "text": "Splendid surveying. The guild will want a copy." }
+  },
+  "template": {
+    "variables": {
+      "place": {
+        "kind": "biome",
+        "ids": ["minecraft:desert", "minecraft:savanna", "minecraft:jungle", "minecraft:taiga", "minecraft:badlands", "minecraft:snowy_plains"]
+      }
+    },
+    "objectives": [
+      { "type": "mcaquests:visit_biome", "biome": "{place}" }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+      { "type": "mcaquests:xp", "amount": 20 },
+      { "type": "mcaquests:hearts", "amount": 12 }
+    ]
+  }
+}

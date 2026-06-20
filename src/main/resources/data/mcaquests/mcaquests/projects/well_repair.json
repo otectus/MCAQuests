@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:well_repair",
+  "scope": { "scope": "village", "fallback_radius": 64 },
+  "sponsor": { "professions": ["minecraft:mason"], "on_death": "transfer" },
+  "title": { "translate": "mcaquests.project.well_repair.title" },
+  "category": "infrastructure",
+  "reputation": { "on_project_complete": 10 },
+  "phases": [
+    {
+      "key": "gather_stone",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.well_repair.gather_stone.offer" },
+        "in_progress": { "translate": "mcaquests.project.well_repair.gather_stone.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:stone", "count": 64 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:bucket", "count": 2 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 30 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "rebuild",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.well_repair.rebuild.offer" },
+        "in_progress": { "translate": "mcaquests.project.well_repair.rebuild.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_place_block", "block": "minecraft:stone_bricks", "count": 8 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 10 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 }, "target": "top_contributor" },
+        { "reward": { "type": "mcaquests:village_reputation", "amount": 5 }, "target": "sponsor_village" }
+      ]
+    }
+  ]
+}

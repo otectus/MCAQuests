@@ -1,6 +1,9 @@
 package dev.otectus.mcaquests.state;
 
+import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
+import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
+import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -26,12 +29,21 @@ public final class ActiveQuest {
     private final ResourceLocation dimension;
     private final long startGameTime;
     private final List<ObjectiveProgress> progress;
+    /** Frozen template values for a quest accepted from a template (spec: chosen values must not reroll). */
+    @Nullable
+    private final ResolvedTemplate template;
     private boolean rewardClaimed;
     private boolean readyNotified;
 
+    /** Lazily-built concretized definition + text resolver, derived from {@link #template}; not persisted. */
+    @Nullable
+    private transient QuestDefinition resolvedCache;
+    @Nullable
+    private transient PlaceholderResolver resolverCache;
+
     public ActiveQuest(ResourceLocation questId, UUID villagerUuid, Component villagerName,
                        @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
-                       long startGameTime, List<ObjectiveProgress> progress) {
+                       long startGameTime, List<ObjectiveProgress> progress, @Nullable ResolvedTemplate template) {
         this.questId = questId;
         this.villagerUuid = villagerUuid;
         this.villagerName = villagerName;
@@ -39,17 +51,50 @@ public final class ActiveQuest {
         this.dimension = dimension;
         this.startGameTime = startGameTime;
         this.progress = progress;
+        this.template = template;
     }
 
     /** Fresh acceptance with empty progress for each objective. */
     public static ActiveQuest create(ResourceLocation questId, UUID villagerUuid, Component villagerName,
                                      @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
-                                     long startGameTime, int objectiveCount) {
+                                     long startGameTime, int objectiveCount, @Nullable ResolvedTemplate template) {
         List<ObjectiveProgress> progress = new ArrayList<>();
         for (int i = 0; i < objectiveCount; i++) {
             progress.add(new ObjectiveProgress());
         }
-        return new ActiveQuest(questId, villagerUuid, villagerName, villagerProfession, dimension, startGameTime, progress);
+        return new ActiveQuest(questId, villagerUuid, villagerName, villagerProfession, dimension,
+                startGameTime, progress, template);
+    }
+
+    /**
+     * The definition to use for this active quest: the concretized template (objectives/rewards filled
+     * from the frozen {@link #template} values) when this came from a template, otherwise {@code base}
+     * unchanged. Cached so the per-second progress tick does not re-parse JSON. Falls back to
+     * {@code base} if the stored values can no longer be substituted (e.g. a datapack changed).
+     */
+    public QuestDefinition resolve(QuestDefinition base) {
+        if (template == null || base.template().isEmpty()) {
+            return base;
+        }
+        if (resolvedCache == null) {
+            resolvedCache = base.template()
+                    .flatMap(spec -> spec.toConcrete(template))
+                    .map(base::withConcrete)
+                    .orElse(base);
+        }
+        return resolvedCache;
+    }
+
+    /** The placeholder resolver for dialogue/title, or {@code null} for a non-template quest. */
+    @Nullable
+    public PlaceholderResolver textResolver() {
+        if (template == null) {
+            return null;
+        }
+        if (resolverCache == null) {
+            resolverCache = new PlaceholderResolver(template);
+        }
+        return resolverCache;
     }
 
     public ResourceLocation questId() {
@@ -115,6 +160,9 @@ public final class ActiveQuest {
             list.add(p.save());
         }
         tag.put("progress", list);
+        if (template != null) {
+            tag.put("template", template.save());
+        }
         return tag;
     }
 
@@ -127,6 +175,8 @@ public final class ActiveQuest {
         for (int i = 0; i < list.size(); i++) {
             progress.add(ObjectiveProgress.load(list.getCompound(i)));
         }
+        ResolvedTemplate template = tag.contains("template")
+                ? ResolvedTemplate.load(tag.getCompound("template")) : null;
         ActiveQuest quest = new ActiveQuest(
                 new ResourceLocation(tag.getString("quest")),
                 tag.getUUID("villager"),
@@ -134,7 +184,8 @@ public final class ActiveQuest {
                 profession,
                 new ResourceLocation(tag.getString("dimension")),
                 tag.getLong("start"),
-                progress);
+                progress,
+                template);
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");
         return quest;

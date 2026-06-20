@@ -12,7 +12,12 @@ public class QuestFailedEvent extends QuestEvent {
     /** Why the quest failed. */
     public enum Reason {
         GIVER_DIED,
-        TIME_LIMIT
+        /** A relative {@code failure.deadline_ticks} budget elapsed. */
+        TIME_LIMIT,
+        /** A {@code failure.deadline_time} time-of-day window passed before turn-in. */
+        TIME_WINDOW,
+        /** A {@code failure.require_weather} weather condition stopped holding. */
+        WEATHER
     }
 
     private final Reason reason;

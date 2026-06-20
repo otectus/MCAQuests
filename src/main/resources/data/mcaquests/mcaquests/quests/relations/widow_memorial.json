@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_widow_memorial",
+  "weight": 16,
+  "category": "social",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "In Loving Memory" },
+  "dialogue": {
+    "offer": { "text": "My spouse is gone, and the grave looks so bare. Would you gather three poppies, so I might lay them to rest properly?" },
+    "accept": { "text": "Thank you. They always loved the red ones." },
+    "decline": { "text": "I understand. Grief is a heavy thing to share." },
+    "in_progress": { "text": "Have you found the poppies? Three is all I ask." },
+    "ready": { "text": "Three poppies. They would have smiled to see them." },
+    "complete": { "text": "The grave looks loved now. Thank you — truly." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:poppy", "count": 3, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:hearts", "amount": 30 }
+  ],
+  "conditions": { "type": "mcaquests:related_villager_status", "relation": "spouse", "status": "dead" }
+}

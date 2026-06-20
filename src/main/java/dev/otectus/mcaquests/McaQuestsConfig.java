@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests;
 
+import dev.otectus.mcaquests.project.SponsorDeathBehavior;
 import net.minecraftforge.common.ForgeConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -47,6 +48,17 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue questChatMessages;
         public final ForgeConfigSpec.BooleanValue strictJsonValidation;
         public final ForgeConfigSpec.BooleanValue debugLogging;
+
+        // Village projects (spec 0.4.0).
+        public final ForgeConfigSpec.BooleanValue enableVillageProjects;
+        public final ForgeConfigSpec.IntValue defaultScopeFallbackRadius;
+        public final ForgeConfigSpec.EnumValue<SponsorDeathBehavior> defaultSponsorDeathBehavior;
+        public final ForgeConfigSpec.BooleanValue oneSponsorPerProjectPerDay;
+        public final ForgeConfigSpec.IntValue projectOffersPerVillager;
+        public final ForgeConfigSpec.IntValue projectContributeMinIntervalTicks;
+        public final ForgeConfigSpec.IntValue defaultPerPlayerContributionCap;
+        public final ForgeConfigSpec.BooleanValue allowProjectCommandRewards;
+        public final ForgeConfigSpec.IntValue maxConcurrentProjectsPerScope;
 
         Common(ForgeConfigSpec.Builder b) {
             b.push("quests");
@@ -98,6 +110,33 @@ public final class McaQuestsConfig {
                     .define("strictJsonValidation", false);
             debugLogging = b.define("debugLogging", false);
             b.pop();
+
+            b.push("projects");
+            enableVillageProjects = b.comment("Master switch for the shared village-projects system (0.4.0).")
+                    .define("enableVillageProjects", true);
+            defaultScopeFallbackRadius = b.comment(
+                    "Block radius used to find/anchor a village when MCA village data is unavailable,",
+                    "and the radius around a project anchor counted for in-village contributions.")
+                    .defineInRange("defaultScopeFallbackRadius", 64, 8, 512);
+            defaultSponsorDeathBehavior = b.comment(
+                    "What happens to a project when its last sponsor dies, if the project does not specify:",
+                    "FAIL, PAUSE, TRANSFER, or TURN_IN_TO_VILLAGE.")
+                    .defineEnum("defaultSponsorDeathBehavior", SponsorDeathBehavior.PAUSE);
+            oneSponsorPerProjectPerDay = b.comment(
+                    "If true, only one deterministically-chosen villager per village surfaces a given",
+                    "project each day, so the same project does not flood every eligible villager.")
+                    .define("oneSponsorPerProjectPerDay", true);
+            projectOffersPerVillager = b.comment("How many community projects a villager presents at once.")
+                    .defineInRange("projectOffersPerVillager", 1, 0, 5);
+            projectContributeMinIntervalTicks = b.comment("Minimum ticks between accepted contributions from one player (anti-spam).")
+                    .defineInRange("projectContributeMinIntervalTicks", 5, 0, 200);
+            defaultPerPlayerContributionCap = b.comment("Default per-player cap on a single project objective (0 = unlimited).")
+                    .defineInRange("defaultPerPlayerContributionCap", 0, 0, Integer.MAX_VALUE);
+            allowProjectCommandRewards = b.comment("Allow command rewards inside project phases (off by default for safety).")
+                    .define("allowProjectCommandRewards", false);
+            maxConcurrentProjectsPerScope = b.comment("Cap on simultaneously-active project instances sharing one scope identity.")
+                    .defineInRange("maxConcurrentProjectsPerScope", 8, 1, 100);
+            b.pop();
         }
     }
 
@@ -107,9 +146,12 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue showQuestTrackerHud;
         public final ForgeConfigSpec.BooleanValue playQuestSounds;
         public final ForgeConfigSpec.IntValue questTrackerMaxEntries;
+        public final ForgeConfigSpec.BooleanValue questTrackerBackground;
         public final ForgeConfigSpec.EnumValue<HudAnchor> questTrackerAnchor;
         public final ForgeConfigSpec.IntValue questTrackerX;
         public final ForgeConfigSpec.IntValue questTrackerY;
+        public final ForgeConfigSpec.BooleanValue showProjectTrackerHud;
+        public final ForgeConfigSpec.IntValue projectTrackerMaxEntries;
 
         Client(ForgeConfigSpec.Builder b) {
             b.push("client");
@@ -118,13 +160,20 @@ public final class McaQuestsConfig {
             showQuestToasts = b.define("showQuestToasts", true);
             showQuestTrackerHud = b.define("showQuestTrackerHud", true);
             playQuestSounds = b.define("playQuestSounds", true);
-            questTrackerMaxEntries = b.defineInRange("questTrackerMaxEntries", 3, 1, 10);
+            questTrackerMaxEntries = b.comment("How many quests the tracker HUD shows at once.")
+                    .defineInRange("questTrackerMaxEntries", 5, 1, 15);
+            questTrackerBackground = b.comment("Draw a translucent background behind the quest tracker HUD.")
+                    .define("questTrackerBackground", true);
             questTrackerAnchor = b.comment("Screen corner the quest tracker HUD anchors to: TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT.")
                     .defineEnum("questTrackerAnchor", HudAnchor.TOP_LEFT);
             questTrackerX = b.comment("Quest tracker horizontal offset in pixels from its anchored corner.")
                     .defineInRange("questTrackerX", 4, 0, 10000);
             questTrackerY = b.comment("Quest tracker vertical offset in pixels from its anchored corner.")
                     .defineInRange("questTrackerY", 4, 0, 10000);
+            showProjectTrackerHud = b.comment("Show participating community projects in the HUD tracker.")
+                    .define("showProjectTrackerHud", true);
+            projectTrackerMaxEntries = b.comment("How many community projects the tracker HUD shows at once.")
+                    .defineInRange("projectTrackerMaxEntries", 3, 1, 10);
             b.pop();
         }
     }

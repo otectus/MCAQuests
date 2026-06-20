@@ -52,6 +52,12 @@ public class QuestMenuScreen extends Screen {
             addCardButtons(card, centerX, y + height - 22);
             y += height + 4;
         }
+        if (ClientProjectData.hasMenuFor(data.villagerUuid())) {
+            addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.project.view"),
+                            b -> QuestClientHandlers.openProjectMenu(data.villagerUuid()))
+                    .bounds(centerX - 75, this.height - 50, 150, 20)
+                    .build());
+        }
         addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose())
                 .bounds(centerX - 50, this.height - 26, 100, 20)
                 .build());

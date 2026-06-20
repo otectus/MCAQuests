@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_librarian_knowledge",
+  "weight": 12,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:librarian"], "adult_only": true },
+  "title": { "text": "For the Archives: {supply_name}" },
+  "dialogue": {
+    "offer": { "text": "The archive runs short of {supply_name}. Bring me {count} and I'll see the records kept." },
+    "accept": { "text": "Wonderful. Knowledge survives only as long as its keepers are stocked." },
+    "decline": { "text": "A pity. The unwritten page forgets so quickly." },
+    "in_progress": { "text": "Have you found {count} {supply_name} for the archive?" },
+    "ready": { "text": "{count} {supply_name} — the shelves will breathe again. Thank you." },
+    "complete": { "text": "A scholar's gratitude is a lasting thing. This is yours." }
+  },
+  "template": {
+    "variables": {
+      "supply": { "kind": "item", "ids": ["minecraft:book", "minecraft:paper", "minecraft:writable_book"] },
+      "count": { "kind": "int", "min": 3, "max": 8 }
+    },
+    "objectives": [
+      { "type": "mcaquests:item_delivery", "item": "{supply}", "count": "{count}", "consume": true }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+      { "type": "mcaquests:xp", "amount": 18 },
+      { "type": "mcaquests:hearts", "amount": 10 }
+    ]
+  }
+}

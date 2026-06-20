@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.target;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -33,8 +34,8 @@ public record BiomeTarget(Optional<ResourceLocation> biome, Optional<TagKey<Biom
 
     public Component describe() {
         if (biome.isPresent()) {
-            return Component.literal(biome.get().toString());
+            return DisplayNames.name(biome.get());
         }
-        return tag.map(t -> (Component) Component.literal("#" + t.location())).orElse(Component.literal("?"));
+        return tag.map(t -> DisplayNames.tagName(t.location())).orElse(Component.literal("?"));
     }
 }

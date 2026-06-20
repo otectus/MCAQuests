@@ -8,6 +8,8 @@ import java.util.List;
 public final class ClientQuestData {
 
     private static volatile List<QuestLogEntry> active = List.of();
+    /** Transient HUD toggle driven by the keybind; the config's showQuestTrackerHud stays the master switch. */
+    private static volatile boolean hudVisible = true;
 
     private ClientQuestData() {
     }
@@ -18,5 +20,13 @@ public final class ClientQuestData {
 
     public static List<QuestLogEntry> active() {
         return active;
+    }
+
+    public static boolean isHudVisible() {
+        return hudVisible;
+    }
+
+    public static void toggleHud() {
+        hudVisible = !hudVisible;
     }
 }

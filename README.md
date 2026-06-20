@@ -17,9 +17,11 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 - 📜 **69 built-in quests** spanning **every villager profession** — farmer, fisherman, shepherd, librarian, cleric, armorer, weaponsmith, toolsmith, mason, butcher, fletcher, leatherworker, cartographer — plus **jobless/nitwit** villagers and MCA's **guard** (with bonus content for archers, adventurers, and mercenaries).
 - 🎭 **Multi-offer conversation UI** — villagers present several quests at once, each with flavor dialogue, objectives, and a reward summary; Accept / Decline / Complete / Abandon inline.
 - 🔗 **Relationship quest chains** — link quests into multi-stage arcs that remember what you did: a farmer asks for wheat, then to expand the farm, then to help an apprentice, then invites you to a feast. Chains branch on whether you completed, failed, or abandoned earlier steps, and the UI shows the arc name and "Part 2 of 4". All datapack-driven — no code required (4 sample arcs included).
+- 🏘️ **Village projects** — shared, multi-stage **community goals** that the whole server works on together. A sponsor villager rallies the town — repair the well, restock the guardhouse, restore the library — and **any player can contribute**: progress is shared and lives in the world save, so donations, kills, and builds all bank into one common pool. Pick a **scope** (player, villager, family, profession, or village), and phases hand out **shared rewards** (to contributors, the top contributor, everyone who helped, or the village) plus mod-side village reputation. Fully datapack-driven and backward compatible; 6 example projects included.
 - 🎯 **10 objective types** — deliver items, gather, craft, fish, kill mobs, break/place blocks, visit biomes or dimensions, and talk to professions.
 - 🎁 **7 reward types** — items, XP, XP levels, status effects, loot tables, commands (off by default), and **MCA hearts**.
-- 🔒 **14 condition types** + `all_of` / `any_of` / `not` composites — gate offers by hearts, profession, biome, dimension, time, weather, held item, advancement, level, random chance, and quest history (completed / not-completed / failed / abandoned).
+- 🔒 **25 condition types** + `all_of` / `any_of` / `not` composites — gate offers by hearts, profession, biome, dimension, time, weather, held item, advancement, level, random chance, and quest history (completed / not-completed / failed / abandoned).
+- 💞 **MCA-aware conditions** — gate quests on the villager's life-sim state: whether they're your **spouse** or **family**, their **relationship status**, **age**, **personality**, **mood**, **village/home**, **health**, or **infection**, and even whether a **relative is missing or has died**. All optional, datapack-driven, and fail-safe; 6 sample quests included (spouse errand, child's request, sick-villager remedy, guard patrol, missing-child search, memorial).
 - 🧭 **Quest tracking** — a keybind-toggled **Quest Log**, a fully repositionable **HUD tracker** that names the giver, and a **toast + sound** when a quest is ready to turn in.
 - 🛡️ **Server-authoritative & exploit-resistant** — all selection, validation, and reward granting happen on the server; turn-in is atomic and idempotent, so packet-spam can't duplicate rewards.
 - 🧩 **Extensible** — a public Java API lets add-ons register their own objective/reward/condition types, and five Forge events (`QuestAccepted/Ready/Completed/Abandoned/Failed`) let other mods react.
@@ -57,6 +59,8 @@ See **[CONFIG.md](CONFIG.md)** for every option and its default.
 ## Add your own quests
 
 Quests load from any datapack at `data/<namespace>/mcaquests/quests/**.json`. Run `/mcaquests export-schema` in-game for a working example, and see **[DATAPACK.md](DATAPACK.md)** for the full field reference and a step-by-step datapack walkthrough. Useful commands: `/mcaquests list`, `/mcaquests validate`, `/mcaquests reload`.
+
+Shared **village projects** load alongside them from `data/<namespace>/mcaquests/projects/**.json` — see the [Village projects](DATAPACK.md#village-projects) section of DATAPACK.md and the `/mcaquests project list|info|validate` commands.
 
 ## Building from source
 

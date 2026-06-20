@@ -12,7 +12,8 @@
     "decline": { "text": "I'll holler at them myself, then." },
     "in_progress": { "text": "Has the apprentice been fed?" },
     "ready": { "text": "Fed and grinning, I'll wager. Good of you." },
-    "complete": { "text": "They look up to you now, you know. As do I." }
+    "complete": { "text": "They look up to you now, you know. As do I." },
+    "failed": { "text": "Sundown came and went, and the poor thing went hungry. Come round again tomorrow and we'll try once more." }
   },
   "objectives": [
     { "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 6, "consume": true }
@@ -29,7 +30,10 @@
     "relationship_arc": { "text": "The Family Farm" },
     "chapter": { "text": "Mind the Apprentice" },
     "prerequisites": ["mcaquests:farmer_family_2_expand"],
-    "unlocks": ["mcaquests:farmer_family_4_feast"],
-    "time_limit_ticks": 12000
+    "unlocks": ["mcaquests:farmer_family_4_feast"]
+  },
+  "failure": {
+    "deadline_ticks": 12000,
+    "retry_after": 24000
   }
 }

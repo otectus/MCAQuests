@@ -1,0 +1,32 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_dawn_defense",
+  "weight": 10,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Hold Till Dawn" },
+  "dialogue": {
+    "offer": { "text": "The horde won't last past sunrise, but it'll thin us before then. Put down 6 zombies before first light and we'll all see the morning." },
+    "accept": { "text": "Then go — every one you drop is a wall we don't have to mend." },
+    "decline": { "text": "Suit yourself. I'll mind the gate alone, then." },
+    "in_progress": { "text": "Dawn's coming. How many have you felled?" },
+    "ready": { "text": "Six down and the sky's greying. We held." },
+    "complete": { "text": "Sunrise, and the village still standing. That's your doing, soldier." },
+    "failed": { "text": "The sun's up and the work's half done. They slipped past us in the dark — and folk noticed who wasn't there." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 6 }
+  ],
+  "conditions": { "type": "mcaquests:time", "period": "NIGHT" },
+  "failure": {
+    "deadline_time": 23000,
+    "failure_hearts": -5,
+    "retry_after": 24000
+  },
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 32 },
+    { "type": "mcaquests:hearts", "amount": 34 }
+  ]
+}

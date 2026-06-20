@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.client.KeyMapping;
+import org.lwjgl.glfw.GLFW;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
@@ -17,12 +18,17 @@ public final class QuestClientSetup {
     public static final KeyMapping OPEN_LOG = new KeyMapping(
             "key.mcaquests.quest_log", InputConstants.UNKNOWN.getValue(), "key.categories.mcaquests");
 
+    /** Shows/hides the quest tracker HUD; defaults to J and is rebindable in Controls. */
+    public static final KeyMapping TOGGLE_HUD = new KeyMapping(
+            "key.mcaquests.toggle_hud", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, "key.categories.mcaquests");
+
     private QuestClientSetup() {
     }
 
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(OPEN_LOG);
+        event.register(TOGGLE_HUD);
     }
 
     @SubscribeEvent

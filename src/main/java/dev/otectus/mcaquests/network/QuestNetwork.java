@@ -11,7 +11,9 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    private static final String PROTOCOL_VERSION = "1";
+    // Bumped to 2 for v0.4.0 — adds the community-project menu/log/contribute packets. The channel
+    // handshake requires matching client+server (save data is unaffected).
+    private static final String PROTOCOL_VERSION = "2";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -39,5 +41,15 @@ public final class QuestNetwork {
                 QuestLogSyncS2CPacket::encode, QuestLogSyncS2CPacket::decode, QuestLogSyncS2CPacket::handle);
         CHANNEL.registerMessage(nextId++, QuestReadyToastS2CPacket.class,
                 QuestReadyToastS2CPacket::encode, QuestReadyToastS2CPacket::decode, QuestReadyToastS2CPacket::handle);
+
+        // v0.4.0 — community projects.
+        CHANNEL.registerMessage(nextId++, ProjectContributeC2SPacket.class,
+                ProjectContributeC2SPacket::encode, ProjectContributeC2SPacket::decode, ProjectContributeC2SPacket::handle);
+        CHANNEL.registerMessage(nextId++, ProjectMenuDataS2CPacket.class,
+                ProjectMenuDataS2CPacket::encode, ProjectMenuDataS2CPacket::decode, ProjectMenuDataS2CPacket::handle);
+        CHANNEL.registerMessage(nextId++, ProjectLogSyncS2CPacket.class,
+                ProjectLogSyncS2CPacket::encode, ProjectLogSyncS2CPacket::decode, ProjectLogSyncS2CPacket::handle);
+        CHANNEL.registerMessage(nextId++, ProjectPhaseToastS2CPacket.class,
+                ProjectPhaseToastS2CPacket::encode, ProjectPhaseToastS2CPacket::decode, ProjectPhaseToastS2CPacket::handle);
     }
 }

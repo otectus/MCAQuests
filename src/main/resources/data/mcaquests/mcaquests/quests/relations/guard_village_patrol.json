@@ -1,0 +1,26 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_guard_village_patrol",
+  "weight": 12,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Keep the Streets Safe" },
+  "dialogue": {
+    "offer": { "text": "This is my village to protect, and the monsters grow bold. Help me thin them out — five of the undead should send a message." },
+    "accept": { "text": "Good. Watch the alleys and the dark corners." },
+    "decline": { "text": "Then stay indoors after dark." },
+    "in_progress": { "text": "How goes the cull? Five of them, remember." },
+    "ready": { "text": "Five down. The streets are quieter already." },
+    "complete": { "text": "The village owes you a debt. I'll not forget it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 5 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 25 }
+  ],
+  "conditions": { "type": "mcaquests:village_member", "value": true }
+}

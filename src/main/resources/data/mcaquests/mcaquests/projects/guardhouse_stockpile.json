@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guardhouse_stockpile",
+  "scope": "village",
+  "sponsor": { "professions": ["mca:guard"], "on_death": "transfer" },
+  "title": { "translate": "mcaquests.project.guardhouse_stockpile.title" },
+  "category": "defense",
+  "reputation": { "on_phase_complete": 2, "on_project_complete": 8 },
+  "phases": [
+    {
+      "key": "arm_the_watch",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.guardhouse_stockpile.arm_the_watch.offer" },
+        "in_progress": { "translate": "mcaquests.project.guardhouse_stockpile.arm_the_watch.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:iron_ingot", "count": 32 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:arrow", "count": 64 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "fortify",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.guardhouse_stockpile.fortify.offer" },
+        "in_progress": { "translate": "mcaquests.project.guardhouse_stockpile.fortify.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:cobblestone", "count": 128 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 12 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 }, "target": "top_contributor" },
+        { "reward": { "type": "mcaquests:village_reputation", "amount": 5 }, "target": "sponsor_village" }
+      ]
+    }
+  ]
+}

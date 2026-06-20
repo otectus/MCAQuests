@@ -25,5 +25,8 @@ public final class QuestClientInput {
                 minecraft.setScreen(new QuestLogScreen());
             }
         }
+        while (QuestClientSetup.TOGGLE_HUD.consumeClick()) {
+            ClientQuestData.toggleHud();
+        }
     }
 }

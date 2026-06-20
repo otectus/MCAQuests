@@ -20,6 +20,11 @@ bin/
 
 # Build/run logs
 *.log
+*.log.gz
+logs/
 
 # Bootstrap scratch (Forge MDK download used only to seed the Gradle wrapper)
 .bootstrap/
+
+# Session summaries (local notes, not part of the published mod)
+docs/summaries/

@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_urgent_medicine_recovery",
+  "weight": 20,
+  "category": "social",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:cleric"], "adult_only": true },
+  "title": { "text": "Making Amends" },
+  "dialogue": {
+    "offer": { "text": "The child clings on, weak but breathing. There's still hope — gather 6 sweet berries and a honey bottle for a tonic, and we may pull them back yet. Take whatever time you need; just don't fail them twice." },
+    "accept": { "text": "Thank you. Bring what you can; I'll keep watch over them." },
+    "decline": { "text": "I understand. The guilt is a heavy thing to carry." },
+    "in_progress": { "text": "How goes the gathering? The tonic can wait a little longer." },
+    "ready": { "text": "Everything I need — let me prepare it at once." },
+    "complete": { "text": "The colour's back in their cheeks. You set right what went wrong, and that takes more strength than never falling at all." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:sweet_berries", "count": 6, "consume": true },
+    { "type": "mcaquests:item_delivery", "item": "minecraft:honey_bottle", "count": 1, "consume": true }
+  ],
+  "conditions": { "type": "mcaquests:quest_failed", "quest": "mcaquests:cleric_urgent_medicine" },
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 28 },
+    { "type": "mcaquests:hearts", "amount": 40 }
+  ]
+}

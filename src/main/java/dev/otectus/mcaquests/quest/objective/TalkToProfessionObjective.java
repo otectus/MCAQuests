@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,7 +29,7 @@ public record TalkToProfessionObjective(ResourceLocation profession, int count) 
     @Override
     public Component describe() {
         return Component.translatable("mcaquests.objective.talk_to_profession", count,
-                Component.literal(profession.toString()));
+                DisplayNames.name(profession));
     }
 
     @Override

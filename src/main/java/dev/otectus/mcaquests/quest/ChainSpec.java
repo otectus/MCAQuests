@@ -13,8 +13,9 @@ import java.util.Optional;
 /**
  * Optional relationship-chain metadata on a {@link QuestDefinition}. A quest with no {@code chain}
  * block behaves exactly as before; this only adds arc grouping (for UI + offer ordering), linear
- * prerequisites (sugar that compiles into {@code quest_completed} conditions), forward {@code unlocks}
- * pointers (validation + offer priority), and an optional per-quest time limit.
+ * prerequisites (sugar that compiles into {@code quest_completed} conditions), and forward
+ * {@code unlocks} pointers (validation + offer priority). Time limits and other failure states live
+ * in the separate {@code failure} block ({@link FailureSpec}).
  *
  * <p>Prerequisites cover the common linear case ("must have completed A"). Branching on outcomes
  * (completed vs failed vs abandoned) is expressed with the explicit {@code quest_failed} /
@@ -26,8 +27,7 @@ public record ChainSpec(String chain,
                         Optional<QuestText> chapter,
                         Optional<QuestText> relationshipArc,
                         List<ResourceLocation> prerequisites,
-                        List<ResourceLocation> unlocks,
-                        Optional<Integer> timeLimitTicks) {
+                        List<ResourceLocation> unlocks) {
 
     public static final Codec<ChainSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("chain").forGetter(ChainSpec::chain),
@@ -36,8 +36,7 @@ public record ChainSpec(String chain,
             QuestText.CODEC.optionalFieldOf("chapter").forGetter(ChainSpec::chapter),
             QuestText.CODEC.optionalFieldOf("relationship_arc").forGetter(ChainSpec::relationshipArc),
             ResourceLocation.CODEC.listOf().optionalFieldOf("prerequisites", List.of()).forGetter(ChainSpec::prerequisites),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("unlocks", List.of()).forGetter(ChainSpec::unlocks),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("time_limit_ticks").forGetter(ChainSpec::timeLimitTicks)
+            ResourceLocation.CODEC.listOf().optionalFieldOf("unlocks", List.of()).forGetter(ChainSpec::unlocks)
     ).apply(instance, ChainSpec::new));
 
     /**

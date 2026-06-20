@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,7 +21,7 @@ public record VisitDimensionObjective(ResourceLocation dimension) implements Que
 
     @Override
     public Component describe() {
-        return Component.translatable("mcaquests.objective.visit_dimension", Component.literal(dimension.toString()));
+        return Component.translatable("mcaquests.objective.visit_dimension", DisplayNames.name(dimension));
     }
 
     @Override

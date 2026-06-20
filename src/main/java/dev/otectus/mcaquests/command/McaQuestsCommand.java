@@ -6,9 +6,15 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
+import dev.otectus.mcaquests.project.ProjectManager;
+import dev.otectus.mcaquests.project.data.ProjectRegistry;
+import dev.otectus.mcaquests.project.state.ProjectState;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
@@ -55,7 +61,107 @@ public final class McaQuestsCommand {
                 .then(Commands.literal("debug")
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.literal("villager")
-                                .executes(McaQuestsCommand::debugVillager))));
+                                .executes(McaQuestsCommand::debugVillager)))
+                .then(Commands.literal("project")
+                        .then(Commands.literal("list")
+                                .requires(src -> src.hasPermission(2))
+                                .executes(McaQuestsCommand::projectList))
+                        .then(Commands.literal("info")
+                                .requires(src -> src.hasPermission(2))
+                                .then(Commands.argument("id", ResourceLocationArgument.id())
+                                        .executes(McaQuestsCommand::projectInfo)))
+                        .then(Commands.literal("validate")
+                                .requires(src -> src.hasPermission(3))
+                                .executes(McaQuestsCommand::projectValidate))
+                        .then(Commands.literal("reset")
+                                .requires(src -> src.hasPermission(3))
+                                .then(Commands.argument("id", ResourceLocationArgument.id())
+                                        .executes(McaQuestsCommand::projectReset)))
+                        .then(Commands.literal("advance")
+                                .requires(src -> src.hasPermission(3))
+                                .then(Commands.argument("id", ResourceLocationArgument.id())
+                                        .executes(McaQuestsCommand::projectAdvance)))
+                        .then(Commands.literal("debug")
+                                .requires(src -> src.hasPermission(2))
+                                .then(Commands.argument("id", ResourceLocationArgument.id())
+                                        .executes(McaQuestsCommand::projectDebug)))));
+    }
+
+    private static int projectList(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        List<ProjectState> instances = ProjectManager.activeInstances(server);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                ProjectRegistry.size() + " project definition(s) loaded; " + instances.size() + " active instance(s):"), false);
+        for (ProjectState state : instances) {
+            ctx.getSource().sendSuccess(() -> Component.literal(" - " + state.projectId()
+                    + " [" + state.scope().lower() + "] key=" + state.identity()
+                    + " phase " + (state.currentPhase() + 1) + " (" + state.status().lower() + ")"), false);
+        }
+        return instances.size();
+    }
+
+    private static int projectInfo(CommandContext<CommandSourceStack> ctx) {
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
+        MinecraftServer server = ctx.getSource().getServer();
+        List<ProjectState> matching = ProjectManager.activeInstances(server).stream()
+                .filter(s -> s.projectId().equals(id)).toList();
+        if (matching.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("No active instance of '" + id + "'. Use /mcaquests project list."));
+            return 0;
+        }
+        for (ProjectState state : matching) {
+            ctx.getSource().sendSuccess(() -> Component.literal(id + " [" + state.scope().lower() + "] "
+                    + state.identity() + "  phase " + (state.currentPhase() + 1)
+                    + "  status=" + state.status().lower()
+                    + "  sponsors=" + state.sponsors().size()
+                    + "  participants=" + state.participants().size()
+                    + "  reputation=" + ProjectManager.reputationOf(server, state.identity())), false);
+            for (int i = 0; i < state.progressCount(); i++) {
+                final int idx = i;
+                ctx.getSource().sendSuccess(() -> Component.literal(
+                        "   objective " + idx + ": shared " + state.progress(idx).count()), false);
+            }
+        }
+        return matching.size();
+    }
+
+    private static int projectValidate(CommandContext<CommandSourceStack> ctx) {
+        List<String> errors = ProjectRegistry.lastErrors();
+        if (errors.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "All " + ProjectRegistry.size() + " loaded project(s) are valid."), false);
+            return 1;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(errors.size() + " project note(s) from the last load:"), false);
+        errors.forEach(e -> ctx.getSource().sendSuccess(() -> Component.literal(" - " + e), false));
+        return 0;
+    }
+
+    private static int projectReset(CommandContext<CommandSourceStack> ctx) {
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
+        int n = ProjectManager.adminReset(ctx.getSource().getServer(), id);
+        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + n + " instance(s) of '" + id + "'."), true);
+        return n;
+    }
+
+    private static int projectAdvance(CommandContext<CommandSourceStack> ctx) {
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
+        int n = ProjectManager.adminAdvance(ctx.getSource().getServer(), id);
+        ctx.getSource().sendSuccess(() -> Component.literal("Advanced " + n + " instance(s) of '" + id + "'."), true);
+        return n;
+    }
+
+    private static int projectDebug(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Entity target = nearestMcaVillager(player, 10.0D);
+        if (target == null) {
+            ctx.getSource().sendFailure(Component.literal("No MCA villager within 10 blocks."));
+            return 0;
+        }
+        ProjectManager.explainAvailability(player, target, id)
+                .forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+        return 1;
     }
 
     private static int listQuests(CommandContext<CommandSourceStack> ctx) {

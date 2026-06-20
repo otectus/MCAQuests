@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_farmer_crop_request",
+  "weight": 14,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
+  "title": { "translate": "mcaquests.quest.template_farmer_crop_request.title", "with": ["{crop_name}"] },
+  "dialogue": {
+    "offer": { "text": "The market's hungry for {crop_name}. Could you bring me {count} of them?" },
+    "accept": { "text": "Bless you — leave them by the stall when you're back." },
+    "decline": { "text": "Ah well. The crates can wait another day." },
+    "in_progress": { "text": "Any luck gathering that {crop_name}?" },
+    "ready": { "text": "{count} {crop_name} — just what the market ordered!" },
+    "complete": { "text": "Fair trade, friend. The stall will be the envy of the road." }
+  },
+  "template": {
+    "variables": {
+      "crop": {
+        "kind": "item",
+        "ids": ["minecraft:wheat", "minecraft:carrot", "minecraft:potato", "minecraft:beetroot", "minecraft:pumpkin", "minecraft:melon_slice"]
+      },
+      "count": { "kind": "int", "min": 8, "max": 20, "per_player_level": 0.5, "limit": 48 },
+      "bounty": { "kind": "int", "min": 2, "max": 4, "per_heart": 0.04, "limit": 12 }
+    },
+    "objectives": [
+      { "type": "mcaquests:item_delivery", "item": "{crop}", "count": "{count}", "consume": true }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": "{bounty}" },
+      { "type": "mcaquests:xp", "amount": "{count}" },
+      { "type": "mcaquests:hearts", "amount": 10 }
+    ]
+  }
+}

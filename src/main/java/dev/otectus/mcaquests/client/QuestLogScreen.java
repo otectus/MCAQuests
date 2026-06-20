@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.client;
 
+import dev.otectus.mcaquests.network.ProjectObjectiveLine;
+import dev.otectus.mcaquests.project.ProjectLogEntry;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -31,7 +33,8 @@ public class QuestLogScreen extends Screen {
         graphics.drawCenteredString(this.font, getTitle(), centerX, 16, 0xFFFFFF);
 
         List<QuestLogEntry> entries = ClientQuestData.active();
-        if (entries.isEmpty()) {
+        List<ProjectLogEntry> projects = ClientProjectData.projects();
+        if (entries.isEmpty() && projects.isEmpty()) {
             graphics.drawCenteredString(this.font,
                     Component.translatable("mcaquests.status.no_active_quests"), centerX, this.height / 2, 0xA0A0A0);
         } else {
@@ -57,6 +60,35 @@ public class QuestLogScreen extends Screen {
                     y += 10;
                 }
                 y += 6;
+            }
+            if (!projects.isEmpty()) {
+                graphics.drawString(this.font, Component.translatable("mcaquests.screen.log.projects"), left, y, 0x5CC8FF);
+                y += 12;
+                for (ProjectLogEntry project : projects) {
+                    graphics.drawString(this.font, project.title().copy()
+                                    .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
+                                    .append(project.sponsorLabel().copy().withStyle(ChatFormatting.GRAY)),
+                            left, y, 0xFFE08A);
+                    y += 11;
+                    graphics.drawString(this.font, Component.empty().append(project.scopeLabel())
+                            .append(Component.literal("  ")).append(project.phaseLabel()), left + 2, y, 0x9A9A9A);
+                    y += 10;
+                    for (ProjectObjectiveLine line : project.objectives()) {
+                        Component text = Component.literal("  - ").append(line.label())
+                                .append(Component.literal("  "))
+                                .append(Component.translatable("mcaquests.label.project.shared",
+                                        line.sharedCurrent(), line.required()));
+                        graphics.drawString(this.font, text, left, y, 0xBFBFBF);
+                        y += 10;
+                        if (line.yourContribution() > 0) {
+                            graphics.drawString(this.font,
+                                    Component.translatable("mcaquests.label.project.you", line.yourContribution()),
+                                    left + 10, y, 0x6FA8DC);
+                            y += 9;
+                        }
+                    }
+                    y += 6;
+                }
             }
         }
         super.render(graphics, mouseX, mouseY, partialTick);

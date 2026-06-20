@@ -1,0 +1,39 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:after_raid_recovery",
+  "scope": "village",
+  "sponsor": { "professions": ["mca:guard"], "on_death": "transfer" },
+  "title": { "translate": "mcaquests.project.after_raid_recovery.title" },
+  "category": "recovery",
+  "reputation": { "on_phase_complete": 3, "on_project_complete": 10 },
+  "phases": [
+    {
+      "key": "clear_threats",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.after_raid_recovery.clear_threats.offer" },
+        "in_progress": { "translate": "mcaquests.project.after_raid_recovery.clear_threats.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_kill_entity", "entity": "minecraft:zombie", "count": 8 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 40 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "rebuild",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.after_raid_recovery.rebuild.offer" },
+        "in_progress": { "translate": "mcaquests.project.after_raid_recovery.rebuild.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:oak_planks", "count": 64 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:bread", "count": 16 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 12 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:loot_table", "loot_table": "minecraft:chests/village/village_weaponsmith" }, "target": "all_participants" }
+      ]
+    }
+  ]
+}

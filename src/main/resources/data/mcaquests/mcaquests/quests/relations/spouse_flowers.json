@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_spouse_flowers",
+  "weight": 14,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Token of Affection" },
+  "dialogue": {
+    "offer": { "text": "You always know how to make me smile. Would you bring me a handful of poppies, my love? Five would brighten the whole house." },
+    "accept": { "text": "You're too good to me. I'll be waiting." },
+    "decline": { "text": "Oh — another time, then." },
+    "in_progress": { "text": "Found any poppies yet, dear?" },
+    "ready": { "text": "Poppies! You remembered. They're perfect." },
+    "complete": { "text": "I'll set these by the window. Thank you, my heart." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:poppy", "count": 5, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:hearts", "amount": 25 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:is_player_spouse" },
+      { "type": "mcaquests:hearts", "min": 50 }
+    ]
+  }
+}

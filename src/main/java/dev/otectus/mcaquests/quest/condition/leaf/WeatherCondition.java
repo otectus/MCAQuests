@@ -17,6 +17,16 @@ public record WeatherCondition(Weather weather) implements QuestCondition {
     public enum Weather {
         ANY, CLEAR, RAIN, THUNDER;
 
+        /** Whether the level's current weather satisfies this value (shared by conditions and failure triggers). */
+        public boolean matches(ServerLevel level) {
+            return switch (this) {
+                case ANY -> true;
+                case CLEAR -> !level.isRaining();
+                case RAIN -> level.isRaining() && !level.isThundering();
+                case THUNDER -> level.isThundering();
+            };
+        }
+
         public static final Codec<Weather> CODEC = Codec.STRING.flatXmap(
                 name -> {
                     try {
@@ -39,12 +49,6 @@ public record WeatherCondition(Weather weather) implements QuestCondition {
 
     @Override
     public boolean test(QuestContext context) {
-        ServerLevel level = context.level();
-        return switch (weather) {
-            case ANY -> true;
-            case CLEAR -> !level.isRaining();
-            case RAIN -> level.isRaining() && !level.isThundering();
-            case THUNDER -> level.isThundering();
-        };
+        return weather.matches(context.level());
     }
 }

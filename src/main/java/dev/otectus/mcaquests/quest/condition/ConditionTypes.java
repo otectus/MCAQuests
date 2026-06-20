@@ -9,10 +9,18 @@ import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.AnyOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AdvancementCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.AgeGroupCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.BiomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.HasHomeCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.HealthBelowCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HeartsCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.InfectedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.IsFamilyMemberCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.IsPlayerSpouseCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ItemHeldCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.MoodCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.PersonalityCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.PlayerLevelCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ProfessionCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestAbandonedCondition;
@@ -20,7 +28,11 @@ import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestFailedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestNotCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.RandomChanceCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.RelatedVillagerStatusCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.RelationshipStateCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TimeCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.VillageMemberCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.VillageReputationCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.WeatherCondition;
 import net.minecraft.resources.ResourceLocation;
 
@@ -51,6 +63,23 @@ public final class ConditionTypes {
     public static final QuestConditionType<QuestNotCompletedCondition> QUEST_NOT_COMPLETED = register("quest_not_completed", QuestNotCompletedCondition.CODEC);
     public static final QuestConditionType<QuestFailedCondition> QUEST_FAILED = register("quest_failed", QuestFailedCondition.CODEC);
     public static final QuestConditionType<QuestAbandonedCondition> QUEST_ABANDONED = register("quest_abandoned", QuestAbandonedCondition.CODEC);
+
+    // v0.3.0 — MCA-aware conditions (see docs/0.3.0-design.md). All read MCA state via the per-pass
+    // McaVillagerSnapshot and fail safe to "not met" when MCA data is unavailable.
+    public static final QuestConditionType<IsPlayerSpouseCondition> IS_PLAYER_SPOUSE = register("is_player_spouse", IsPlayerSpouseCondition.CODEC);
+    public static final QuestConditionType<RelationshipStateCondition> RELATIONSHIP_STATE = register("relationship_state", RelationshipStateCondition.CODEC);
+    public static final QuestConditionType<IsFamilyMemberCondition> IS_FAMILY_MEMBER = register("is_family_member", IsFamilyMemberCondition.CODEC);
+    public static final QuestConditionType<AgeGroupCondition> AGE_GROUP = register("age_group", AgeGroupCondition.CODEC);
+    public static final QuestConditionType<PersonalityCondition> PERSONALITY = register("personality", PersonalityCondition.CODEC);
+    public static final QuestConditionType<MoodCondition> MOOD = register("mood", MoodCondition.CODEC);
+    public static final QuestConditionType<VillageMemberCondition> VILLAGE_MEMBER = register("village_member", VillageMemberCondition.CODEC);
+    public static final QuestConditionType<HasHomeCondition> HAS_HOME = register("has_home", HasHomeCondition.CODEC);
+    public static final QuestConditionType<HealthBelowCondition> HEALTH_BELOW = register("health_below", HealthBelowCondition.CODEC);
+    public static final QuestConditionType<InfectedCondition> INFECTED = register("infected", InfectedCondition.CODEC);
+    public static final QuestConditionType<RelatedVillagerStatusCondition> RELATED_VILLAGER_STATUS = register("related_villager_status", RelatedVillagerStatusCondition.CODEC);
+
+    // v0.4.0 — independent mod-side village reputation as a condition.
+    public static final QuestConditionType<VillageReputationCondition> VILLAGE_REPUTATION = register("village_reputation", VillageReputationCondition.CODEC);
 
     public static final Codec<QuestConditionType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

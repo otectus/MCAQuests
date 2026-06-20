@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_missing_child_search",
+  "weight": 18,
+  "category": "exploration",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Parent's Plea" },
+  "dialogue": {
+    "offer": { "text": "My child wandered off and hasn't come home. Please — search the wilds for any sign of them. Start with the forest where they liked to play." },
+    "accept": { "text": "Thank you. Bring word the moment you find anything." },
+    "decline": { "text": "Please... if you change your mind, I'll be here, waiting." },
+    "in_progress": { "text": "Any trace of my little one out there?" },
+    "ready": { "text": "You searched the forest? Tell me everything." },
+    "complete": { "text": "Bless you for looking. At least now I know someone cared enough to try." }
+  },
+  "objectives": [
+    { "type": "mcaquests:visit_biome", "tag": "minecraft:is_forest" }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:hearts", "amount": 30 }
+  ],
+  "conditions": { "type": "mcaquests:related_villager_status", "relation": "child", "status": "missing" }
+}

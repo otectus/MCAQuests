@@ -1,0 +1,39 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:library_restoration",
+  "scope": { "scope": "profession", "professions": ["minecraft:librarian"] },
+  "sponsor": { "professions": ["minecraft:librarian"], "on_death": "pause" },
+  "title": { "translate": "mcaquests.project.library_restoration.title" },
+  "category": "culture",
+  "reputation": { "on_project_complete": 6 },
+  "phases": [
+    {
+      "key": "gather_texts",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.library_restoration.gather_texts.offer" },
+        "in_progress": { "translate": "mcaquests.project.library_restoration.gather_texts.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:paper", "count": 64 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:book", "count": 16 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 30 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "catalogue",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.library_restoration.catalogue.offer" },
+        "in_progress": { "translate": "mcaquests.project.library_restoration.catalogue.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_talk_to_profession", "profession": "minecraft:librarian", "count": 3 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:loot_table", "loot_table": "minecraft:chests/stronghold_library" }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 10 }, "target": "all_participants" }
+      ]
+    }
+  ]
+}

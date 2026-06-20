@@ -12,7 +12,8 @@
     "decline": { "text": "Then pray they don't come calling tonight." },
     "in_progress": { "text": "Those spiders won't wait. Move!" },
     "ready": { "text": "The treeline's quiet again. Good work." },
-    "complete": { "text": "Reliable as the sunrise, you are. Let's see about the recruits." }
+    "complete": { "text": "Reliable as the sunrise, you are. Let's see about the recruits." },
+    "failed": { "text": "Too slow — the nest reached the fences while you dawdled. Catch your breath and we'll try again." }
   },
   "objectives": [
     { "type": "mcaquests:kill_entity", "entity": "minecraft:spider", "count": 4 }
@@ -29,7 +30,10 @@
     "relationship_arc": { "text": "Keeping the Peace" },
     "chapter": { "text": "Beat the Treeline" },
     "prerequisites": ["mcaquests:guard_safety_1_clear"],
-    "unlocks": ["mcaquests:guard_safety_3_militia", "mcaquests:guard_safety_2b_amends"],
-    "time_limit_ticks": 6000
+    "unlocks": ["mcaquests:guard_safety_3_militia", "mcaquests:guard_safety_2b_amends"]
+  },
+  "failure": {
+    "deadline_ticks": 6000,
+    "retry_after": 24000
   }
 }

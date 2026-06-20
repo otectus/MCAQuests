@@ -5,6 +5,8 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
+import dev.otectus.mcaquests.quest.FailureSpec;
+import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.QuestManager;
 import dev.otectus.mcaquests.quest.TurnInMode;
 import dev.otectus.mcaquests.quest.objective.BreakBlockObjective;
@@ -22,10 +24,11 @@ import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.ItemFishedEvent;
@@ -35,8 +38,10 @@ import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -105,7 +110,7 @@ public final class QuestProgressEvents {
                         progress.setCount(1);
                     }
                 });
-        failExpiredQuests(player);
+        checkFailureTriggers(player);
         autoCompleteSelfQuests(player);
         QuestManager.checkReadyTransitions(player);
         // Refresh the client quest log + HUD (~once per second) for players with active quests.
@@ -117,35 +122,54 @@ public final class QuestProgressEvents {
     }
 
     /**
-     * Fails active quests whose {@code chain.time_limit_ticks} has elapsed since acceptance. The deadline
-     * is derived from the persisted {@code startGameTime}, so it survives logout / restart. Records a
-     * FAILED outcome so {@code quest_failed}-gated follow-ups can branch on it.
+     * Fails active quests whose {@code failure} triggers have fired: a relative {@code deadline_ticks}
+     * budget elapsed, a {@code deadline_time} time-of-day window passed, or required weather stopped.
+     * Time deadlines are derived from the persisted {@code startGameTime}, so they survive logout /
+     * restart. A quest whose objectives are already satisfied is left untouched — the player keeps a
+     * grace window to turn it in. Each failure routes through {@link QuestManager#failQuest} so the
+     * configured outcome (hearts / retry cooldown / dialogue) and the FAILED history record apply
+     * uniformly with every other failure path.
      */
-    private static void failExpiredQuests(ServerPlayer player) {
+    private static void checkFailureTriggers(ServerPlayer player) {
         QuestCapabilities.get(player).ifPresent(data -> {
             long now = player.level().getGameTime();
-            List<ActiveQuest> expired = new ArrayList<>();
+            List<FailedTrigger> toFail = new ArrayList<>();
             for (ActiveQuest active : data.active()) {
-                QuestRegistry.get(active.questId()).ifPresent(def -> def.chain()
-                        .flatMap(chain -> chain.timeLimitTicks())
-                        .ifPresent(limit -> {
-                            if (now - active.startGameTime() > limit) {
-                                expired.add(active);
-                            }
-                        }));
-            }
-            for (ActiveQuest active : expired) {
-                QuestRegistry.get(active.questId()).ifPresent(def -> {
-                    data.history().recordOutcome(def.id(), dev.otectus.mcaquests.state.QuestHistory.Outcome.FAILED);
-                    MinecraftForge.EVENT_BUS.post(
-                            new QuestFailedEvent(player, null, def, QuestFailedEvent.Reason.TIME_LIMIT));
-                    if (McaQuestsConfig.COMMON.questChatMessages.get()) {
-                        player.sendSystemMessage(Component.translatable("mcaquests.message.quest_failed", def.title()));
-                    }
+                QuestRegistry.get(active.questId()).ifPresent(base -> {
+                    QuestDefinition def = active.resolve(base);
+                    def.failure().ifPresent(failure -> {
+                        if (QuestManager.isComplete(player, def, active)) {
+                            return; // ready to turn in — never failed by a time/weather trigger
+                        }
+                        QuestFailedEvent.Reason reason = firedReason(player, active, failure, now);
+                        if (reason != null) {
+                            toFail.add(new FailedTrigger(active, def, reason));
+                        }
+                    });
                 });
-                data.remove(active);
+            }
+            for (FailedTrigger ft : toFail) {
+                QuestManager.failQuest(player, ft.active(), ft.def(), ft.reason(), null, data);
             }
         });
+    }
+
+    /** The first failure trigger that has fired for {@code active}, or {@code null} if none has. */
+    @Nullable
+    private static QuestFailedEvent.Reason firedReason(ServerPlayer player, ActiveQuest active,
+                                                       FailureSpec failure, long now) {
+        OptionalLong deadline = failure.deadlineGameTime(active.startGameTime());
+        if (deadline.isPresent() && now >= deadline.getAsLong()) {
+            return failure.timeDeadlineReason();
+        }
+        if (failure.requireWeather().isPresent()
+                && !failure.requireWeather().get().matches((ServerLevel) player.level())) {
+            return QuestFailedEvent.Reason.WEATHER;
+        }
+        return null;
+    }
+
+    private record FailedTrigger(ActiveQuest active, QuestDefinition def, QuestFailedEvent.Reason reason) {
     }
 
     /** Turns in SELF_COMPLETE quests as soon as their objectives are satisfied (spec section 17). */
@@ -153,7 +177,8 @@ public final class QuestProgressEvents {
         QuestCapabilities.get(player).ifPresent(data -> {
             List<ActiveQuest> ready = new ArrayList<>();
             for (ActiveQuest active : data.active()) {
-                QuestRegistry.get(active.questId()).ifPresent(def -> {
+                QuestRegistry.get(active.questId()).ifPresent(base -> {
+                    QuestDefinition def = active.resolve(base);
                     if (def.turnIn().mode() == TurnInMode.SELF_COMPLETE && !active.rewardClaimed()
                             && QuestManager.isComplete(player, def, active)) {
                         ready.add(active);
@@ -164,34 +189,42 @@ public final class QuestProgressEvents {
         });
     }
 
-    /** When a quest giver dies, fail its original-giver quests if configured (spec section 17). */
+    /**
+     * When a quest giver dies, fail the affected quests. A quest fails if its {@code failure} block
+     * opts in with {@code fail_on_giver_death}, OR (legacy global behaviour) if the
+     * {@code failQuestIfGiverDies} config is on and the quest is turned in to its original giver. All
+     * failures route through {@link QuestManager#failQuest} (spec section 17).
+     */
     @SubscribeEvent
     public static void onGiverDeath(LivingDeathEvent event) {
-        if (event.getEntity().level().isClientSide()
-                || !McaCompat.isMcaVillager(event.getEntity())
-                || !McaQuestsConfig.COMMON.failQuestIfGiverDies.get()) {
+        if (event.getEntity().level().isClientSide() || !McaCompat.isMcaVillager(event.getEntity())) {
             return;
         }
         MinecraftServer server = event.getEntity().getServer();
         if (server == null) {
             return;
         }
-        UUID giver = event.getEntity().getUUID();
+        boolean globalFail = McaQuestsConfig.COMMON.failQuestIfGiverDies.get();
+        Entity giverEntity = event.getEntity();
+        UUID giver = giverEntity.getUUID();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             QuestCapabilities.get(player).ifPresent(data -> {
-                List<ActiveQuest> failed = data.byVillager(giver).stream()
-                        .filter(active -> QuestRegistry.get(active.questId())
-                                .map(def -> def.turnIn().mode() == TurnInMode.ORIGINAL_GIVER)
-                                .orElse(true))
-                        .toList();
-                for (ActiveQuest active : failed) {
-                    QuestRegistry.get(active.questId()).ifPresent(def -> {
-                        data.history().recordOutcome(def.id(), dev.otectus.mcaquests.state.QuestHistory.Outcome.FAILED);
-                        MinecraftForge.EVENT_BUS.post(
-                                new QuestFailedEvent(player, event.getEntity(), def, QuestFailedEvent.Reason.GIVER_DIED));
+                List<ActiveQuest> failed = new ArrayList<>();
+                for (ActiveQuest active : data.byVillager(giver)) {
+                    QuestRegistry.get(active.questId()).ifPresent(base -> {
+                        QuestDefinition def = active.resolve(base);
+                        boolean perQuest = def.failure().map(FailureSpec::failOnGiverDeath).orElse(false);
+                        boolean globalApplies = globalFail && def.turnIn().mode() == TurnInMode.ORIGINAL_GIVER;
+                        if (perQuest || globalApplies) {
+                            failed.add(active);
+                        }
                     });
                 }
-                failed.forEach(data::remove);
+                for (ActiveQuest active : failed) {
+                    QuestRegistry.get(active.questId()).ifPresent(base ->
+                            QuestManager.failQuest(player, active, active.resolve(base),
+                                    QuestFailedEvent.Reason.GIVER_DIED, giverEntity, data));
+                }
                 if (!failed.isEmpty()) {
                     player.sendSystemMessage(Component.translatable("mcaquests.message.giver_died"));
                 }
@@ -261,8 +294,9 @@ public final class QuestProgressEvents {
             ServerPlayer player, Class<T> type, BiConsumer<T, ObjectiveProgress> action) {
         QuestCapabilities.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
-                QuestRegistry.get(active.questId()).ifPresent(def -> {
-                    List<QuestObjective> objectives = def.objectives();
+                QuestRegistry.get(active.questId()).ifPresent(base -> {
+                    // Resolve template values so progress is tracked against this copy's concrete objectives.
+                    List<QuestObjective> objectives = active.resolve(base).objectives();
                     for (int i = 0; i < objectives.size(); i++) {
                         QuestObjective objective = objectives.get(i);
                         if (type.isInstance(objective)) {

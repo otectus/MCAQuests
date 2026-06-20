@@ -30,6 +30,17 @@ public final class RewardTypes {
     public static final QuestRewardType<CommandReward> COMMAND =
             register(new ResourceLocation(McaQuests.MOD_ID, "command"), CommandReward.CODEC);
 
+    // v0.4.0 — community project rewards. The distributor supplies the project/scope context the
+    // last three need; hearts_with_sponsor also works through the normal grant path.
+    public static final QuestRewardType<HeartsWithSponsorReward> HEARTS_WITH_SPONSOR =
+            register(new ResourceLocation(McaQuests.MOD_ID, "hearts_with_sponsor"), HeartsWithSponsorReward.CODEC);
+    public static final QuestRewardType<HeartsWithParticipantsReward> HEARTS_WITH_PARTICIPANTS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "hearts_with_participants"), HeartsWithParticipantsReward.CODEC);
+    public static final QuestRewardType<VillageReputationReward> VILLAGE_REPUTATION =
+            register(new ResourceLocation(McaQuests.MOD_ID, "village_reputation"), VillageReputationReward.CODEC);
+    public static final QuestRewardType<UnlockReward> UNLOCK =
+            register(new ResourceLocation(McaQuests.MOD_ID, "unlock"), UnlockReward.CODEC);
+
     public static final Codec<QuestRewardType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {
                 QuestRewardType<?> type = BY_ID.get(id);
