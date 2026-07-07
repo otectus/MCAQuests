@@ -4,6 +4,286 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-07-07
+
+An **MCA: Conversations** add-on bridge, lead-style escorts, and a substantial quest-pack expansion.
+Existing saves and datapacks are unaffected — the new `escort_entity` fields are optional and default
+to the previous behavior, and the conversation hooks do nothing unless the add-on registers them.
+
+### Added
+
+- **MCA: Conversations — voiced quest dialogue** — a new add-on API (`QuestDialogueHooks` /
+  `QuestDialogueResolver`) lets **MCA: Conversations** speak a quest's lifecycle line (offer /
+  in-progress / ready / complete / failed) in the villager's own personality instead of the static
+  datapack `dialogue` text. Resolved server-side at Component-build time; **degrades safely to the
+  static line** when no resolver is registered, the resolver returns `null`, or it throws — so the
+  base mod is unchanged without the add-on.
+- **MCA: Conversations — conversation-driven objectives** — objectives implementing
+  `ExternalSignalObjective` advance when the add-on pushes a signal via
+  `QuestManager.notifyExternalObjective(player, signalId, villagerUuid)` — e.g. "the player talked to
+  this villager about topic Y" — letting talk-based quests progress from an actual conversation
+  rather than a built-in detector.
+- **NPC-led escorts** — `escort_entity` gains a `lead` flag (default `false`). With `lead: true` the
+  villager walks to the destination **itself** and **pauses whenever the player is farther than
+  `wait_distance` blocks** (default 6), so the player must stay close to keep it safe — the inverse of
+  the old player-leads / villager-follows behavior. Driven server-side through MCA's brain
+  (`MoveState.MOVE` + the vanilla `WALK_TARGET` memory), isolated behind `McaCompat`; the lead pace is
+  configurable via the new `leadVillagerSpeed` option. Lead/follow movement is now also released cleanly
+  on quest complete/abandon/fail. Pairs with `failure.fail_on_giver_death`.
+- **Staged relative-escorts** — when a `lead` escort's target is someone *other than the giver* (a
+  relative or other villager), the escortee now **waits invulnerable and motionless at its spot** until the
+  player comes within `wait_distance`; the escort then "truly begins" — the escortee becomes mortal, starts
+  being led, and from that point its **death fails the quest** (new `ESCORT_TARGET_DIED` reason, heart
+  penalty applied to the giver). Auto-detected for `lead` + non-`self` villager, overridable with the new
+  `stage_until_near` field. The escortee is locked by UUID (so a re-resolving `family` target can't swap
+  relatives) and the hold is released on engage/cleanup so a held villager is never left frozen.
+- **Findable quest targets** — for an active quest, objectives that target a specific villager
+  (`deliver_to_villager`, `heal_entity`, `cure_villager`, `escort_entity`, `protect_entity`,
+  `defend_villager`) now resolve the target's **real name** and home village in the objective line — e.g.
+  "Deliver 1× Paper to **Hans (your brother) — Oakvale**" (the name comes from MCA's persistent family tree,
+  so it shows even when the relative is unloaded) — and the target villager **glows** through walls while it
+  is loaded, so it can be found. New `highlightQuestTargets` config (default on) toggles the glow. Objective
+  lines are resolved server-side, so no protocol change. Family-relative quests are also gated on
+  `related_villager_status <relation> same_village` so they are only offered when a findable relative exists
+  — fixing `relations/letter_to_brother`, which could previously be offered to a villager with no sibling at
+  all (an impossible quest).
+- **`mcaquests:giver_distance_from_village` condition** — gates a quest on the giver being at least
+  `min_distance` blocks from its home-village center (optionally also outside the village border). Fails
+  safe to *not met* when the giver has no village. Combine with `mcaquests:time` `NIGHT` via `any_of` to
+  reserve escort / "out after dark" quests for villagers genuinely far from home or caught out at night.
+- **`mcaquests:reach_location` objective** — the player travels to a location anchor; arrival sticks
+  complete (distinct from `enter_structure`, which keys off a named structure).
+- **`mcaquests:defend_location` objective** — defeat hostile threats near a fixed place anchor (the
+  place-anchored sibling of `defend_villager`).
+- **~54 new built-in quests plus 3 chains, 2 projects, 2 situations, and 2 templates**, emphasizing
+  combat/defense, relationship & family arcs, and village/emergent events: lead-escort and
+  night/distance-gated quests, gate defenses and night watches (showcasing `defend_location`), spouse /
+  child / parent storylines, the multi-stage **courting**, **lost_child** (branching), and
+  **aging_parent** relationship arcs, the **muster_the_militia** and **rebuild_the_walls** community
+  projects, and the **defend_the_gate** / **raiders_at_the_gate** situations.
+
+### Changed
+
+- The built-in `relations/escort_me_home` quest now uses `lead: true` and is gated to a villager a short
+  way from home during the day (keeping its "before nightfall" deadline). A new night/far variant,
+  `relations/lead_me_home`, covers being caught out after dark with no time limit.
+
+### Fixed
+
+- **Escort/lead quests now actually work.** Three compounding bugs are resolved:
+  - **Erratic, stuttering movement.** A led villager's walk target was only re-issued once per second, so
+    MCA's per-tick brain behaviors overwrote it for the other 19 ticks — the villager drifted/stuttered
+    instead of walking to its destination. Lead actuation now runs **every tick** so the walk target sticks,
+    and the `wait_distance` leash gained hysteresis so it no longer thrashes start/stop at the boundary.
+  - **"Escort to the village" while already in it / never completing.** Arrival at a village anchor
+    (`home_village`/`nearest_village`) now triggers when the villager is **inside the village border**, not
+    within a small radius of the single center point, and the check is horizontal (the village center's `Y`
+    no longer blocks completion). Home-village lead quests are also gated with `require_outside_border` so a
+    villager already inside the village isn't offered an "escort me home".
+  - **Drifting destination.** The escort destination is now **resolved once and frozen when the quest is
+    accepted**, so a `nearest_village` (previously recomputed against the *player's* position every tick) or a
+    moving relative target no longer snaps around. `nearest_village` also resolves relative to the
+    escortee/giver rather than the player.
+- `reach_location` uses the same border-aware, horizontal arrival as escorts.
+
+### Compatibility
+
+- The **MCA: Conversations** integration is **optional**. MCA: Quests only ships the hooks and their
+  safe fallbacks; the consumer lives in the separate MCA: Conversations add-on. With the add-on
+  absent, dialogue stays the static datapack text and `ExternalSignalObjective` quests progress
+  through their normal detectors — nothing else changes.
+
+## [0.8.0] - 2026-06-22
+
+Built for **Minecraft 1.20.1 / Forge**, requiring **MCA Reborn 7.6.x** and **Architectury API**. The
+**Living Village** phase: villages now react to what actually happens in the world and ask for help.
+Instead of only standing, author-authored offers, gameplay events open transient **Situations** that
+surface dynamic, time-limited quest offers on nearby villagers and resolve into reputation outcomes.
+Saves remain forward/backward compatible (new data loads as empty when absent). **Network protocol
+bumped to v4** — client and server must run matching versions.
+
+### Added
+
+- **Situations** — a new, fully datapack-driven system of emergent, world-driven quests loaded from
+  `data/<ns>/mcaquests/situations/**.json`. A situation pairs a **trigger** (what world event opens it)
+  with lifetime/throttle metadata, a **scope**, resolution **outcomes**, and the dynamic **offer**
+  surfaced while it is open. Open situations are stored in the world save (`mcaquests_situations.dat`),
+  so they survive logout, chunk/villager unload, and restart; everything is server-authoritative.
+  - **Six trigger types**, registry-driven like objectives/conditions/rewards: `mcaquests:raid`,
+    `villager_death`, `infection` (`min_progress`), `missing_kin` (`relation`), `low_food`
+    (`threshold`, read from MCA village storage), and `night` (`require_full_moon`). Detection is
+    player-proximity-driven (a periodic sweep of villages near players) plus event-driven on villager
+    death; all MCA access stays behind `McaCompat`.
+  - **Three scopes** decide who surfaces the offer and where the outcome lands: `village`, `villager`
+    (the focal one), and `family` (an MCA lineage).
+  - **Dynamic offers** reuse the entire existing quest lifecycle. A situation's `offer` block is the
+    body of a quest (objectives, rewards, dialogue, turn-in, templates, offer shaping) and is surfaced
+    through the same selection/shaping pipeline as static quests, defaulting to a higher priority so the
+    village's needs stand out (`situationDefaultPriority`). The offer is time-limited: its deadline is
+    anchored to the situation's open time, so the existing HUD countdown and failure machinery apply.
+  - **Resolution & outcomes** — the first participant to complete the offer resolves the situation as a
+    **success** (village reputation, routed through the single `ReputationService`, plus optional hearts
+    to the focal villager); its deadline expiring resolves a **failure** (a reputation penalty, and any
+    still-active copies fail with the new `SITUATION_CLOSED` reason); a condition lifting on its own
+    (the raid ends, food recovers) closes it **cleared**, usually neutral.
+  - **Throttling** — a per-village concurrency cap, a per-definition cooldown, and a global anti-spam
+    cooldown gate how often situations open; every suppression is logged (caps are never silent).
+  - **"Village needs help" toast** to nearby players when a situation opens (client `showSituationToast`)
+    and a card tag marking situation offers in the menu.
+  - **Six built-in example situations**: `after_raid_recovery`, `cure_the_infected`, `find_missing_child`,
+    `avenge_the_fallen`, `famine_relief`, and `night_watch`.
+  - **New commands** — `/mcaquests situation list|info <id>|validate|debug` (list/info/debug at op level
+    2, validate at op level 3).
+  - **Config** — a new `situations` block: `enableSituations` (master switch),
+    `maxConcurrentSituationsPerVillage`, `situationGlobalCooldownTicks`, `situationDetectionIntervalTicks`,
+    `maxSituationOffersPerMenu`, `situationDefaultPriority`, and client `showSituationToast`.
+
+### Changed
+
+- **Network protocol bumped v3 → v4** for the situation toast packet. The handshake rejects mismatched
+  client/server; save data is unaffected.
+- All active-quest definition lookups now route through a single resolver so dynamic situation offers
+  reuse the quest lifecycle (accept, track, turn in, fail) unchanged alongside static quests.
+
+### Compatibility
+
+- Fully save backward/forward compatible: open situations and the new optional `ActiveQuest` situation
+  link load as empty/absent on pre-0.8.0 saves, and existing quests, projects, conditions, and rewards
+  are unchanged. When `enableSituations` is off, nothing is detected, opened, or surfaced.
+
+## [0.7.0] - 2026-06-21
+
+Built for **Minecraft 1.20.1 / Forge**, requiring **MCA Reborn 7.6.x** and **Architectury API**. Turns the
+quest loop into a long-term **progression** system: village reputation now has named tiers, players earn
+titles, and a new journal screen makes it all visible. Saves are forward/backward compatible (new data
+loads as empty when absent). **Network protocol bumped to v3** — client and server must run matching
+versions.
+
+### Added
+
+- **Reputation tiers** — a datapack-defined, ordered ladder of named thresholds over the existing
+  per-village reputation (default: Stranger → Acquaintance → Friend → Honored → Revered). Loaded from
+  `data/<ns>/mcaquests/reputation_tiers/**.json`; the shipped `mcaquests:default` ladder can be overridden.
+  A built-in fallback ladder is used if none is defined.
+- **`mcaquests:reputation_tier` condition** — gate a quest's eligibility on a minimum (and optional maximum)
+  tier with the giver's village; supports an optional named `ladder`. Fails safe when no village resolves
+  or tiers are disabled.
+- **Player titles** — earned per-village or globally and persisted on the player. New
+  **`mcaquests:grant_title` reward** (scope `village` or `global`), and tiers may auto-grant a title via
+  `grants_title` when first reached. Optional title definitions load from `data/<ns>/mcaquests/titles/**.json`.
+- **Tier-up toast** — shown when the player pushes a village into a new reputation tier.
+- **Journal screen** — opened via the new (unbound by default) **Open Journal** keybind or a button in the
+  Quest Log. Shows each village's reputation and tier, earned titles, and a completed-quest archive.
+- **New admin/test commands** — `/mcaquests reputation get|set|add|tiers` and
+  `/mcaquests title grant|list|clear`. `/mcaquests validate` now also reports progression cross-references
+  (undefined granted titles, unknown tier ids).
+- **Config** — `enableReputationTiers` (default on) gates the loaders, condition, UI, toasts, and titles.
+- Example quest `mcaquests:honored_envoy` exercising the new condition and reward.
+
+### Changed
+
+- **Network protocol bumped v2 → v3** for the tier-up toast and journal request/sync packets. The
+  handshake rejects mismatched client/server; save data is unaffected.
+- All village-reputation writes (quests and projects) now route through a single `ReputationService` so
+  tier crossings and title grants fire consistently.
+
+### Compatibility
+
+- Fully save backward/forward compatible: new player NBT (`titles`) and the per-village tier high-water
+  mark load as empty when absent. Existing `village_reputation` rewards keep working and now additionally
+  drive tier-ups. A 0.7.0 save opened by 0.6.0 ignores the new keys (losing titles/high-water on a
+  round-trip through the older version).
+
+## [0.6.0] - 2026-06-21
+
+Built for **Minecraft 1.20.1 / Forge**, requiring **MCA Reborn 7.6.x** and **Architectury API**. Turns
+MCA: Quests into a living-village RPG system: quests can now involve people, homes, families, and places
+rather than only inventory checks. No network protocol change; fully backward compatible — every existing
+quest, condition, and objective works unchanged.
+
+### Added
+
+- **Twelve NPC- and village-centered objective types**, all registry-driven (no hardcoded quest cases),
+  server-authoritative, and persisted through the existing quest state (they survive logout, death,
+  dimension change, villager/chunk unload, and dedicated-server restart):
+  - `mcaquests:escort_entity` — lead a villager to a home, village, workstation, another villager, or coords.
+  - `mcaquests:protect_entity` — keep a villager alive for a duration (optionally only while near you).
+  - `mcaquests:defend_villager` — kill hostile threats near a villager.
+  - `mcaquests:trade_with_villager` — complete trades with a villager or profession.
+  - `mcaquests:heal_entity` — use a remedy item on a hurt villager.
+  - `mcaquests:cure_villager` — cure an infected (zombifying) MCA villager.
+  - `mcaquests:breed_animals` / `mcaquests:tame_animal` — breed/tame animals, optionally near a place.
+  - `mcaquests:sleep_or_rest` — sleep through to morning.
+  - `mcaquests:build_near_location` — place blocks near a place (each position counts once — no farming).
+  - `mcaquests:enter_structure` — enter a configured structure (id or tag).
+  - `mcaquests:deliver_to_villager` — hand an item to a specific villager (family member, profession, UUID).
+- **Villager targets** (`self` / `profession` / `family` relation / `uuid`) and **location anchors**
+  (`home_village` / `nearest_village` / `giver_pos` / `villager` / `workstation` / `bed` / `coords`),
+  resolved relative to the quest giver — unloaded targets pause the objective rather than failing it.
+- **Per-objective datapack validation** (`ObjectiveValidator`) reporting bad targets/anchors/structures by
+  quest id, objective index, and field, honouring `strictJsonValidation`.
+- **Seven example quests** demonstrating the new system (escort home, protect a child, deliver a letter,
+  cure infected kin, repair the village well, trade with the blacksmith, defend the guard captain).
+- **`McaCompat`** gains `getHomePos`, `getWorkstationPos`, `isInfected`, `findGiverRelative`, and
+  `giverRelativeUuids` — all safe-fail, with MCA internals kept inside that one class.
+- **`ObjectiveProgress`** extended (elapsed ticks, locked target UUID, deduped placed positions, scratch
+  tag) — backward compatible: old count-only progress loads unchanged.
+
+### Known limitations
+
+- `cure_villager` and `enter_structure` depend on MCA/dynamic-registry state and ship with documented
+  fallbacks (see DATAPACK.md). The "villager uses their bed" variant of `sleep_or_rest` is not implemented.
+
+## [0.5.0] - 2026-06-19
+
+Built for **Minecraft 1.20.1 / Forge**, requiring **MCA Reborn 7.6.x** and **Architectury API**. Hardens the
+relationship-quest-chain system (0.2.0) into a production-grade tool for long-term, author-built villager
+stories. No network protocol change. **Behaviour change:** relationship arcs are now **per-villager** — see
+*Changed* and the migration note below.
+
+### Added
+
+- **Per-villager relationship arcs** — chain progress is tracked against the individual villager you deal
+  with, so the same arc can be lived out independently with different villagers. Chain `prerequisites` compile
+  to `quest_completed` with `scope: giver`, and the four quest-state conditions (`quest_completed`,
+  `quest_not_completed`, `quest_failed`, `quest_abandoned`) gain an optional `scope` field (`global` default,
+  or `giver`). `QuestHistory` persists per-giver completion/outcome counts alongside the global ones, so arc
+  progress survives logout, death, dimension change, villager unload/reload, and dedicated-server restart. No
+  client-side state is trusted.
+- **Offer priority & weighted bonuses** — two optional top-level fields shape *which* eligible quest a villager
+  offers. `priority` (int) tiers offers (higher fills slots first; a chain continuation defaults above
+  standalone). `weight_bonus` is a list of `{ "when": <condition>, "amount": <int> }` that adds to a quest's
+  selection weight when its condition holds — e.g. likelier as MCA hearts rise or as earlier stages are
+  completed (`quest_completed` `scope: giver`). Selection stays deterministic and server-authoritative.
+- **Chain-aware debug commands** — `/mcaquests debug villager` now lists every chain stage the nearest villager
+  could give and why each is offered / eligible / locked / hidden-superseded / completed / on cooldown;
+  `/mcaquests debug quest <id>` prints the full per-quest gate checklist, per-villager chain progress, history
+  counts, and effective weight/priority — built for datapack authors diagnosing stuck arcs.
+- **Expanded chain validation** — `/mcaquests validate` splits **errors** (blank chain id, `stage` above
+  `stage_total`, self-references, circular `prerequisites` or `unlocks`, unknown/disabled condition targets,
+  impossible "completed and not-completed" gates) from non-fatal **warnings** (inconsistent `stage_total`, two
+  non-branching quests sharing a stage, dangling `unlocks`, a branch gated on a quest that can never fail).
+  Only errors honour `strictJsonValidation`. Every message names the quest, chain, field, and referenced id.
+- **New worked arc** — `chains/mapmaker_expedition` (cartographer), a 3-stage branching arc demonstrating
+  prerequisites, a `failure` deadline with `retry_after`, a `quest_failed` `scope: giver` recovery branch,
+  `priority`, and hearts-based `weight_bonus`.
+
+### Changed
+
+- Relationship arcs are **per-villager** rather than global (see *Added*). Standalone (non-chain) quests are
+  unchanged and keep global completion/cooldown semantics. The bundled `guard_safety` and `jobless_friendship`
+  branch conditions now carry `scope: giver` so each arc is coherently per-villager.
+- Offer selection is organised into datapack-controllable priority tiers with context-sensitive effective
+  weights, generalising the previous hardcoded "chain continuations first" rule (which remains the default
+  when no `priority` is set).
+
+### Migration
+
+- Save-data compatible with 0.1.0–0.4.0 worlds; the per-villager history maps are additive and load empty on
+  older saves. **One caveat:** an arc that was *in progress* before this update restarts under per-villager
+  tracking (an earlier stage completed globally no longer counts toward the new per-villager gate). Standalone
+  quests, cooldowns, and already-finished arcs are unaffected.
+
 ## [0.4.0] - 2026-06-19
 
 Built for **Minecraft 1.20.1 / Forge**, requiring **MCA Reborn 7.6.x** and **Architectury API**.
@@ -161,5 +441,6 @@ and **Architectury API**. Prod-tested against MCA Reborn 7.6.20.
 - MCA Reborn exposes no public API, so this release links against MCA's internal classes and is pinned to the **7.6.x** line; all access is isolated behind a single `McaCompat` adapter.
 - Turn-in is atomic and idempotent — rewards cannot be duplicated by packet spam.
 
+[0.9.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.9.0
 [0.2.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.2.0
 [0.1.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.1.0

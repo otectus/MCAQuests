@@ -21,6 +21,10 @@ public class QuestLogScreen extends Screen {
     @Override
     protected void init() {
         int centerX = this.width / 2;
+        addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.journal"),
+                        b -> this.minecraft.setScreen(new JournalScreen()))
+                .bounds(centerX - 154, this.height - 36, 100, 20)
+                .build());
         addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose())
                 .bounds(centerX - 50, this.height - 36, 100, 20)
                 .build());

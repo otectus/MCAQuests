@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:weaponsmith_drowned_depths",
+  "weight": 10,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "professions": ["minecraft:weaponsmith"], "adult_only": true },
+  "title": { "text": "From the Drowned Depths" },
+  "dialogue": {
+    "offer": { "text": "The drowned hoard metal down in the dark water — and the odd trident, too. Send five of them back to the deep and salvage what they're hiding." },
+    "accept": { "text": "Mind their tridents. They throw harder than you'd think." },
+    "decline": { "text": "Then the river keeps its secrets a while longer." },
+    "in_progress": { "text": "How many drowned have you cleared from the shallows?" },
+    "ready": { "text": "Five of the river-dead put to rest. Good diving." },
+    "complete": { "text": "Whatever you hauled up, you earned. The forge thanks you." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:drowned", "count": 5 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 28 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

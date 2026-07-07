@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mapmaker_expedition_3_frontier",
+  "weight": 13,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["minecraft:cartographer"], "adult_only": true },
+  "title": { "text": "Charting the Frontier" },
+  "dialogue": {
+    "offer": { "text": "Everything's led to this: the frontier itself. Bring me 2 empty maps and we'll set down the first true chart of these lands — together." },
+    "accept": { "text": "Two maps, two cartographers. History, in ink." },
+    "decline": { "text": "The edge of the world can wait one more day." },
+    "in_progress": { "text": "The frontier's still blank on the page. Those maps?" },
+    "ready": { "text": "Spread them out — let's fill in the unknown." },
+    "complete": { "text": "There. The frontier has a face now, and your name belongs on this map as much as mine. Wherever you wander, you'll never be off the chart again." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:map", "count": 2, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
+    { "type": "mcaquests:item", "item": "minecraft:map", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 38 },
+    { "type": "mcaquests:hearts", "amount": 38 }
+  ],
+  "chain": {
+    "chain": "mcaquests:mapmaker_expedition",
+    "stage": 3,
+    "stage_total": 3,
+    "relationship_arc": { "text": "Charting the Frontier" },
+    "chapter": { "text": "The Frontier Map" }
+  },
+  "conditions": {
+    "any_of": [
+      { "type": "mcaquests:quest_completed", "quest": "mcaquests:mapmaker_expedition_2_expedition", "scope": "giver" },
+      { "type": "mcaquests:quest_completed", "quest": "mcaquests:mapmaker_expedition_2b_salvage", "scope": "giver" }
+    ]
+  },
+  "weight_bonus": [
+    { "when": { "type": "mcaquests:hearts", "min": 60 }, "amount": 6 }
+  ]
+}

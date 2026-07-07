@@ -45,6 +45,8 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue maxHeartsReward;
         public final ForgeConfigSpec.EnumValue<ProfessionMatchingMode> professionMatchingMode;
         public final ForgeConfigSpec.BooleanValue followGiverAfterAccept;
+        public final ForgeConfigSpec.DoubleValue leadVillagerSpeed;
+        public final ForgeConfigSpec.BooleanValue highlightQuestTargets;
         public final ForgeConfigSpec.BooleanValue questChatMessages;
         public final ForgeConfigSpec.BooleanValue strictJsonValidation;
         public final ForgeConfigSpec.BooleanValue debugLogging;
@@ -59,6 +61,16 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue defaultPerPlayerContributionCap;
         public final ForgeConfigSpec.BooleanValue allowProjectCommandRewards;
         public final ForgeConfigSpec.IntValue maxConcurrentProjectsPerScope;
+
+        public final ForgeConfigSpec.BooleanValue enableReputationTiers;
+
+        // Living Village — situations (spec 0.8.0).
+        public final ForgeConfigSpec.BooleanValue enableSituations;
+        public final ForgeConfigSpec.IntValue maxConcurrentSituationsPerVillage;
+        public final ForgeConfigSpec.IntValue situationGlobalCooldownTicks;
+        public final ForgeConfigSpec.IntValue situationDetectionIntervalTicks;
+        public final ForgeConfigSpec.IntValue maxSituationOffersPerMenu;
+        public final ForgeConfigSpec.IntValue situationDefaultPriority;
 
         Common(ForgeConfigSpec.Builder b) {
             b.push("quests");
@@ -101,6 +113,16 @@ public final class McaQuestsConfig {
                     "If true, a quest giver follows the player after they accept a quest (escort-style).",
                     "If false (default), accepting never makes the villager follow you, and an existing auto-follow is cleared.")
                     .define("followGiverAfterAccept", false);
+            leadVillagerSpeed = b.comment(
+                    "Walk-speed multiplier for a villager LEADING the player in a lead-style escort objective",
+                    "(escort_entity with \"lead\": true). Lower keeps the villager near walking pace so the",
+                    "player can stay close and guard it.")
+                    .defineInRange("leadVillagerSpeed", 0.6, 0.1, 2.0);
+            highlightQuestTargets = b.comment(
+                    "If true (default), a villager that is the target of one of your active quests (the",
+                    "recipient of a delivery, or the villager to heal/cure/escort/protect/defend) glows through",
+                    "walls while it is loaded, so you can find it. Applied server-side; syncs to all clients.")
+                    .define("highlightQuestTargets", true);
             questChatMessages = b.comment("Send a short chat confirmation when a quest is accepted or completed.")
                     .define("questChatMessages", true);
             b.pop();
@@ -137,6 +159,41 @@ public final class McaQuestsConfig {
             maxConcurrentProjectsPerScope = b.comment("Cap on simultaneously-active project instances sharing one scope identity.")
                     .defineInRange("maxConcurrentProjectsPerScope", 8, 1, 100);
             b.pop();
+
+            b.push("progression");
+            enableReputationTiers = b.comment(
+                    "Master switch for reputation tiers, player titles, and the journal screen (0.7.0).",
+                    "When off, the reputation_tier condition fails safe, tier-up toasts/titles are not granted,",
+                    "and tier ladders are not loaded; existing village reputation still accrues unchanged.")
+                    .define("enableReputationTiers", true);
+            b.pop();
+
+            b.push("situations");
+            enableSituations = b.comment(
+                    "Master switch for the Living Village situations system (0.8.0): emergent, world-driven,",
+                    "time-limited quest offers opened by gameplay events (raids, deaths, infection, famine, ...).",
+                    "When off, no situations are detected, opened, or surfaced; existing quests are unaffected.")
+                    .define("enableSituations", true);
+            maxConcurrentSituationsPerVillage = b.comment(
+                    "Cap on simultaneously-open situations in one village. Excess detections are suppressed",
+                    "(and logged). 0 disables the cap.")
+                    .defineInRange("maxConcurrentSituationsPerVillage", 2, 0, 100);
+            situationGlobalCooldownTicks = b.comment(
+                    "Minimum ticks between any two situations opening in the same village (anti-spam).")
+                    .defineInRange("situationGlobalCooldownTicks", 6000, 0, Integer.MAX_VALUE);
+            situationDetectionIntervalTicks = b.comment(
+                    "How often (ticks) the periodic detector scans villages for tick-driven situations",
+                    "(famine, missing kin, nightfall). Event-driven triggers (raid/death/infection) are immediate.")
+                    .defineInRange("situationDetectionIntervalTicks", 200, 20, Integer.MAX_VALUE);
+            maxSituationOffersPerMenu = b.comment(
+                    "Cap on how many situation offers a single villager surfaces at once (they compete with",
+                    "static offers via the usual priority/weight shaping).")
+                    .defineInRange("maxSituationOffersPerMenu", 2, 0, 10);
+            situationDefaultPriority = b.comment(
+                    "Default offer-priority tier for situation offers that do not set their own. Higher fills",
+                    "menu slots first; situations default above standalone quests so the village's needs stand out.")
+                    .defineInRange("situationDefaultPriority", 5, 0, 1000);
+            b.pop();
         }
     }
 
@@ -152,6 +209,7 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue questTrackerY;
         public final ForgeConfigSpec.BooleanValue showProjectTrackerHud;
         public final ForgeConfigSpec.IntValue projectTrackerMaxEntries;
+        public final ForgeConfigSpec.BooleanValue showSituationToast;
 
         Client(ForgeConfigSpec.Builder b) {
             b.push("client");
@@ -174,6 +232,8 @@ public final class McaQuestsConfig {
                     .define("showProjectTrackerHud", true);
             projectTrackerMaxEntries = b.comment("How many community projects the tracker HUD shows at once.")
                     .defineInRange("projectTrackerMaxEntries", 3, 1, 10);
+            showSituationToast = b.comment("Show a toast when the village opens a new situation that needs help (0.8.0).")
+                    .define("showSituationToast", true);
             b.pop();
         }
     }

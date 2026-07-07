@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:muster_the_militia",
+  "scope": { "scope": "village", "fallback_radius": 64 },
+  "sponsor": { "professions": ["mca:guard"], "on_death": "transfer" },
+  "title": { "text": "Muster the Militia" },
+  "category": "defense",
+  "reputation": { "on_phase_complete": 3, "on_project_complete": 12 },
+  "phases": [
+    {
+      "key": "arm_the_recruits",
+      "dialogue": {
+        "offer": { "text": "If this village is to defend itself, the recruits need steel and arrows. Donate iron and shafts and we'll see them armed." },
+        "in_progress": { "text": "Keep the iron and arrows coming — a militia's only as good as its kit." }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:iron_ingot", "count": 24 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:arrow", "count": 64 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "drill_the_militia",
+      "dialogue": {
+        "offer": { "text": "Now blood them. Help the recruits cut down the undead pressing our walls — sixteen kills will make soldiers of them." },
+        "in_progress": { "text": "Every kill is a lesson. Keep the recruits in the fight." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_kill_entity", "entity": "minecraft:zombie", "count": 16 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 12 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 }, "target": "top_contributor" },
+        { "reward": { "type": "mcaquests:village_reputation", "amount": 5 }, "target": "sponsor_village" }
+      ]
+    }
+  ]
+}

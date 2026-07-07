@@ -46,6 +46,8 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 | Option | Default | What it does |
 |---|---|---|
 | `followGiverAfterAccept` | `false` | If `true`, the giver follows the player after a quest is accepted (escort-style). **Default `false`: accepting never makes a villager follow you, and an existing auto-follow is cleared.** |
+| `leadVillagerSpeed` | `0.6` | Walk-speed multiplier for a villager **leading** the player in a lead-style escort (`escort_entity` with `lead:true`). Lower keeps it near walking pace so the player can stay close and guard it. Range `0.1`–`2.0`. |
+| `highlightQuestTargets` | `true` | A villager that is the target of one of your active quests (the delivery recipient, or the villager to heal/cure/escort/protect/defend) **glows** through walls while it is loaded, so you can find it. Applied server-side; syncs to all clients. |
 | `questChatMessages` | `true` | Send a short chat confirmation when a quest is accepted or completed. |
 
 ### `[debug]`
@@ -53,6 +55,21 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 |---|---|---|
 | `strictJsonValidation` | `false` | Treat any malformed/unknown quest JSON as a hard error instead of skipping it. |
 | `debugLogging` | `false` | Verbose logging for troubleshooting. |
+
+### `[progression]`
+| Option | Default | What it does |
+|---|---|---|
+| `enableReputationTiers` | `true` | Master switch for reputation tiers, player titles, and the journal screen (0.7.0). When off, the `reputation_tier` condition fails safe, tier-up toasts/titles are not granted, and tier/title ladders are not loaded; raw village reputation still accrues. |
+
+### `[situations]`
+| Option | Default | What it does |
+|---|---|---|
+| `enableSituations` | `true` | Master switch for the Living Village situations system (0.8.0). When off, no situations are detected, opened, or surfaced; existing quests are unaffected. |
+| `maxConcurrentSituationsPerVillage` | `2` | Cap on simultaneously-open situations in one village. Excess detections are suppressed (and logged). `0` disables the cap. |
+| `situationGlobalCooldownTicks` | `6000` | Minimum ticks between any two situations opening in the same village (anti-spam). |
+| `situationDetectionIntervalTicks` | `200` | How often (ticks) villages near players are scanned for tick-driven situations (famine, missing kin, nightfall) and open situations are maintained. Death is detected immediately. |
+| `maxSituationOffersPerMenu` | `2` | Cap on how many situation offers a single villager surfaces at once (they compete with static offers via the usual priority/weight shaping). |
+| `situationDefaultPriority` | `5` | Default offer-priority tier for situation offers that don't set their own, so the village's needs fill menu slots first. |
 
 ---
 
@@ -63,6 +80,7 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 |---|---|---|
 | `showQuestButtonInMcaMenu` | `true` | Inject the **Quests** button into MCA's villager interaction menu. |
 | `showQuestToasts` | `true` | Toast popup when a quest becomes ready to turn in. |
+| `showSituationToast` | `true` | Toast popup when a nearby village opens a situation that needs help (0.8.0). |
 | `playQuestSounds` | `true` | Play a sound with the ready toast. |
 | `showQuestTrackerHud` | `true` | Show the on-screen active-quest tracker. |
 | `questTrackerMaxEntries` | `3` | Max quests listed in the HUD tracker. |

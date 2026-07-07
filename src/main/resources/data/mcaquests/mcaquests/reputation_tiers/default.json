@@ -1,0 +1,9 @@
+{
+  "tiers": [
+    { "id": "stranger", "threshold": 0, "name": "Stranger" },
+    { "id": "acquaintance", "threshold": 25, "name": "Acquaintance" },
+    { "id": "friend", "threshold": 75, "name": "Friend" },
+    { "id": "honored", "threshold": 150, "name": "Honored", "grants_title": "mcaquests:honored_of_village" },
+    { "id": "revered", "threshold": 300, "name": "Revered", "grants_title": "mcaquests:revered_of_village" }
+  ]
+}

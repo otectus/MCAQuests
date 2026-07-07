@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:defend_the_gate",
+  "scope": "village",
+  "duration_ticks": 11000,
+  "cooldown_ticks": 72000,
+  "trigger": { "type": "mcaquests:night" },
+  "outcomes": {
+    "success": { "reputation": 10 },
+    "failure": { "reputation": -6 }
+  },
+  "offer": {
+    "weight": 7,
+    "giver": { "professions": ["mca:guard"], "adult_only": true },
+    "title": { "text": "Defend the Gate" },
+    "dialogue": {
+      "offer": { "text": "They're testing the gate again tonight. Plant yourself at the wall with me and cut down eight of them before they break through — hold this ground." },
+      "accept": { "text": "Then hold the gate. Not one of them gets past." },
+      "decline": { "text": "Then I hold it alone, and pray the bar holds too." },
+      "in_progress": { "text": "Hold the line! How many at the gate have you dropped?" },
+      "ready": { "text": "Eight down and the gate still ours. Well held, watcher." },
+      "complete": { "text": "The gate stood the night because you stood at it. The village owes you a quiet dawn." },
+      "failed": { "text": "They breached before we cleared them. A hard night — and a harder morning." }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:defend_location",
+        "location": { "anchor": "home_village" },
+        "threat": { "entity": "minecraft:zombie" },
+        "radius": 24,
+        "count": 8
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+      { "type": "mcaquests:xp", "amount": 28 },
+      { "type": "mcaquests:hearts", "amount": 22 }
+    ]
+  }
+}

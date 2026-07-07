@@ -31,8 +31,8 @@
   },
   "conditions": {
     "any_of": [
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:guard_safety_2_patrol" },
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:guard_safety_2b_amends" }
+      { "type": "mcaquests:quest_completed", "quest": "mcaquests:guard_safety_2_patrol", "scope": "giver" },
+      { "type": "mcaquests:quest_completed", "quest": "mcaquests:guard_safety_2b_amends", "scope": "giver" }
     ]
   }
 }

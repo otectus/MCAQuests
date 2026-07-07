@@ -1,0 +1,29 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_trade_with_blacksmith",
+  "weight": 12,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "Custom from the Forge" },
+  "dialogue": {
+    "offer": { "text": "Our blacksmith's been short of custom lately and it's wearing on them. Go strike a couple of trades at the forge — it'd lift their spirits and the village's." },
+    "accept": { "text": "Good of you. Two trades ought to do it." },
+    "decline": { "text": "Ah well. Coin's tight all round." },
+    "in_progress": { "text": "Been to see the blacksmith yet?" },
+    "ready": { "text": "Heard the hammer ringing again — that's your doing." },
+    "complete": { "text": "The smith's in good cheer now. The whole village feels it. My thanks." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:trade_with_villager",
+      "profession": "minecraft:weaponsmith",
+      "count": 2
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 16 }
+  ]
+}

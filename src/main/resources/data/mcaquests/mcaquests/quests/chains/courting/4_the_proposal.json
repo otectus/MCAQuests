@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:courting_4_the_proposal",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Courtship" },
+  "dialogue": {
+    "offer": { "text": "My heart's quite made up about you. There's only one thing left to ask — but a promise like that deserves a ring. Bring me four gold, and let me have it shaped into something forever." },
+    "accept": { "text": "Four gold, and then... well. You know what then. Hurry back to me." },
+    "decline": { "text": "Take your time. Some things shouldn't be rushed. I'll wait." },
+    "in_progress": { "text": "Have you the gold yet? My hands won't stop fidgeting." },
+    "ready": { "text": "Gold enough for a ring — and for a promise. You know what I'm asking, don't you?" },
+    "complete": { "text": "Then it's settled, here and now: it's you, and only you. Whatever comes, we face it together." }
+  },
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
+    { "type": "mcaquests:xp", "amount": 40 },
+    { "type": "mcaquests:hearts", "amount": 40 }
+  ],
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:gold_ingot", "count": 4, "consume": true }
+  ],
+  "chain": {
+    "chain": "mcaquests:courting",
+    "stage": 4,
+    "stage_total": 4,
+    "relationship_arc": { "text": "A Courtship" },
+    "chapter": { "text": "The Proposal" },
+    "prerequisites": ["mcaquests:courting_3_meet_the_family"]
+  }
+}

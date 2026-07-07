@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:aging_parent_2_remedy",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "The Twilight Years" },
+  "dialogue": {
+    "offer": { "text": "My parent's taken ill and my own remedies aren't helping. A golden carrot, pressed into their hand by someone who cares — would you tend to them for me? I can't bear to see them suffer." },
+    "accept": { "text": "Bless you. Be gentle — they're prouder than they are strong, these days." },
+    "decline": { "text": "Please reconsider. They haven't many seasons left to waste on stubbornness." },
+    "in_progress": { "text": "Have you tended my parent yet? How do they fare?" },
+    "ready": { "text": "The color's back in their cheeks? Oh, thank the light." },
+    "complete": { "text": "You gave my parent ease when I couldn't. There's one last thing I'd ask — but it can wait until they've rested." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:heal_entity",
+      "villager": { "mode": "family", "relation": "parent" },
+      "item": "minecraft:golden_carrot",
+      "below_health_fraction": 0.8,
+      "count": 1
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 26 },
+    { "type": "mcaquests:hearts", "amount": 26 }
+  ],
+  "chain": {
+    "chain": "mcaquests:aging_parent",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Twilight Years" },
+    "chapter": { "text": "The Remedy" },
+    "prerequisites": ["mcaquests:aging_parent_1_warm_meal"],
+    "unlocks": ["mcaquests:aging_parent_3_last_walk"]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "parent",
+    "status": "nearby"
+  }
+}

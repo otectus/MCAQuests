@@ -28,5 +28,10 @@ public final class QuestClientInput {
         while (QuestClientSetup.TOGGLE_HUD.consumeClick()) {
             ClientQuestData.toggleHud();
         }
+        while (QuestClientSetup.OPEN_JOURNAL.consumeClick()) {
+            if (minecraft.player != null && minecraft.screen == null) {
+                minecraft.setScreen(new JournalScreen());
+            }
+        }
     }
 }

@@ -28,6 +28,7 @@ public final class ProjectSavedData extends SavedData {
 
     private final Map<String, ProjectState> instances = new LinkedHashMap<>();
     private final Map<String, Integer> reputation = new LinkedHashMap<>();
+    private final Map<String, String> tierHighWater = new LinkedHashMap<>();
     private final Map<UUID, List<PendingReward>> pending = new LinkedHashMap<>();
 
     public ProjectSavedData() {
@@ -69,12 +70,29 @@ public final class ProjectSavedData extends SavedData {
         return reputation.getOrDefault(identity, 0);
     }
 
+    /** A snapshot of all scope identities that currently carry a reputation value (0.7.0). */
+    public java.util.Set<String> reputationKeys() {
+        return new java.util.LinkedHashSet<>(reputation.keySet());
+    }
+
     public void addReputation(String identity, int delta) {
         if (delta == 0) {
             return;
         }
         reputation.merge(identity, delta, Integer::sum);
         setDirty();
+    }
+
+    /** Highest reputation tier id ever reached for this identity, or {@code null} if none recorded (0.7.0). */
+    public String tierHighWater(String identity) {
+        return tierHighWater.get(identity);
+    }
+
+    public void setTierHighWater(String identity, String tierId) {
+        if (!tierId.equals(tierHighWater.get(identity))) {
+            tierHighWater.put(identity, tierId);
+            setDirty();
+        }
     }
 
     // --- offline pending player rewards ---
@@ -107,6 +125,10 @@ public final class ProjectSavedData extends SavedData {
         reputation.forEach(rep::putInt);
         tag.put("reputation", rep);
 
+        CompoundTag hw = new CompoundTag();
+        tierHighWater.forEach(hw::putString);
+        tag.put("repTierHW", hw);
+
         CompoundTag pend = new CompoundTag();
         pending.forEach((uuid, list) -> {
             ListTag rewards = new ListTag();
@@ -127,6 +149,10 @@ public final class ProjectSavedData extends SavedData {
         CompoundTag rep = tag.getCompound("reputation");
         for (String key : rep.getAllKeys()) {
             data.reputation.put(key, rep.getInt(key));
+        }
+        CompoundTag hw = tag.getCompound("repTierHW");
+        for (String key : hw.getAllKeys()) {
+            data.tierHighWater.put(key, hw.getString(key));
         }
         CompoundTag pend = tag.getCompound("pending");
         for (String key : pend.getAllKeys()) {

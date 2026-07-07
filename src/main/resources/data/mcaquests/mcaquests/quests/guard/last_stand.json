@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_last_stand",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "The Last Stand" },
+  "dialogue": {
+    "offer": { "text": "They're massing thick and we're too few. Hold the village heart with me and put down a dozen before sunrise — if dawn finds them inside the walls, we've lost." },
+    "accept": { "text": "Then we hold till dawn. Steady now." },
+    "decline": { "text": "Then we sell the square dearly without you." },
+    "in_progress": { "text": "Dawn's a long way off. Keep cutting them down!" },
+    "ready": { "text": "A dozen down and grey light on the wall. We held." },
+    "complete": { "text": "You stood the whole night through. They'll tell this one for years." },
+    "failed": { "text": "Dawn came and they were still among the houses. A black night for us all." }
+  },
+  "failure": {
+    "deadline_time": 23000,
+    "failure_hearts": -6,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:defend_location",
+      "location": { "anchor": "home_village" },
+      "threat": { "entity": "minecraft:zombie" },
+      "radius": 20,
+      "count": 12
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
+    { "type": "mcaquests:xp", "amount": 38 },
+    { "type": "mcaquests:hearts", "amount": 34 }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

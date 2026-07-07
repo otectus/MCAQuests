@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:lost_child_1_trail",
+  "weight": 13,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "Bring Them Home" },
+  "dialogue": {
+    "offer": { "text": "My child is gone — wandered off days ago and never came back. They loved the forest. Please, search the woods for any trace of them. I'm out of my mind with worry." },
+    "accept": { "text": "Bless you. Look where the trees grow thick — that's where they'd go." },
+    "decline": { "text": "Then who will look, if not you? Please, reconsider." },
+    "in_progress": { "text": "Have you reached the forest? Any sign at all?" },
+    "ready": { "text": "You searched the woods? Tell me — tell me you found something." },
+    "complete": { "text": "Footprints, heading deeper. They were alive when they passed here. There's still hope — we have to follow it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:visit_biome", "tag": "minecraft:is_forest" }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 22 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ],
+  "chain": {
+    "chain": "mcaquests:lost_child",
+    "stage": 1,
+    "stage_total": 3,
+    "relationship_arc": { "text": "Bring Them Home" },
+    "chapter": { "text": "Footprints in the Mud" },
+    "unlocks": ["mcaquests:lost_child_2_deeper"]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "child",
+    "status": "missing"
+  }
+}

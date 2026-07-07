@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_cure_my_spouse",
+  "weight": 12,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "Don't Let Me Turn" },
+  "dialogue": {
+    "offer": { "text": "Something bit me in the dark, my love, and I can feel it taking hold — I'm so cold. There's a way back, a golden apple and a steady hand. Please. Don't let me turn." },
+    "accept": { "text": "Hurry, my heart. I'll hold on as long as I can." },
+    "decline": { "text": "No — don't go. Please don't leave me to this." },
+    "in_progress": { "text": "It's spreading... the cure, love, quickly." },
+    "ready": { "text": "The cold... it's loosening its grip. You're saving me." },
+    "complete": { "text": "I'm myself again. You pulled me back from the edge of something awful. I owe you my very soul." }
+  },
+  "objectives": [
+    { "type": "mcaquests:cure_villager", "villager": { "mode": "self" } }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 34 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:is_player_spouse" },
+      { "type": "mcaquests:infected" }
+    ]
+  }
+}

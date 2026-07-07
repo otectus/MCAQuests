@@ -1,0 +1,46 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_lead_me_home",
+  "weight": 12,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "Lead Me Home" },
+  "dialogue": {
+    "offer": { "text": "I've strayed too far and the light's failing. I know the way back — just keep close and keep the monsters off me, and I'll lead us home." },
+    "accept": { "text": "Stay near me. I'll set the pace." },
+    "decline": { "text": "Then I'll find my own way, and hope for the best." },
+    "in_progress": { "text": "This way — and don't let anything creep up behind us." },
+    "ready": { "text": "Home, and in one piece! I knew I could count on you." },
+    "complete": { "text": "Safe behind the walls at last. I won't forget this kindness." },
+    "failed": { "text": "We never made it... I was lucky to crawl away. Another time, perhaps." }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "home_village" },
+      "radius": 8,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 24 },
+    { "type": "mcaquests:hearts", "amount": 26 }
+  ],
+  "conditions": {
+    "any_of": [
+      { "type": "mcaquests:giver_distance_from_village", "min_distance": 64, "require_outside_border": true },
+      { "all_of": [
+          { "type": "mcaquests:time", "period": "NIGHT" },
+          { "type": "mcaquests:giver_distance_from_village", "min_distance": 24, "require_outside_border": true }
+      ] }
+    ]
+  }
+}

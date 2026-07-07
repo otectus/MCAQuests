@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cartographer_guide_the_surveyor",
+  "weight": 10,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": { "professions": ["minecraft:cartographer"], "adult_only": true },
+  "title": { "text": "Guide the Surveyor" },
+  "dialogue": {
+    "offer": { "text": "I've sketches enough to fill a book, but it's dark and my drafting table is across rough ground. Keep me safe and I'll lead us back to it before my notes blow away." },
+    "accept": { "text": "Splendid. Mind the path while I mind the maps." },
+    "decline": { "text": "Then I'll clutch my papers and risk it alone." },
+    "in_progress": { "text": "The table's this way — keep the dark off my back." },
+    "ready": { "text": "My drafting table! Now the real work begins." },
+    "complete": { "text": "Every line I draw tonight, I owe to you. My thanks, escort." }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "workstation" },
+      "radius": 6,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 26 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_kin_errand",
+  "weight": 10,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Kindness for Kin" },
+  "dialogue": {
+    "offer": { "text": "Family looks after family, don't they? Carry {count} {gift_name} to one of my kin for me — hand it to them yourself, with a kind word." },
+    "accept": { "text": "Bless you. They'll be so pleased someone thought of them." },
+    "decline": { "text": "Another time, perhaps. Family keeps." },
+    "in_progress": { "text": "Have you found my kin with the {gift_name} yet?" },
+    "ready": { "text": "{count} {gift_name}, delivered with care — wonderful." },
+    "complete": { "text": "You've a place in this family's heart now. That's not a thing we give lightly." }
+  },
+  "template": {
+    "variables": {
+      "gift": {
+        "kind": "item",
+        "ids": ["minecraft:poppy", "minecraft:cookie", "minecraft:bread", "minecraft:cooked_cod", "minecraft:sweet_berries", "minecraft:white_wool", "minecraft:apple"]
+      },
+      "count": { "kind": "int", "min": 3, "max": 8, "per_player_level": 0.2, "limit": 16 }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:deliver_to_villager",
+        "recipient": { "mode": "family", "relation": "any" },
+        "item": "{gift}",
+        "count": "{count}",
+        "consume": true
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+      { "type": "mcaquests:hearts", "amount": 16 }
+    ]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "any",
+    "status": "same_village"
+  }
+}

@@ -41,6 +41,10 @@ public final class RewardTypes {
     public static final QuestRewardType<UnlockReward> UNLOCK =
             register(new ResourceLocation(McaQuests.MOD_ID, "unlock"), UnlockReward.CODEC);
 
+    // v0.7.0 — grants a player title (village-scoped or global).
+    public static final QuestRewardType<GrantTitleReward> GRANT_TITLE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "grant_title"), GrantTitleReward.CODEC);
+
     public static final Codec<QuestRewardType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {
                 QuestRewardType<?> type = BY_ID.get(id);

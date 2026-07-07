@@ -1,7 +1,12 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.List;
 
 /**
  * A single requirement a player must satisfy to complete a quest (spec section 14). Registry-driven
@@ -17,6 +22,15 @@ public interface QuestObjective {
 
     /** Human-readable one-line summary for the quest card, e.g. "Deliver 24 Wheat". */
     Component describe();
+
+    /**
+     * Context-aware variant used to build the active quest-log line: lets an objective resolve a concrete
+     * target villager's real name (and a location hint) server-side, so the player knows who to find.
+     * Defaults to {@link #describe()}.
+     */
+    default Component describe(ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        return describe();
+    }
 
     /** Target amount (for progress display). */
     int required();
@@ -34,5 +48,15 @@ public interface QuestObjective {
     /** True if progress accumulates via game events rather than a live state check. */
     default boolean isEventDriven() {
         return false;
+    }
+
+    /**
+     * Datapack-load validation hook (spec section 26). Appends semantic problems a codec cannot catch
+     * (e.g. a target referencing a field its mode requires, an out-of-range radius). Messages should
+     * be prefixed with {@code "Quest '<questId>': objective[<index>] "}. No-op by default, so existing
+     * objective types are unaffected. Runs against the literal authored objective, so for template
+     * quests it sees pre-substitution values (template semantics remain the TemplateValidator's job).
+     */
+    default void validate(ResourceLocation questId, int index, List<String> errors) {
     }
 }

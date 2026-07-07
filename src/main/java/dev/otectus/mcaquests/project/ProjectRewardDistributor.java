@@ -53,7 +53,8 @@ public final class ProjectRewardDistributor {
                 continue;
             }
             if (reward instanceof VillageReputationReward rep) {
-                data.addReputation(state.identity(), rep.amount());
+                dev.otectus.mcaquests.quest.reputation.ReputationService.award(
+                        data, server, state.identity(), rep.amount(), null);
                 continue;
             }
 

@@ -6,6 +6,7 @@ import dev.otectus.mcaquests.project.objective.ProjectObjectiveTypes;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
 import dev.otectus.mcaquests.quest.reward.RewardTypes;
+import dev.otectus.mcaquests.quest.situation.SituationTriggerTypes;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -46,6 +47,7 @@ public final class McaQuests {
         RewardTypes.bootstrap();
         ConditionTypes.bootstrap();
         ProjectObjectiveTypes.bootstrap();
+        SituationTriggerTypes.bootstrap();
         event.enqueueWork(QuestNetwork::register);
     }
 }

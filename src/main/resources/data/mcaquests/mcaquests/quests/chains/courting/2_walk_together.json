@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:courting_2_walk_together",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Courtship" },
+  "dialogue": {
+    "offer": { "text": "It's a fine evening for a walk, and I'd feel safer — happier — with you beside me. Let me lead us out to the next village and back. Keep the dark off us and I'll keep the company sweet." },
+    "accept": { "text": "Then give me your arm and let's not hurry." },
+    "decline": { "text": "Another evening, maybe. I'll hold you to it." },
+    "in_progress": { "text": "Stay close — the stars are better shared." },
+    "ready": { "text": "What a walk that was. I didn't want it to end." },
+    "complete": { "text": "I'll remember this evening a long while. You make the whole world feel safer." }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "nearest_village", "radius": 256 },
+      "radius": 12,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 24 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "chain": {
+    "chain": "mcaquests:courting",
+    "stage": 2,
+    "stage_total": 4,
+    "relationship_arc": { "text": "A Courtship" },
+    "chapter": { "text": "An Evening Stroll" },
+    "prerequisites": ["mcaquests:courting_1_first_gift"],
+    "unlocks": ["mcaquests:courting_3_meet_the_family"]
+  }
+}

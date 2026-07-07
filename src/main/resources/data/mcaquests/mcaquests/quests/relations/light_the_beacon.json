@@ -1,0 +1,37 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_light_the_beacon",
+  "weight": 9,
+  "category": "infrastructure",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "Light the Beacons" },
+  "dialogue": {
+    "offer": { "text": "When the dark comes the little ones get frightened. Would you set out some lanterns around the village — six warm lights to say we're safe in here?" },
+    "accept": { "text": "Bless you. A lit village is a brave village." },
+    "decline": { "text": "Then we'll huddle by the one candle, as always." },
+    "in_progress": { "text": "How many lanterns are glowing now?" },
+    "ready": { "text": "Oh, it's lovely — like little stars come down to the fences." },
+    "complete": { "text": "The children stopped crying the moment the lights went up. You gave us a gentler night." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:lantern",
+      "location": { "anchor": "home_village" },
+      "radius": 20,
+      "count": 6
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 18 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:village_member" },
+      { "type": "mcaquests:time", "period": "NIGHT" }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_childs_first_toy",
+  "weight": 10,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Child's First Toy" },
+  "dialogue": {
+    "offer": { "text": "My little one's been so brave lately. I'd love to make them a soft toy lamb — could you bring three white wool to my child directly? Let them pick the softest." },
+    "accept": { "text": "They'll be over the moon. Look for them near the well." },
+    "decline": { "text": "Another time, perhaps. They'll understand." },
+    "in_progress": { "text": "Have you found my child with that wool?" },
+    "ready": { "text": "Soft wool, straight into little hands — wonderful." },
+    "complete": { "text": "You should have seen their face. You've made a child very happy today." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": { "mode": "family", "relation": "child" },
+      "item": "minecraft:white_wool",
+      "count": 3,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "child",
+    "status": "nearby"
+  }
+}

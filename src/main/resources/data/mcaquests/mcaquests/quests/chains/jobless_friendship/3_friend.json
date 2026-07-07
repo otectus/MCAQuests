@@ -32,8 +32,8 @@
   },
   "conditions": {
     "any_of": [
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:jobless_friendship_2_favor" },
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:jobless_friendship_2b_understanding" }
+      { "type": "mcaquests:quest_completed", "quest": "mcaquests:jobless_friendship_2_favor", "scope": "giver" },
+      { "type": "mcaquests:quest_completed", "quest": "mcaquests:jobless_friendship_2b_understanding", "scope": "giver" }
     ]
   }
 }

@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_torch_the_dark",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Torch the Dark" },
+  "dialogue": {
+    "offer": { "text": "Monsters spawn where the light fails. Ring the village edge with torches — a dozen should push the dark back past the wall." },
+    "accept": { "text": "Good thinking. Light denies them the ground." },
+    "decline": { "text": "Then we fight in the dark again tonight." },
+    "in_progress": { "text": "How many torches up along the wall?" },
+    "ready": { "text": "The edge is bright as a hearth. They'll think twice now." },
+    "complete": { "text": "A lit wall is a quiet wall. The watch sleeps easier for your work." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:torch",
+      "location": { "anchor": "home_village" },
+      "radius": 24,
+      "count": 12
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

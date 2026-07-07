@@ -46,6 +46,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         boolean strict = McaQuestsConfig.COMMON.strictJsonValidation.get();
         Map<ResourceLocation, QuestDefinition> loaded = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
@@ -61,15 +62,18 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
                     });
         }
 
-        QuestChainValidator.validate(loaded, errors);
+        QuestChainValidator.validate(loaded, errors, warnings);
         TemplateValidator.validate(loaded, errors);
         FailureValidator.validate(loaded, errors);
+        ObjectiveValidator.validate(loaded, errors);
         if (strict && !errors.isEmpty()) {
             throw new QuestValidationException(errors.get(errors.size() - 1));
         }
 
-        QuestRegistry.replaceAll(loaded, errors);
-        McaQuests.LOGGER.info("Loaded {} MCA quest(s) with {} error(s).", loaded.size(), errors.size());
+        QuestRegistry.replaceAll(loaded, errors, warnings);
+        warnings.forEach(w -> McaQuests.LOGGER.warn("[MCA: Quests] {}", w));
+        McaQuests.LOGGER.info("Loaded {} MCA quest(s) with {} error(s), {} warning(s).",
+                loaded.size(), errors.size(), warnings.size());
     }
 
     private static void recordError(List<String> errors, boolean strict, String message) {

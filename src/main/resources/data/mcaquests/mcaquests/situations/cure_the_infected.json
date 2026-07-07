@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cure_the_infected",
+  "scope": "village",
+  "duration_ticks": 6000,
+  "cooldown_ticks": 36000,
+  "trigger": { "type": "mcaquests:infection", "min_progress": 0.1 },
+  "outcomes": {
+    "success": { "reputation": 14 },
+    "failure": { "reputation": -10 }
+  },
+  "offer": {
+    "weight": 10,
+    "giver": { "adult_only": true },
+    "title": { "text": "The Rot Spreads" },
+    "dialogue": {
+      "offer": { "text": "One of our own is turning — the zombie-sickness has them. A golden apple, used in time, can still save them. Please, before it's too late!" },
+      "accept": { "text": "Hurry to them. Every moment counts." },
+      "decline": { "text": "Then we can only bar the doors and grieve." },
+      "in_progress": { "text": "Have you reached them? Use the golden apple before they turn." },
+      "ready": { "text": "They're cured? Thank the heavens." },
+      "complete": { "text": "You pulled them back from the dark. The whole village breathes easier." },
+      "failed": { "text": "We were too slow. The rot took them. May they rest." }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:cure_villager",
+        "villager": { "mode": "family", "relation": "any" },
+        "cure_item": { "item": "minecraft:golden_apple" }
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+      { "type": "mcaquests:xp", "amount": 35 },
+      { "type": "mcaquests:hearts", "amount": 30 }
+    ]
+  }
+}

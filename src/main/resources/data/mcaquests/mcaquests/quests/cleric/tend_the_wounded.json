@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_tend_the_wounded",
+  "weight": 11,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:cleric"], "adult_only": true },
+  "title": { "text": "Tend the Wounded" },
+  "dialogue": {
+    "offer": { "text": "I've taken hurt tending others and my own hands shake too much to mend it. Press a golden carrot on me and let the warmth do its work." },
+    "accept": { "text": "Bless you. A healer needs healing too, sometimes." },
+    "decline": { "text": "Then I'll pray it knits on its own. Go in peace." },
+    "in_progress": { "text": "The wound still aches, friend. That golden carrot?" },
+    "ready": { "text": "Ahh — the pain ebbs already. The light provides." },
+    "complete": { "text": "Mended and grateful. Now I can get back to tending the rest. Bless you." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:heal_entity",
+      "villager": { "mode": "self" },
+      "item": "minecraft:golden_carrot",
+      "below_health_fraction": 0.7,
+      "count": 1
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 22 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "conditions": {
+    "type": "mcaquests:health_below",
+    "threshold": 0.7
+  }
+}

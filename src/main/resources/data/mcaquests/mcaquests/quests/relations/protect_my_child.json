@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_protect_my_child",
+  "weight": 9,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "While They Gather Flowers" },
+  "dialogue": {
+    "offer": { "text": "My little one wants to gather flowers by the meadow, but I daren't let them go alone. Keep them safe for a couple of minutes while they pick?" },
+    "accept": { "text": "Bless you. Don't let them out of your sight." },
+    "decline": { "text": "Then they'll have to stay inside today." },
+    "in_progress": { "text": "Are they still safe? Keep close to them." },
+    "ready": { "text": "Safe and sound, with an armful of flowers! Thank you." },
+    "complete": { "text": "You watched over my child as if they were your own. I won't forget that." },
+    "failed": { "text": "My child... no. I should never have let them out. Leave me." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:protect_entity",
+      "villager": { "mode": "family", "relation": "child" },
+      "duration_ticks": 2400,
+      "require_near_player": true,
+      "near_radius": 16,
+      "fail_on_death": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 24 },
+    { "type": "mcaquests:hearts", "amount": 26 }
+  ]
+}

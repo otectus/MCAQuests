@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:weaponsmith_proving_the_steel",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:weaponsmith"], "adult_only": true },
+  "title": { "text": "Proving the Steel" },
+  "dialogue": {
+    "offer": { "text": "I've forged a new blade and a smith's word means nothing — it's the field that proves steel. Take it out and put down six of the undead, then tell me how it held." },
+    "accept": { "text": "Mind the edge. Report back honest, now." },
+    "decline": { "text": "Then it hangs untested on the rack. A pity." },
+    "in_progress": { "text": "How does the blade bite? Six of them, remember." },
+    "ready": { "text": "Six undead and the edge still keen? Then I forged true." },
+    "complete": { "text": "Proven steel and a proven arm. Keep the blade — you've earned it twice over." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:iron_sword", "count": 1 },
+    { "type": "mcaquests:xp", "amount": 26 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_post_raid_sweep",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Sweep the Streets" },
+  "dialogue": {
+    "offer": { "text": "The main fight's done but stragglers still lurk in the alleys and cellars. Sweep the village and put down six of them before they regroup." },
+    "accept": { "text": "Check the dark corners. That's where they hide." },
+    "decline": { "text": "Then we'll be jumping at shadows all night." },
+    "in_progress": { "text": "Found any of the stragglers yet?" },
+    "ready": { "text": "Six rooted out of the alleys. The streets are clean." },
+    "complete": { "text": "Thorough as always. The village can breathe again. Well swept." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 26 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ],
+  "conditions": {
+    "type": "mcaquests:village_member"
+  }
+}

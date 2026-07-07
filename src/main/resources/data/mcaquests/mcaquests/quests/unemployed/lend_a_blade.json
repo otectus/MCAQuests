@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_lend_a_blade",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "Lend a Blade" },
+  "dialogue": {
+    "offer": { "text": "I've no trade and no coin, but I've got neighbors I care about, and there's three of the dead shambling too near our doors. You've a strong arm — would you see them off?" },
+    "accept": { "text": "Thank you kindly. I'll keep folk indoors till it's done." },
+    "decline": { "text": "Fair enough. Not everyone's a fighter." },
+    "in_progress": { "text": "Still a couple of them lurching about out there." },
+    "ready": { "text": "All three? You've a brave heart, friend." },
+    "complete": { "text": "I can't pay you what a lord would, but you've my thanks and a neighbor's loyalty. That's worth something." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 3 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ]
+}

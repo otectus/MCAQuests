@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.compat;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -35,6 +36,7 @@ public final class McaVillagerSnapshot {
     private final OptionalInt moodValue;
     private final Optional<String> moodName;
     private final boolean homeVillage;
+    private final Optional<BlockPos> homeVillageCenter;
     private final boolean home;
     private final OptionalDouble healthFraction;
     private final float infectionProgress;
@@ -53,6 +55,7 @@ public final class McaVillagerSnapshot {
         this.moodValue = McaCompat.getMoodValue(villager);
         this.moodName = McaCompat.getMoodName(villager);
         this.homeVillage = McaCompat.hasHomeVillage(villager);
+        this.homeVillageCenter = McaCompat.getHomeVillageCenter(villager);
         this.home = McaCompat.hasHome(villager);
         this.healthFraction = McaCompat.getHealthFraction(villager);
         this.infectionProgress = McaCompat.getInfectionProgress(villager);
@@ -88,6 +91,11 @@ public final class McaVillagerSnapshot {
 
     public boolean hasHomeVillage() {
         return homeVillage;
+    }
+
+    /** The center of the giver's MCA home village (captured once per pass), or empty when it has none. */
+    public Optional<BlockPos> homeVillageCenter() {
+        return homeVillageCenter;
     }
 
     public boolean hasHome() {

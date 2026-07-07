@@ -1,0 +1,29 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_cure_infected_kin",
+  "weight": 6,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "The Sickness Among Us" },
+  "dialogue": {
+    "offer": { "text": "One of my kin has the rot in them — the zombie-sickness. A golden apple and a steady hand can still pull them back from it. Please, hurry, before they turn for good." },
+    "accept": { "text": "Go to them. The cure can't wait." },
+    "decline": { "text": "Then we can only pray, and bar the door." },
+    "in_progress": { "text": "Is my kin cured yet? Use the golden apple on them." },
+    "ready": { "text": "They're whole again? Thank every star above." },
+    "complete": { "text": "You gave my family their life back. We are forever in your debt." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:cure_villager",
+      "villager": { "mode": "family", "relation": "any" },
+      "cure_item": { "item": "minecraft:golden_apple" }
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 40 },
+    { "type": "mcaquests:hearts", "amount": 35 }
+  ]
+}

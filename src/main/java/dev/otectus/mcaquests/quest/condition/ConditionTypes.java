@@ -12,6 +12,7 @@ import dev.otectus.mcaquests.quest.condition.leaf.AdvancementCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AgeGroupCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.BiomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.GiverDistanceFromVillageCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HasHomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HealthBelowCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HeartsCondition;
@@ -30,6 +31,7 @@ import dev.otectus.mcaquests.quest.condition.leaf.QuestNotCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.RandomChanceCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.RelatedVillagerStatusCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.RelationshipStateCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.ReputationTierCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TimeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.VillageMemberCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.VillageReputationCondition;
@@ -80,6 +82,13 @@ public final class ConditionTypes {
 
     // v0.4.0 — independent mod-side village reputation as a condition.
     public static final QuestConditionType<VillageReputationCondition> VILLAGE_REPUTATION = register("village_reputation", VillageReputationCondition.CODEC);
+
+    // v0.7.0 — named reputation tier gate over the same per-village reputation.
+    public static final QuestConditionType<ReputationTierCondition> REPUTATION_TIER = register("reputation_tier", ReputationTierCondition.CODEC);
+
+    // Distance gate for lead-style escorts and "out after dark" content (pair with time:NIGHT via any_of).
+    public static final QuestConditionType<GiverDistanceFromVillageCondition> GIVER_DISTANCE_FROM_VILLAGE =
+            register("giver_distance_from_village", GiverDistanceFromVillageCondition.CODEC);
 
     public static final Codec<QuestConditionType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

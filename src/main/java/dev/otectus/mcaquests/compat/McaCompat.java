@@ -13,6 +13,7 @@ import forge.net.mca.server.world.data.Village;
 import forge.net.mca.server.world.data.VillageManager;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -21,6 +22,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -135,6 +140,86 @@ public final class McaCompat {
             } else if (mca.getVillagerBrain().getMoveState() == MoveState.FOLLOW) {
                 mca.getVillagerBrain().setMoveState(MoveState.MOVE, player);
             }
+        }
+    }
+
+    /**
+     * Drives the villager to walk toward {@code dest} on its own — the NPC <em>leads</em> (the inverse of
+     * {@link #setQuestGiverFollow}). Forces {@code MoveState.MOVE} (only when not already MOVE, to avoid
+     * refreshing the brain every tick), then writes the vanilla {@link MemoryModuleType#WALK_TARGET} memory
+     * that the villager's always-on move-to-walk-target behavior consumes to pathfind there. Re-issue each
+     * poll — other brain behaviors can clear the walk target out from under us. <b>Server side only.</b>
+     * No-op and fail-safe on a non-MCA entity or any error.
+     */
+    public static void leadVillagerTo(ServerPlayer player, Entity villager, BlockPos dest, double speed) {
+        if (!(villager instanceof VillagerEntityMCA mca)) {
+            return;
+        }
+        try {
+            if (mca.getVillagerBrain().getMoveState() != MoveState.MOVE) {
+                mca.getVillagerBrain().setMoveState(MoveState.MOVE, player);
+            }
+            mca.getBrain().setMemory(MemoryModuleType.WALK_TARGET,
+                    new WalkTarget(Vec3.atBottomCenterOf(dest), (float) speed, 1));
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA leadVillagerTo failed; ignoring", t);
+        }
+    }
+
+    /**
+     * Pauses a leading villager: clears its {@link MemoryModuleType#WALK_TARGET} and stops the navigator so
+     * it stands still when the player falls behind or the lead ends. Leaves the move state alone ({@code
+     * MOVE} is the natural idle for a led villager). <b>Server side only.</b> Safe on a non-MCA entity or
+     * any error.
+     */
+    public static void stopVillagerLeading(Entity villager) {
+        if (!(villager instanceof VillagerEntityMCA mca)) {
+            return;
+        }
+        try {
+            mca.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            mca.getNavigation().stop();
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA stopVillagerLeading failed; ignoring", t);
+        }
+    }
+
+    /**
+     * Pins a villager to its exact spot and makes it immune to all damage — used to "stage" an escortee so
+     * it waits safely until the player reaches it. Uses vanilla {@code setNoAi} (a full AI/movement freeze,
+     * not overridden by MCA) plus {@code setInvulnerable}; {@code VillagerEntityMCA#hurt} is {@code final}
+     * and delegates to {@code super.hurt}, so the invulnerable flag is honored. Re-assert each tick while
+     * holding (both flags persist to entity NBT, so a still-active quest self-heals on reload). Always undo
+     * with {@link #releaseVillagerHold}. <b>Server side only.</b> Safe on a non-MCA entity or any error.
+     */
+    public static void holdVillagerInPlace(Entity villager) {
+        if (!(villager instanceof VillagerEntityMCA mca)) {
+            return;
+        }
+        try {
+            mca.setNoAi(true);
+            mca.setInvulnerable(true);
+            mca.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            mca.getNavigation().stop();
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA holdVillagerInPlace failed; ignoring", t);
+        }
+    }
+
+    /**
+     * Releases a {@link #holdVillagerInPlace} hold: restores normal AI and vulnerability. Idempotent and
+     * fail-safe; call it when the escort engages, completes, or the quest ends so a held villager is never
+     * left frozen/invulnerable. <b>Server side only.</b>
+     */
+    public static void releaseVillagerHold(Entity villager) {
+        if (!(villager instanceof VillagerEntityMCA mca)) {
+            return;
+        }
+        try {
+            mca.setInvulnerable(false);
+            mca.setNoAi(false);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA releaseVillagerHold failed; ignoring", t);
         }
     }
 
@@ -313,6 +398,11 @@ public final class McaCompat {
         return OptionalDouble.empty();
     }
 
+    /** True when the villager is currently zombie-infected (infection progress &gt; 0). Safe default: {@code false}. */
+    public static boolean isInfected(Entity villager) {
+        return getInfectionProgress(villager) > 0f;
+    }
+
     /** The villager's zombie-infection progress (0..1). Safe default: {@code 0f}. */
     public static float getInfectionProgress(Entity villager) {
         if (villager instanceof VillagerEntityMCA mca) {
@@ -364,6 +454,18 @@ public final class McaCompat {
                     relation, status, t);
             return false;
         }
+    }
+
+    /**
+     * True when {@code villager} has at least one missing relative of any tracked relation
+     * (spouse/parent/child/sibling) — the village-scoped signal for the {@code missing_kin} situation
+     * trigger (0.8.0). Safe default: {@code false}.
+     */
+    public static boolean hasMissingRelative(ServerLevel level, Entity villager) {
+        return relativesWithStatus(level, villager, "spouse", "missing")
+                || relativesWithStatus(level, villager, "parent", "missing")
+                || relativesWithStatus(level, villager, "child", "missing")
+                || relativesWithStatus(level, villager, "sibling", "missing");
     }
 
     private static boolean matchesRelativeStatus(ServerLevel level, Entity giver, FamilyTree tree,
@@ -498,6 +600,44 @@ public final class McaCompat {
         }
     }
 
+    /**
+     * The count of edible items currently banked in the village's MCA storage buffer — the famine
+     * measure for the {@code low_food} situation trigger (0.8.0). Empty when the village does not
+     * resolve or MCA storage is unavailable (the trigger then never fires). Safe-fail.
+     */
+    public static OptionalInt getVillageFoodCount(ServerLevel level, int villageId) {
+        try {
+            return VillageManager.get(level).getOrEmpty(villageId)
+                    .map(v -> {
+                        int food = 0;
+                        for (ItemStack stack : v.storageBuffer) {
+                            if (stack != null && stack.isEdible()) {
+                                food += stack.getCount();
+                            }
+                        }
+                        return OptionalInt.of(food);
+                    })
+                    .orElseGet(OptionalInt::empty);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA getVillageFoodCount failed; defaulting empty", t);
+            return OptionalInt.empty();
+        }
+    }
+
+    /**
+     * True when a vanilla raid is currently active at {@code pos} (used to detect the {@code raid}
+     * situation near a village center). Not MCA-specific, but kept here with the other village helpers.
+     * Safe default: {@code false}.
+     */
+    public static boolean isRaidActive(ServerLevel level, BlockPos pos) {
+        try {
+            return level.getRaidAt(pos) != null;
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("isRaidActive failed; defaulting false", t);
+            return false;
+        }
+    }
+
     /** The currently-loaded resident villager entities of the village with {@code villageId}. Safe default: empty list. */
     public static List<Entity> loadedVillageResidents(ServerLevel level, int villageId) {
         try {
@@ -582,6 +722,125 @@ public final class McaCompat {
             return Optional.of(min);
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA getFamilyRootId failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Location anchors & relative resolution for the NPC/village objective types.
+    //
+    // MCA's Residency exposes the villager's assigned home (Optional<GlobalPos>) and workplace
+    // (BlockPos), and the FamilyTree lets us pick a concrete relative of the giver. We surface only
+    // primitives (BlockPos / UUID) so no forge.net.mca.* type escapes this class. Every method fails
+    // safe to a documented default and never throws.
+    // ---------------------------------------------------------------------------------------------
+
+    /** The villager's assigned home/bed position (MCA {@code Residency#getHome}). Safe default: {@code empty}. */
+    public static Optional<BlockPos> getHomePos(Entity villager) {
+        if (villager instanceof VillagerEntityMCA mca) {
+            try {
+                return mca.getResidency().getHome().map(GlobalPos::pos);
+            } catch (Throwable t) {
+                McaQuests.LOGGER.debug("MCA getHomePos failed; defaulting empty", t);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** The villager's workstation/job-site position (MCA {@code Residency#getWorkplace}). Safe default: {@code empty}. */
+    public static Optional<BlockPos> getWorkstationPos(Entity villager) {
+        if (villager instanceof VillagerEntityMCA mca) {
+            try {
+                BlockPos pos = mca.getResidency().getWorkplace();
+                // MCA returns BlockPos.ZERO (and occasionally null) when no workplace is assigned.
+                if (pos != null && !pos.equals(BlockPos.ZERO)) {
+                    return Optional.of(pos);
+                }
+            } catch (Throwable t) {
+                McaQuests.LOGGER.debug("MCA getWorkstationPos failed; defaulting empty", t);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Every relative of {@code giver} of the given {@code relation}
+     * ({@code any}/{@code spouse}/{@code parent}/{@code child}/{@code sibling}), by UUID. Walks the
+     * persistent {@link FamilyTree}, so it lists relatives even when they are unloaded. Self and the
+     * MCA nil UUID are filtered out. Safe default: empty list.
+     */
+    public static List<UUID> giverRelativeUuids(ServerLevel level, Entity giver, String relation) {
+        try {
+            Optional<EntityRelationship> opt = EntityRelationship.of(giver);
+            if (opt.isEmpty()) {
+                return List.of();
+            }
+            FamilyTreeNode node = opt.get().getFamilyEntry();
+            if (node == null) {
+                return List.of();
+            }
+            List<UUID> relatives = new ArrayList<>();
+            if (relation.equals("spouse") || relation.equals("any")) {
+                UUID partner = node.partner();
+                if (partner != null && !partner.equals(Util.NIL_UUID)) {
+                    relatives.add(partner);
+                }
+            }
+            if (relation.equals("parent") || relation.equals("any")) {
+                node.streamParents().forEach(relatives::add);
+            }
+            if (relation.equals("child") || relation.equals("any")) {
+                node.streamChildren().forEach(relatives::add);
+            }
+            if (relation.equals("sibling") || relation.equals("any")) {
+                relatives.addAll(node.siblings());
+            }
+            UUID self = giver.getUUID();
+            List<UUID> cleaned = new ArrayList<>();
+            for (UUID uuid : relatives) {
+                if (uuid != null && !uuid.equals(Util.NIL_UUID) && !uuid.equals(self) && !cleaned.contains(uuid)) {
+                    cleaned.add(uuid);
+                }
+            }
+            return cleaned;
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA giverRelativeUuids(relation={}) failed; defaulting empty", relation, t);
+            return List.of();
+        }
+    }
+
+    /**
+     * A concrete relative of {@code giver} of the given {@code relation}, preferring one that is
+     * currently loaded so the caller can act on the entity. Safe default: {@code empty}.
+     */
+    public static Optional<UUID> findGiverRelative(ServerLevel level, Entity giver, String relation) {
+        UUID firstKnown = null;
+        for (UUID uuid : giverRelativeUuids(level, giver, relation)) {
+            Entity entity = level.getEntity(uuid);
+            if (entity != null && entity.isAlive()) {
+                return Optional.of(uuid); // prefer a loaded relative
+            }
+            if (firstKnown == null) {
+                firstKnown = uuid;
+            }
+        }
+        return Optional.ofNullable(firstKnown);
+    }
+
+    /**
+     * The display name of a giver's relative by UUID, read from MCA's persistent {@link FamilyTree} so it
+     * resolves <em>even when the relative is not currently loaded</em>. Lets a quest objective name the
+     * villager the player must find. Safe default: {@code empty}.
+     */
+    public static Optional<String> getRelativeDisplayName(Entity giver, UUID relativeUuid) {
+        try {
+            return EntityRelationship.of(giver)
+                    .map(EntityRelationship::getFamilyTree)
+                    .flatMap(tree -> tree.getOrEmpty(relativeUuid))
+                    .map(FamilyTreeNode::getName)
+                    .filter(name -> name != null && !name.isBlank());
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA getRelativeDisplayName failed; defaulting empty", t);
             return Optional.empty();
         }
     }

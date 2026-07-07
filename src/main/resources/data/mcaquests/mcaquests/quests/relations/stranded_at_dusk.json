@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_stranded_at_dusk",
+  "weight": 11,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "Stranded at Dusk" },
+  "dialogue": {
+    "offer": { "text": "I wandered too far and now the sun's nearly gone. I can find the way myself if you'll keep the monsters off me — walk with me to the nearest village before something finds us." },
+    "accept": { "text": "Bless you. I'll lead — you just keep your blade between me and the dark." },
+    "decline": { "text": "Then I'll have to chance the road alone. Pray for me." },
+    "in_progress": { "text": "Stay close behind me — I daren't run." },
+    "ready": { "text": "Walls and torchlight at last! We made it." },
+    "complete": { "text": "I'd have died out there without you. I won't forget this." },
+    "failed": { "text": "They caught us on the road... I barely escaped. Leave me be a while." }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -6,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "nearest_village", "radius": 160 },
+      "radius": 10,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 32 },
+    { "type": "mcaquests:hearts", "amount": 30 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:giver_distance_from_village", "min_distance": 96, "require_outside_border": true },
+      { "type": "mcaquests:time", "period": "NIGHT" }
+    ]
+  }
+}

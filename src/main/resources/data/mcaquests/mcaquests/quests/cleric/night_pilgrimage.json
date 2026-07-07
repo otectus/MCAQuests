@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_night_pilgrimage",
+  "weight": 10,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": { "professions": ["minecraft:cleric"], "adult_only": true },
+  "title": { "text": "Night Pilgrimage" },
+  "dialogue": {
+    "offer": { "text": "Evening prayers ran long and now the dark presses close. Walk with me and keep the wicked things at bay — I'll lead us home to my own bed." },
+    "accept": { "text": "Blessings upon you. Stay near and fear nothing." },
+    "decline": { "text": "Then I'll trust to faith and a quick step. Go in peace." },
+    "in_progress": { "text": "Not far now. Keep the shadows from our heels." },
+    "ready": { "text": "My own threshold, thank the light. We're home." },
+    "complete": { "text": "You guarded a humble servant through the dark. That is its own blessing — and here is mine to you." }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "bed" },
+      "radius": 4,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 24 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

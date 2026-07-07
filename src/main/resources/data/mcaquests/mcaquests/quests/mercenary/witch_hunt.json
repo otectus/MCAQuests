@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mercenary_witch_hunt",
+  "weight": 10,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "professions": ["mca:mercenary"], "adult_only": true },
+  "title": { "text": "Witch Hunt" },
+  "dialogue": {
+    "offer": { "text": "A coven's been cooking trouble in the swamp — bad potions, worse luck. There's coin in it if you put down three of the witches." },
+    "accept": { "text": "Mind their throwing arm. Those bottles bite." },
+    "decline": { "text": "Suit yourself. The bounty keeps." },
+    "in_progress": { "text": "How many witches off the board?" },
+    "ready": { "text": "Three covens' worth of mischief, ended. Here's your coin." },
+    "complete": { "text": "Clean work. I'll know who to call next time there's a contract." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:witch", "count": 3 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 35 },
+    { "type": "mcaquests:hearts", "amount": 26 }
+  ]
+}

@@ -71,7 +71,9 @@ To **disable the built-in quests** entirely and ship only your own, set `enableD
 | `rewards` | array | no | none | Granted on turn-in. See [Rewards](#rewards). |
 | `turn_in` | object | no | `original_giver` | Where/how to hand in. See [Turn-in](#turn-in). |
 | `conditions` | object | no | none | Extra gate on being offered. See [Conditions](#conditions). |
-| `chain` | object | no | none | Relationship-arc metadata: stage, prerequisites, time limit. See [Quest chains](#quest-chains). |
+| `priority` | int | no | — | Offer priority tier; higher tiers fill a villager's slots first. Defaults so chain continuations (stage > 1) outrank standalone offers. See [Offer priority & weight bonuses](#offer-priority--weight-bonuses). |
+| `weight_bonus` | array | no | none | Conditional additions to `weight` (e.g. likelier as hearts rise). See [Offer priority & weight bonuses](#offer-priority--weight-bonuses). |
+| `chain` | object | no | none | Relationship-arc metadata: stage, prerequisites, unlocks. See [Quest chains](#quest-chains). |
 | `template` | object | no | none | Turns the quest into a randomized template: variable pools + the objective/reward JSON that uses them. See [Quest templates](#quest-templates). |
 
 ¹ Required for a hand-authored quest. A **template** quest omits top-level `objectives`/`rewards` and supplies them inside its `template` block instead.
@@ -147,6 +149,80 @@ Every objective shares an optional `count` (default `1`). "Targets" accept **eit
 | `mcaquests:visit_dimension` | `dimension` (resource location) | Enter that dimension, e.g. `minecraft:the_nether`. |
 | `mcaquests:talk_to_profession` | `profession` (resource location), `count` | Interact with that many villagers of a profession. |
 
+The objectives below center on living villagers, homes, families, and places. They all track
+progress **server-side** and persist through the existing quest state, so they survive logout, death,
+dimension change, villager/chunk unload, and dedicated-server restart. They never trust client packets.
+
+| `type` | Fields | Meaning |
+|---|---|---|
+| `mcaquests:escort_entity` | `villager` (default self), `destination` (anchor, req.), `radius` (1–64, def 6), `follow` (bool, def true), `lead` (bool, def false), `wait_distance` (1–64, def 6), `stage_until_near` (bool, optional) | Get a villager to a location; arrival sticks complete. With `follow` (default) the **player** leads and the villager trails. With `lead:true` the **villager** walks to the destination itself (re-pathed every tick), pausing whenever the player is farther than `wait_distance` blocks (so the player must stay close to guard it); `follow` is ignored. The destination is **resolved and frozen when the quest is accepted** (so a `nearest_village`/relative target never drifts). **Arrival** is border-aware: for a `home_village`/`nearest_village` anchor the villager need only be **inside the village border**; for any other anchor it is a horizontal (Y-ignored) distance within `radius`. Pair with `failure.fail_on_giver_death` so it fails if the escorted villager dies.<br>**Staged escort:** when `lead` is on and the escortee is **not the giver** (a relative/other villager), the escort is *staged* — the escortee waits **invulnerable and motionless** at its spot until the player comes within `wait_distance`, then the escort begins and from that point the escortee's **death fails the quest**. Auto-detected for `lead` + non-`self` villager; `stage_until_near` forces it on (`true`) or off (`false`). |
+| `mcaquests:protect_entity` | `villager` (default self), `duration_ticks` (≥20, def 2400), `require_near_player` (bool), `near_radius` (1–64, def 16), `fail_on_death` (bool, def true) | Keep a villager alive for a duration (shown in seconds). |
+| `mcaquests:defend_villager` | `villager` (default self), `threat` (entity target, req.), `radius` (1–64, def 16), `count` (def 5) | Kill hostile threats near a villager. |
+| `mcaquests:defend_location` | `location` (anchor, req.), `threat` (entity target, req.), `radius` (1–64, def 16), `count` (def 5) | Kill hostile threats near a fixed place (a gate, well, village center) — the place-anchored sibling of `defend_villager`. |
+| `mcaquests:trade_with_villager` | `villager` **or** `profession` (both optional), `count` (def 1) | Complete trades with a villager / profession. |
+| `mcaquests:heal_entity` | `villager` (default self), item target (req.), `below_health_fraction` (0–1, def 1.0), `count` (def 1), `consume` (bool, def false) | Use a remedy item on a hurt villager. |
+| `mcaquests:cure_villager` | `villager` (default self), `cure_item` (anchored item, def golden apple) | Cure an infected (zombifying) MCA villager. |
+| `mcaquests:breed_animals` | `animal` (entity target, req.), `near` (anchor, optional), `radius` (def 32), `count` (def 1) | Breed animals, optionally near a place. |
+| `mcaquests:tame_animal` | `animal` (entity target, req.), `near` (anchor, optional), `radius` (def 48), `count` (def 1) | Tame animals, optionally near a place. |
+| `mcaquests:sleep_or_rest` | `require_morning` (bool, def true) | Sleep through to morning. |
+| `mcaquests:build_near_location` | block target (req.), `location` (anchor, req.), `radius` (1–64, def 8), `count` (def 8) | Place blocks near a place (each position counts once). |
+| `mcaquests:enter_structure` | `structure` (id) **or** `structure_tag` (tag) | Enter a generated structure. |
+| `mcaquests:deliver_to_villager` | `recipient` (villager, req.), item target (req.), `count` (def 1), `consume` (bool, def true) | Hand an item to a specific villager (consumed at hand-off). |
+| `mcaquests:reach_location` | `location` (anchor, req.), `radius` (1–64, def 6) | The **player** travels to a location anchor; arrival sticks complete. Border-aware like `escort_entity`: a `home_village`/`nearest_village` anchor completes anywhere **inside the village border**; other anchors use a horizontal (Y-ignored) distance within `radius`. (Distinct from `enter_structure`, which keys off a named structure.) |
+
+### Villager targets
+
+Fields named `villager` / `recipient` select an MCA villager **relative to the quest giver**. The
+object always carries a `mode`:
+
+```json
+{ "mode": "self" }                                       // the giver
+{ "mode": "profession", "profession": "minecraft:weaponsmith" }
+{ "mode": "family", "relation": "sibling" }              // any | spouse | parent | child | sibling
+{ "mode": "uuid", "uuid": "<uuid>" }
+```
+
+Where `villager` is optional it defaults to `self`. Resolution is by UUID, so an **unloaded** target
+just pauses the objective (no false completion or failure).
+
+**Finding the target.** For an *active* quest the objective line resolves the target's **real name** and home
+village — e.g. "Deliver 1× Paper to **Hans (your brother) — Oakvale**" (the name comes from MCA and works even
+when the relative is unloaded) — and the target villager **glows** through walls while it is loaded (toggle
+`highlightQuestTargets`). When a target is a *relative* of the giver, gate the quest on
+`related_villager_status <relation> same_village` so it is only offered when a findable relative actually
+exists (otherwise it can be offered as an impossible quest).
+
+### Location anchors
+
+Fields named `destination` / `location` / `near` resolve to a position via an `anchor`:
+
+```json
+{ "anchor": "home_village" }                             // the giver's MCA home village (arrival = inside its border)
+{ "anchor": "nearest_village", "radius": 128 }           // nearest village to the giver, within radius (arrival = inside its border)
+{ "anchor": "giver_pos" }                                 // the giver's current position
+{ "anchor": "villager", "villager": { "mode": "family", "relation": "spouse" } }
+{ "anchor": "workstation" }                               // the giver's job site
+{ "anchor": "bed" }                                       // the giver's home/bed
+{ "anchor": "coords", "pos": [100, 64, -200] }
+```
+
+### Validation & MCA limitations
+
+- Unknown item/block/entity ids fail at load (registry-backed codecs). Radius/duration/count ranges are
+  enforced by the codec. The objective validator additionally reports a `villager`/`recipient` missing
+  the field its `mode` needs, a `coords` anchor without `pos`, an unknown family `relation`, a
+  `trade_with_villager` setting both `villager` and `profession`, and an `enter_structure` with neither
+  selector — each message names the quest and objective index.
+- **`enter_structure`** ids belong to a *dynamic* registry, so they can only be checked for syntax at
+  load (a warning, never a hard error); an unknown/unloaded structure simply never matches at runtime.
+- **`cure_villager`** observes MCA's infection state (it latches "seen infected", then completes on the
+  return to not-infected). MCA's infection/cure model is the authority; if that state is unavailable the
+  objective never completes (it never crashes). Targets that are never infected can't be completed.
+- **`sleep_or_rest`** implements player sleep only; "make a villager use their bed" is not implemented
+  (MCA does not expose villager sleep reliably).
+- **Workstation/bed anchors** depend on the giver having an assigned job site / home in MCA; otherwise
+  they resolve empty and the objective pauses.
+
 ---
 
 ## Rewards
@@ -162,6 +238,8 @@ Granted atomically on turn-in (items insert-or-drop, then XP, effects, loot, and
 | `mcaquests:hearts` | `amount` | MCA hearts with the giver. Clamped by `min/maxHeartsReward` and scaled by `heartsRewardMultiplier`. |
 | `mcaquests:loot_table` | `loot_table` (resource location) | Rolls a loot table. Requires `allowLootTableRewards` (on by default). |
 | `mcaquests:command` | `command` (string) | Runs a command. **Disabled** unless `allowCommandRewards = true`. |
+| `mcaquests:village_reputation` | `amount` | Adds independent mod-side reputation to the giver's village (see Progression). |
+| `mcaquests:grant_title` | `title` (resource location), `scope` (`village`/`global`, default `village`) | Awards a player title (see Progression). |
 
 ---
 
@@ -183,10 +261,17 @@ An extra gate on whether the quest is **offered**. A single condition object, wh
 | `mcaquests:advancement` | `advancement` (resource location) |
 | `mcaquests:player_level` | `min`, `max` |
 | `mcaquests:random_chance` | `chance` (0.0–1.0) |
-| `mcaquests:quest_completed` | `quest` (resource location) |
-| `mcaquests:quest_not_completed` | `quest` (resource location) |
-| `mcaquests:quest_failed` | `quest` (resource location) — true once that quest has failed (giver died / timed out) |
-| `mcaquests:quest_abandoned` | `quest` (resource location) — true once the player abandoned that quest |
+| `mcaquests:quest_completed` | `quest` (resource location), `scope` (`global`/`giver`, default `global`) |
+| `mcaquests:quest_not_completed` | `quest` (resource location), `scope` (`global`/`giver`, default `global`) |
+| `mcaquests:quest_failed` | `quest` (resource location), `scope` — true once that quest has failed (giver died / timed out) |
+| `mcaquests:quest_abandoned` | `quest` (resource location), `scope` — true once the player abandoned that quest |
+| `mcaquests:village_reputation` | `min`, `max` — raw reputation with the giver's village |
+| `mcaquests:reputation_tier` | `min_tier` (required), `max_tier`, `ladder` (default `mcaquests:default`) — tier with the giver's village (see Progression) |
+
+> **`scope`** on the four quest-state conditions chooses whose history they read. `global` (the default)
+> counts the quest across all villagers — the historical behaviour. `giver` counts only what the player did
+> with the villager currently being talked to, which is how **per-villager relationship arcs** work (see
+> [Quest chains](#quest-chains)).
 
 ### MCA-aware conditions
 
@@ -205,6 +290,7 @@ These gate a quest on the giver's **MCA Reborn** state (relationship to the play
 | `mcaquests:health_below` | `threshold` (required, `(0,1]`) | The giver's health fraction (current ÷ max) is below `threshold`. |
 | `mcaquests:infected` | `min_progress` (default `0`) | The giver's zombie-infection progress is `> 0` and at least `min_progress` (range `[0,1]`). |
 | `mcaquests:related_villager_status` | `relation` + `status` (both required) | The giver has at least one relative of `relation` (`spouse`/`parent`/`child`/`sibling`) whose `status` matches: `alive`, `nearby`, `missing` (in the family tree, not deceased, not currently loaded), `dead`, or `same_village`. |
+| `mcaquests:giver_distance_from_village` | `min_distance` (default `0`), `require_outside_border` (bool, default `false`) | The giver is at least `min_distance` blocks from its **home-village center** (and, when `require_outside_border`, also outside the village border). Fails safe to *not met* when the giver has no home village — so a villager standing in its own square is never offered an "escort me home" quest. The gate for lead-style escorts and "out after dark" content; pair with `time:NIGHT` via `any_of`. |
 
 Examples:
 
@@ -223,6 +309,20 @@ Examples:
 
 ```json
 "conditions": { "type": "mcaquests:related_villager_status", "relation": "child", "status": "missing" }
+```
+
+A lead-style escort is gated to "far from home, or a little out after dark" like so:
+
+```json
+"conditions": {
+  "any_of": [
+    { "type": "mcaquests:giver_distance_from_village", "min_distance": 80 },
+    { "all_of": [
+        { "type": "mcaquests:time", "period": "NIGHT" },
+        { "type": "mcaquests:giver_distance_from_village", "min_distance": 24 }
+    ] }
+  ]
+}
 ```
 
 **Failure behavior.** A non-MCA giver, a missing/partly-loaded relationship or family graph, or any internal MCA error all evaluate to *not met* (debug-logged), never an exception. `health_below` and `related_villager_status` read live/persistent state, so a quest can appear or disappear as that state changes — reopen the menu to refresh.
@@ -364,6 +464,12 @@ The optional `chain` block turns a set of standalone quests into a **relationshi
 unlocks the next, the UI shows "Part 2 of 4", and follow-ups can branch on whether you completed,
 failed, or abandoned an earlier step. Quests with no `chain` block are unaffected.
 
+**Arcs are per-villager.** Chain progress is tracked against the individual villager you are dealing with: a
+prerequisite is satisfied only when you completed the earlier stage **with that same villager**, so the same
+arc can be lived out independently with different villagers. Standalone (non-chain) quests are unaffected and
+stay global. (Under the hood, `prerequisites` compile to `quest_completed` with `scope: giver`; give branch
+conditions the same `scope: giver` to keep the whole arc per-villager.)
+
 ```json
 "chain": {
   "chain": "mcaquests:farmer_family",
@@ -383,7 +489,7 @@ failed, or abandoned an earlier step. Quests with no `chain` block are unaffecte
 | `stage_total` | int | — | Total stages, for the "Part 2 of 4" label. |
 | `relationship_arc` | text | — | Arc name shown in the menu / quest log. |
 | `chapter` | text | — | This stage's subtitle, shown after the part number. |
-| `prerequisites` | list of quest ids | `[]` | The arc gate: every listed quest must be **completed** before this one is offered. Compiles into `quest_completed` conditions and is merged with any `conditions` block. |
+| `prerequisites` | list of quest ids | `[]` | The arc gate: every listed quest must be **completed with this villager** before this one is offered. Compiles into `quest_completed` (`scope: giver`) conditions, merged with any `conditions` block. |
 | `unlocks` | list of quest ids | `[]` | Forward pointers to the quests this one leads to. Used for validation (reachability, cycle detection); the actual gating lives on the downstream quest's `prerequisites`/`conditions`. |
 
 > **Deadlines moved.** Per-quest time limits used to live here as `chain.time_limit_ticks`. They are
@@ -394,19 +500,59 @@ failed, or abandoned an earlier step. Quests with no `chain` block are unaffecte
 
 - **Linear** chains use `prerequisites` — "must have completed the previous stage." That's the common case.
 - **Branching** uses the explicit outcome conditions in a `conditions` block. A redemption quest gated on
-  `{ "type": "mcaquests:quest_failed", "quest": "..." }` only appears after the player fails that quest; a
-  "no hard feelings" follow-up can use `mcaquests:quest_abandoned`. To let two branches converge on the same
-  finale, gate the finale with `any_of` over the `quest_completed` of each branch (leave `prerequisites` empty
-  and list it in each branch's `unlocks` so validation still sees it as reachable).
+  `{ "type": "mcaquests:quest_failed", "quest": "...", "scope": "giver" }` only appears after the player fails
+  that quest **with this villager**; a "no hard feelings" follow-up can use `mcaquests:quest_abandoned`. Add
+  `"scope": "giver"` so the branch stays per-villager like the prerequisites (omit it for the old global
+  behaviour). To let two branches converge on the same finale, gate the finale with `any_of` over the
+  `quest_completed` (`scope: giver`) of each branch (leave `prerequisites` empty and list it in each branch's
+  `unlocks` so validation still sees it as reachable).
+
+### Offer priority & weight bonuses
+
+Two optional top-level fields shape *which* eligible quest a villager offers (both work on any quest, not just
+chains):
+
+- **`priority`** (int) groups offers into tiers. A villager fills its offer slots from the highest tier down,
+  so a higher-priority quest is shown ahead of lower ones. Unset, a chain continuation (stage > 1) defaults to
+  tier 1 and everything else to tier 0 — an in-progress arc is preferred over unrelated standalone offers. Set
+  `priority` to override (including `0` to opt a continuation out of the default preference).
+- **`weight_bonus`** is a list of `{ "when": <condition>, "amount": <int> }`. Each entry adds `amount` to the
+  quest's `weight` when its condition holds, so an offer grows likelier as a relationship deepens, as MCA
+  hearts rise, or as earlier stages are completed (`quest_completed` with `scope: giver`). `amount` may be
+  negative to make a quest rarer.
+
+```json
+"priority": 2,
+"weight_bonus": [
+  { "when": { "type": "mcaquests:hearts", "min": 50 }, "amount": 10 },
+  { "when": { "type": "mcaquests:quest_completed",
+              "quest": "mcaquests:mapmaker_expedition_1_survey", "scope": "giver" }, "amount": 5 }
+]
+```
+
+Selection stays deterministic and server-authoritative — the same player/villager/day always yields the same
+offers. Within a tier the weighted draw uses each quest's effective weight (base `weight` plus matching
+bonuses, floored at 1).
 
 ### Validation
 
-`/mcaquests validate` reports chain problems, each naming the quest and field: unknown or disabled
-`prerequisites`/`unlocks` targets, `stage` below 1, circular `unlocks`, and later stages that nothing
-can reach. Fix these and `/mcaquests reload`.
+`/mcaquests validate` reports chain problems in two tiers, each naming the quest, chain, field, and referenced
+id. **Errors** (these also block load when `strictJsonValidation` is on): unknown or disabled
+`prerequisites`/`unlocks`/condition targets, a blank chain id, `stage` below 1, `stage` above `stage_total`,
+a quest listing itself, a later stage nothing can reach, circular `prerequisites` or `unlocks`, and impossible
+gates (requiring a quest to be both completed and not-completed). **Warnings** (reported but never fatal):
+inconsistent `stage_total` across a chain, two non-branching quests sharing a stage (they'd be offered
+together), an `unlocks` pointer the target never references back, and a branch gated on a quest that can never
+fail. Fix and `/mcaquests reload`.
 
-The four built-in arcs under `data/mcaquests/mcaquests/quests/chains/` (farmer, guard, librarian, jobless)
-are complete worked examples — copy one as a starting point.
+`/mcaquests debug villager` lists every chain stage the nearest villager could give and why each is offered /
+eligible / locked / hidden / completed / on cooldown; `/mcaquests debug quest <id>` prints the full gate
+checklist and per-villager progress for one quest — use these to trace a stuck arc.
+
+The five built-in arcs under `data/mcaquests/mcaquests/quests/chains/` — `farmer_family` (linear),
+`guard_safety` and `jobless_friendship` (branching), `librarian_knowledge`, and `mapmaker_expedition` (a
+branching arc that also shows `priority`, `weight_bonus`, and a `failure` deadline with `retry_after`) — are
+complete worked examples; copy one as a starting point.
 
 ---
 
@@ -484,6 +630,65 @@ skipped (with a debug log) rather than crashing. Under `strictJsonValidation` th
 The five built-in templates under `data/mcaquests/mcaquests/quests/templates/` (farmer crop request, guard
 mob cull, fisherman catch, librarian knowledge, cartographer survey) are complete worked examples — copy one
 as a starting point.
+
+---
+
+## Progression: reputation tiers & titles
+
+*(spec 0.7.0; gated by `enableReputationTiers`, on by default.)*
+
+Every village carries an independent mod-side **reputation** value, raised by the `village_reputation`
+reward (on quests and projects). **Reputation tiers** put named, ordered thresholds on top of that value,
+and players can earn **titles** as they climb.
+
+### Reputation tier ladders
+
+Define a ladder in `data/<ns>/mcaquests/reputation_tiers/<name>.json`. The id `mcaquests:default` is the
+ladder used by the UI and by any `reputation_tier` condition that omits `ladder`; ship your own
+`default.json` to override the built-in one.
+
+```json
+{
+  "tiers": [
+    { "id": "stranger",     "threshold": 0,   "name": "Stranger" },
+    { "id": "acquaintance", "threshold": 25,  "name": "Acquaintance" },
+    { "id": "friend",       "threshold": 75,  "name": "Friend" },
+    { "id": "honored",      "threshold": 150, "name": "Honored",  "grants_title": "mcaquests:honored_of_village" },
+    { "id": "revered",      "threshold": 300, "name": "Revered",  "grants_title": "mcaquests:revered_of_village" }
+  ]
+}
+```
+
+- `threshold` is the **inclusive minimum** reputation for the tier. Tiers must **strictly ascend**, and the
+  lowest threshold must be `<= 0` so every value maps to a tier (validated; invalid ladders are skipped).
+- `grants_title` (optional) auto-awards a village-scoped title the first time a village reaches this tier.
+
+Gate a quest on a tier with the `reputation_tier` condition:
+
+```json
+{ "type": "mcaquests:reputation_tier", "min_tier": "friend" }
+```
+
+### Titles
+
+A title is just a resource location. Award one with the `grant_title` reward:
+
+```json
+{ "type": "mcaquests:grant_title", "title": "mcaquests:village_friend", "scope": "village" }
+```
+
+`scope` is `village` (attached to the giver's village; no-op if no village resolves) or `global`. Titles
+work even without a definition (the id is displayed), but you can supply a display name and scope in
+`data/<ns>/mcaquests/titles/<name>.json`:
+
+```json
+{ "name": "Friend of the Village", "scope": "village" }
+```
+
+Players see their reputation, tiers, and titles in the **Journal** (Open Journal keybind, or the button in
+the Quest Log). `/mcaquests reputation get|set|add|tiers` and `/mcaquests title grant|list|clear` help with
+testing; `/mcaquests validate` warns about `grant_title` rewards with undefined titles and `reputation_tier`
+conditions naming unknown tiers.
 
 ---
 
@@ -846,6 +1051,103 @@ that trade:
 
 ---
 
+## Situations (the Living Village)
+
+*(spec 0.8.0; gated by `enableSituations`, on by default.)*
+
+A **situation** is a transient, village-shared condition opened by something that happens in the world
+(a raid, a death, an infection, missing kin, famine, nightfall). While it is open it surfaces a
+**dynamic, time-limited quest offer** on eligible nearby villagers, then **resolves** with a
+success/failure/cleared outcome that moves village reputation. Situations are server-authoritative,
+persisted in the world save, and survive restart.
+
+Define one in `data/<ns>/mcaquests/situations/<name>.json`:
+
+```json
+{
+  "id": "mcaquests:after_raid_recovery",
+  "scope": "village",
+  "duration_ticks": 9600,
+  "cooldown_ticks": 48000,
+  "trigger": { "type": "mcaquests:raid" },
+  "outcomes": {
+    "success": { "reputation": 18 },
+    "failure": { "reputation": -12 },
+    "cleared": { "reputation": 0 }
+  },
+  "offer": {
+    "weight": 12,
+    "giver": { "professions": ["mca:guard"], "adult_only": true },
+    "title": { "text": "Drive Them Back" },
+    "dialogue": {
+      "offer":   { "text": "The raid is upon us! Cut down the attackers — six of them, quickly!" },
+      "ready":   { "text": "They're breaking! You've saved us." },
+      "complete":{ "text": "The village still stands because of you." },
+      "failed":  { "text": "We lost too much before help came." }
+    },
+    "objectives": [ { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 6 } ],
+    "rewards":    [ { "type": "mcaquests:hearts", "amount": 25 } ]
+  }
+}
+```
+
+### Top-level fields
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `id` | (required) | Unique id. The offer reuses the quest lifecycle under a synthetic id `mcaquests:situation/<ns>/<path>`. |
+| `enabled` | `true` | Set `false` to ship a definition without activating it. |
+| `scope` | `village` | Who surfaces the offer / where the outcome lands: `village`, `villager` (the focal one), or `family` (an MCA lineage). |
+| `duration_ticks` | `24000` | How long the situation stays open. The accepted quest's deadline is anchored to this, so the HUD countdown and failure machinery apply automatically. |
+| `cooldown_ticks` | `24000` | Per-village cooldown before this definition can open again there. |
+| `trigger` | (required) | What opens it (see below). |
+| `outcomes` | none | `success` / `failure` / `cleared`, each `{ "reputation": <int>, "hearts": <int> }` (both default 0). Reputation goes to the giver's village; hearts go to the focal villager (scopes `villager`/`family`). |
+| `offer` | (required) | The dynamic quest body (see below). |
+
+### Triggers
+
+The `"type"` field selects the trigger, exactly like objectives/conditions/rewards. Detection is
+player-proximity-driven (villages near players are scanned periodically) plus event-driven on death.
+
+| Type | Fields | Fires when |
+| --- | --- | --- |
+| `mcaquests:raid` | — | A raid is active at the village. Closes as **cleared** if the raid ends first. |
+| `mcaquests:villager_death` | `relation` (default `any`) | A village resident dies. |
+| `mcaquests:infection` | `min_progress` (0–1, default 0) | A resident's zombie-infection reaches the threshold. |
+| `mcaquests:missing_kin` | `relation` (default `any`) | A resident has a missing relative (spouse/parent/child/sibling). |
+| `mcaquests:low_food` | `threshold` (default 16) | The village's banked edible items drop to the threshold. Closes as **cleared** if food recovers. |
+| `mcaquests:night` | `require_full_moon` (default false) | Nightfall in the village. |
+
+### The `offer` block
+
+The offer is the body of a quest: it accepts the same `weight`, `title`, `giver`, `dialogue`,
+`objectives`, `rewards`, `turn_in`, `template`, and offer-shaping (`priority`, `weight_bonus`) fields a
+normal quest does. It has no `id`, `chain`, or `conditions` — a situation's eligibility is decided by
+its scope and the giver gate, not by static conditions. Objectives resolve relative to the giver, just
+like ordinary NPC/village objectives. A `dialogue.failed` line is shown if the situation fails.
+
+### Resolution
+
+- **Success** — the first player to complete the offer resolves the situation: its `success` outcome is
+  applied and it stops being offered. (Other players' rewards for their own copies are unaffected.)
+- **Failure** — the deadline expires: the `failure` outcome is applied and any still-active copies fail.
+- **Cleared** — the underlying condition lifts on its own (raid ends, food recovers): the `cleared`
+  outcome is applied, usually neutral.
+
+### Throttling
+
+`maxConcurrentSituationsPerVillage` caps how many are open in one village at once; `cooldown_ticks`
+(per definition) and `situationGlobalCooldownTicks` (per village) space them out. Suppressed openings
+are logged. `maxSituationOffersPerMenu` caps how many a single villager surfaces; situation offers
+otherwise compete with static quests, defaulting above them via `situationDefaultPriority`.
+
+### Commands
+
+`/mcaquests situation list` (loaded definitions + open instances), `info <id>`, `debug` (open
+situations for the nearest villager's village), and `validate` (op 3) report problems from the last load.
+
+---
+
 ## Complete example
 
 `/mcaquests export-schema` writes this to `config/mcaquests/example_quest.json`:
@@ -894,3 +1196,10 @@ that trade:
 ## Extending with code
 
 Add-on mods can register custom objective / reward / condition types under their own namespace via `dev.otectus.mcaquests.api.McaQuestsApi` (during mod setup), and react to quests through the Forge-bus events in `dev.otectus.mcaquests.api.event` (`QuestAccepted/Ready/Completed/Abandoned/Failed`).
+
+### MCA: Conversations hooks
+
+Two optional hooks let a conversation add-on such as **MCA: Conversations** drive quest text and progress. Both are code-facing (not datapack fields), and both are inert unless the add-on registers itself, so the base mod behaves identically without it:
+
+- **Voiced dialogue** — register a `dev.otectus.mcaquests.api.QuestDialogueResolver` via `QuestDialogueHooks.setResolver(...)` to render a quest's lifecycle line (offer / in-progress / ready / complete / failed) in the villager's own voice instead of the static `dialogue` text. It runs server-side when the quest card is built and **falls back to the datapack text** whenever the resolver is absent, returns `null`, or throws.
+- **Conversation-driven objectives** — an objective that implements `dev.otectus.mcaquests.api.ExternalSignalObjective` advances when the add-on calls `QuestManager.notifyExternalObjective(player, signalId, villagerUuid)` — e.g. signalling that the player discussed a given topic with a villager — rather than relying on a built-in detector.

@@ -1,25 +1,41 @@
 package dev.otectus.mcaquests;
 
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
+import dev.otectus.mcaquests.data.ConditionRefs;
 import dev.otectus.mcaquests.data.QuestChainValidator;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.GiverSpec;
 import dev.otectus.mcaquests.quest.RepeatRule;
 import dev.otectus.mcaquests.quest.WeightedPicker;
+import dev.otectus.mcaquests.quest.condition.HistoryScope;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestConditionType;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.AnyOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestAbandonedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestFailedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestNotCompletedCondition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
+import dev.otectus.mcaquests.quest.target.LocationAnchor;
+import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.state.QuestHistory;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToIntFunction;
@@ -69,6 +85,79 @@ class QuestLogicTest {
         progress.add(3);
         ObjectiveProgress restored = ObjectiveProgress.load(progress.save());
         assertEquals(10, restored.count(), "progress count survives an NBT save/load");
+    }
+
+    @Test
+    void objectiveProgressNewFieldsRoundTrip() {
+        ObjectiveProgress progress = new ObjectiveProgress(2);
+        progress.addElapsed(140);
+        UUID target = UUID.fromString("00000000-0000-0000-0000-000000000abc");
+        progress.setTargetUuid(target);
+        assertTrue(progress.addVisited(new BlockPos(1, 2, 3)), "first visit credits");
+        assertFalse(progress.addVisited(new BlockPos(1, 2, 3)), "re-visiting the same pos never re-credits");
+        assertTrue(progress.addVisited(new BlockPos(4, 5, 6)));
+        progress.extra().putBoolean("seen_infected", true);
+
+        ObjectiveProgress restored = ObjectiveProgress.load(progress.save());
+        assertEquals(2, restored.count());
+        assertEquals(140, restored.elapsedTicks(), "elapsed ticks survive save/load");
+        assertEquals(target, restored.targetUuid(), "target uuid survives save/load");
+        assertEquals(2, restored.visitedCount(), "visited set survives save/load");
+        assertTrue(restored.hasVisited(new BlockPos(1, 2, 3)));
+        assertTrue(restored.extra().getBoolean("seen_infected"), "extra scratch survives save/load");
+    }
+
+    @Test
+    void objectiveProgressBackwardCompatibleWithCountOnlyTag() {
+        CompoundTag legacy = new CompoundTag();
+        legacy.putInt("count", 5);
+        ObjectiveProgress restored = ObjectiveProgress.load(legacy);
+        assertEquals(5, restored.count(), "legacy count-only NBT still loads");
+        assertEquals(0, restored.elapsedTicks());
+        assertEquals(null, restored.targetUuid());
+        assertEquals(0, restored.visitedCount());
+    }
+
+    @Test
+    void villagerTargetCodecParsesAndValidates() {
+        VillagerTarget family = parse(VillagerTarget.CODEC, "{\"mode\":\"family\",\"relation\":\"sibling\"}");
+        assertEquals(VillagerTarget.Mode.FAMILY, family.mode());
+        assertEquals(Optional.of("sibling"), family.relation());
+
+        VillagerTarget self = parse(VillagerTarget.CODEC, "{\"mode\":\"self\"}");
+        assertEquals(VillagerTarget.Mode.SELF, self.mode());
+
+        assertTrue(VillagerTarget.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"mode\":\"bogus\"}"))
+                .error().isPresent(), "an unknown mode fails to parse");
+
+        // validate() flags a missing required field for the chosen mode.
+        List<String> errors = new ArrayList<>();
+        parse(VillagerTarget.CODEC, "{\"mode\":\"uuid\"}").validate("obj", errors);
+        assertFalse(errors.isEmpty(), "uuid mode without a uuid is reported");
+    }
+
+    @Test
+    void locationAnchorCodecParsesAndValidates() {
+        LocationAnchor coords = parse(LocationAnchor.CODEC, "{\"anchor\":\"coords\",\"pos\":[1,2,3]}");
+        assertEquals(LocationAnchor.Type.COORDS, coords.type());
+        assertEquals(Optional.of(new BlockPos(1, 2, 3)), coords.pos());
+
+        LocationAnchor nearest = parse(LocationAnchor.CODEC, "{\"anchor\":\"nearest_village\",\"radius\":64}");
+        assertEquals(LocationAnchor.Type.NEAREST_VILLAGE, nearest.type());
+        assertEquals(Optional.of(64), nearest.radius());
+
+        List<String> errors = new ArrayList<>();
+        parse(LocationAnchor.CODEC, "{\"anchor\":\"coords\"}").validate("obj", errors);
+        assertFalse(errors.isEmpty(), "coords anchor without a pos is reported");
+    }
+
+    // Note: StructureTarget's codec touches the STRUCTURE registry key, which transitively requires
+    // MC bootstrap, so it cannot be exercised in these registry-free unit tests (validated in-game).
+
+    private static <T> T parse(com.mojang.serialization.Codec<T> codec, String json) {
+        DataResult<T> result = codec.parse(JsonOps.INSTANCE, JsonParser.parseString(json));
+        return result.result().orElseThrow(() -> new AssertionError(
+                "failed to parse '" + json + "': " + result.error().map(Object::toString).orElse("?")));
     }
 
     @Test
@@ -187,6 +276,53 @@ class QuestLogicTest {
 
         // Self-unlock is the smallest cycle.
         assertTrue(QuestChainValidator.findUnlockCycle(Map.of(a, List.of(a))).isPresent());
+    }
+
+    @Test
+    void perVillagerHistoryRoundTripAndIsolation() {
+        QuestHistory history = new QuestHistory();
+        ResourceLocation quest = new ResourceLocation("mcaquests", "mapmaker_expedition_1_survey");
+        UUID villagerA = UUID.randomUUID();
+        UUID villagerB = UUID.randomUUID();
+        history.recordCompletion(quest, villagerA);
+        history.recordOutcome(quest, villagerA, QuestHistory.Outcome.FAILED);
+
+        QuestHistory restored = new QuestHistory();
+        restored.load(history.save());
+        assertEquals(1, restored.completionCountByGiver(quest, villagerA), "per-giver completion survives save/load");
+        assertEquals(0, restored.completionCountByGiver(quest, villagerB), "another villager shares no chain progress");
+        assertEquals(1, restored.outcomeCountByGiver(quest, villagerA, QuestHistory.Outcome.FAILED),
+                "per-giver failure survives save/load");
+        assertEquals(0, restored.outcomeCountByGiver(quest, villagerB, QuestHistory.Outcome.FAILED),
+                "another villager shares no failure record");
+        assertEquals(1, restored.completionCount(quest), "global completion is still tracked alongside per-giver");
+    }
+
+    @Test
+    void conditionRefsCollectsRequiredWithPolarity() {
+        ResourceLocation x = new ResourceLocation("mcaquests", "x");
+        QuestCondition gate = new AllOfCondition(List.of(
+                new QuestCompletedCondition(x, HistoryScope.GIVER),
+                new QuestNotCompletedCondition(x, HistoryScope.GIVER)));
+        List<ConditionRefs.Ref> required = ConditionRefs.required(Optional.of(gate));
+        assertTrue(required.stream().anyMatch(r -> r.quest().equals(x) && r.polarity()), "completed(x) is required");
+        assertTrue(required.stream().anyMatch(r -> r.quest().equals(x) && !r.polarity()), "not-completed(x) is required");
+        QuestCondition anyOf = new AnyOfCondition(List.of(new QuestCompletedCondition(x, HistoryScope.GLOBAL)));
+        assertTrue(ConditionRefs.required(Optional.of(anyOf)).isEmpty(), "any_of members are optional, not required");
+    }
+
+    @Test
+    void conditionRefsDetectsOutcomeBranchAndReferences() {
+        ResourceLocation y = new ResourceLocation("mcaquests", "y");
+        assertTrue(ConditionRefs.hasOutcomeBranch(Optional.of(new QuestFailedCondition(y, HistoryScope.GIVER))),
+                "quest_failed marks an outcome branch");
+        assertTrue(ConditionRefs.hasOutcomeBranch(Optional.of(new QuestAbandonedCondition(y, HistoryScope.GLOBAL))),
+                "quest_abandoned marks an outcome branch");
+        assertFalse(ConditionRefs.hasOutcomeBranch(Optional.of(new QuestCompletedCondition(y, HistoryScope.GIVER))),
+                "plain quest_completed is not an outcome branch");
+        assertTrue(ConditionRefs.allReferencedQuests(Optional.of(
+                        new NotCondition(new QuestCompletedCondition(y, HistoryScope.GLOBAL)))).contains(y),
+                "references are found through composites");
     }
 
     /** A leaf condition that ignores context and returns a fixed value (for composite tests). */

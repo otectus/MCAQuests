@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:archer_cull_from_afar",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:archer"], "adult_only": true },
+  "title": { "text": "Cull From Afar" },
+  "dialogue": {
+    "offer": { "text": "A pack of skeletons rattles around the old field, and I'll not waste good arrows on a clumsy shot. Drop eight of them — show me a marksman's work." },
+    "accept": { "text": "Loose clean and let none get within a sword's reach." },
+    "decline": { "text": "Then I'll thin them myself, slow as that'll be." },
+    "in_progress": { "text": "How many of the bone-rattlers have you dropped?" },
+    "ready": { "text": "Eight clean kills. That is how a bow is meant to sing." },
+    "complete": { "text": "You shoot like you were born with a string in hand. Well done." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:skeleton", "count": 8 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 28 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

@@ -28,3 +28,6 @@ logs/
 
 # Session summaries (local notes, not part of the published mod)
 docs/summaries/
+
+# Local dependency jars (MCA Reborn is fetched from the Modrinth Maven at build time)
+libs/

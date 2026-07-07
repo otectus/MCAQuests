@@ -32,6 +32,7 @@
   },
   "conditions": {
     "type": "mcaquests:quest_abandoned",
-    "quest": "mcaquests:jobless_friendship_2_favor"
+    "quest": "mcaquests:jobless_friendship_2_favor",
+    "scope": "giver"
   }
 }

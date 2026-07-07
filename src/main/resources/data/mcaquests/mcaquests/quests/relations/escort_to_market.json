@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_escort_to_market",
+  "weight": 9,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "To Market, To Market" },
+  "dialogue": {
+    "offer": { "text": "I've goods to sell but the road to the next village runs through rough country. Keep me safe and I'll lead the way to the market town." },
+    "accept": { "text": "Wonderful. Stay close and let me pick the path." },
+    "decline": { "text": "Then my wares stay in the cart another week, I suppose." },
+    "in_progress": { "text": "The market's not far now — mind the road behind us." },
+    "ready": { "text": "Stalls and customers at last! We've arrived." },
+    "complete": { "text": "A safe road and a full market — couldn't ask for more. My thanks, friend." }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -5,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "nearest_village", "radius": 256 },
+      "radius": 12,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 26 }
+  ],
+  "conditions": {
+    "type": "mcaquests:giver_distance_from_village",
+    "min_distance": 64
+  }
+}

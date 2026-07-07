@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_hold_the_gate",
+  "weight": 12,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Hold the Gate" },
+  "dialogue": {
+    "offer": { "text": "They're pressing the gate again tonight. Plant your feet by the wall with me and cut down eight of them — give ground and the whole street is theirs." },
+    "accept": { "text": "Then hold this ground. Not one step back." },
+    "decline": { "text": "Then stand aside for those who'll fight." },
+    "in_progress": { "text": "Hold the line! How many at the gate have you dropped?" },
+    "ready": { "text": "Eight down and the gate still ours. Well held." },
+    "complete": { "text": "You stood your ground when it counted. The watch won't forget it." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:defend_location",
+      "location": { "anchor": "home_village" },
+      "threat": { "entity": "minecraft:zombie" },
+      "radius": 20,
+      "count": 8
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 26 }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

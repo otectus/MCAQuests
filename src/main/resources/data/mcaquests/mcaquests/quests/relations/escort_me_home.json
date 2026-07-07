@@ -1,0 +1,44 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_escort_me_home",
+  "weight": 10,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "See Me Home" },
+  "dialogue": {
+    "offer": { "text": "It's getting late and the road isn't safe alone. Keep close and keep the monsters off me, and I'll lead us back to the village before nightfall." },
+    "accept": { "text": "Stay near — I'll set the pace." },
+    "decline": { "text": "Then I'll risk the road myself, I suppose." },
+    "in_progress": { "text": "Keep moving with me, friend — we haven't long before dusk." },
+    "ready": { "text": "Home at last, and before dark! I knew I could trust you." },
+    "complete": { "text": "Safe and sound. I won't forget this kindness." },
+    "failed": { "text": "Night fell before we made it. We were lucky to survive — maybe next time." }
+  },
+  "failure": {
+    "deadline_time": 13000,
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "home_village" },
+      "radius": 8,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:giver_distance_from_village", "min_distance": 48, "require_outside_border": true },
+      { "type": "mcaquests:time", "period": "DAY" }
+    ]
+  }
+}

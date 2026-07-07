@@ -22,6 +22,10 @@ public final class QuestClientSetup {
     public static final KeyMapping TOGGLE_HUD = new KeyMapping(
             "key.mcaquests.toggle_hud", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, "key.categories.mcaquests");
 
+    /** Opens the progression journal (reputation/titles/archive). Unbound by default. */
+    public static final KeyMapping OPEN_JOURNAL = new KeyMapping(
+            "key.mcaquests.journal", InputConstants.UNKNOWN.getValue(), "key.categories.mcaquests");
+
     private QuestClientSetup() {
     }
 
@@ -29,6 +33,7 @@ public final class QuestClientSetup {
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(OPEN_LOG);
         event.register(TOGGLE_HUD);
+        event.register(OPEN_JOURNAL);
     }
 
     @SubscribeEvent

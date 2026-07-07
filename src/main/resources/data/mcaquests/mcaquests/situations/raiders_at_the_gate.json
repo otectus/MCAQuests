@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:raiders_at_the_gate",
+  "scope": "village",
+  "duration_ticks": 9600,
+  "cooldown_ticks": 48000,
+  "trigger": { "type": "mcaquests:raid" },
+  "outcomes": {
+    "success": { "reputation": 16 },
+    "failure": { "reputation": -10 }
+  },
+  "offer": {
+    "weight": 10,
+    "giver": { "professions": ["mca:guard"], "adult_only": true },
+    "title": { "text": "Raiders at the Gate" },
+    "dialogue": {
+      "offer": { "text": "The horns are sounding — raiders are on the village! Hold the wall and cut down eight of the attackers before they put the homes to the torch!" },
+      "accept": { "text": "To the wall, then! Break their charge!" },
+      "decline": { "text": "Then bar your door and pray the gate holds." },
+      "in_progress": { "text": "They're still coming! Eight of the raiders down — that's what we need!" },
+      "ready": { "text": "Their line's breaking — you've turned the tide!" },
+      "complete": { "text": "The village still stands, and that's your doing. We won't forget who held the gate." },
+      "failed": { "text": "They got through despite us. We'll be a long time counting the cost." }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:defend_location",
+        "location": { "anchor": "home_village" },
+        "threat": { "tag": "minecraft:raiders" },
+        "radius": 24,
+        "count": 8
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+      { "type": "mcaquests:xp", "amount": 36 },
+      { "type": "mcaquests:hearts", "amount": 24 }
+    ]
+  }
+}

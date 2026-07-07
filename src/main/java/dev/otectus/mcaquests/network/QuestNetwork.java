@@ -11,9 +11,11 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 2 for v0.4.0 — adds the community-project menu/log/contribute packets. The channel
-    // handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "2";
+    // Bumped to 4 for v0.8.0 — adds the "village needs help" situation toast packet. (3 was v0.7.0: the
+    // reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the community-project
+    // menu/log/contribute packets.) The channel handshake requires matching client+server (save data is
+    // unaffected).
+    private static final String PROTOCOL_VERSION = "4";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -51,5 +53,17 @@ public final class QuestNetwork {
                 ProjectLogSyncS2CPacket::encode, ProjectLogSyncS2CPacket::decode, ProjectLogSyncS2CPacket::handle);
         CHANNEL.registerMessage(nextId++, ProjectPhaseToastS2CPacket.class,
                 ProjectPhaseToastS2CPacket::encode, ProjectPhaseToastS2CPacket::decode, ProjectPhaseToastS2CPacket::handle);
+
+        // v0.7.0 — progression: tier-up toast + journal request/sync.
+        CHANNEL.registerMessage(nextId++, ReputationTierToastS2CPacket.class,
+                ReputationTierToastS2CPacket::encode, ReputationTierToastS2CPacket::decode, ReputationTierToastS2CPacket::handle);
+        CHANNEL.registerMessage(nextId++, RequestJournalC2SPacket.class,
+                RequestJournalC2SPacket::encode, RequestJournalC2SPacket::decode, RequestJournalC2SPacket::handle);
+        CHANNEL.registerMessage(nextId++, JournalSyncS2CPacket.class,
+                JournalSyncS2CPacket::encode, JournalSyncS2CPacket::decode, JournalSyncS2CPacket::handle);
+
+        // v0.8.0 — Living Village: situation "needs help" toast.
+        CHANNEL.registerMessage(nextId++, SituationToastS2CPacket.class,
+                SituationToastS2CPacket::encode, SituationToastS2CPacket::decode, SituationToastS2CPacket::handle);
     }
 }

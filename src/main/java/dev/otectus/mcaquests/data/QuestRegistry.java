@@ -16,13 +16,15 @@ public final class QuestRegistry {
 
     private static volatile Map<ResourceLocation, QuestDefinition> quests = Map.of();
     private static volatile List<String> lastErrors = List.of();
+    private static volatile List<String> lastWarnings = List.of();
 
     private QuestRegistry() {
     }
 
-    static void replaceAll(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors) {
+    static void replaceAll(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors, List<String> warnings) {
         quests = Map.copyOf(loaded);
         lastErrors = List.copyOf(errors);
+        lastWarnings = List.copyOf(warnings);
     }
 
     public static Collection<QuestDefinition> all() {
@@ -43,5 +45,10 @@ public final class QuestRegistry {
 
     public static List<String> lastErrors() {
         return lastErrors;
+    }
+
+    /** Non-fatal chain/style problems from the last load (heuristics that never block load). */
+    public static List<String> lastWarnings() {
+        return lastWarnings;
     }
 }

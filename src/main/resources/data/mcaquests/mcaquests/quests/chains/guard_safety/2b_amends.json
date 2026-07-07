@@ -32,6 +32,7 @@
   },
   "conditions": {
     "type": "mcaquests:quest_failed",
-    "quest": "mcaquests:guard_safety_2_patrol"
+    "quest": "mcaquests:guard_safety_2_patrol",
+    "scope": "giver"
   }
 }

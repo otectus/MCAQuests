@@ -3,7 +3,9 @@ package dev.otectus.mcaquests.quest;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
+import dev.otectus.mcaquests.quest.condition.HistoryScope;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
@@ -41,7 +43,8 @@ public record QuestDefinition(
         Optional<QuestCondition> conditions,
         Optional<ChainSpec> chain,
         Optional<FailureSpec> failure,
-        Optional<TemplateSpec> template) {
+        Optional<TemplateSpec> template,
+        OfferShaping offerShaping) {
 
     /** Dialogue states (spec section 9). */
     public static final String OFFER = "offer";
@@ -69,7 +72,8 @@ public record QuestDefinition(
             ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(QuestDefinition::conditions),
             ChainSpec.CODEC.optionalFieldOf("chain").forGetter(QuestDefinition::chain),
             FailureSpec.CODEC.optionalFieldOf("failure").forGetter(QuestDefinition::failure),
-            TemplateSpec.CODEC.optionalFieldOf("template").forGetter(QuestDefinition::template)
+            TemplateSpec.CODEC.optionalFieldOf("template").forGetter(QuestDefinition::template),
+            OfferShaping.MAP_CODEC.forGetter(QuestDefinition::offerShaping)
     ).apply(instance, QuestDefinition::new));
 
     /** Translation key for this quest's display title (spec section 32), e.g. {@code mcaquests.quest.<path>.title}. */
@@ -117,7 +121,31 @@ public record QuestDefinition(
      */
     public QuestDefinition withConcrete(TemplateSpec.Concrete concrete) {
         return new QuestDefinition(id, enabled, weight, category, titleOverride, repeat, giver, dialogue,
-                concrete.objectives(), concrete.rewards(), turnIn, conditions, chain, failure, template);
+                concrete.objectives(), concrete.rewards(), turnIn, conditions, chain, failure, template,
+                offerShaping);
+    }
+
+    /** Datapack offer priority tier, if set (see {@link OfferShaping}). */
+    public Optional<Integer> priority() {
+        return offerShaping.priority();
+    }
+
+    /** Conditional selection-weight bonuses (see {@link OfferShaping}). */
+    public List<WeightBonus> weightBonus() {
+        return offerShaping.weightBonus();
+    }
+
+    /**
+     * The selection weight for this offer in {@code context}: the base {@link #weight()} plus every
+     * {@link WeightBonus} whose condition holds, clamped to at least 1 (mirrors {@code WeightedPicker},
+     * which treats sub-1 weights as 1). Identical to {@code weight()} when no {@code weight_bonus} is set.
+     */
+    public int effectiveWeight(QuestContext context) {
+        int total = weight;
+        for (WeightBonus bonus : weightBonus()) {
+            total += bonus.evaluate(context);
+        }
+        return Math.max(1, total);
     }
 
     public int cooldownTicks() {
@@ -138,7 +166,9 @@ public record QuestDefinition(
         List<QuestCondition> all = new ArrayList<>();
         conditions.ifPresent(all::add);
         for (ResourceLocation prerequisite : prerequisites) {
-            all.add(new QuestCompletedCondition(prerequisite));
+            // GIVER scope: a chain stage is gated on what the player did with THIS villager, so the same
+            // arc can be lived out independently with different villagers (per-villager relationship arcs).
+            all.add(new QuestCompletedCondition(prerequisite, HistoryScope.GIVER));
         }
         return Optional.of(new AllOfCondition(all));
     }

@@ -14,10 +14,12 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 ## Features
 
 - 🗨️ **Integrated menu** — a **Quests** button is injected directly into MCA's villager interaction screen (no extra steps, no separate UI to learn).
-- 📜 **69 built-in quests** spanning **every villager profession** — farmer, fisherman, shepherd, librarian, cleric, armorer, weaponsmith, toolsmith, mason, butcher, fletcher, leatherworker, cartographer — plus **jobless/nitwit** villagers and MCA's **guard** (with bonus content for archers, adventurers, and mercenaries).
+- 📜 **150+ built-in quests** spanning **every villager profession** — farmer, fisherman, shepherd, librarian, cleric, armorer, weaponsmith, toolsmith, mason, butcher, fletcher, leatherworker, cartographer — plus **jobless/nitwit** villagers and MCA's **guard** (with bonus content for archers, adventurers, and mercenaries).
 - 🎭 **Multi-offer conversation UI** — villagers present several quests at once, each with flavor dialogue, objectives, and a reward summary; Accept / Decline / Complete / Abandon inline.
 - 🔗 **Relationship quest chains** — link quests into multi-stage arcs that remember what you did: a farmer asks for wheat, then to expand the farm, then to help an apprentice, then invites you to a feast. Chains branch on whether you completed, failed, or abandoned earlier steps, and the UI shows the arc name and "Part 2 of 4". All datapack-driven — no code required (4 sample arcs included).
+- 🌾 **Living Village situations** — villages **react to what happens in the world**. Raids, deaths, zombie infections, missing kin, famine, and nightfall open transient **situations** that surface dynamic, **time-limited** quest offers on nearby villagers — "drive back the raid", "cure the infected", "find the missing child", "fill the empty granary" — and resolve into village reputation when you help (or fail to). Server-authoritative, throttled so they never spam, and persisted in the world save. Fully datapack-driven (`situations/`) and backward compatible; 6 example situations included.
 - 🏘️ **Village projects** — shared, multi-stage **community goals** that the whole server works on together. A sponsor villager rallies the town — repair the well, restock the guardhouse, restore the library — and **any player can contribute**: progress is shared and lives in the world save, so donations, kills, and builds all bank into one common pool. Pick a **scope** (player, villager, family, profession, or village), and phases hand out **shared rewards** (to contributors, the top contributor, everyone who helped, or the village) plus mod-side village reputation. Fully datapack-driven and backward compatible; 6 example projects included.
+- 🏅 **Progression: reputation tiers & titles** — village reputation now climbs a named ladder (Stranger → Acquaintance → Friend → Honored → Revered), with a tier-up toast and auto-earned **titles**. Gate quests on a player's standing with the `reputation_tier` condition, award titles with the `grant_title` reward, and track it all in a new **Journal** screen (village reputation, tiers, titles, and a completed-quest archive). Fully datapack-driven (`reputation_tiers/`, `titles/`) and backward compatible.
 - 🎯 **10 objective types** — deliver items, gather, craft, fish, kill mobs, break/place blocks, visit biomes or dimensions, and talk to professions.
 - 🎁 **7 reward types** — items, XP, XP levels, status effects, loot tables, commands (off by default), and **MCA hearts**.
 - 🔒 **25 condition types** + `all_of` / `any_of` / `not` composites — gate offers by hearts, profession, biome, dimension, time, weather, held item, advancement, level, random chance, and quest history (completed / not-completed / failed / abandoned).
@@ -25,6 +27,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 - 🧭 **Quest tracking** — a keybind-toggled **Quest Log**, a fully repositionable **HUD tracker** that names the giver, and a **toast + sound** when a quest is ready to turn in.
 - 🛡️ **Server-authoritative & exploit-resistant** — all selection, validation, and reward granting happen on the server; turn-in is atomic and idempotent, so packet-spam can't duplicate rewards.
 - 🧩 **Extensible** — a public Java API lets add-ons register their own objective/reward/condition types, and five Forge events (`QuestAccepted/Ready/Completed/Abandoned/Failed`) let other mods react.
+- 💬 **MCA: Conversations integration** (optional) — with the **MCA: Conversations** add-on installed, villagers **speak** a quest's offer / progress / completion / failure line in their own personality instead of the static text, and "talk to this villager" objectives progress from an **actual conversation**. MCA: Quests ships only the hooks and safe fallbacks — without the add-on, dialogue stays as written and nothing else changes.
 
 ## Requirements
 
@@ -34,6 +37,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | **Mod loader** | Forge 47.4.10 or newer |
 | **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.6.x |
 | **[Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api)** | **Required** (Forge) — MCA Reborn depends on it |
+| **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
 
 MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
@@ -62,6 +66,8 @@ Quests load from any datapack at `data/<namespace>/mcaquests/quests/**.json`. Ru
 
 Shared **village projects** load alongside them from `data/<namespace>/mcaquests/projects/**.json` — see the [Village projects](DATAPACK.md#village-projects) section of DATAPACK.md and the `/mcaquests project list|info|validate` commands.
 
+Emergent **situations** load from `data/<namespace>/mcaquests/situations/**.json` — pair a world-event trigger (raid, death, infection, missing kin, famine, night) with a time-limited offer. See the [Situations](DATAPACK.md#situations-the-living-village) section of DATAPACK.md and the `/mcaquests situation list|info|validate|debug` commands.
+
 ## Building from source
 
 Requires **JDK 17**.
@@ -75,6 +81,8 @@ The jar lands in `build/libs/`. MCA Reborn and Architectury are pulled automatic
 ## Compatibility note
 
 MCA Reborn exposes no public API, so MCA: Quests links against its internal classes and is therefore pinned to the **7.6.x** line. A future MCA major version may require an update here. All MCA access is isolated behind a single `McaCompat` adapter to make that easy.
+
+The **MCA: Conversations** integration is a soft dependency: MCA: Quests exposes the dialogue and objective hooks (`QuestDialogueHooks`, `ExternalSignalObjective`) and the add-on registers itself against them. When it isn't installed the hooks simply no-op — quest dialogue falls back to the static datapack text and objectives progress through their normal detectors.
 
 ## License & credits
 

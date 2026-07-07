@@ -346,7 +346,7 @@ public final class ProjectManager {
             }
             if (state.tryMarkPhaseDistributed(current)) {
                 ProjectRewardDistributor.distribute(server, level, data, state, def, current);
-                addReputation(data, state, def.reputation().onPhaseComplete());
+                addReputation(server, data, state, def.reputation().onPhaseComplete());
                 MinecraftForge.EVENT_BUS.post(new ProjectEvent.PhaseAdvanced(def, state, current));
                 broadcastToast(server, state, def, current);
             }
@@ -359,7 +359,7 @@ public final class ProjectManager {
                 state.enterPhase(next, nextPhase.objectives().size());
             } else {
                 state.setStatus(ProjectStatus.COMPLETED);
-                addReputation(data, state, def.reputation().onProjectComplete());
+                addReputation(server, data, state, def.reputation().onProjectComplete());
                 MinecraftForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
                 def.followUp().ifPresent(target -> seedFollowUp(server, level, data, state, target));
                 return;
@@ -408,8 +408,8 @@ public final class ProjectManager {
         }
     }
 
-    static void addReputation(ProjectSavedData data, ProjectState state, int delta) {
-        data.addReputation(state.identity(), delta);
+    static void addReputation(MinecraftServer server, ProjectSavedData data, ProjectState state, int delta) {
+        dev.otectus.mcaquests.quest.reputation.ReputationService.award(data, server, state.identity(), delta, null);
     }
 
     /** Seeds a follow-up project in the same scope identity. Public for the reward distributor. */
@@ -551,7 +551,7 @@ public final class ProjectManager {
         switch (behavior) {
             case FAIL -> {
                 state.setStatus(ProjectStatus.FAILED);
-                addReputation(data, state, def.reputation().onFail());
+                addReputation(server, data, state, def.reputation().onFail());
                 MinecraftForge.EVENT_BUS.post(new ProjectEvent.Failed(def, state));
             }
             case PAUSE -> state.setStatus(ProjectStatus.PAUSED);
@@ -561,7 +561,7 @@ public final class ProjectManager {
                 }
             }
             case TURN_IN_TO_VILLAGE -> {
-                addReputation(data, state, def.reputation().onProjectComplete());
+                addReputation(server, data, state, def.reputation().onProjectComplete());
                 state.setStatus(ProjectStatus.COMPLETED);
                 MinecraftForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
             }

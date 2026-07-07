@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_defend_the_captain",
+  "weight": 10,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Hold the Line" },
+  "dialogue": {
+    "offer": { "text": "The dead are pressing the gate and I can't hold them alone. Stand with me — cut down five of the undead before they overrun us." },
+    "accept": { "text": "Then draw your blade, soldier. Stay near me." },
+    "decline": { "text": "Then stand aside and let those who'll fight do it." },
+    "in_progress": { "text": "Keep them off me! How many have you felled?" },
+    "ready": { "text": "Five down and the line holds. We did it." },
+    "complete": { "text": "You stood your ground when it counted. The watch remembers that." },
+    "failed": { "text": "They broke through while you were elsewhere. We'll be mending walls for a week." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:defend_villager",
+      "villager": { "mode": "self" },
+      "threat": { "entity": "minecraft:zombie" },
+      "radius": 16,
+      "count": 5
+    }
+  ],
+  "conditions": { "type": "mcaquests:time", "period": "NIGHT" },
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 28 }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_carry_word_home",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "Carry Word Home" },
+  "dialogue": {
+    "offer": { "text": "I'm posted too far out to leave my watch, but the village must hear what I've seen. Make for the village and carry word back for me — quick as you can." },
+    "accept": { "text": "Good. Keep to cover and don't stop running." },
+    "decline": { "text": "Then the message waits, and so does the danger." },
+    "in_progress": { "text": "Are you at the village yet? They need to know." },
+    "ready": { "text": "Word delivered? Then we've a chance to be ready." },
+    "complete": { "text": "Fast and faithful. The watch could use a runner like you." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:reach_location",
+      "location": { "anchor": "home_village" },
+      "radius": 12
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 24 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "conditions": {
+    "any_of": [
+      { "type": "mcaquests:giver_distance_from_village", "min_distance": 64 },
+      { "type": "mcaquests:time", "period": "NIGHT" }
+    ]
+  }
+}

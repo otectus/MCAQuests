@@ -1,0 +1,34 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:after_raid_recovery",
+  "scope": "village",
+  "duration_ticks": 9600,
+  "cooldown_ticks": 48000,
+  "trigger": { "type": "mcaquests:raid" },
+  "outcomes": {
+    "success": { "reputation": 18 },
+    "failure": { "reputation": -12 }
+  },
+  "offer": {
+    "weight": 12,
+    "giver": { "professions": ["mca:guard"], "adult_only": true },
+    "title": { "text": "Drive Them Back" },
+    "dialogue": {
+      "offer": { "text": "The raid is upon us! Cut down the attackers before they overrun the homes — six of them, and quickly!" },
+      "accept": { "text": "Then to arms. Watch the gates." },
+      "decline": { "text": "Then we hold the line alone. Pray it's enough." },
+      "in_progress": { "text": "Keep at them! The village is counting on you." },
+      "ready": { "text": "They're breaking! You've saved us." },
+      "complete": { "text": "The village still stands because of you. We won't forget it." },
+      "failed": { "text": "We lost too much before help came. The village will remember the cost." }
+    },
+    "objectives": [
+      { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 6 }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
+      { "type": "mcaquests:xp", "amount": 40 },
+      { "type": "mcaquests:hearts", "amount": 25 }
+    ]
+  }
+}

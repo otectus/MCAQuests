@@ -3,6 +3,8 @@ package dev.otectus.mcaquests.quest;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
+import dev.otectus.mcaquests.api.ExternalSignalObjective;
+import dev.otectus.mcaquests.api.QuestDialogueHooks;
 import dev.otectus.mcaquests.api.event.QuestAbandonedEvent;
 import dev.otectus.mcaquests.api.event.QuestAcceptedEvent;
 import dev.otectus.mcaquests.api.event.QuestCompletedEvent;
@@ -20,7 +22,16 @@ import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
+import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
+import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
+import dev.otectus.mcaquests.quest.situation.DynamicOfferSource;
+import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
+import dev.otectus.mcaquests.quest.situation.SituationIds;
+import dev.otectus.mcaquests.quest.situation.SituationManager;
+import dev.otectus.mcaquests.quest.situation.SituationOffer;
+import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
+import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
@@ -38,6 +49,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -49,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.ToIntFunction;
 
 /**
  * Server-authoritative quest controller: builds the menu view, and handles accept / decline /
@@ -140,7 +153,7 @@ public final class QuestManager {
         List<ActiveQuest> relevant = relevantActiveQuests(player, villager, data);
         if (!relevant.isEmpty()) {
             ActiveQuest active = relevant.get(0);
-            Optional<QuestDefinition> defOpt = QuestRegistry.get(active.questId());
+            Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(active.questId());
             if (defOpt.isEmpty()) {
                 // The definition disappeared on a datapack reload — fail gracefully (spec section 36).
                 send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.BLOCKED));
@@ -149,7 +162,7 @@ public final class QuestManager {
             QuestDefinition def = active.resolve(defOpt.get());
             boolean ready = isComplete(player, def, active) && canTurnInAt(active, def, villager);
             QuestMenuStatus status = ready ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
-            QuestCard card = buildCard(player, def, active.textResolver(), active,
+            QuestCard card = buildCard(player, villager, def, active.textResolver(), active,
                     ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS);
             send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, status, List.of(card)));
             return;
@@ -165,18 +178,10 @@ public final class QuestManager {
             send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
         }
-        long worldDay = ((ServerLevel) player.level()).getDayTime() / 24000L;
-        int slots = McaQuestsConfig.COMMON.offersPerVillager.get();
-        long seed = offerSeed(player, villagerUuid, worldDay);
-        // Prioritize relationship-arc continuations (stage > 1): fill slots from those first, then the
-        // rest. Deterministic — same player/villager/day yields the same offers.
-        List<QuestDefinition> continuations = eligible.stream().filter(QuestManager::isChainContinuation).toList();
-        List<QuestDefinition> standalone = eligible.stream().filter(def -> !isChainContinuation(def)).toList();
-        List<QuestDefinition> chosen = new ArrayList<>(
-                WeightedPicker.pickMany(continuations, QuestDefinition::weight, seed, slots));
-        if (chosen.size() < slots) {
-            chosen.addAll(WeightedPicker.pickMany(standalone, QuestDefinition::weight, seed, slots - chosen.size()));
-        }
+        // Deterministic, server-authoritative selection: priority tiers (datapack-controlled; chain
+        // continuations default above standalone) fill slots in turn, each tier weighted by the quest's
+        // context-sensitive effective weight. Same player/villager/day yields the same offers.
+        List<QuestDefinition> chosen = selectOffers(player, villager, data, eligible);
         List<QuestCard> cards = new ArrayList<>();
         for (QuestDefinition def : chosen) {
             buildOfferCard(player, villager, data, def).ifPresent(cards::add);
@@ -192,7 +197,7 @@ public final class QuestManager {
     private static Optional<QuestCard> buildOfferCard(ServerPlayer player, Entity villager, PlayerQuestData data,
                                                       QuestDefinition def) {
         if (!def.isTemplate()) {
-            return Optional.of(buildCard(player, def, null, null, QuestDefinition.OFFER));
+            return Optional.of(buildCard(player, villager, def, null, null, QuestDefinition.OFFER));
         }
         TemplateSpec spec = def.template().get();
         QuestContext context = new QuestContext(player, villager, data, def.id());
@@ -203,13 +208,22 @@ public final class QuestManager {
             return Optional.empty();
         }
         QuestDefinition resolved = def.withConcrete(concrete.get());
-        return Optional.of(buildCard(player, resolved, new PlaceholderResolver(values.get()), null, QuestDefinition.OFFER));
+        return Optional.of(buildCard(player, villager, resolved, new PlaceholderResolver(values.get()), null,
+                QuestDefinition.OFFER));
     }
 
-    private static QuestCard buildCard(ServerPlayer player, QuestDefinition def, @Nullable PlaceholderResolver resolver,
-                                       @Nullable ActiveQuest active, String dialogueState) {
-        return new QuestCard(def.id(), def.title(resolver), chainLabel(def),
-                def.dialogueOr(dialogueState, def.title(resolver), resolver),
+    private static QuestCard buildCard(ServerPlayer player, @Nullable Entity villager, QuestDefinition def,
+                                       @Nullable PlaceholderResolver resolver, @Nullable ActiveQuest active,
+                                       String dialogueState) {
+        // Situation offers reuse the chain-label slot for a "village needs help" tag so the player can tell
+        // an emergent, time-limited request from a standing offer (0.8.0).
+        boolean situation = def.category().map(SituationOffer.CATEGORY::equals).orElse(false);
+        Component label = situation ? Component.translatable("mcaquests.situation.card_tag") : chainLabel(def);
+        // An add-on (e.g. MCA: Conversations) may voice this line in the villager's personality; falls back to
+        // the quest's own static dialogue text when none is registered (QuestDialogueHooks).
+        Component dialogue = QuestDialogueHooks.resolve(player, villager, def, dialogueState,
+                def.dialogueOr(dialogueState, def.title(resolver), resolver));
+        return new QuestCard(def.id(), def.title(resolver), label, dialogue,
                 objectiveLines(player, def, active), rewardLines(def));
     }
 
@@ -225,7 +239,7 @@ public final class QuestManager {
     // ---------------------------------------------------------------- actions
 
     public static boolean accept(ServerPlayer player, Entity villager, ResourceLocation questId) {
-        Optional<QuestDefinition> defOpt = QuestRegistry.get(questId);
+        Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(questId);
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
         if (defOpt.isEmpty() || dataOpt.isEmpty()) {
             return false;
@@ -261,23 +275,44 @@ public final class QuestManager {
             resolver = new PlaceholderResolver(frozen);
         }
 
+        // A situation offer is anchored to its open instance: start time = the instance's open time so
+        // the quest's deadline lands on the situation's master deadline, and the link lets completion /
+        // expiry resolve the shared situation (0.8.0). A situation that closed between offer and accept
+        // can no longer be accepted.
+        long startTime = ((ServerLevel) player.level()).getGameTime();
+        UUID situationLink = null;
+        if (SituationIds.isSyntheticId(questId)) {
+            MinecraftServer server = player.getServer();
+            Optional<SituationInstance> instanceOpt = server == null
+                    ? Optional.empty() : findOpenSituation(server, villager, questId);
+            if (instanceOpt.isEmpty()) {
+                return false;
+            }
+            startTime = instanceOpt.get().openGameTime();
+            situationLink = instanceOpt.get().instanceId();
+        }
+
         data.add(ActiveQuest.create(questId, villagerUuid,
                 McaCompat.getVillagerDisplayName(villager),
                 McaCompat.getProfessionId(villager).orElse(null),
                 player.level().dimension().location(),
-                ((ServerLevel) player.level()).getGameTime(),
-                accepted.objectives().size(), frozen));
+                startTime,
+                accepted.objectives().size(), frozen, situationLink));
+        if (situationLink != null && player.getServer() != null) {
+            SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
+        }
         MinecraftForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, accepted));
         McaCompat.setQuestGiverFollow(player, villager, McaQuestsConfig.COMMON.followGiverAfterAccept.get());
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
-            player.sendSystemMessage(Component.translatable("mcaquests.message.quest_accepted", accepted.title(resolver)));
+            player.sendSystemMessage(QuestDialogueHooks.resolve(player, villager, accepted, QuestDefinition.ACCEPT,
+                    Component.translatable("mcaquests.message.quest_accepted", accepted.title(resolver))));
         }
         return true;
     }
 
     public static boolean turnIn(ServerPlayer player, Entity villager, ResourceLocation questId) {
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
-        Optional<QuestDefinition> defOpt = QuestRegistry.get(questId);
+        Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(questId);
         if (dataOpt.isEmpty() || defOpt.isEmpty()) {
             return false;
         }
@@ -296,7 +331,7 @@ public final class QuestManager {
     /** Auto-completion for {@link TurnInMode#SELF_COMPLETE} quests; called from the progress tick. */
     public static void selfComplete(ServerPlayer player, ActiveQuest active) {
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
-        Optional<QuestDefinition> defOpt = QuestRegistry.get(active.questId());
+        Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(active.questId());
         if (dataOpt.isEmpty() || defOpt.isEmpty() || active.rewardClaimed()) {
             return;
         }
@@ -336,18 +371,25 @@ public final class QuestManager {
         grantVillageReputationRewards(player, grantVillager, def);
 
         long now = ((ServerLevel) player.level()).getGameTime();
-        data.history().recordCompletion(def.id());
+        data.history().recordCompletion(def.id(), active.villagerUuid());
         switch (def.repeat().type()) {
             case COOLDOWN -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), now + def.cooldownTicks());
             case ONCE -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), Long.MAX_VALUE);
             case REPEATABLE -> { /* immediately available again */ }
         }
+        releaseEscortMovement(player, def, active);
         data.remove(active);
         MinecraftForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
-            player.sendSystemMessage(Component.translatable("mcaquests.message.quest_completed",
-                    def.title(active.textResolver())));
+            player.sendSystemMessage(QuestDialogueHooks.resolve(player, grantVillager, def, QuestDefinition.COMPLETE,
+                    Component.translatable("mcaquests.message.quest_completed", def.title(active.textResolver()))));
         }
+        // A situation offer resolves its shared situation on the first participant's completion (0.8.0).
+        active.situationInstance().ifPresent(instanceId -> {
+            if (player.getServer() != null) {
+                SituationManager.resolveSuccess(player.getServer(), instanceId, player);
+            }
+        });
         return true;
     }
 
@@ -374,7 +416,8 @@ public final class QuestManager {
                     McaQuestsConfig.COMMON.defaultScopeFallbackRadius.get());
         }
         if (villageId.isPresent()) {
-            ProjectSavedData.get(player.getServer()).addReputation("v:" + villageId.getAsInt(), amount);
+            dev.otectus.mcaquests.quest.reputation.ReputationService.award(
+                    player.getServer(), "v:" + villageId.getAsInt(), amount, player);
         }
     }
 
@@ -388,8 +431,9 @@ public final class QuestManager {
             return false;
         }
         dataOpt.get().remove(active.get());
-        QuestRegistry.get(questId).ifPresent(def -> {
-            dataOpt.get().history().recordOutcome(def.id(), QuestHistory.Outcome.ABANDONED);
+        QuestDefinitions.resolve(questId).ifPresent(def -> {
+            releaseEscortMovement(player, active.get().resolve(def), active.get());
+            dataOpt.get().history().recordOutcome(def.id(), active.get().villagerUuid(), QuestHistory.Outcome.ABANDONED);
             MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
         });
         return true;
@@ -413,7 +457,7 @@ public final class QuestManager {
         Entity resolvedGiver = giver != null ? giver : resolveGiver(player, active);
         long now = ((ServerLevel) player.level()).getGameTime();
 
-        data.history().recordOutcome(def.id(), QuestHistory.Outcome.FAILED);
+        data.history().recordOutcome(def.id(), active.villagerUuid(), QuestHistory.Outcome.FAILED);
         def.failure().ifPresent(failure -> {
             if (failure.failureHearts() != 0 && resolvedGiver != null) {
                 McaCompat.addHearts(player, resolvedGiver, failure.failureHearts());
@@ -425,18 +469,52 @@ public final class QuestManager {
                         data.history().setCooldownUntil(def.id(), active.villagerUuid(), now + retry));
             }
         });
+        releaseEscortMovement(player, def, active);
         data.remove(active);
 
         MinecraftForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
-            player.sendSystemMessage(def.dialogueOr(QuestDefinition.FAILED,
+            Component failLine = def.dialogueOr(QuestDefinition.FAILED,
                     Component.translatable("mcaquests.message.quest_failed", def.title(active.textResolver())),
-                    active.textResolver()));
+                    active.textResolver());
+            player.sendSystemMessage(QuestDialogueHooks.resolve(player, resolvedGiver, def, QuestDefinition.FAILED,
+                    failLine));
         }
         if (McaQuestsConfig.COMMON.debugLogging.get()) {
             McaQuests.LOGGER.debug("[MCA: Quests] Failed quest '{}' for {} (reason {}).",
                     def.id(), player.getGameProfile().getName(), reason);
         }
+    }
+
+    /**
+     * Releases any escort movement the giver/escortee was under (lead {@code WALK_TARGET} or legacy
+     * {@code FOLLOW}) when a quest reaches a terminal state, so a led villager doesn't keep walking after
+     * the quest completes, is abandoned, or fails. Best-effort and fail-safe: only escort objectives, only
+     * a currently-loaded target.
+     */
+    private static void releaseEscortMovement(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (int i = 0; i < def.objectives().size(); i++) {
+            if (def.objectives().get(i) instanceof EscortEntityObjective escort) {
+                resolveEscortee(escort, active.progress(i), player, active, level).ifPresent(target -> {
+                    McaCompat.releaseVillagerHold(target);   // un-freeze a still-waiting (Phase A) escortee
+                    McaCompat.stopVillagerLeading(target);
+                    McaCompat.setQuestGiverFollow(player, target, false);
+                });
+            }
+        }
+    }
+
+    /** The escortee to clean up: the objective's locked target if one was pinned, else the villager target. */
+    private static Optional<LivingEntity> resolveEscortee(EscortEntityObjective escort, ObjectiveProgress progress,
+                                                          ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        UUID locked = progress.targetUuid();
+        if (locked != null && level.getEntity(locked) instanceof LivingEntity le) {
+            return Optional.of(le);
+        }
+        return escort.villager().resolve(player, active, level);
     }
 
     // ---------------------------------------------------------------- helpers
@@ -484,7 +562,7 @@ public final class QuestManager {
     private static List<ActiveQuest> relevantActiveQuests(ServerPlayer player, Entity villager, PlayerQuestData data) {
         List<ActiveQuest> relevant = new ArrayList<>();
         for (ActiveQuest active : data.active()) {
-            QuestDefinition base = QuestRegistry.get(active.questId()).orElse(null);
+            QuestDefinition base = QuestDefinitions.resolve(active.questId()).orElse(null);
             if (base == null) {
                 continue;
             }
@@ -497,7 +575,7 @@ public final class QuestManager {
         }
         // Surface a ready, turn-in-able quest ahead of an in-progress one.
         relevant.sort(Comparator.comparingInt(active -> {
-            QuestDefinition base = QuestRegistry.get(active.questId()).orElse(null);
+            QuestDefinition base = QuestDefinitions.resolve(active.questId()).orElse(null);
             QuestDefinition def = base == null ? null : active.resolve(base);
             boolean ready = def != null && isComplete(player, def, active) && canTurnInAt(active, def, villager);
             return ready ? 0 : 1;
@@ -512,6 +590,102 @@ public final class QuestManager {
         }
         ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, active.dimension()));
         return level != null ? level.getEntity(active.villagerUuid()) : null;
+    }
+
+    /** The open situation instance behind a synthetic offer id, scoped to the villager's village (0.8.0). */
+    private static Optional<SituationInstance> findOpenSituation(MinecraftServer server, Entity villager,
+                                                                ResourceLocation syntheticId) {
+        Optional<ResourceLocation> sourceId = SituationIds.sourceIdOf(syntheticId);
+        java.util.OptionalInt villageId = McaCompat.getHomeVillageId(villager);
+        if (sourceId.isEmpty() || villageId.isEmpty()) {
+            return Optional.empty();
+        }
+        return SituationSavedData.get(server).openInstancesInVillage(villageId.getAsInt()).stream()
+                .filter(instance -> instance.defId().equals(sourceId.get()))
+                .findFirst();
+    }
+
+    /**
+     * Public read-only convenience overload for add-ons: the offers {@code villager} could currently give
+     * {@code player}, resolving the player's quest data internally (empty when the player has none). Lets a
+     * dialogue mod ask "does this villager have work for me?" without touching {@link PlayerQuestData}.
+     */
+    public static List<QuestDefinition> eligibleOffers(ServerPlayer player, Entity villager) {
+        return QuestCapabilities.get(player)
+                .map(data -> eligibleOffers(player, villager, data))
+                .orElseGet(List::of);
+    }
+
+    /** True when {@code villager} has at least one eligible offer for {@code player} right now. */
+    public static boolean hasEligibleOffer(ServerPlayer player, Entity villager) {
+        return !eligibleOffers(player, villager).isEmpty();
+    }
+
+    /**
+     * True when {@code player} has an active quest — given by, or turn-in-able at, {@code villager} — whose
+     * objectives are all satisfied (ready to hand in now). Read-only.
+     */
+    public static boolean hasReadyTurnIn(ServerPlayer player, Entity villager) {
+        return QuestCapabilities.get(player).map(data -> data.active().stream().anyMatch(active -> {
+            QuestDefinition base = QuestDefinitions.resolve(active.questId()).orElse(null);
+            if (base == null) {
+                return false;
+            }
+            QuestDefinition def = active.resolve(base);
+            return isComplete(player, def, active) && canTurnInAt(active, def, villager);
+        })).orElse(false);
+    }
+
+    /**
+     * Advances every {@link ExternalSignalObjective} in the player's active quests that matches
+     * {@code signalId} (and, if the objective is villager-specific, {@code villagerUuid}) by one step, then
+     * runs the same post-progress sequence as the per-tick handler (self-complete SELF_COMPLETE quests →
+     * ready transitions → log sync) so a conversation-driven objective completes immediately. Generic: any
+     * add-on that registers an {@code ExternalSignalObjective} type can push progress through it.
+     * {@code villagerUuid} may be null when the signal is not tied to a specific villager.
+     */
+    public static void notifyExternalObjective(ServerPlayer player, ResourceLocation signalId,
+                                               @Nullable UUID villagerUuid) {
+        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        if (dataOpt.isEmpty()) {
+            return;
+        }
+        PlayerQuestData data = dataOpt.get();
+        boolean advanced = false;
+        for (ActiveQuest active : new ArrayList<>(data.active())) {
+            QuestDefinition base = QuestDefinitions.resolve(active.questId()).orElse(null);
+            if (base == null) {
+                continue;
+            }
+            QuestDefinition def = active.resolve(base);
+            List<QuestObjective> objectives = def.objectives();
+            for (int i = 0; i < objectives.size(); i++) {
+                QuestObjective objective = objectives.get(i);
+                if (objective instanceof ExternalSignalObjective signal
+                        && signal.matchesSignal(signalId, villagerUuid)) {
+                    ObjectiveProgress progress = active.progress(i);
+                    if (progress.count() < objective.required()) {
+                        progress.add(1);
+                        advanced = true;
+                    }
+                }
+            }
+        }
+        if (!advanced) {
+            return;
+        }
+        // Same order as QuestProgressEvents' per-tick sequence: auto-complete first, then ready + sync.
+        for (ActiveQuest active : new ArrayList<>(data.active())) {
+            QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
+                QuestDefinition def = active.resolve(base);
+                if (def.turnIn().mode() == TurnInMode.SELF_COMPLETE && !active.rewardClaimed()
+                        && isComplete(player, def, active)) {
+                    selfComplete(player, active);
+                }
+            });
+        }
+        checkReadyTransitions(player);
+        syncLog(player);
     }
 
     static List<QuestDefinition> eligibleOffers(ServerPlayer player, Entity villager, PlayerQuestData data) {
@@ -533,7 +707,7 @@ public final class QuestManager {
                 .filter(def -> !data.hasActive(def.id(), villagerUuid))
                 .filter(def -> !data.history().onCooldown(def.id(), villagerUuid, now))
                 .filter(def -> def.repeat().type() != RepeatRule.RepeatType.ONCE
-                        || data.history().completionCount(def.id()) == 0)
+                        || onceCompletionCount(data, def, villagerUuid) == 0)
                 // effectiveConditions() folds chain prerequisites into the condition gate, so a later
                 // stage can never be offered before its prerequisites are completed.
                 .filter(def -> def.effectiveConditions()
@@ -542,7 +716,11 @@ public final class QuestManager {
                         .orElse(true))
                 .sorted(Comparator.comparing(def -> def.id().toString()))
                 .toList();
-        return collapseChainsToFurthestStage(filtered);
+        // Static quests first, then any open situations this villager can surface (0.8.0). Situation
+        // offers compete in the same selection/shaping pipeline below.
+        List<QuestDefinition> eligible = new ArrayList<>(collapseChainsToFurthestStage(filtered));
+        eligible.addAll(DynamicOfferSource.collect(player, villager, data, profession, adult, hearts));
+        return eligible;
     }
 
     /**
@@ -562,12 +740,65 @@ public final class QuestManager {
                 .toList();
     }
 
+    /**
+     * Deterministic, server-authoritative offer selection from the eligible pool. Candidates are grouped
+     * into priority tiers ({@link #effectivePriority}: a chain continuation defaults above standalone, and a
+     * datapack can override with {@code priority}); the highest tiers fill slots first, and within a tier
+     * each quest is weighted by its context-sensitive {@link QuestDefinition#effectiveWeight}. One
+     * {@link McaVillagerSnapshot} is shared across the weight evaluations. Same player/villager/day → same
+     * offers.
+     */
+    private static List<QuestDefinition> selectOffers(ServerPlayer player, Entity villager, PlayerQuestData data,
+                                                      List<QuestDefinition> eligible) {
+        long worldDay = ((ServerLevel) player.level()).getDayTime() / 24000L;
+        int slots = McaQuestsConfig.COMMON.offersPerVillager.get();
+        long seed = offerSeed(player, villager.getUUID(), worldDay);
+        McaVillagerSnapshot snapshot = new McaVillagerSnapshot(player, villager);
+        ToIntFunction<QuestDefinition> weightFn = def ->
+                def.effectiveWeight(new QuestContext(player, villager, data, def.id(), snapshot));
+        List<QuestDefinition> chosen = new ArrayList<>();
+        List<Integer> tiers = eligible.stream().map(QuestManager::effectivePriority).distinct()
+                .sorted(Comparator.reverseOrder()).toList();
+        for (int tier : tiers) {
+            if (chosen.size() >= slots) {
+                break;
+            }
+            List<QuestDefinition> bucket = eligible.stream().filter(def -> effectivePriority(def) == tier).toList();
+            chosen.addAll(WeightedPicker.pickMany(bucket, weightFn, seed, slots - chosen.size()));
+        }
+        return chosen;
+    }
+
+    /**
+     * Offer priority tier: explicit {@code priority}, else a situation offer defaults to the configured
+     * {@code situationDefaultPriority} (so the village's needs stand out), else a chain continuation
+     * (stage &gt; 1) defaults above standalone.
+     */
+    private static int effectivePriority(QuestDefinition def) {
+        if (def.priority().isPresent()) {
+            return def.priority().get();
+        }
+        if (def.category().map(SituationOffer.CATEGORY::equals).orElse(false)) {
+            return McaQuestsConfig.COMMON.situationDefaultPriority.get();
+        }
+        return isChainContinuation(def) ? 1 : 0;
+    }
+
+    /** ONCE-quest completion count: per-villager for chain stages (1:1 arcs), global for standalone quests. */
+    private static int onceCompletionCount(PlayerQuestData data, QuestDefinition def, UUID villagerUuid) {
+        return def.chain().isPresent()
+                ? data.history().completionCountByGiver(def.id(), villagerUuid)
+                : data.history().completionCount(def.id());
+    }
+
     private static List<Component> objectiveLines(ServerPlayer player, QuestDefinition def, @Nullable ActiveQuest active) {
         List<Component> lines = new ArrayList<>();
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
             QuestObjective objective = objectives.get(i);
-            Component line = objective.describe();
+            Component line = active != null
+                    ? objective.describe(player, active, (ServerLevel) player.level())
+                    : objective.describe();
             if (active != null) {
                 int current = objective.current(player, active.progress(i));
                 line = Component.empty().append(line)
@@ -597,7 +828,7 @@ public final class QuestManager {
     public static void checkReadyTransitions(ServerPlayer player) {
         QuestCapabilities.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
-                QuestRegistry.get(active.questId()).ifPresent(base -> {
+                QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     QuestDefinition def = active.resolve(base);
                     boolean complete = isComplete(player, def, active);
                     if (complete && !active.readyNotified()) {
@@ -618,7 +849,7 @@ public final class QuestManager {
         QuestCapabilities.get(player).ifPresent(data -> {
             List<QuestLogEntry> entries = new ArrayList<>();
             for (ActiveQuest active : data.active()) {
-                QuestRegistry.get(active.questId()).ifPresent(base -> {
+                QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     QuestDefinition def = active.resolve(base);
                     java.util.OptionalLong deadline = def.failure()
                             .map(failure -> failure.deadlineGameTime(active.startGameTime()))
@@ -630,5 +861,167 @@ public final class QuestManager {
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
         });
+    }
+
+    // ---------------------------------------------------------------- diagnostics (/mcaquests debug)
+
+    /**
+     * Human-readable explanation of why {@code questId} is or is not offered by {@code villager} right now:
+     * the per-quest gate checklist, per-villager chain progress, history counts, weight/priority, and a final
+     * status. Drives {@code /mcaquests debug quest}. Read-only.
+     */
+    public static List<Component> explainOffer(ServerPlayer player, Entity villager, ResourceLocation questId) {
+        List<Component> out = new ArrayList<>();
+        QuestDefinition def = QuestDefinitions.resolve(questId).orElse(null);
+        if (def == null) {
+            out.add(Component.literal("Unknown quest '" + questId + "'."));
+            return out;
+        }
+        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        if (dataOpt.isEmpty() || !(player.level() instanceof ServerLevel level)) {
+            out.add(Component.literal("No quest data, or not on a server level."));
+            return out;
+        }
+        PlayerQuestData data = dataOpt.get();
+        UUID villagerUuid = villager.getUUID();
+        long now = level.getGameTime();
+
+        out.add(Component.literal("Quest " + questId + def.chain()
+                .map(c -> " [chain '" + c.chain() + "' stage " + c.stage() + "]").orElse(" [standalone]")));
+
+        ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
+        out.add(line("enabled", def.enabled()));
+        out.add(line("profession match", def.giver().isGeneric()
+                || ProfessionMatcher.matchesAny(def.giver().professions(), profession, profMode())));
+        out.add(line("adult ok", !def.giver().adultOnly() || McaCompat.isAdult(villager)));
+        int hearts = McaCompat.getHearts(player, villager);
+        out.add(line("hearts in range (" + hearts + ")", def.giver().acceptsHearts(hearts)));
+        out.add(line("not already active here", !data.hasActive(questId, villagerUuid)));
+        out.add(line("off cooldown", !data.history().onCooldown(questId, villagerUuid, now)));
+        out.add(line("not a finished once-quest", def.repeat().type() != RepeatRule.RepeatType.ONCE
+                || onceCompletionCount(data, def, villagerUuid) == 0));
+        McaVillagerSnapshot snapshot = new McaVillagerSnapshot(player, villager);
+        out.add(line("conditions + prerequisites", def.effectiveConditions()
+                .map(c -> c.test(new QuestContext(player, villager, data, questId, snapshot))).orElse(true)));
+
+        def.chain().ifPresent(c -> c.prerequisites().forEach(pre -> out.add(Component.literal(
+                "    prereq " + pre + ": " + (data.history().completionCountByGiver(pre, villagerUuid) > 0
+                        ? "completed with this villager" : "NOT completed with this villager")))));
+        out.add(Component.literal("    history: completed " + data.history().completionCount(questId)
+                + " (with this villager " + data.history().completionCountByGiver(questId, villagerUuid) + ")"
+                + ", failed " + data.history().outcomeCount(questId, QuestHistory.Outcome.FAILED)
+                + ", abandoned " + data.history().outcomeCount(questId, QuestHistory.Outcome.ABANDONED)));
+        out.add(Component.literal("    priority " + effectivePriority(def) + ", effective weight "
+                + def.effectiveWeight(new QuestContext(player, villager, data, questId, snapshot))
+                + " (base " + def.weight() + ")"));
+
+        List<QuestDefinition> eligible = eligibleOffers(player, villager, data);
+        List<QuestDefinition> chosen = selectOffers(player, villager, data, eligible);
+        out.add(status(offerStatus(player, villager, data, def, eligible, chosen)));
+        return out;
+    }
+
+    /**
+     * One status line per relationship-chain stage this {@code villager} could give (by profession), grouped
+     * by chain and ordered by stage. Drives the chain section of {@code /mcaquests debug villager}. Read-only.
+     */
+    public static List<Component> explainChainAvailability(ServerPlayer player, Entity villager) {
+        List<Component> out = new ArrayList<>();
+        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        if (dataOpt.isEmpty()) {
+            out.add(Component.literal("No quest data for this player."));
+            return out;
+        }
+        PlayerQuestData data = dataOpt.get();
+        ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
+        List<QuestDefinition> chainQuests = QuestRegistry.all().stream()
+                .filter(def -> def.chain().isPresent())
+                .filter(def -> def.giver().isGeneric()
+                        || ProfessionMatcher.matchesAny(def.giver().professions(), profession, profMode()))
+                .sorted(Comparator.<QuestDefinition, String>comparing(def -> def.chain().get().chain())
+                        .thenComparingInt(def -> def.chain().get().stage())
+                        .thenComparing(def -> def.id().toString()))
+                .toList();
+        if (chainQuests.isEmpty()) {
+            out.add(Component.literal("chains: (none for this villager's profession)"));
+            return out;
+        }
+        List<QuestDefinition> eligible = eligibleOffers(player, villager, data);
+        List<QuestDefinition> chosen = selectOffers(player, villager, data, eligible);
+        out.add(Component.literal("chains:"));
+        String current = null;
+        for (QuestDefinition def : chainQuests) {
+            String chain = def.chain().get().chain();
+            if (!chain.equals(current)) {
+                current = chain;
+                out.add(Component.literal("  " + chain + ":"));
+            }
+            out.add(Component.literal("    stage " + def.chain().get().stage() + " " + def.id().getPath()
+                    + " — " + offerStatus(player, villager, data, def, eligible, chosen)));
+        }
+        return out;
+    }
+
+    /** Compact offer status for one quest at one villager (shared by both debug commands). */
+    private static String offerStatus(ServerPlayer player, Entity villager, PlayerQuestData data, QuestDefinition def,
+                                      List<QuestDefinition> eligible, List<QuestDefinition> chosen) {
+        UUID villagerUuid = villager.getUUID();
+        long now = ((ServerLevel) player.level()).getGameTime();
+        if (data.hasActive(def.id(), villagerUuid)) {
+            return "ACTIVE (accepted from this villager)";
+        }
+        if (chosen.contains(def)) {
+            return "OFFERED";
+        }
+        if (eligible.contains(def)) {
+            return "ELIGIBLE (in the pool, not drawn this slot/day)";
+        }
+        if (!def.enabled()) {
+            return "DISABLED";
+        }
+        if (def.repeat().type() == RepeatRule.RepeatType.ONCE && onceCompletionCount(data, def, villagerUuid) > 0) {
+            return "COMPLETED (with this villager)";
+        }
+        if (data.history().onCooldown(def.id(), villagerUuid, now)) {
+            return "ON_COOLDOWN";
+        }
+        if (passesIndividualFilters(player, villager, data, def)) {
+            String by = def.chain().flatMap(c -> eligible.stream()
+                    .filter(e -> e.chain()
+                            .map(ec -> ec.chain().equals(c.chain()) && ec.stage() > c.stage()).orElse(false))
+                    .map(e -> e.id().getPath()).findFirst()).orElse("a later stage");
+            return "HIDDEN/SUPERSEDED (by " + by + ")";
+        }
+        return "LOCKED (prerequisite or condition unmet)";
+    }
+
+    /** Whether a quest passes every per-quest offer filter — everything {@link #eligibleOffers} checks bar the chain collapse. */
+    private static boolean passesIndividualFilters(ServerPlayer player, Entity villager, PlayerQuestData data,
+                                                   QuestDefinition def) {
+        UUID villagerUuid = villager.getUUID();
+        long now = ((ServerLevel) player.level()).getGameTime();
+        ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
+        if (!def.enabled()
+                || !(def.giver().isGeneric()
+                        || ProfessionMatcher.matchesAny(def.giver().professions(), profession, profMode()))
+                || (def.giver().adultOnly() && !McaCompat.isAdult(villager))
+                || !def.giver().acceptsHearts(McaCompat.getHearts(player, villager))
+                || data.hasActive(def.id(), villagerUuid)
+                || data.history().onCooldown(def.id(), villagerUuid, now)
+                || (def.repeat().type() == RepeatRule.RepeatType.ONCE
+                        && onceCompletionCount(data, def, villagerUuid) != 0)) {
+            return false;
+        }
+        McaVillagerSnapshot snapshot = new McaVillagerSnapshot(player, villager);
+        return def.effectiveConditions()
+                .map(c -> c.test(new QuestContext(player, villager, data, def.id(), snapshot))).orElse(true);
+    }
+
+    private static Component line(String label, boolean ok) {
+        return Component.literal("  " + (ok ? "[ok] " : "[no] ") + label);
+    }
+
+    private static Component status(String text) {
+        return Component.literal("=> " + text);
     }
 }

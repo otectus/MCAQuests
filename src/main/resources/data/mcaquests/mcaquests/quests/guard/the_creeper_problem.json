@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_the_creeper_problem",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:guard"], "adult_only": true },
+  "title": { "text": "The Creeper Problem" },
+  "dialogue": {
+    "offer": { "text": "Something keeps cratering the road and the garden walls. Hunt down four creepers before they take a house with them." },
+    "accept": { "text": "Carefully, now — let them get close and you'll share the blast." },
+    "decline": { "text": "Then mind your step near the walls." },
+    "in_progress": { "text": "Any of those hissing wretches dealt with?" },
+    "ready": { "text": "Four fewer holes in my road. Good." },
+    "complete": { "text": "The masons thank you, and so do I. Fine work." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "entity": "minecraft:creeper", "count": 4 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 26 },
+    { "type": "mcaquests:hearts", "amount": 22 }
+  ]
+}

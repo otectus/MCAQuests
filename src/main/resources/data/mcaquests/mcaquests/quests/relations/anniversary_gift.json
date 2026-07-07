@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_anniversary_gift",
+  "weight": 10,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "An Anniversary to Remember" },
+  "dialogue": {
+    "offer": { "text": "Do you know what day it is, my love? Our day. Bring home a cake and we'll mark another year together, just the two of us." },
+    "accept": { "text": "Oh, you remembered after all. I'll set out the good plates." },
+    "decline": { "text": "...Of course. Another year, another forgotten day." },
+    "in_progress": { "text": "Is the cake on its way, dearest?" },
+    "ready": { "text": "A whole cake! You old romantic, you." },
+    "complete": { "text": "To another year, and many more. I'm the luckiest soul in the village." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:cake", "count": 1, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 24 },
+    { "type": "mcaquests:hearts", "amount": 30 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:is_player_spouse" },
+      { "type": "mcaquests:hearts", "min": 40 }
+    ]
+  }
+}

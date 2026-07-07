@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:courting_1_first_gift",
+  "weight": 12,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Courtship" },
+  "dialogue": {
+    "offer": { "text": "You've been on my mind more than I'd like to admit. I'd not turn away a handful of poppies from someone like you — three would do, if you're so inclined." },
+    "accept": { "text": "Oh! Well. I'll be waiting, then. Don't keep me too long." },
+    "decline": { "text": "Of course. Forget I said anything." },
+    "in_progress": { "text": "Still gathering those poppies, are you?" },
+    "ready": { "text": "Poppies, for me? They're beautiful. You shouldn't have — but I'm glad you did." },
+    "complete": { "text": "I'll press one of these in a book to remember today. Come find me again, won't you?" }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:poppy", "count": 3, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "chain": {
+    "chain": "mcaquests:courting",
+    "stage": 1,
+    "stage_total": 4,
+    "relationship_arc": { "text": "A Courtship" },
+    "chapter": { "text": "A First Gift" },
+    "unlocks": ["mcaquests:courting_2_walk_together"]
+  },
+  "weight_bonus": [
+    { "when": { "type": "mcaquests:hearts", "min": 25 }, "amount": 6 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:relationship_state", "states": ["single"] },
+      { "type": "mcaquests:hearts", "min": 15 }
+    ]
+  }
+}

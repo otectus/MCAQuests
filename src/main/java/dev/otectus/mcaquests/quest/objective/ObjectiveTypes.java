@@ -38,6 +38,38 @@ public final class ObjectiveTypes {
     public static final QuestObjectiveType<TalkToProfessionObjective> TALK_TO_PROFESSION =
             register(new ResourceLocation(McaQuests.MOD_ID, "talk_to_profession"), TalkToProfessionObjective.CODEC);
 
+    // NPC/village-centered objective types (escort, protect, trade, heal, …).
+    public static final QuestObjectiveType<EscortEntityObjective> ESCORT_ENTITY =
+            register(new ResourceLocation(McaQuests.MOD_ID, "escort_entity"), EscortEntityObjective.CODEC);
+    public static final QuestObjectiveType<ProtectEntityObjective> PROTECT_ENTITY =
+            register(new ResourceLocation(McaQuests.MOD_ID, "protect_entity"), ProtectEntityObjective.CODEC);
+    public static final QuestObjectiveType<DefendVillagerObjective> DEFEND_VILLAGER =
+            register(new ResourceLocation(McaQuests.MOD_ID, "defend_villager"), DefendVillagerObjective.CODEC);
+    public static final QuestObjectiveType<TradeWithVillagerObjective> TRADE_WITH_VILLAGER =
+            register(new ResourceLocation(McaQuests.MOD_ID, "trade_with_villager"), TradeWithVillagerObjective.CODEC);
+    public static final QuestObjectiveType<HealEntityObjective> HEAL_ENTITY =
+            register(new ResourceLocation(McaQuests.MOD_ID, "heal_entity"), HealEntityObjective.CODEC);
+    public static final QuestObjectiveType<CureVillagerObjective> CURE_VILLAGER =
+            register(new ResourceLocation(McaQuests.MOD_ID, "cure_villager"), CureVillagerObjective.CODEC);
+    public static final QuestObjectiveType<BreedAnimalsObjective> BREED_ANIMALS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "breed_animals"), BreedAnimalsObjective.CODEC);
+    public static final QuestObjectiveType<TameAnimalObjective> TAME_ANIMAL =
+            register(new ResourceLocation(McaQuests.MOD_ID, "tame_animal"), TameAnimalObjective.CODEC);
+    public static final QuestObjectiveType<SleepOrRestObjective> SLEEP_OR_REST =
+            register(new ResourceLocation(McaQuests.MOD_ID, "sleep_or_rest"), SleepOrRestObjective.CODEC);
+    public static final QuestObjectiveType<BuildNearLocationObjective> BUILD_NEAR_LOCATION =
+            register(new ResourceLocation(McaQuests.MOD_ID, "build_near_location"), BuildNearLocationObjective.CODEC);
+    public static final QuestObjectiveType<EnterStructureObjective> ENTER_STRUCTURE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "enter_structure"), EnterStructureObjective.CODEC);
+    public static final QuestObjectiveType<DeliverToVillagerObjective> DELIVER_TO_VILLAGER =
+            register(new ResourceLocation(McaQuests.MOD_ID, "deliver_to_villager"), DeliverToVillagerObjective.CODEC);
+
+    // Travel + place-anchored combat objectives.
+    public static final QuestObjectiveType<ReachLocationObjective> REACH_LOCATION =
+            register(new ResourceLocation(McaQuests.MOD_ID, "reach_location"), ReachLocationObjective.CODEC);
+    public static final QuestObjectiveType<DefendLocationObjective> DEFEND_LOCATION =
+            register(new ResourceLocation(McaQuests.MOD_ID, "defend_location"), DefendLocationObjective.CODEC);
+
     /** Maps a type id to/from its registry entry, failing parsing on an unknown id. */
     public static final Codec<QuestObjectiveType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:honored_envoy",
+  "weight": 8,
+  "category": "relations",
+  "repeat": { "type": "once" },
+  "giver": { "professions": ["mca:guard", "minecraft:none", "minecraft:nitwit"], "adult_only": true },
+  "title": { "text": "An Honored Envoy" },
+  "dialogue": {
+    "offer": { "text": "You've become a friend to this village. Carry our banner well — bring 8 paper to seal the proclamation, and you'll be named among the honored." },
+    "accept": { "text": "The scribes are waiting. Off you go." },
+    "decline": { "text": "The honor will keep until you're ready." },
+    "in_progress": { "text": "The proclamation still needs that paper." },
+    "ready": { "text": "Paper at last. Let it be written." },
+    "complete": { "text": "By the village's word, you are honored. Wear the name with pride." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:paper", "count": 8 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 15 },
+    { "type": "mcaquests:grant_title", "title": "mcaquests:honored_of_village", "scope": "village" }
+  ],
+  "conditions": {
+    "type": "mcaquests:reputation_tier",
+    "min_tier": "friend"
+  }
+}

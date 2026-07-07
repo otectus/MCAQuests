@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fletcher_feathers_for_fighters",
+  "weight": 11,
+  "category": "delivery",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["minecraft:fletcher"], "adult_only": true },
+  "title": { "text": "Arrows for the Watch" },
+  "dialogue": {
+    "offer": { "text": "The watch burns through arrows faster than I can fletch them, and another dark night's coming. Bring me sixteen arrows and I'll see the wall stays stocked." },
+    "accept": { "text": "Good. An archer without arrows is just a fellow holding a stick." },
+    "decline": { "text": "Then the quivers run dry, and the wall with them." },
+    "in_progress": { "text": "How's that bundle of arrows coming?" },
+    "ready": { "text": "Sixteen good shafts — that'll keep the watch loosing till dawn." },
+    "complete": { "text": "The wall's well supplied, thanks to you. Steady hands keep the village standing." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:arrow", "count": 16, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:xp", "amount": 16 },
+    { "type": "mcaquests:hearts", "amount": 18 }
+  ]
+}

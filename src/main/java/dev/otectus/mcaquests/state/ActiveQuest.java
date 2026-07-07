@@ -32,6 +32,13 @@ public final class ActiveQuest {
     /** Frozen template values for a quest accepted from a template (spec: chosen values must not reroll). */
     @Nullable
     private final ResolvedTemplate template;
+    /**
+     * The open situation this quest was accepted from (0.8.0), or {@code null} for an ordinary quest.
+     * Links the per-player quest back to the village-shared {@code SituationInstance} so completion can
+     * resolve it. Additive and optional — absent on pre-0.8.0 saves.
+     */
+    @Nullable
+    private final UUID situationInstance;
     private boolean rewardClaimed;
     private boolean readyNotified;
 
@@ -43,7 +50,8 @@ public final class ActiveQuest {
 
     public ActiveQuest(ResourceLocation questId, UUID villagerUuid, Component villagerName,
                        @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
-                       long startGameTime, List<ObjectiveProgress> progress, @Nullable ResolvedTemplate template) {
+                       long startGameTime, List<ObjectiveProgress> progress, @Nullable ResolvedTemplate template,
+                       @Nullable UUID situationInstance) {
         this.questId = questId;
         this.villagerUuid = villagerUuid;
         this.villagerName = villagerName;
@@ -52,18 +60,28 @@ public final class ActiveQuest {
         this.startGameTime = startGameTime;
         this.progress = progress;
         this.template = template;
+        this.situationInstance = situationInstance;
     }
 
     /** Fresh acceptance with empty progress for each objective. */
     public static ActiveQuest create(ResourceLocation questId, UUID villagerUuid, Component villagerName,
                                      @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
                                      long startGameTime, int objectiveCount, @Nullable ResolvedTemplate template) {
+        return create(questId, villagerUuid, villagerName, villagerProfession, dimension,
+                startGameTime, objectiveCount, template, null);
+    }
+
+    /** Fresh acceptance linked to an open situation (0.8.0); {@code situationInstance} may be {@code null}. */
+    public static ActiveQuest create(ResourceLocation questId, UUID villagerUuid, Component villagerName,
+                                     @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
+                                     long startGameTime, int objectiveCount, @Nullable ResolvedTemplate template,
+                                     @Nullable UUID situationInstance) {
         List<ObjectiveProgress> progress = new ArrayList<>();
         for (int i = 0; i < objectiveCount; i++) {
             progress.add(new ObjectiveProgress());
         }
         return new ActiveQuest(questId, villagerUuid, villagerName, villagerProfession, dimension,
-                startGameTime, progress, template);
+                startGameTime, progress, template, situationInstance);
     }
 
     /**
@@ -122,6 +140,11 @@ public final class ActiveQuest {
         return startGameTime;
     }
 
+    /** The open situation this quest was accepted from (0.8.0), or empty for an ordinary quest. */
+    public java.util.Optional<UUID> situationInstance() {
+        return java.util.Optional.ofNullable(situationInstance);
+    }
+
     public ObjectiveProgress progress(int index) {
         return progress.get(index);
     }
@@ -163,6 +186,9 @@ public final class ActiveQuest {
         if (template != null) {
             tag.put("template", template.save());
         }
+        if (situationInstance != null) {
+            tag.putUUID("situation", situationInstance);
+        }
         return tag;
     }
 
@@ -177,6 +203,7 @@ public final class ActiveQuest {
         }
         ResolvedTemplate template = tag.contains("template")
                 ? ResolvedTemplate.load(tag.getCompound("template")) : null;
+        UUID situationInstance = tag.contains("situation") ? tag.getUUID("situation") : null;
         ActiveQuest quest = new ActiveQuest(
                 new ResourceLocation(tag.getString("quest")),
                 tag.getUUID("villager"),
@@ -185,7 +212,8 @@ public final class ActiveQuest {
                 new ResourceLocation(tag.getString("dimension")),
                 tag.getLong("start"),
                 progress,
-                template);
+                template,
+                situationInstance);
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");
         return quest;

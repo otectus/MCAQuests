@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_sweetheart_cocoa",
+  "weight": 12,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "Something Sweet" },
+  "dialogue": {
+    "offer": { "text": "I've a terrible sweet tooth today, my heart. Would you bring me half a dozen cookies? I'll share — maybe." },
+    "accept": { "text": "You spoil me. I'll put the kettle on." },
+    "decline": { "text": "Hmph. I'll dream of cookies, then." },
+    "in_progress": { "text": "Any cookies yet, love?" },
+    "ready": { "text": "Six whole cookies! However did you know?" },
+    "complete": { "text": "Mm. Saved you the last one — see how good I am to you?" }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:cookie", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
+    { "type": "mcaquests:hearts", "amount": 20 }
+  ],
+  "conditions": {
+    "type": "mcaquests:is_player_spouse"
+  }
+}

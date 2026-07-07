@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_search_the_ruins",
+  "weight": 9,
+  "category": "social",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "Search the Old Tunnels" },
+  "dialogue": {
+    "offer": { "text": "One of my kin went missing near the old mineshaft and no one's dared look. You're brave enough — search the tunnels and bring me any sign of them." },
+    "accept": { "text": "Thank you. Take a torch, and mind the drops." },
+    "decline": { "text": "Then they stay lost, and I stay haunted by it." },
+    "in_progress": { "text": "Have you reached the old tunnels yet?" },
+    "ready": { "text": "You went down into the dark for us? Tell me what you found." },
+    "complete": { "text": "Whatever the tunnels held, at least we know now. That's a mercy in itself. Thank you for looking." }
+  },
+  "objectives": [
+    { "type": "mcaquests:enter_structure", "structure_tag": "minecraft:mineshaft" }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
+    { "type": "mcaquests:xp", "amount": 26 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "sibling",
+    "status": "missing"
+  }
+}

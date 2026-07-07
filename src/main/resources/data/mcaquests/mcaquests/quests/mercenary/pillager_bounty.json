@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mercenary_pillager_bounty",
+  "weight": 11,
+  "category": "combat",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": { "professions": ["mca:mercenary"], "adult_only": true },
+  "title": { "text": "Pillager Bounty" },
+  "dialogue": {
+    "offer": { "text": "A pillager band's been shaking down travelers on the trade road. The crossbow crowd, the standard-bearers, all of them — clear out six and there's good coin waiting." },
+    "accept": { "text": "Watch for their crossbows. They shoot before they parley." },
+    "decline": { "text": "More for the next blade, then." },
+    "in_progress": { "text": "How many of the band have you put down?" },
+    "ready": { "text": "Six raiders cold on the road. The merchants will breathe easier." },
+    "complete": { "text": "The road's safer for honest folk now. Take your bounty — you earned it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "tag": "minecraft:raiders", "count": 6 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
+    { "type": "mcaquests:xp", "amount": 35 },
+    { "type": "mcaquests:hearts", "amount": 26 }
+  ]
+}

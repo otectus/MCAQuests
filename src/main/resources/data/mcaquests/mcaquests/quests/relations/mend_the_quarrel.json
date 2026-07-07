@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_mend_the_quarrel",
+  "weight": 9,
+  "category": "social",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": { "adult_only": true },
+  "title": { "text": "Mend the Quarrel" },
+  "dialogue": {
+    "offer": { "text": "My sibling and I parted on hard words, and pride keeps us both silent. Carry a single poppy to them for me — they'll know what it means." },
+    "accept": { "text": "Thank you. One flower can say what I can't." },
+    "decline": { "text": "Then the silence stretches on, I suppose." },
+    "in_progress": { "text": "Have you reached my sibling with the flower?" },
+    "ready": { "text": "They took it? And didn't throw it back? That's a start." },
+    "complete": { "text": "We spoke tonight, first time in months. You mended what pride near broke. Thank you." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": { "mode": "family", "relation": "sibling" },
+      "item": "minecraft:poppy",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 24 }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "sibling",
+    "status": "same_village"
+  }
+}

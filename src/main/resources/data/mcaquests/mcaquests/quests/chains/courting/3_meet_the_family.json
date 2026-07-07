@@ -1,0 +1,34 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:courting_3_meet_the_family",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "A Courtship" },
+  "dialogue": {
+    "offer": { "text": "Things are... serious now, aren't they? Then it's time you met my family properly. Bring a cake to share at the table — make a good impression, and so will I." },
+    "accept": { "text": "Don't be nervous. They'll adore you. Probably." },
+    "decline": { "text": "...You're not having second thoughts, are you?" },
+    "in_progress": { "text": "Have you got the cake? They're expecting us." },
+    "ready": { "text": "A whole cake! Oh, they'll be charmed before you say a word." },
+    "complete": { "text": "They loved you — I knew they would. It feels right, you and me. It really does." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:cake", "count": 1, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:xp", "amount": 26 },
+    { "type": "mcaquests:hearts", "amount": 28 }
+  ],
+  "chain": {
+    "chain": "mcaquests:courting",
+    "stage": 3,
+    "stage_total": 4,
+    "relationship_arc": { "text": "A Courtship" },
+    "chapter": { "text": "Meeting the Family" },
+    "prerequisites": ["mcaquests:courting_2_walk_together"],
+    "unlocks": ["mcaquests:courting_4_the_proposal"]
+  }
+}

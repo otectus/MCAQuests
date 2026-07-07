@@ -1,0 +1,49 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:aging_parent_3_last_walk",
+  "weight": 14,
+  "category": "chain",
+  "repeat": { "type": "once" },
+  "giver": { "adult_only": true },
+  "title": { "text": "The Twilight Years" },
+  "dialogue": {
+    "offer": { "text": "My parent wishes to walk the old path one more time before their strength fails for good — but they shouldn't go alone. Guard them as they lead the way, and see them safely back to their bed. It would mean the world to us both." },
+    "accept": { "text": "Walk slow, and let them set the pace. Let them have this." },
+    "decline": { "text": "Please — they may not get another chance to ask." },
+    "in_progress": { "text": "Are they alright out there? Keep close to them, won't you?" },
+    "ready": { "text": "Back home and resting easy? Then they had their walk after all." },
+    "complete": { "text": "You gave my parent one last good day, and gave me peace to carry forever. There's no kindness greater than that. Thank you — from the bottom of my heart." }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "family", "relation": "parent" },
+      "destination": { "anchor": "bed" },
+      "radius": 4,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
+    { "type": "mcaquests:xp", "amount": 38 },
+    { "type": "mcaquests:hearts", "amount": 38 }
+  ],
+  "chain": {
+    "chain": "mcaquests:aging_parent",
+    "stage": 3,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Twilight Years" },
+    "chapter": { "text": "One Last Walk" },
+    "prerequisites": ["mcaquests:aging_parent_2_remedy"]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "parent",
+    "status": "nearby"
+  }
+}
