@@ -72,6 +72,13 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue maxSituationOffersPerMenu;
         public final ForgeConfigSpec.IntValue situationDefaultPriority;
 
+        // FTB Quests optional integration (spec section 10/13, v1.0.0).
+        public final ForgeConfigSpec.BooleanValue enableFtbQuestsIntegration;
+        public final ForgeConfigSpec.IntValue ftbqStatePollIntervalTicks;
+        public final ForgeConfigSpec.DoubleValue ftbqHeartsScanRadius;
+        public final ForgeConfigSpec.BooleanValue allowFtbqProgressRewards;
+        public final ForgeConfigSpec.BooleanValue syncFtbqEditorIds;
+
         Common(ForgeConfigSpec.Builder b) {
             b.push("quests");
             enableDefaultQuestPack = b.comment("Ship and enable the built-in default quest pack.")
@@ -193,6 +200,31 @@ public final class McaQuestsConfig {
                     "Default offer-priority tier for situation offers that do not set their own. Higher fills",
                     "menu slots first; situations default above standalone quests so the village's needs stand out.")
                     .defineInRange("situationDefaultPriority", 5, 0, 1000);
+            b.pop();
+
+            b.push("compat.ftbquests");
+            enableFtbQuestsIntegration = b.comment(
+                    "Master behavior switch for the optional FTB Quests integration. When false (or FTB",
+                    "Quests is absent): mcaquests tasks never progress (poll returns early, pushes skip),",
+                    "mcaquests rewards no-op with a one-time WARN, ftbq_* conditions follow their",
+                    "when_missing policy, ftbq_progress rewards no-op with log, and commands report",
+                    "\"disabled\". Type registration is unaffected by this switch either way.")
+                    .define("enableFtbQuestsIntegration", true);
+            ftbqStatePollIntervalTicks = b.comment(
+                    "autoSubmitOnPlayerTick() interval (ticks) for the stateful FTB Quests tasks. Counter",
+                    "tasks are event-pushed and additionally poll at 4x this interval as a safety net.")
+                    .defineInRange("ftbqStatePollIntervalTicks", 100, 20, 1200);
+            ftbqHeartsScanRadius = b.comment(
+                    "Radius (blocks) for McaCompat.maxHeartsWithin, used by the FTB Quests hearts task.")
+                    .defineInRange("ftbqHeartsScanRadius", 16.0, 4.0, 64.0);
+            allowFtbqProgressRewards = b.comment(
+                    "Gates the mcaquests:ftbq_progress reward. Scope is limited to quest-book progress",
+                    "(not commands), hence default-on; still a server-owner lever.")
+                    .define("allowFtbqProgressRewards", true);
+            syncFtbqEditorIds = b.comment(
+                    "Send the known-ids packet to clients on login/reload when FTB Quests is present,",
+                    "so the mcaquests condition/reward editor dropdowns can offer real quest/task ids.")
+                    .define("syncFtbqEditorIds", true);
             b.pop();
         }
     }

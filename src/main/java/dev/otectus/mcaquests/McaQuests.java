@@ -10,6 +10,7 @@ import dev.otectus.mcaquests.quest.situation.SituationTriggerTypes;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -33,6 +34,19 @@ public final class McaQuests {
     public McaQuests() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, McaQuestsConfig.COMMON_SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, McaQuestsConfig.CLIENT_SPEC);
+
+        // Optional FTB Quests integration (spec §10.4). ordering="AFTER" in mods.toml sorts our
+        // constructor after FTB Quests' own, so its built-in TaskTypes/RewardTypes already exist.
+        // This fully-qualified call is the ONLY reference to compat.ftbq outside that package
+        // (enforced by NoFtbqClassloadTest); no always-loaded class may import from it.
+        if (ModList.get().isLoaded("ftbquests")) {
+            try {
+                dev.otectus.mcaquests.compat.ftbq.FtbqBootstrap.init();
+            } catch (Throwable t) {   // binary drift in a future FTBQ build must not kill the game
+                McaQuests.LOGGER.error("[MCA: Quests] FTB Quests detected but integration failed to start; "
+                        + "it will be disabled. Report this with your FTB Quests version.", t);
+            }
+        }
 
         final IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         modBus.addListener(this::onCommonSetup);
