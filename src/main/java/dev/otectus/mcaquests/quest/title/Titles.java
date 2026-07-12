@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Read-only registry of title definitions, swapped atomically by {@code TitleLoader} on datapack reload
@@ -28,6 +29,11 @@ public final class Titles {
 
     public static boolean isDefined(ResourceLocation id) {
         return definitions.containsKey(id);
+    }
+
+    /** Every defined title id (task M5.1: FTB editor known-ids sync, spec §20). */
+    public static Set<ResourceLocation> ids() {
+        return definitions.keySet();
     }
 
     /**

@@ -8,6 +8,7 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.FtbqBridge;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
+import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
 import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
@@ -479,6 +480,9 @@ public final class McaQuestsCommand {
                     // no-op via NoopFtbqBridge when FTB Quests is absent or disabled.
                     for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                         FtbqBridge.Holder.get().recheckAll(player);
+                        // Task M5.1: re-sync FTB editor known-ids too — a reload may add/remove quest,
+                        // chain, ladder, tier, title, project, or situation ids the editor dropdowns offer.
+                        FtbqEditorIdsSync.maybeSend(player);
                     }
                 }, server);
         return 1;

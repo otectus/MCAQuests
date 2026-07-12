@@ -11,11 +11,11 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 4 for v0.8.0 — adds the "village needs help" situation toast packet. (3 was v0.7.0: the
-    // reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the community-project
-    // menu/log/contribute packets.) The channel handshake requires matching client+server (save data is
-    // unaffected).
-    private static final String PROTOCOL_VERSION = "4";
+    // Bumped to 5 for task M5.1 — adds the FTB editor known-ids sync packet. (4 was v0.8.0: the
+    // "village needs help" situation toast packet; 3 was v0.7.0: the reputation tier-up toast and
+    // journal request/sync packets; 2 was v0.4.0: the community-project menu/log/contribute packets.)
+    // The channel handshake requires matching client+server (save data is unaffected).
+    private static final String PROTOCOL_VERSION = "5";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -65,5 +65,10 @@ public final class QuestNetwork {
         // v0.8.0 — Living Village: situation "needs help" toast.
         CHANNEL.registerMessage(nextId++, SituationToastS2CPacket.class,
                 SituationToastS2CPacket::encode, SituationToastS2CPacket::decode, SituationToastS2CPacket::handle);
+
+        // Task M5.1 — FTB Quests editor known-ids sync (registered unconditionally; only the send is
+        // gated on FTB Quests being loaded + syncFtbqEditorIds, see FtbqEditorIdsSync).
+        CHANNEL.registerMessage(nextId++, FtbqEditorIdsS2CPacket.class,
+                FtbqEditorIdsS2CPacket::encode, FtbqEditorIdsS2CPacket::decode, FtbqEditorIdsS2CPacket::handle);
     }
 }

@@ -5,6 +5,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
 import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
@@ -93,6 +94,8 @@ public final class QuestProgressEvents {
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             QuestManager.syncLog(player);
+            // Task M5.1: FTB editor known-ids sync (no-op unless FTB Quests is loaded + syncFtbqEditorIds).
+            FtbqEditorIdsSync.maybeSend(player);
         }
     }
 

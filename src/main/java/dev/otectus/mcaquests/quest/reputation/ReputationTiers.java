@@ -6,6 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Read-only registry of reputation tier ladders, swapped atomically by {@code ReputationTierLoader} on
@@ -37,6 +38,11 @@ public final class ReputationTiers {
 
     public static Optional<ReputationTierSet> get(ResourceLocation id) {
         return Optional.ofNullable(ladders.get(id));
+    }
+
+    /** Every loaded ladder id (task M5.1: FTB editor known-ids sync, spec §20). */
+    public static Set<ResourceLocation> ids() {
+        return ladders.keySet();
     }
 
     /** The active default ladder, falling back to {@link #BUILTIN_DEFAULT} when none is loaded. */
