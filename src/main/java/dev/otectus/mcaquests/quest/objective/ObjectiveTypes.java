@@ -70,6 +70,10 @@ public final class ObjectiveTypes {
     public static final QuestObjectiveType<DefendLocationObjective> DEFEND_LOCATION =
             register(new ResourceLocation(McaQuests.MOD_ID, "defend_location"), DefendLocationObjective.CODEC);
 
+    // FTB Quests bridge objective (spec section 18) — registered unconditionally, zero FTB imports.
+    public static final QuestObjectiveType<FtbqCompleteQuestObjective> FTBQ_COMPLETE_QUEST =
+            register(new ResourceLocation(McaQuests.MOD_ID, "ftbq_complete_quest"), FtbqCompleteQuestObjective.CODEC);
+
     /** Maps a type id to/from its registry entry, failing parsing on an unknown id. */
     public static final Codec<QuestObjectiveType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

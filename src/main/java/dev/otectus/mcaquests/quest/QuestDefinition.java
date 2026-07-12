@@ -7,7 +7,11 @@ import dev.otectus.mcaquests.quest.condition.HistoryScope;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
+import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.FtbqQuestCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.FtbqWhenMissing;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
+import dev.otectus.mcaquests.quest.objective.FtbqCompleteQuestObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
@@ -144,22 +148,32 @@ public record QuestDefinition(
 
     /**
      * The condition gate actually used for offer eligibility: the author's {@code conditions} AND a
-     * {@code quest_completed} requirement for each chain {@code prerequisite}. This is the single
-     * desugaring point for prerequisites — they reuse the existing condition system, so offer
-     * filtering needs no chain-specific logic.
+     * {@code quest_completed} requirement for each chain {@code prerequisite} AND a
+     * {@code not(ftbq_quest_completed)} guard for each {@code ftbq_complete_quest} objective whose
+     * {@code already_complete} is {@code block_offer} (spec §18). This is the single desugaring point
+     * for both — they reuse the existing condition system, so offer filtering needs no chain- or
+     * FTBQ-specific logic anywhere else.
      */
     public Optional<QuestCondition> effectiveConditions() {
-        List<ResourceLocation> prerequisites = chain.map(ChainSpec::prerequisites).orElse(List.of());
-        if (prerequisites.isEmpty()) {
+        List<QuestCondition> extra = new ArrayList<>();
+        for (ResourceLocation prerequisite : chain.map(ChainSpec::prerequisites).orElse(List.of())) {
+            // GIVER scope: a chain stage is gated on what the player did with THIS villager, so the same
+            // arc can be lived out independently with different villagers (per-villager relationship arcs).
+            extra.add(new QuestCompletedCondition(prerequisite, HistoryScope.GIVER));
+        }
+        for (QuestObjective objective : objectives) {
+            if (objective instanceof FtbqCompleteQuestObjective ftbq && ftbq.alreadyComplete().blocksOffer()) {
+                // NOT_MET: an absent/failed bridge must not hide the offer — only a positively-confirmed
+                // FTB completion should (mirrors FtbqQuestCompletedCondition's own default policy).
+                extra.add(new NotCondition(new FtbqQuestCompletedCondition(ftbq.quest(), FtbqWhenMissing.NOT_MET)));
+            }
+        }
+        if (extra.isEmpty()) {
             return conditions;
         }
         List<QuestCondition> all = new ArrayList<>();
         conditions.ifPresent(all::add);
-        for (ResourceLocation prerequisite : prerequisites) {
-            // GIVER scope: a chain stage is gated on what the player did with THIS villager, so the same
-            // arc can be lived out independently with different villagers (per-villager relationship arcs).
-            all.add(new QuestCompletedCondition(prerequisite, HistoryScope.GIVER));
-        }
+        all.addAll(extra);
         return Optional.of(new AllOfCondition(all));
     }
 }

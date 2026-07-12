@@ -79,6 +79,7 @@
   "mcaquests.objective.deliver_to_villager": "Deliver %s× %s to %s",
   "mcaquests.objective.reach_location": "Travel to %s",
   "mcaquests.objective.defend_location": "Defeat %s× %s near %s",
+  "mcaquests.objective.ftbq_complete_quest": "Complete %s",
 
   "mcaquests.target.villager.self": "them",
   "mcaquests.target.named": "%s (%s)",
