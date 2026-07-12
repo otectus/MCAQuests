@@ -12,6 +12,9 @@ import dev.otectus.mcaquests.quest.condition.leaf.AdvancementCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AgeGroupCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.BiomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.FtbqChapterCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.FtbqQuestCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.FtbqTaskCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.GiverDistanceFromVillageCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HasHomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HealthBelowCondition;
@@ -89,6 +92,16 @@ public final class ConditionTypes {
     // Distance gate for lead-style escorts and "out after dark" content (pair with time:NIGHT via any_of).
     public static final QuestConditionType<GiverDistanceFromVillageCondition> GIVER_DISTANCE_FROM_VILLAGE =
             register("giver_distance_from_village", GiverDistanceFromVillageCondition.CODEC);
+
+    // 1.0.0 (§17) — read FTB Quests completion state. Registered always regardless of FTB Quests'
+    // presence (zero FTB imports; evaluation goes through FtbqBridge.Holder), so datapacks referencing
+    // them validate and load identically whether or not FTB Quests is installed.
+    public static final QuestConditionType<FtbqQuestCompletedCondition> FTBQ_QUEST_COMPLETED =
+            register("ftbq_quest_completed", FtbqQuestCompletedCondition.CODEC);
+    public static final QuestConditionType<FtbqChapterCompletedCondition> FTBQ_CHAPTER_COMPLETED =
+            register("ftbq_chapter_completed", FtbqChapterCompletedCondition.CODEC);
+    public static final QuestConditionType<FtbqTaskCompletedCondition> FTBQ_TASK_COMPLETED =
+            register("ftbq_task_completed", FtbqTaskCompletedCondition.CODEC);
 
     public static final Codec<QuestConditionType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {
