@@ -8,8 +8,10 @@ import net.minecraftforge.eventbus.api.Event;
 import java.util.OptionalInt;
 
 /**
- * Fired by {@code TitleService.grant} after {@code PlayerTitles} reports the title as newly granted (not
- * on re-grants) — spec section 11.1. Server-side, not cancellable.
+ * Fired by {@code TitleService} (from {@code grantGlobal}/{@code grantVillage}, and therefore every
+ * grant path including {@code grant}, the reputation tier-up, and the admin title command) after
+ * {@code PlayerTitles} reports the title as newly granted — never on re-grants. Spec section 11.1;
+ * server-side, not cancellable.
  */
 public class TitleGrantedEvent extends Event {
 

@@ -27,42 +27,39 @@ public final class TitleService {
     }
 
     public static boolean grant(ServerPlayer player, TitleScope scope, ResourceLocation title, @Nullable Entity giver) {
-        if (scope == TitleScope.GLOBAL) {
-            boolean granted = grantGlobal(player, title);
-            if (granted) {
-                postGranted(player, title, TitleScope.GLOBAL, OptionalInt.empty());
-            }
-            return granted;
-        }
-        OptionalInt villageId = resolveVillage(player, giver);
-        if (villageId.isEmpty()) {
-            return false;
-        }
-        boolean granted = grantVillage(player, villageId.getAsInt(), title);
+        return scope == TitleScope.GLOBAL
+                ? grantGlobal(player, title)
+                : resolveVillage(player, giver).stream().anyMatch(id -> grantVillage(player, id, title));
+    }
+
+    public static boolean grantGlobal(ServerPlayer player, ResourceLocation title) {
+        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        boolean granted = data.map(d -> d.titles().grantGlobal(title)).orElse(false);
         if (granted) {
-            postGranted(player, title, scope, villageId);
+            postGranted(player, title, TitleScope.GLOBAL, OptionalInt.empty());
+        }
+        return granted;
+    }
+
+    public static boolean grantVillage(ServerPlayer player, int villageId, ResourceLocation title) {
+        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        boolean granted = data.map(d -> d.titles().grantVillage(villageId, title)).orElse(false);
+        if (granted) {
+            postGranted(player, title, TitleScope.VILLAGE, OptionalInt.of(villageId));
         }
         return granted;
     }
 
     /**
-     * The single funnel through which {@link TitleGrantedEvent} is posted (Risk R1): only {@link #grant}
-     * calls this, and only when {@code PlayerTitles} reports the title as newly added, so a re-grant (or
-     * the admin {@code /mcaquests title} command, which calls {@link #grantGlobal}/{@link #grantVillage}
-     * directly) never double-posts.
+     * The single funnel through which {@link TitleGrantedEvent} is posted (Risk R1): it sits at the
+     * innermost mutation points ({@link #grantGlobal}/{@link #grantVillage}, immediately after
+     * {@code PlayerTitles} reports the title as newly added), so every grant path — the
+     * {@code grant_title} reward via {@link #grant}, the reputation tier-up grant, and the admin
+     * {@code /mcaquests title} command — emits exactly once, and re-grants never post. {@link #grant}
+     * itself does not post; it only delegates, so delegation cannot double-post.
      */
     private static void postGranted(ServerPlayer player, ResourceLocation title, TitleScope scope, OptionalInt villageId) {
         MinecraftForge.EVENT_BUS.post(new TitleGrantedEvent(player, title, scope, villageId));
-    }
-
-    public static boolean grantGlobal(ServerPlayer player, ResourceLocation title) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
-        return data.map(d -> d.titles().grantGlobal(title)).orElse(false);
-    }
-
-    public static boolean grantVillage(ServerPlayer player, int villageId, ResourceLocation title) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
-        return data.map(d -> d.titles().grantVillage(villageId, title)).orElse(false);
     }
 
     private static OptionalInt resolveVillage(ServerPlayer player, @Nullable Entity giver) {
