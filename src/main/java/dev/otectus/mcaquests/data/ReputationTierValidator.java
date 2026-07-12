@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Structural validation for reputation tier ladders (spec 0.7.0): non-empty, unique tier ids, strictly
+ * Structural validation for reputation tier ladders (spec 0.7.0): non-empty, unique tier ids (with no
+ * {@code '|'} — reserved as the {@code ladder|tier} separator in the FTB editor known-ids sync), strictly
  * ascending thresholds, and a floor at {@code <= 0} so every reputation value maps to a tier. Returns
  * {@code true} when the ladder is usable; appends human-readable problems to {@code errors} otherwise.
  */
@@ -30,6 +31,11 @@ public final class ReputationTierValidator {
         for (ReputationTier tier : tiers) {
             if (!seen.add(tier.id())) {
                 errors.add("Reputation tier set '" + id + "' has duplicate tier id '" + tier.id() + "'.");
+                ok = false;
+            }
+            if (tier.id().indexOf('|') >= 0) {
+                errors.add("Reputation tier set '" + id + "' tier id '" + tier.id() + "' must not contain '|' "
+                        + "(reserved as the ladder|tier separator in the FTB editor known-ids sync, spec section 20).");
                 ok = false;
             }
             if (tier.threshold() <= previous) {

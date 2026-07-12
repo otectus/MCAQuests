@@ -70,6 +70,17 @@ class ReputationTierTest {
     }
 
     @Test
+    void validatorRejectsPipeInTierId() {
+        // '|' is reserved as the ladder|tier separator in the FTB editor known-ids sync (task M5.1).
+        ReputationTierSet piped = new ReputationTierSet(List.of(
+                new ReputationTier("a|b", 0, "A", Optional.empty())));
+        List<String> errors = new ArrayList<>();
+        assertFalse(ReputationTierValidator.validate(id("piped"), piped, errors));
+        assertTrue(errors.stream().anyMatch(e -> e.contains("a|b") && e.contains("'|'")),
+                () -> "expected a pipe-rejection error naming the tier id, got: " + errors);
+    }
+
+    @Test
     void validatorRejectsDuplicateIds() {
         ReputationTierSet dup = new ReputationTierSet(List.of(
                 new ReputationTier("a", 0, "A", Optional.empty()),

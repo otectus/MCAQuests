@@ -101,15 +101,18 @@ public final class FtbqEditorIdsSync {
         chainNames.put(chainId, realChainDisplayName(chain).orElse(chainId));
     }
 
-    /** The first {@code relationship_arc} or {@code chapter} text on {@code chain}, plain (no placeholders). */
+    /**
+     * The first {@code relationship_arc} or {@code chapter} name on {@code chain}, shipped <em>verbatim</em>:
+     * a {@code translate} line contributes its raw translation key, a {@code text} line its literal string.
+     * Deliberately NOT resolved server-side — a dedicated server has no client lang files, so resolving here
+     * would bake raw keys into the packet with no way to localize. The client consumer
+     * ({@code ClientKnownIds.lookupChainName}) runs every name through {@code Component.translatable(...)}
+     * uniformly; Minecraft's language lookup returns unmatched keys unchanged, so a literal travels as
+     * itself and a key localizes with the client's own lang files.
+     */
     private static Optional<String> realChainDisplayName(ChainSpec chain) {
-        if (chain.relationshipArc().isPresent()) {
-            return Optional.of(chain.relationshipArc().get().resolve().getString());
-        }
-        if (chain.chapter().isPresent()) {
-            return Optional.of(chain.chapter().get().resolve().getString());
-        }
-        return Optional.empty();
+        return chain.relationshipArc().or(chain::chapter)
+                .flatMap(text -> text.translate().or(text::text));
     }
 
     private static void addTierEntries(List<String> out, ResourceLocation ladderId, ReputationTierSet set) {

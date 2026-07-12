@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.network.FtbqEditorIdsS2CPacket;
+import net.minecraft.network.chat.Component;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -81,9 +82,15 @@ public final class ClientKnownIds {
         return chainIds;
     }
 
-    /** The display name for {@code chainId} from the last sync, or {@code chainId} itself if unknown. */
+    /**
+     * The display name for {@code chainId} from the last sync, or {@code chainId} itself if unknown.
+     * Synced names travel verbatim as translate-keys-or-literals (see {@code FtbqEditorIdsS2CPacket}),
+     * so every name is run through {@link Component#translatable} uniformly here: Minecraft's language
+     * lookup localizes a known key with the client's own lang files and returns anything else — a
+     * literal name, or an unmatched key — unchanged.
+     */
     public static String lookupChainName(String chainId) {
-        return chainNames.getOrDefault(chainId, chainId);
+        return Component.translatable(chainNames.getOrDefault(chainId, chainId)).getString();
     }
 
     public static List<String> ladderIds() {

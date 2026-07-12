@@ -4,8 +4,12 @@ import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
 import dev.otectus.mcaquests.data.ConditionRefs;
 import dev.otectus.mcaquests.data.QuestChainValidator;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
+import dev.otectus.mcaquests.quest.ChainSpec;
 import dev.otectus.mcaquests.quest.GiverSpec;
+import dev.otectus.mcaquests.quest.OfferShaping;
+import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.RepeatRule;
+import dev.otectus.mcaquests.quest.TurnInSpec;
 import dev.otectus.mcaquests.quest.WeightedPicker;
 import dev.otectus.mcaquests.quest.condition.HistoryScope;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -276,6 +280,35 @@ class QuestLogicTest {
 
         // Self-unlock is the smallest cycle.
         assertTrue(QuestChainValidator.findUnlockCycle(Map.of(a, List.of(a))).isPresent());
+    }
+
+    @Test
+    void chainValidatorRejectsPipeInChainId() {
+        // '|' is reserved as the id|name separator in the FTB editor known-ids sync (task M5.1); a pipe
+        // in a chain id would silently corrupt the flattened wire entry, so the validator rejects it.
+        QuestDefinition good = chainQuest("good_quest", "the_family_farm");
+        QuestDefinition bad = chainQuest("bad_quest", "the|family|farm");
+
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        QuestChainValidator.validate(Map.of(good.id(), good), errors, warnings);
+        assertTrue(errors.isEmpty(), () -> "pipe-free chain id must validate cleanly, got: " + errors);
+
+        List<String> errors2 = new ArrayList<>();
+        QuestChainValidator.validate(Map.of(bad.id(), bad), errors2, new ArrayList<>());
+        assertTrue(errors2.stream().anyMatch(e -> e.contains("the|family|farm") && e.contains("'|'")),
+                () -> "expected a pipe-rejection error naming the chain id, got: " + errors2);
+    }
+
+    /** A minimal enabled stage-1 quest whose only interesting feature is its {@code chain} id. */
+    private static QuestDefinition chainQuest(String path, String chainId) {
+        ChainSpec chain = new ChainSpec(chainId, 1, Optional.empty(), Optional.empty(), Optional.empty(),
+                List.of(), List.of());
+        GiverSpec giver = new GiverSpec(List.of(), true, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        return new QuestDefinition(new ResourceLocation("mcaquests", path), true, 1, Optional.empty(),
+                Optional.empty(), RepeatRule.DEFAULT, giver, Map.of(), List.of(), List.of(),
+                TurnInSpec.DEFAULT, Optional.empty(), Optional.of(chain), Optional.empty(),
+                Optional.empty(), OfferShaping.NONE);
     }
 
     @Test

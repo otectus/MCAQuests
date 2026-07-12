@@ -26,13 +26,18 @@ import java.util.function.Supplier;
  *   <li>{@code questIds} — every loaded {@code QuestDefinition} id.</li>
  *   <li>{@code chainEntries} — {@code "<chainId>|<displayName>"}, one per distinct chain id found in
  *       the quest registry. The display name is the first {@code relationship_arc} or {@code chapter}
- *       text found on any member of that chain, falling back to the raw chain id when no member
- *       supplies one — see {@link FtbqEditorIdsSync} for the map construction, which is the "registry
- *       scan for a nicer name" that {@code McaChainCompletedTask.getAltTitle()} deferred at task M2.3.
+ *       found on any member of that chain, falling back to the raw chain id when no member supplies
+ *       one — see {@link FtbqEditorIdsSync} for the map construction, which is the "registry scan for
+ *       a nicer name" that {@code McaChainCompletedTask.getAltTitle()} deferred at task M2.3. Names
+ *       travel <em>verbatim</em> as translate-keys-or-literals (a {@code translate} line ships its raw
+ *       key, a {@code text} line its literal string) and are localized client-side:
+ *       {@link ClientKnownIds#lookupChainName} runs every name through {@code Component.translatable}
+ *       uniformly, which localizes known keys and passes literals/unmatched keys through unchanged.
  *       Joined (not parallel-listed) so the wire format is exactly seven lists, matching §20's
- *       enumeration one-for-one; chain ids are author slugs and never contain {@code '|'}, so
- *       splitting on the first occurrence (done client-side in {@link ClientKnownIds}) is unambiguous
- *       even if a display name itself happens to contain one.</li>
+ *       enumeration one-for-one; {@code '|'} is rejected in chain ids at validation time
+ *       ({@code QuestChainValidator}), so splitting on the first occurrence (done client-side in
+ *       {@link ClientKnownIds}) is unambiguous even if a display name itself happens to contain
+ *       one.</li>
  *   <li>{@code ladderIds} — every {@code ReputationTierSet} id.</li>
  *   <li>{@code ladderTierEntries} — {@code "<ladderId>|<tierId>"}, flattened, one entry per tier.</li>
  *   <li>{@code titleIds} — every defined title id.</li>

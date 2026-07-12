@@ -42,6 +42,10 @@ public final class QuestChainValidator {
             if (chain.chain().isBlank()) {
                 errors.add(where + "chain id is blank.");
             }
+            if (chain.chain().indexOf('|') >= 0) {
+                errors.add(where + "chain id must not contain '|' (reserved as the id|name separator "
+                        + "in the FTB editor known-ids sync, spec section 20).");
+            }
             if (chain.stage() < 1) {
                 errors.add(where + "chain.stage must be >= 1 (was " + chain.stage() + ").");
             }
