@@ -57,6 +57,13 @@ public final class McaCompat {
     /** Squared interaction/proximity radius shared by the interaction guard and "nearby" checks. */
     private static final double INTERACT_RANGE_SQR = 12.0D * 12.0D;
 
+    /**
+     * MCA's placeholder name for a player family-tree node it auto-creates before the player has set a
+     * character name (MCA {@code PlayerSaveData.getFamilyEntry()} falls back to this when the entity is
+     * offline/unresolvable). Treated as "no name set" so the Minecraft-username fallback still engages.
+     */
+    private static final String MCA_UNNAMED_PLACEHOLDER = "Unnamed Adventurer";
+
     private McaCompat() {
     }
 
@@ -854,7 +861,7 @@ public final class McaCompat {
     public static Optional<String> getMcaPlayerName(ServerPlayer player) {
         try {
             return Optional.ofNullable(PlayerSaveData.get(player).getFamilyEntry().getName())
-                    .filter(name -> !name.isBlank());
+                    .filter(name -> !name.isBlank() && !name.equals(MCA_UNNAMED_PLACEHOLDER));
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA getMcaPlayerName failed; defaulting empty", t);
             return Optional.empty();

@@ -46,6 +46,13 @@ public final class TemplateValidator {
         ResourceLocation id = def.id();
         Set<String> declared = spec.variables().keySet();
 
+        // A variable named 'player' is resolved by name in objective/reward JSON but shadowed to the
+        // recipient's MCA name in dialogue, so the two would silently disagree — reject it up front.
+        if (declared.contains(PlaceholderResolver.RESERVED_PLAYER)) {
+            errors.add("Quest '" + id + "': template variable '" + PlaceholderResolver.RESERVED_PLAYER
+                    + "' shadows the reserved {player} dialogue token; rename it.");
+        }
+
         if (!def.objectives().isEmpty()) {
             errors.add("Quest '" + id + "': has both a 'template' block and top-level 'objectives'; "
                     + "the top-level objectives are ignored (templates objectives live under 'template.objectives').");
@@ -61,6 +68,9 @@ public final class TemplateValidator {
         def.titleOverride().ifPresent(text -> collectTokens(text, referenced));
         def.dialogue().values().forEach(text -> collectTokens(text, referenced));
         for (String token : referenced) {
+            if (PlaceholderResolver.isReserved(token)) {
+                continue; // {player} is a reserved dialogue token, resolved per recipient — never declared.
+            }
             String base = token.endsWith(NAME_SUFFIX) ? token.substring(0, token.length() - NAME_SUFFIX.length()) : token;
             if (!declared.contains(token) && !declared.contains(base)) {
                 errors.add("Quest '" + id + "': template placeholder '{" + token + "}' references no declared variable.");

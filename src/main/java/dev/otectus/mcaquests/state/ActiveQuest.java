@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.state;
 
+import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
@@ -9,6 +10,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -109,6 +111,11 @@ public final class ActiveQuest {
         return template == null
                 ? PlaceholderResolver.forPlayerName(playerName)
                 : new PlaceholderResolver(template, playerName);
+    }
+
+    /** {@link #textResolver(String)} using {@code player}'s MCA name (username fallback) for {@code {player}}. */
+    public PlaceholderResolver textResolver(ServerPlayer player) {
+        return textResolver(McaCompat.getPlayerName(player));
     }
 
     public ResourceLocation questId() {

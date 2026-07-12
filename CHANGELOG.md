@@ -4,12 +4,47 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Follow-up fixes to the 0.9.1 `{player}` / MCA-name feature after a code review. The headline fixes make
+`{player}` actually usable in the cases 0.9.1 documented but broke: it no longer fails validation in
+template quests, custom accept/complete dialogue now renders, and players without an MCA character name
+are named correctly again.
+
+### Fixed
+
+- **Template quests using `{player}` no longer fail to load** — the reserved `{player}` token was flagged as
+  an undeclared variable, so any template quest using it in `dialogue`/`title` failed validation and, under
+  `strictJsonValidation`, refused to load. The reserved token is now exempt from the check.
+- **Custom `accept` / `complete` dialogue now shows in chat** — a quest's own `accept`/`complete` dialogue
+  line (and any `{player}` in it) was ignored on accept and turn-in unless the MCA: Conversations add-on was
+  installed; only the generic "Quest accepted/completed" message appeared. Both now render the datapack's
+  line, matching the `failed` state.
+- **Players without an MCA character name are named by their username again** — MCA auto-creates a family
+  node named "Unnamed Adventurer" for unresolved/offline players, which suppressed the Minecraft-username
+  fallback. That placeholder is now treated as "no name set", so cards, messages, toasts, and command
+  feedback no longer address players as "Unnamed Adventurer".
+
+### Changed
+
+- **A template variable named `player` is now rejected at load time** — it would resolve in objective/reward
+  JSON but be shadowed by the reserved token in dialogue, silently disagreeing. `/mcaquests validate` now
+  reports it (rename the variable).
+- **Admin title-command feedback identifies the account** — `/mcaquests title grant|list|clear` feedback now
+  shows the MCA character name **and** the Minecraft username (which is unique) when they differ, so a
+  mistargeted command is no longer indistinguishable in the output.
+- Internal cleanup with no behavior change: consolidated the player-name → placeholder-resolver plumbing,
+  removed a per-tick MCA save-data lookup on the quest-progress path, and dropped now-unreachable code
+  branches.
+
 ## [0.9.1] - 2026-07-11
 
 Address the player by their **MCA character name** (the name set in MCA's character-creation screen)
-instead of their Minecraft username wherever the mod names them. Existing saves and datapacks are
-unaffected — the new `{player}` token is optional, and every name lookup falls back to the Minecraft
-username when MCA is absent or no character name was set.
+instead of their Minecraft username wherever the mod names them. The new `{player}` token is optional, and
+every name lookup falls back to the Minecraft username when MCA is absent or no character name was set.
+Note that hand-authored (non-template) `text` dialogue now goes through the placeholder pass so `{player}`
+works there too: this means `{{`/`}}` escapes now resolve in that text (a literal `{{` renders as `{`), and a
+`"with"` list on a hand-authored `"translate"` line is now applied instead of ignored.
 
 ### Added
 

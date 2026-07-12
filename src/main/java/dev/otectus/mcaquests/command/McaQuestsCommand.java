@@ -154,10 +154,21 @@ public final class McaQuestsCommand {
                                         .executes(McaQuestsCommand::titleClear)))));
     }
 
+    /**
+     * Operator-facing label for a player: their MCA character name plus their unique Minecraft username
+     * when the two differ. MCA names are player-settable and non-unique, so the username keeps admin
+     * feedback tied to a specific account (a mistargeted grant is otherwise undetectable from output).
+     */
+    private static String adminName(ServerPlayer player) {
+        String mca = McaCompat.getPlayerName(player);
+        String account = player.getGameProfile().getName();
+        return mca.equals(account) ? account : mca + " (" + account + ")";
+    }
+
     private static int titleGrant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         ResourceLocation title = ResourceLocationArgument.getId(ctx, "title");
-        String name = McaCompat.getPlayerName(target);
+        String name = adminName(target);
         boolean added = TitleService.grantGlobal(target, title);
         ctx.getSource().sendSuccess(() -> Component.literal((added ? "Granted" : "Already had")
                 + " global title '" + title + "' to " + name + "."), true);
@@ -168,7 +179,7 @@ public final class McaQuestsCommand {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         ResourceLocation title = ResourceLocationArgument.getId(ctx, "title");
         int village = IntegerArgumentType.getInteger(ctx, "village");
-        String name = McaCompat.getPlayerName(target);
+        String name = adminName(target);
         boolean added = TitleService.grantVillage(target, village, title);
         ctx.getSource().sendSuccess(() -> Component.literal((added ? "Granted" : "Already had")
                 + " title '" + title + "' to " + name
@@ -178,7 +189,7 @@ public final class McaQuestsCommand {
 
     private static int titleList(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-        String name = McaCompat.getPlayerName(target);
+        String name = adminName(target);
         PlayerTitles titles = QuestCapabilities.get(target).map(PlayerQuestData::titles).orElse(null);
         if (titles == null || titles.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.literal(
@@ -196,7 +207,7 @@ public final class McaQuestsCommand {
 
     private static int titleClear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-        String name = McaCompat.getPlayerName(target);
+        String name = adminName(target);
         QuestCapabilities.get(target).ifPresent(d -> d.titles().clear());
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "Cleared all titles for " + name + "."), true);

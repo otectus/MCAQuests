@@ -19,7 +19,6 @@ import dev.otectus.mcaquests.quest.template.TemplateSpec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -88,9 +87,9 @@ public record SituationOffer(
 
     /**
      * A title fallback used when the offer omits one (synthetic quests have no lang key by default).
-     * Renders inline placeholders (e.g. {@code {player}}) through {@code resolver} when non-null.
+     * Renders inline placeholders (e.g. {@code {player}}) through {@code resolver}.
      */
-    public Component titleOr(Component fallback, @Nullable PlaceholderResolver resolver) {
-        return title.map(text -> resolver != null ? text.resolve(resolver) : text.resolve()).orElse(fallback);
+    public Component titleOr(Component fallback, PlaceholderResolver resolver) {
+        return title.map(text -> text.resolve(resolver)).orElse(fallback);
     }
 }

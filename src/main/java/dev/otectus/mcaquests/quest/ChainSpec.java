@@ -8,7 +8,6 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ExtraCodecs;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,14 +43,13 @@ public record ChainSpec(String chain,
     /**
      * A short context line for the UI, e.g. {@code "The Family Farm — Part 2 of 4: Harvest Day"}.
      * Empty when there is nothing useful to show (no arc name, single stage, no chapter). The
-     * {@code resolver} (when non-null) renders inline placeholders such as {@code {player}} in the arc
-     * and chapter text.
+     * {@code resolver} renders inline placeholders such as {@code {player}} in the arc and chapter text.
      */
-    public Optional<Component> label(@Nullable PlaceholderResolver resolver) {
+    public Optional<Component> label(PlaceholderResolver resolver) {
         MutableComponent line = Component.empty();
         boolean any = false;
         if (relationshipArc.isPresent()) {
-            line.append(resolveText(relationshipArc.get(), resolver));
+            line.append(relationshipArc.get().resolve(resolver));
             any = true;
         }
         Optional<Component> part = partLabel();
@@ -66,14 +64,10 @@ public record ChainSpec(String chain,
             if (any) {
                 line.append(Component.literal(": "));
             }
-            line.append(resolveText(chapter.get(), resolver));
+            line.append(chapter.get().resolve(resolver));
             any = true;
         }
         return any ? Optional.of(line) : Optional.empty();
-    }
-
-    private static Component resolveText(QuestText text, @Nullable PlaceholderResolver resolver) {
-        return resolver != null ? text.resolve(resolver) : text.resolve();
     }
 
     private Optional<Component> partLabel() {

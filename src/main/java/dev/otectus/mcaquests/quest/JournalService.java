@@ -11,6 +11,7 @@ import dev.otectus.mcaquests.quest.reputation.ReputationService;
 import dev.otectus.mcaquests.quest.reputation.ReputationTier;
 import dev.otectus.mcaquests.quest.reputation.ReputationTierSet;
 import dev.otectus.mcaquests.quest.reputation.ReputationTiers;
+import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.quest.title.Titles;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -61,8 +62,10 @@ public final class JournalService {
             villages.add(villageEntry(level, saved, data, ladder, villageId));
         }
 
+        // The journal is this player's history, so resolve {player} in archived titles to their MCA name.
+        PlaceholderResolver resolver = PlaceholderResolver.forPlayer(player);
         Function<ResourceLocation, Component> titleResolver = id ->
-                QuestRegistry.get(id).map(QuestDefinition::title).orElseGet(() -> Component.literal(id.toString()));
+                QuestRegistry.get(id).map(def -> def.title(resolver)).orElseGet(() -> Component.literal(id.toString()));
         List<JournalArchiveEntry> archive = buildArchive(data.history().completionsView(), titleResolver, ARCHIVE_CAP);
 
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),

@@ -624,13 +624,18 @@ Every variable has a `kind` discriminator.
   It works in the dialogue, title, and chain arc/chapter text of **any** quest — not just templates — and
   cannot be shadowed by a template variable named `player`. Being dialogue-only, `{player}` is never
   substituted into objective/reward JSON. Example: `"offer": { "text": "Well met, {player}! Could you help me?" }`.
+  Because hand-authored (non-template) `text` dialogue now runs through this same placeholder pass, the
+  `{{`/`}}` escapes apply to it too (a literal `{{` renders as `{`), and a `"with"` list on a hand-authored
+  `"translate"` line is now filled in rather than ignored.
 
 ### Validation
 
 `/mcaquests validate` reports template problems, each naming the quest and field: registry `ids` that don't
-exist, `tags` that are empty/unknown, `{placeholders}` that reference no declared variable, and substituted
-objective/reward JSON that fails to parse. Empty pools also **fail safe at runtime** — the offer is simply
-skipped (with a debug log) rather than crashing. Under `strictJsonValidation` these become hard errors.
+exist, `tags` that are empty/unknown, `{placeholders}` that reference no declared variable, a template
+variable named `player` (which would shadow the reserved `{player}` token — rename it), and substituted
+objective/reward JSON that fails to parse. The reserved `{player}` token is exempt from the
+declared-variable check. Empty pools also **fail safe at runtime** — the offer is simply skipped (with a
+debug log) rather than crashing. Under `strictJsonValidation` these become hard errors.
 
 The five built-in templates under `data/mcaquests/mcaquests/quests/templates/` (farmer crop request, guard
 mob cull, fisherman catch, librarian knowledge, cartographer survey) are complete worked examples — copy one

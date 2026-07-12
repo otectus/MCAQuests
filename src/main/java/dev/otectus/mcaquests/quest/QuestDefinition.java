@@ -18,7 +18,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ExtraCodecs;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -81,33 +80,24 @@ public record QuestDefinition(
         return "mcaquests.quest." + id.getPath() + ".title";
     }
 
-    public Component title() {
-        return title(null);
-    }
-
     /**
-     * The display title, resolving {@code {token}} placeholders through {@code resolver} when this is a
-     * concretized template quest (null for hand-authored quests — plain resolution).
+     * The display title, resolving inline {@code {token}} placeholders (e.g. {@code {player}} and template
+     * variables) through {@code resolver}.
      */
-    public Component title(@Nullable PlaceholderResolver resolver) {
-        if (resolver == null) {
-            return titleOverride.map(QuestText::resolve).orElseGet(() -> Component.translatable(titleKey()));
-        }
+    public Component title(PlaceholderResolver resolver) {
         return titleOverride.map(text -> text.resolve(resolver)).orElseGet(() -> Component.translatable(titleKey()));
     }
 
-    /** Resolves a dialogue line for the given state, or {@code fallback} if the quest omits it. */
-    public Component dialogueOr(String state, Component fallback) {
-        return dialogueOr(state, fallback, null);
-    }
-
-    /** Dialogue resolution that fills {@code {token}} placeholders via {@code resolver} for templates. */
-    public Component dialogueOr(String state, Component fallback, @Nullable PlaceholderResolver resolver) {
+    /**
+     * Resolves the dialogue line for {@code state} (filling {@code {token}} placeholders via
+     * {@code resolver}), or {@code fallback} if the quest omits that state.
+     */
+    public Component dialogueOr(String state, Component fallback, PlaceholderResolver resolver) {
         QuestText line = dialogue.get(state);
         if (line == null) {
             return fallback;
         }
-        return resolver != null ? line.resolve(resolver) : line.resolve();
+        return line.resolve(resolver);
     }
 
     public boolean isTemplate() {

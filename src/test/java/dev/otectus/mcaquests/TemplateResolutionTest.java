@@ -115,6 +115,15 @@ class TemplateResolutionTest {
     }
 
     @Test
+    void reservedTokenPredicate() {
+        // TemplateValidator relies on this to skip {player} in its undeclared-token check and to reject a
+        // template variable that would shadow the reserved token. Only the exact token is reserved.
+        assertTrue(PlaceholderResolver.isReserved("player"));
+        assertFalse(PlaceholderResolver.isReserved("count"));
+        assertFalse(PlaceholderResolver.isReserved("player_name"));
+    }
+
+    @Test
     void templateSpecKeepsRawObjectives() {
         String json = "{\"variables\":{\"count\":{\"kind\":\"int\",\"min\":1,\"max\":3}},"
                 + "\"objectives\":[{\"type\":\"mcaquests:obtain_item\",\"item\":\"{crop}\",\"count\":\"{count}\"}]}";

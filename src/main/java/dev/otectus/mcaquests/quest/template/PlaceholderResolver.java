@@ -4,8 +4,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import dev.otectus.mcaquests.compat.McaCompat;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -35,7 +37,12 @@ public final class PlaceholderResolver {
      * {@link #values} map (so a template variable cannot shadow it) and deliberately absent from the
      * whole-token JSON path ({@link #substitute(JsonElement)}) so it is dialogue-only.
      */
-    private static final String RESERVED_PLAYER = "player";
+    public static final String RESERVED_PLAYER = "player";
+
+    /** Whether {@code token} is a reserved dialogue token that no template variable may declare or shadow. */
+    public static boolean isReserved(String token) {
+        return RESERVED_PLAYER.equals(token);
+    }
 
     private final Map<String, ResolvedValue> values;
 
@@ -58,6 +65,11 @@ public final class PlaceholderResolver {
      */
     public static PlaceholderResolver forPlayerName(@Nullable String playerName) {
         return new PlaceholderResolver(new ResolvedTemplate(Map.of()), playerName);
+    }
+
+    /** {@link #forPlayerName} using {@code player}'s MCA name (with Minecraft-username fallback). */
+    public static PlaceholderResolver forPlayer(ServerPlayer player) {
+        return forPlayerName(McaCompat.getPlayerName(player));
     }
 
     /** Deep-substitutes whole-token {@code "{var}"} string values into their JSON form. */
