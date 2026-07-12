@@ -40,4 +40,14 @@ class McaCompatSafeFailTest {
     void infectionDefaultsToZeroOnMissingData() {
         assertEquals(0f, McaCompat.getInfectionProgress(null), "infectionProgress");
     }
+
+    @Test
+    void isPlayerMarriedDefaultsFalseOnMissingData() {
+        assertFalse(McaCompat.isPlayerMarried(null), "isPlayerMarried");
+    }
+
+    @Test
+    void maxHeartsWithinDefaultsEmptyOnMissingData() {
+        assertTrue(McaCompat.maxHeartsWithin(null, 16.0).isEmpty(), "maxHeartsWithin");
+    }
 }

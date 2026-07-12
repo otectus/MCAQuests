@@ -26,6 +26,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -874,5 +875,47 @@ public final class McaCompat {
      */
     public static String getPlayerName(ServerPlayer player) {
         return getMcaPlayerName(player).orElseGet(() -> player.getGameProfile().getName());
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // §11.5 — marriage/proximity-hearts accessors for the RPG disposition layer.
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * True if this player is married (to a villager or player) per MCA player save data
+     * ({@code PlayerSaveData} implements {@link EntityRelationship} directly, so its own
+     * {@code isMarried()} already covers both {@code MARRIED_TO_VILLAGER} and
+     * {@code MARRIED_TO_PLAYER}). Safe default: {@code false}.
+     */
+    public static boolean isPlayerMarried(ServerPlayer player) {
+        try {
+            return PlayerSaveData.get(player).isMarried();
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA isPlayerMarried failed; defaulting false", t);
+            return false;
+        }
+    }
+
+    /**
+     * Highest MCA hearts value between the player and any loaded MCA villager (adult or child — hearts
+     * are hearts) within {@code radius} blocks. One bounded {@code getEntitiesOfClass} call — callers
+     * must throttle. Safe default: {@code empty} (none loaded / MCA absent / any failure).
+     */
+    public static OptionalInt maxHeartsWithin(ServerPlayer player, double radius) {
+        try {
+            AABB box = player.getBoundingBox().inflate(radius);
+            List<VillagerEntityMCA> nearby = player.level().getEntitiesOfClass(VillagerEntityMCA.class, box);
+            OptionalInt max = OptionalInt.empty();
+            for (VillagerEntityMCA villager : nearby) {
+                int hearts = getHearts(player, villager);
+                if (max.isEmpty() || hearts > max.getAsInt()) {
+                    max = OptionalInt.of(hearts);
+                }
+            }
+            return max;
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA maxHeartsWithin failed; defaulting empty", t);
+            return OptionalInt.empty();
+        }
     }
 }
