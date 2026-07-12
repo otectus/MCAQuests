@@ -211,5 +211,53 @@
   "ftbquests.task.mcaquests.quest_completed.alt_title.specific": "Complete '%s'",
   "ftbquests.task.mcaquests.quest_completed.alt_title.profession": "Complete %s quests for %s",
   "ftbquests.task.mcaquests.quest_completed.alt_title.any": "Complete any %s villager quests",
-  "ftbquests.task.mcaquests.quest_completed.progress": "Completed: %s / %s"
+  "ftbquests.task.mcaquests.quest_completed.progress": "Completed: %s / %s",
+  "ftbquests.task.mcaquests.quest_completed.count": "Count",
+
+  "ftbquests.task.mcaquests.chain_completed": "Story Arc Finished",
+  "ftbquests.task.mcaquests.chain_completed.chain_id": "Chain ID",
+  "ftbquests.task.mcaquests.chain_completed.alt_title": "Finish the '%s' story",
+
+  "ftbquests.task.mcaquests.reputation": "Village Reputation",
+  "ftbquests.task.mcaquests.reputation.reputation": "Reputation",
+  "ftbquests.task.mcaquests.reputation.village_count": "Village Count",
+  "ftbquests.task.mcaquests.reputation.alt_title.single": "Reach %s reputation with a village",
+  "ftbquests.task.mcaquests.reputation.alt_title.multi": "Reach %s reputation with %s villages",
+  "ftbquests.task.mcaquests.reputation.progress": "Progress: %s / %s",
+
+  "ftbquests.task.mcaquests.reputation_tier": "Reputation Tier",
+  "ftbquests.task.mcaquests.reputation_tier.ladder": "Ladder",
+  "ftbquests.task.mcaquests.reputation_tier.tier": "Tier",
+  "ftbquests.task.mcaquests.reputation_tier.village_count": "Village Count",
+  "ftbquests.task.mcaquests.reputation_tier.alt_title": "Reach '%s' tier with %s village(s)",
+
+  "ftbquests.task.mcaquests.title": "Titles Earned",
+  "ftbquests.task.mcaquests.title.title_id": "Title ID",
+  "ftbquests.task.mcaquests.title.count": "Count",
+  "ftbquests.task.mcaquests.title.alt_title.specific": "Earn the '%s' title",
+  "ftbquests.task.mcaquests.title.alt_title.any": "Earn %s distinct titles",
+
+  "ftbquests.task.mcaquests.project_completed": "Village Projects Completed",
+  "ftbquests.task.mcaquests.project_completed.project_id": "Project ID",
+  "ftbquests.task.mcaquests.project_completed.count": "Count",
+  "ftbquests.task.mcaquests.project_completed.alt_title.specific": "Complete '%s' %s times",
+  "ftbquests.task.mcaquests.project_completed.alt_title.any": "Complete %s village projects",
+
+  "ftbquests.task.mcaquests.project_contribution": "Project Contributions",
+  "ftbquests.task.mcaquests.project_contribution.project_id": "Project ID",
+  "ftbquests.task.mcaquests.project_contribution.count": "Count",
+  "ftbquests.task.mcaquests.project_contribution.alt_title.specific": "Contribute %s to '%s'",
+  "ftbquests.task.mcaquests.project_contribution.alt_title.any": "Contribute %s units to village projects",
+
+  "ftbquests.task.mcaquests.situation_resolved": "Situations Resolved",
+  "ftbquests.task.mcaquests.situation_resolved.situation_id": "Situation ID",
+  "ftbquests.task.mcaquests.situation_resolved.count": "Count",
+  "ftbquests.task.mcaquests.situation_resolved.alt_title.specific": "Resolve '%s' %s times",
+  "ftbquests.task.mcaquests.situation_resolved.alt_title.any": "Resolve %s village situations",
+
+  "ftbquests.task.mcaquests.hearts": "Villager Hearts",
+  "ftbquests.task.mcaquests.hearts.hearts": "Hearts",
+  "ftbquests.task.mcaquests.hearts.spouse_only": "Spouse Only",
+  "ftbquests.task.mcaquests.hearts.alt_title.spouse": "Earn %s hearts with your spouse",
+  "ftbquests.task.mcaquests.hearts.alt_title.any": "Earn %s hearts with a villager"
 }

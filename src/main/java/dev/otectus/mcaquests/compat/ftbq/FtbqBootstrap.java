@@ -9,10 +9,9 @@ import dev.otectus.mcaquests.compat.FtbqBridge;
  * there in a {@code Throwable} guard so a future FTB Quests build that breaks binary
  * compatibility disables the integration instead of crashing the game (spec §10.4).
  *
- * <p>Current scope (task M2.2): the bridge seam plus task-type registration — two pilot task
- * types ({@code mcaquests:married}, {@code mcaquests:quest_completed}) of the ten in the §15
- * table. Reward-type registration and the event bridge (§10.3, §12) land in later M2.x tasks, at
- * which point the log line below grows again.
+ * <p>Current scope (task M2.3): the bridge seam plus task-type registration — all ten task types
+ * in the §15 table are now registered. Reward-type registration and the event bridge (§10.3, §12)
+ * land in later M2.x tasks, at which point the log line below grows again.
  */
 public final class FtbqBootstrap {
 

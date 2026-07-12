@@ -918,4 +918,34 @@ public final class McaCompat {
             return OptionalInt.empty();
         }
     }
+
+    /**
+     * The loaded MCA villager within {@code radius} blocks of the player with the highest relationship
+     * hearts (ties keep the first one scanned) — the entity-returning sibling of {@link #maxHeartsWithin},
+     * added for the FTBQ {@code mcaquests:hearts} task's {@code spouse_only} mode (spec §15.9), which needs
+     * to test {@link #isPlayerSpouse} against the same "best hearts" villager rather than duplicating the
+     * MCA scan. Kept here (and not in {@code compat.ftbq}) so no {@code forge.net.mca} type ever needs to
+     * appear in a {@code compat.ftbq} signature — this returns a bare {@link Entity}, exactly like every
+     * other MCA-touching method in this class. One bounded {@code getEntitiesOfClass} call — callers must
+     * throttle. Safe default: {@code empty} (none loaded / MCA absent / any failure).
+     */
+    public static Optional<Entity> bestHeartsVillagerWithin(ServerPlayer player, double radius) {
+        try {
+            AABB box = player.getBoundingBox().inflate(radius);
+            List<VillagerEntityMCA> nearby = player.level().getEntitiesOfClass(VillagerEntityMCA.class, box);
+            VillagerEntityMCA best = null;
+            int bestHearts = Integer.MIN_VALUE;
+            for (VillagerEntityMCA villager : nearby) {
+                int hearts = getHearts(player, villager);
+                if (best == null || hearts > bestHearts) {
+                    best = villager;
+                    bestHearts = hearts;
+                }
+            }
+            return Optional.ofNullable(best);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA bestHeartsVillagerWithin failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
 }
