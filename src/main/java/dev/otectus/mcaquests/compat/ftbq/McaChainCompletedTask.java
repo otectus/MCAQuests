@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.compat.ftbq;
 import dev.ftb.mods.ftblibrary.config.ConfigGroup;
 import dev.ftb.mods.ftbquests.quest.Quest;
 import dev.ftb.mods.ftbquests.quest.task.TaskType;
+import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.quest.ChainSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
@@ -90,22 +91,23 @@ public class McaChainCompletedTask extends McaBooleanTaskBase {
     @Override
     public void fillConfigGroup(ConfigGroup config) {
         super.fillConfigGroup(config);
-        // Dropdown-from-synced-ids (§20) lands with the other editor-id work; plain free-text for now,
-        // matching McaQuestCompletedTask's precedent (task M2.2).
-        config.addString("chain_id", chainId, v -> chainId = v, "")
-                .setNameKey("ftbquests.task.mcaquests.chain_completed.chain_id");
+        // chain_id is a synced known id (§20) — dropdown-with-free-text via IdConfigRows, with the
+        // synced display name (ClientKnownIds.lookupChainName) rather than the raw id in the dropdown.
+        IdConfigRows.addIdField(config, "chain_id", "ftbquests.task.mcaquests.chain_completed.chain_id",
+                chainId, v -> chainId = v, "", ClientKnownIds.chainIds(), ClientKnownIds::lookupChainName);
     }
 
     /**
-     * {@code "Finish the '<arc name>' story"}. The spec allows the arc display name to fall back to the
-     * raw chain id; we always use the raw id here rather than scanning the quest registry for a chain
-     * member's {@code relationship_arc}/{@code chapter} text every render — this is called on every
-     * tooltip frame, and the id is already a human-authored slug in practice (e.g.
-     * {@code the_family_farm}). A registry scan for a nicer name can be added later without touching the
-     * wire format.
+     * {@code "Finish the '<arc name>' story"}. Resolves {@code chainId} through
+     * {@link ClientKnownIds#lookupChainName} (task M2.3's deferred debt, closed at M5.2) — a single map
+     * lookup plus one {@code Component.translatable} localization, cheap enough for a per-tooltip-frame
+     * call, and it falls back to the raw id automatically when {@code ClientKnownIds} hasn't synced yet
+     * (empty client cache → {@code lookupChainName} returns its input unchanged) — exactly today's
+     * behaviour in that case.
      */
     @Override
     public MutableComponent getAltTitle() {
-        return Component.translatable("ftbquests.task.mcaquests.chain_completed.alt_title", chainId);
+        return Component.translatable("ftbquests.task.mcaquests.chain_completed.alt_title",
+                ClientKnownIds.lookupChainName(chainId));
     }
 }

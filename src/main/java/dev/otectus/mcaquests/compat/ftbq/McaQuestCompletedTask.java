@@ -6,6 +6,7 @@ import dev.ftb.mods.ftbquests.quest.Quest;
 import dev.ftb.mods.ftbquests.quest.TeamData;
 import dev.ftb.mods.ftbquests.quest.task.TaskType;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -100,10 +101,12 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     @Override
     public void fillConfigGroup(ConfigGroup config) {
         super.fillConfigGroup(config);
-        // Dropdowns from synced known ids (§20) land in a later task; plain free-text for now,
-        // mirroring StageTask's always-addString shape (FTB-Quests quest/task/StageTask.java:61).
-        config.addString("quest_id", questId, v -> questId = v, "")
-                .setNameKey("ftbquests.task.mcaquests.quest_completed.quest_id");
+        // quest_id is a synced known id (§20) — dropdown-with-free-text via IdConfigRows.
+        IdConfigRows.addIdField(config, "quest_id", "ftbquests.task.mcaquests.quest_completed.quest_id",
+                questId, v -> questId = v, "", ClientKnownIds.questIds());
+        // profession/chain_id/category are NOT in the synced known-ids payload (profession would need
+        // ProfessionMatcher's known professions, which §20 doesn't sync; chain_id/category here scope a
+        // *filter*, not an identity match) — plain free-text, per task M5.2's brief.
         config.addString("profession", profession, v -> profession = v, "")
                 .setNameKey("ftbquests.task.mcaquests.quest_completed.profession");
         config.addString("chain_id", chainId, v -> chainId = v, "")

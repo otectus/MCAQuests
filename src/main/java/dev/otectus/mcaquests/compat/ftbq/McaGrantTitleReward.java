@@ -5,6 +5,7 @@ import dev.ftb.mods.ftblibrary.config.NameMap;
 import dev.ftb.mods.ftbquests.quest.Quest;
 import dev.ftb.mods.ftbquests.quest.reward.RewardType;
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.project.state.BankedReward;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
@@ -134,8 +135,9 @@ public class McaGrantTitleReward extends McaRewardBase {
     @Override
     public void fillConfigGroup(ConfigGroup config) {
         super.fillConfigGroup(config);
-        config.addString("title_id", titleId, v -> titleId = v, "")
-                .setNameKey("ftbquests.reward.mcaquests.grant_title.title_id");
+        // title_id is a synced known id (§20) — dropdown-with-free-text via IdConfigRows.
+        IdConfigRows.addIdField(config, "title_id", "ftbquests.reward.mcaquests.grant_title.title_id",
+                titleId, v -> titleId = v, "", ClientKnownIds.titleIds());
         config.addEnum("scope", scope, v -> scope = v, SCOPE_NAME_MAP)
                 .setNameKey("ftbquests.reward.mcaquests.grant_title.scope");
     }

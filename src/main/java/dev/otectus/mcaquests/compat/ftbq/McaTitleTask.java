@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.compat.ftbq;
 import dev.ftb.mods.ftblibrary.config.ConfigGroup;
 import dev.ftb.mods.ftbquests.quest.Quest;
 import dev.ftb.mods.ftbquests.quest.task.TaskType;
+import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.PlayerTitles;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -92,8 +93,9 @@ public class McaTitleTask extends McaCounterTaskBase {
     @Override
     public void fillConfigGroup(ConfigGroup config) {
         super.fillConfigGroup(config);
-        config.addString("title_id", titleId, v -> titleId = v, "")
-                .setNameKey("ftbquests.task.mcaquests.title.title_id");
+        // title_id is a synced known id (§20) — dropdown-with-free-text via IdConfigRows.
+        IdConfigRows.addIdField(config, "title_id", "ftbquests.task.mcaquests.title.title_id",
+                titleId, v -> titleId = v, "", ClientKnownIds.titleIds());
     }
 
     @Override

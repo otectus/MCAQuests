@@ -4,6 +4,7 @@ import dev.ftb.mods.ftblibrary.config.ConfigGroup;
 import dev.ftb.mods.ftbquests.quest.Quest;
 import dev.ftb.mods.ftbquests.quest.task.TaskType;
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.quest.reputation.ReputationService;
 import dev.otectus.mcaquests.quest.reputation.ReputationTier;
 import dev.otectus.mcaquests.quest.reputation.ReputationTierSet;
@@ -16,6 +17,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -124,13 +128,36 @@ public class McaReputationTierTask extends McaBooleanTaskBase {
     @Override
     public void fillConfigGroup(ConfigGroup config) {
         super.fillConfigGroup(config);
-        // Dropdowns from synced known ids (§20) land in a later task; plain free-text for now.
-        config.addString("ladder", ladder, v -> ladder = v, "mcaquests:default")
-                .setNameKey("ftbquests.task.mcaquests.reputation_tier.ladder");
-        config.addString("tier", tier, v -> tier = v, "")
-                .setNameKey("ftbquests.task.mcaquests.reputation_tier.tier");
+        // ladder is a synced known id (§20) — dropdown-with-free-text via IdConfigRows.
+        IdConfigRows.addIdField(config, "ladder", "ftbquests.task.mcaquests.reputation_tier.ladder",
+                ladder, v -> ladder = v, "mcaquests:default", ClientKnownIds.ladderIds());
+        // tier's dropdown is scoped to whichever ladder is selected *at screen-open time* — FTB
+        // Library's ConfigGroup has no live cross-row dependency wiring (each row's contents are fixed
+        // when fillConfigGroup runs), so picking a different ladder in the enum row above and expecting
+        // the tier dropdown to refresh in the same session isn't possible; re-opening the editor after
+        // changing/saving the ladder recomputes this list correctly. Documented per task M5.2's brief.
+        IdConfigRows.addIdField(config, "tier", "ftbquests.task.mcaquests.reputation_tier.tier",
+                tier, v -> tier = v, "", tiersForCurrentLadder());
         config.addInt("village_count", villageCount, v -> villageCount = v, 1, 1, Integer.MAX_VALUE)
                 .setNameKey("ftbquests.task.mcaquests.reputation_tier.village_count");
+    }
+
+    /**
+     * Distinct tier ids belonging to {@link #ladder} (the currently-configured value, read before
+     * this call), parsed from {@link ClientKnownIds#ladderTierEntries()}'s flattened
+     * {@code "<ladderId>|<tierId>"} entries. Empty when no synced entry matches — including when
+     * {@code ladder} itself is a hand-typed id from a not-yet-loaded datapack — which correctly makes
+     * {@link IdConfigRows#addIdField} fall back to free-text only for {@code tier} in that case.
+     */
+    private List<String> tiersForCurrentLadder() {
+        Set<String> tiers = new LinkedHashSet<>();
+        for (String entry : ClientKnownIds.ladderTierEntries()) {
+            int sep = entry.indexOf('|');
+            if (sep >= 0 && entry.substring(0, sep).equals(ladder)) {
+                tiers.add(entry.substring(sep + 1));
+            }
+        }
+        return new ArrayList<>(tiers);
     }
 
     @Override
