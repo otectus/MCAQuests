@@ -98,6 +98,8 @@
   "mcaquests.message.protect_target_died": "The one you were protecting has fallen.",
   "mcaquests.message.escort_target_died": "The one you were escorting has fallen.",
 
+  "mcaquests.ftbq.reward.banked_delivered": "A reward you claimed earlier has finally reached you.",
+
   "mcaquests.objective.donate_item": "Donate %s× %s",
   "mcaquests.objective.project_kill_entity": "Defeat %s× %s near the village",
   "mcaquests.objective.project_place_block": "Place %s× %s at the site",

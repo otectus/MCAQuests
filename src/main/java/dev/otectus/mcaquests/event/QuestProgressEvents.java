@@ -5,6 +5,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.QuestManager;
@@ -71,7 +72,9 @@ import net.minecraftforge.fml.common.Mod;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -316,6 +319,7 @@ public final class QuestProgressEvents {
         checkFailureTriggers(player);
         autoCompleteSelfQuests(player);
         maybeScanSituations(player);
+        maybeRetryBankedRewards(player, level);
         QuestManager.checkReadyTransitions(player);
         // Refresh the client quest log + HUD (~once per second) for players with active quests.
         QuestCapabilities.get(player).ifPresent(data -> {
@@ -348,6 +352,27 @@ public final class QuestProgressEvents {
         lastSituationScan = now;
         SituationDetectors.scan(server);
         SituationManager.tick(server);
+    }
+
+    /** In-game day (per player) the banked-reward retry last ran, so it fires at most once per day (task M3.1). */
+    private static final Map<UUID, Long> lastBankedRetryDay = new HashMap<>();
+
+    /**
+     * Retries any banked FTB-claim rewards (village_reputation / hearts / grant_title with no resolvable
+     * target at claim time — spec 1.0.0 §16, task M3.1) at most once per in-game day while the player is
+     * online, piggybacking this existing ~once/sec-throttled tick rather than adding new tick machinery
+     * (user decision). Login already retries via {@code ProjectLifecycleEvents.onPlayerLogin} →
+     * {@code ProjectManager.deliverPending}; this covers the case of a long, uninterrupted session where
+     * a village/spouse only becomes reachable well after login.
+     */
+    private static void maybeRetryBankedRewards(ServerPlayer player, ServerLevel level) {
+        long day = level.getDayTime() / 24000L;
+        Long lastDay = lastBankedRetryDay.get(player.getUUID());
+        if (lastDay != null && lastDay == day) {
+            return;
+        }
+        lastBankedRetryDay.put(player.getUUID(), day);
+        ProjectManager.deliverPending(player);
     }
 
     /**

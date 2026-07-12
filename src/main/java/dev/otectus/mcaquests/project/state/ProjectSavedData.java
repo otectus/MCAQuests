@@ -102,6 +102,11 @@ public final class ProjectSavedData extends SavedData {
         setDirty();
     }
 
+    /** Convenience overload for banked FTB-claim rewards (task M3.1) — routes through {@link #addPending}. */
+    public void addBankedReward(UUID player, BankedReward reward) {
+        addPending(player, PendingReward.ofBanked(reward));
+    }
+
     public List<PendingReward> drainPending(UUID player) {
         List<PendingReward> owed = pending.remove(player);
         if (owed == null || owed.isEmpty()) {
@@ -161,7 +166,14 @@ public final class ProjectSavedData extends SavedData {
                 ListTag rewards = pend.getList(key, Tag.TAG_COMPOUND);
                 List<PendingReward> list = new ArrayList<>();
                 for (int i = 0; i < rewards.size(); i++) {
-                    list.add(PendingReward.load(rewards.getCompound(i)));
+                    // Per-entry guard (forward-compat, task M3.1): an unrecognised kind/type, or a
+                    // malformed tag that throws while parsing (e.g. an invalid ResourceLocation), is
+                    // skipped without dropping this player's other, well-formed pending rewards.
+                    try {
+                        PendingReward.load(rewards.getCompound(i)).ifPresent(list::add);
+                    } catch (RuntimeException ignored) {
+                        // skip malformed entry; siblings still load
+                    }
                 }
                 if (!list.isEmpty()) {
                     data.pending.put(uuid, list);

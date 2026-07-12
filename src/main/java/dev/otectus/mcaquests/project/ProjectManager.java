@@ -656,14 +656,32 @@ public final class ProjectManager {
         return Component.empty();
     }
 
-    /** Delivers any phase rewards owed to a returning player (login). */
+    /**
+     * Delivers any phase rewards owed to a returning player (login), and retries any banked FTB-claim
+     * rewards (village_reputation / hearts / grant_title with no resolvable target at claim time —
+     * spec 1.0.0 §16, task M3.1) against the player's current surroundings. Called on login
+     * ({@code ProjectLifecycleEvents.onPlayerLogin}) and once per in-game day while online
+     * ({@code QuestProgressEvents}'s throttled per-player tick). {@code drainPending} removes the whole
+     * owed list from storage up front; a banked entry that still can't resolve is re-queued in this same
+     * server-thread pass, so the only loss window matches legacy pending delivery's own — a crash between
+     * the drain and the (re-)grant, before the next autosave.
+     */
     public static void deliverPending(ServerPlayer player) {
         if (!enabled() || player.getServer() == null || !(player.level() instanceof ServerLevel level)) {
             return;
         }
-        ProjectSavedData data = ProjectSavedData.get(player.getServer());
+        MinecraftServer server = player.getServer();
+        ProjectSavedData data = ProjectSavedData.get(server);
         List<PendingReward> owed = data.drainPending(player.getUUID());
         for (PendingReward reward : owed) {
+            if (reward.kind() == PendingReward.Kind.BANKED) {
+                if (ProjectRewardDistributor.attemptBankedDelivery(server, level, player, reward.banked())) {
+                    player.sendSystemMessage(Component.translatable("mcaquests.ftbq.reward.banked_delivered"));
+                } else {
+                    data.addPending(player.getUUID(), reward); // still no target - stays banked
+                }
+                continue;
+            }
             ProjectDefinition def = ProjectRegistry.get(reward.projectId()).orElse(null);
             if (def == null) {
                 continue;
