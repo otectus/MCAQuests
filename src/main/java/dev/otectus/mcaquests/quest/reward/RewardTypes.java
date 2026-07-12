@@ -45,6 +45,10 @@ public final class RewardTypes {
     public static final QuestRewardType<GrantTitleReward> GRANT_TITLE =
             register(new ResourceLocation(McaQuests.MOD_ID, "grant_title"), GrantTitleReward.CODEC);
 
+    // M4 — grants FTB Quests progress for the player's team (complete task, complete quest, or reset task).
+    public static final QuestRewardType<FtbqProgressReward> FTBQ_PROGRESS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "ftbq_progress"), FtbqProgressReward.CODEC);
+
     public static final Codec<QuestRewardType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {
                 QuestRewardType<?> type = BY_ID.get(id);

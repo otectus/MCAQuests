@@ -136,6 +136,9 @@
   "mcaquests.reward.village_reputation": "+%s village reputation",
   "mcaquests.reward.unlock": "Unlocks a follow-up project",
   "mcaquests.reward.mcarealtalk.unlock_topic": "Opens up a deeper conversation about %s",
+  "mcaquests.reward.ftbq_progress.describe.complete_task": "Complete FTB task",
+  "mcaquests.reward.ftbq_progress.describe.complete_quest": "Complete FTB quest",
+  "mcaquests.reward.ftbq_progress.describe.reset_task": "Reset FTB task",
 
   "mcaquests.toast.situation_opened": "The village needs help!",
   "mcaquests.situation.card_tag": "⚠ The village needs help",
