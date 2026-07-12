@@ -200,5 +200,16 @@
   "mcaquests.quest.cartographer_scout_the_land.decline": "Perhaps another expedition, then.",
   "mcaquests.quest.cartographer_scout_the_land.in_progress": "Have you reached the forest yet?",
   "mcaquests.quest.cartographer_scout_the_land.ready": "You found it! Tell me everything.",
-  "mcaquests.quest.cartographer_scout_the_land.complete": "These notes will fill in the blank corners of my charts."
+  "mcaquests.quest.cartographer_scout_the_land.complete": "These notes will fill in the blank corners of my charts.",
+
+  "ftbquests.task.mcaquests.married": "Married",
+  "ftbquests.task.mcaquests.quest_completed": "Villager Quests Completed",
+  "ftbquests.task.mcaquests.quest_completed.quest_id": "Quest ID",
+  "ftbquests.task.mcaquests.quest_completed.profession": "Profession",
+  "ftbquests.task.mcaquests.quest_completed.chain_id": "Chain ID",
+  "ftbquests.task.mcaquests.quest_completed.category": "Category",
+  "ftbquests.task.mcaquests.quest_completed.alt_title.specific": "Complete '%s'",
+  "ftbquests.task.mcaquests.quest_completed.alt_title.profession": "Complete %s quests for %s",
+  "ftbquests.task.mcaquests.quest_completed.alt_title.any": "Complete any %s villager quests",
+  "ftbquests.task.mcaquests.quest_completed.progress": "Completed: %s / %s"
 }
