@@ -79,4 +79,19 @@ public record ChainSpec(String chain,
         }
         return Optional.empty();
     }
+
+    /**
+     * Whether this stage is a <em>final</em> stage of its arc (spec §15.2, used by the FTBQ
+     * {@code chain_completed} task): {@code stage == stageTotal} when {@code stageTotal} is present
+     * (authoritative — decided even if {@code unlocks} happens to be non-empty, e.g. a sequel-arc
+     * hook), otherwise {@code unlocks} is empty. Branching arcs can have more than one final stage —
+     * callers checking "did the player finish this chain" should treat any final-stage completion as
+     * a match.
+     */
+    public boolean isFinalStage() {
+        if (stageTotal.isPresent()) {
+            return stage == stageTotal.get();
+        }
+        return unlocks.isEmpty();
+    }
 }
