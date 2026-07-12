@@ -52,6 +52,10 @@
   "mcaquests.reward.loot_table": "A surprise reward",
   "mcaquests.reward.command": "A special reward",
 
+  "mcaquests.condition.ftbq_quest_completed": "FTB quest completed",
+  "mcaquests.condition.ftbq_chapter_completed": "FTB chapter completed",
+  "mcaquests.condition.ftbq_task_completed": "FTB task completed",
+
   "mcaquests.objective.item_delivery": "Deliver %s× %s",
   "mcaquests.objective.obtain_item": "Obtain %s× %s",
   "mcaquests.objective.kill_entity": "Defeat %s× %s",
