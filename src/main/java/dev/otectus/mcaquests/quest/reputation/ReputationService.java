@@ -125,20 +125,19 @@ public final class ReputationService {
 
     /**
      * Resolves the current tier for a village's reputation against a specified ladder.
-     * Returns empty when saved data is absent, no entry for the village, or the ladder cannot
-     * be resolved. The tier index is calculated using {@link #tierIndex(ReputationTierSet, int)};
-     * an index of -1 (reputation below lowest threshold) returns empty.
+     * A village with no reputation record is treated as reputation 0 (matching
+     * {@code ProjectSavedData.reputation}'s default everywhere else), so untouched villages
+     * still resolve to the floor tier of ladders whose lowest threshold is &le; 0. Returns
+     * empty when the ladder cannot be resolved, or when {@link #tierIndex(ReputationTierSet, int)}
+     * yields -1 (reputation below the lowest threshold, or empty ladder).
      */
     public static Optional<ReputationTier> currentTier(MinecraftServer server, int villageId, ResourceLocation ladder) {
         ReputationTierSet tiers = ReputationTiers.get(ladder).orElse(null);
         if (tiers == null) {
             return Optional.empty();
         }
-        OptionalInt rep = villageReputation(server, villageId);
-        if (rep.isEmpty()) {
-            return Optional.empty();
-        }
-        int index = tierIndex(tiers, rep.getAsInt());
+        int rep = villageReputation(server, villageId).orElse(0);
+        int index = tierIndex(tiers, rep);
         return index < 0 ? Optional.empty() : Optional.of(tiers.tiers().get(index));
     }
 
