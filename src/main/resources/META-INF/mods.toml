@@ -39,3 +39,12 @@ description='''${mod_description}'''
     versionRange="[9.2,10)"
     ordering="AFTER"
     side="BOTH"
+
+# FTB Quests is an optional integration (compat.ftbq): load AFTER it when present so
+# its built-in TaskTypes are initialized before our constructor registers types.
+[[dependencies.${mod_id}]]
+    modId="ftbquests"
+    mandatory=false
+    versionRange="[2001.4,)"
+    ordering="AFTER"
+    side="BOTH"

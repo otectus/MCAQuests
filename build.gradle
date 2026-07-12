@@ -94,6 +94,13 @@ repositories {
         forRepositories(fg.repository)
         filter { includeGroup 'maven.modrinth' }
     }
+
+    // FTB Quests optional integration — scoped to dev.ftb.mods only.
+    maven {
+        name = 'FTB'
+        url = 'https://maven.ftb.dev/releases'
+        content { includeGroup 'dev.ftb.mods' }
+    }
 }
 
 dependencies {
@@ -113,6 +120,18 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // FTB Quests optional integration — compile-time only. NEVER shipped, NEVER 'implementation'.
+    compileOnly fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
+    compileOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
+    compileOnly fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
+
+    // Optional: put the FTB stack on the dev runtime for hands-on testing.
+    if (project.hasProperty('enableFtbqInDev') && project.enableFtbqInDev.toBoolean()) {
+        runtimeOnly fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
+        runtimeOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
+        runtimeOnly fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
+    }
 }
 
 test {
