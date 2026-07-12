@@ -28,17 +28,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * and compares every village's {@link ReputationService#currentTier} index against it.
  *
  * <p>An unknown ladder or tier id fails safe to {@code false} (never met) and logs one WARN — not one
- * per check (that would spam the log every poll interval), but one per distinct (ladder, tier) pair for
- * the life of the JVM. {@link #WARNED} is never cleared here; a datapack reload that fixes the ladder
- * would need a JVM restart to re-arm the warning under the current scheme. That is an accepted rough
- * edge for M2.3 — the reload-scoped cache M2.4 adds elsewhere in the FTBQ bridge is the natural place to
- * also clear this set, so this is deliberately left for that task rather than inventing a second,
- * unrelated cache-invalidation hook here.
+ * per check (that would spam the log every poll interval), but one per distinct (ladder, tier) pair,
+ * until {@link #clearWarned()} runs. {@link FtbqEventBridge} calls {@link #clearWarned()} on every
+ * {@code ClearFileCacheEvent} and on server stopping (§12.3/§12.6), so a datapack fix to a ladder/tier
+ * re-arms the warning on the very next reload rather than requiring a JVM restart.
  */
 public class McaReputationTierTask extends McaBooleanTaskBase {
 
-    // TODO(M2.4): clear this alongside the reload-scoped cache M2.4 introduces, so a datapack fix to a
-    // ladder/tier re-arms the warning without a JVM restart.
     private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
 
     private String ladder = "mcaquests:default";
@@ -86,6 +82,11 @@ public class McaReputationTierTask extends McaBooleanTaskBase {
         if (WARNED.add(ladder + "|" + tier)) {
             McaQuests.LOGGER.warn("[MCA: Quests] FTBQ task {} misconfigured: {}", getType().getTypeId(), reason);
         }
+    }
+
+    /** Called by {@link FtbqEventBridge} on cache drop (§12.3) so fixed ladders/tiers re-arm the WARN. */
+    static void clearWarned() {
+        WARNED.clear();
     }
 
     @Override

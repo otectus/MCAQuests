@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.compat.FtbqBridge;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.project.ProjectManager;
@@ -468,9 +469,18 @@ public final class McaQuestsCommand {
         var server = src.getServer();
         src.sendSuccess(() -> Component.literal("Reloading datapacks (quests)..."), true);
         server.reloadResources(server.getPackRepository().getSelectedIds())
-                .thenRunAsync(() -> src.sendSuccess(() -> Component.literal(
-                        "Quests reloaded: " + QuestRegistry.size() + " loaded, "
-                                + QuestRegistry.lastErrors().size() + " error(s)."), true), server);
+                .thenRunAsync(() -> {
+                    src.sendSuccess(() -> Component.literal(
+                            "Quests reloaded: " + QuestRegistry.size() + " loaded, "
+                                    + QuestRegistry.lastErrors().size() + " error(s)."), true);
+                    // §12.6: re-evaluate FTB progress for online players now that the registry swap is
+                    // done (new/changed quest ids may change what mcaquests-side FTB tasks match). Routed
+                    // strictly through the FtbqBridge interface — never compat.ftbq — so this is a free
+                    // no-op via NoopFtbqBridge when FTB Quests is absent or disabled.
+                    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                        FtbqBridge.Holder.get().recheckAll(player);
+                    }
+                }, server);
         return 1;
     }
 

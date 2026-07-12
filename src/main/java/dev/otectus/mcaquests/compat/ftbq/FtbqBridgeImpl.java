@@ -6,6 +6,7 @@ import dev.ftb.mods.ftbquests.quest.QuestObject;
 import dev.ftb.mods.ftbquests.quest.QuestObjectBase;
 import dev.ftb.mods.ftbquests.quest.ServerQuestFile;
 import dev.ftb.mods.ftbquests.quest.TeamData;
+import dev.ftb.mods.ftbquests.quest.reward.Reward;
 import dev.ftb.mods.ftbquests.quest.task.Task;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
@@ -128,21 +129,37 @@ public final class FtbqBridgeImpl implements FtbqBridge {
         }
     }
 
-    /** {@inheritDoc} STUB — full recompute-from-state re-evaluation lands in task M2.4 (§15). */
+    /**
+     * {@inheritDoc} Delegates to {@link FtbqEventBridge}'s cached §12.4 guard-chain sweep over all
+     * ten {@code mcaquests:} task classes — the same mechanics the event listeners use, just run for
+     * every class at once rather than the subset a given domain event implies.
+     */
     @Override
     public void recheckAll(ServerPlayer player) {
         try {
-            // Intentionally no-op until M2.4 wires the ten Mca*Task classes' checkStages idiom.
+            FtbqEventBridge.recheckAll(player);
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("[MCA: Quests] FTBQ bridge {} failed", "recheckAll", t);
         }
     }
 
-    /** {@inheritDoc} STUB — real counts land once FtbqTaskTypes/FtbqRewardTypes exist (M2.4). */
+    /**
+     * {@inheritDoc} Counts {@code mcaquests:}-namespaced tasks/rewards currently in the server book
+     * by the registered {@link dev.ftb.mods.ftbquests.quest.task.TaskType}/{@code RewardType}'s own
+     * {@code typeId} namespace (not by Java class), so reward counts become correct automatically
+     * once M3.2 registers {@code FtbqRewardTypes} without touching this method again.
+     */
     @Override
     public int[] integrationObjectCounts() {
         try {
-            return new int[]{0, 0};
+            if (ServerQuestFile.INSTANCE == null) {
+                return new int[]{0, 0};
+            }
+            int taskCount = ServerQuestFile.INSTANCE.<Task>collect(o -> o instanceof Task task
+                    && McaQuests.MOD_ID.equals(task.getType().getTypeId().getNamespace())).size();
+            int rewardCount = ServerQuestFile.INSTANCE.<Reward>collect(o -> o instanceof Reward reward
+                    && McaQuests.MOD_ID.equals(reward.getType().getTypeId().getNamespace())).size();
+            return new int[]{taskCount, rewardCount};
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("[MCA: Quests] FTBQ bridge {} failed", "integrationObjectCounts", t);
             return new int[]{0, 0};

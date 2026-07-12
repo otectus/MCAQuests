@@ -9,9 +9,11 @@ import dev.otectus.mcaquests.compat.FtbqBridge;
  * there in a {@code Throwable} guard so a future FTB Quests build that breaks binary
  * compatibility disables the integration instead of crashing the game (spec §10.4).
  *
- * <p>Current scope (task M2.3): the bridge seam plus task-type registration — all ten task types
- * in the §15 table are now registered. Reward-type registration and the event bridge (§10.3, §12)
- * land in later M2.x tasks, at which point the log line below grows again.
+ * <p>Current scope (task M2.4): the bridge seam, all ten §15 task types, and the full event bridge
+ * (§12/§15.0) — {@link FtbqBridge.Holder} is set <em>before</em> {@link FtbqEventBridge#register()}
+ * so that if event-bridge registration itself throws partway through (a future FTB Quests binary
+ * incompatibility), any listener that already attached to the bus still sees a real bridge instance
+ * rather than momentarily reading the {@code Noop} default. Reward-type registration lands in M3.2.
  */
 public final class FtbqBootstrap {
 
@@ -19,10 +21,12 @@ public final class FtbqBootstrap {
     }
 
     public static void init() {                       // called iff ModList.get().isLoaded("ftbquests")
-        // FtbqRewardTypes.register() / FtbqEventBridge.register() land in later M2.x tasks.
+        // FtbqRewardTypes.register() lands in M3.2.
         FtbqTaskTypes.register();
         FtbqBridge.Holder.set(new FtbqBridgeImpl());
-        McaQuests.LOGGER.info("[MCA: Quests] FTB Quests integration bridge active ({} task type(s) registered).",
+        FtbqEventBridge.register();
+        McaQuests.LOGGER.info(
+                "[MCA: Quests] FTB Quests integration bridge active ({} task type(s) registered, event bridge listening).",
                 FtbqTaskTypes.count());
     }
 }
