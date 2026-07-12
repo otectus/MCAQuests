@@ -42,11 +42,9 @@ public final class ActiveQuest {
     private boolean rewardClaimed;
     private boolean readyNotified;
 
-    /** Lazily-built concretized definition + text resolver, derived from {@link #template}; not persisted. */
+    /** Lazily-built concretized definition, derived from {@link #template}; not persisted. */
     @Nullable
     private transient QuestDefinition resolvedCache;
-    @Nullable
-    private transient PlaceholderResolver resolverCache;
 
     public ActiveQuest(ResourceLocation questId, UUID villagerUuid, Component villagerName,
                        @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
@@ -103,16 +101,14 @@ public final class ActiveQuest {
         return resolvedCache;
     }
 
-    /** The placeholder resolver for dialogue/title, or {@code null} for a non-template quest. */
-    @Nullable
-    public PlaceholderResolver textResolver() {
-        if (template == null) {
-            return null;
-        }
-        if (resolverCache == null) {
-            resolverCache = new PlaceholderResolver(template);
-        }
-        return resolverCache;
+    /**
+     * The placeholder resolver for dialogue/title, carrying the reserved {@code {player}} token. Built
+     * fresh each call because {@code playerName} is per-recipient; it only wraps the value map (cheap).
+     */
+    public PlaceholderResolver textResolver(@Nullable String playerName) {
+        return template == null
+                ? PlaceholderResolver.forPlayerName(playerName)
+                : new PlaceholderResolver(template, playerName);
     }
 
     public ResourceLocation questId() {

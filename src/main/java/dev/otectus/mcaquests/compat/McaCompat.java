@@ -9,6 +9,7 @@ import forge.net.mca.entity.ai.relationship.AgeState;
 import forge.net.mca.entity.ai.relationship.EntityRelationship;
 import forge.net.mca.server.world.data.FamilyTree;
 import forge.net.mca.server.world.data.FamilyTreeNode;
+import forge.net.mca.server.world.data.PlayerSaveData;
 import forge.net.mca.server.world.data.Village;
 import forge.net.mca.server.world.data.VillageManager;
 import net.minecraft.Util;
@@ -843,5 +844,28 @@ public final class McaCompat {
             McaQuests.LOGGER.debug("MCA getRelativeDisplayName failed; defaulting empty", t);
             return Optional.empty();
         }
+    }
+
+    /**
+     * The player's chosen MCA character name (set in MCA's character-creation screen), read from their
+     * node in the persistent {@link FamilyTree} via {@link PlayerSaveData}. Empty when MCA is absent, the
+     * player has not set a name, or it is blank. Safe default: {@code empty}.
+     */
+    public static Optional<String> getMcaPlayerName(ServerPlayer player) {
+        try {
+            return Optional.ofNullable(PlayerSaveData.get(player).getFamilyEntry().getName())
+                    .filter(name -> !name.isBlank());
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA getMcaPlayerName failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * The player's MCA character name with their Minecraft username as a safe fallback (when MCA is absent
+     * or no name has been set). Never blank or null — suitable for direct display.
+     */
+    public static String getPlayerName(ServerPlayer player) {
+        return getMcaPlayerName(player).orElseGet(() -> player.getGameProfile().getName());
     }
 }

@@ -89,6 +89,32 @@ class TemplateResolutionTest {
     }
 
     @Test
+    void reservedPlayerTokenResolvesToMcaName() {
+        // A name-only resolver (non-template quest) renders {player} to the supplied MCA name.
+        assertEquals("Well met, Aria!",
+                PlaceholderResolver.forPlayerName("Aria").substituteLiteral("Well met, {player}!").getString());
+
+        // No player in scope (validation preview): {player} renders verbatim rather than throwing.
+        assertEquals("Hi {player}",
+                PlaceholderResolver.forPlayerName(null).substituteLiteral("Hi {player}").getString());
+
+        // The reserved token is unshadowable: a template variable literally named "player" does not win.
+        Map<String, ResolvedValue> values = new LinkedHashMap<>();
+        values.put("player", new ResolvedValue.TextValue(QuestText.literal("SHADOW")));
+        PlaceholderResolver shadowed = new PlaceholderResolver(new ResolvedTemplate(values), "Aria");
+        assertEquals("Aria", shadowed.substituteLiteral("{player}").getString());
+
+        // {player} is dialogue-only: the whole-token JSON path never resolves it (stays verbatim).
+        JsonElement out = PlaceholderResolver.forPlayerName("Aria")
+                .substitute(JsonParser.parseString("{\"item\":\"{player}\"}"));
+        assertEquals("{player}", out.getAsJsonObject().get("item").getAsString());
+
+        // Placeholder-free text is unchanged by the resolver (no regression for hand-authored lines).
+        assertEquals("plain text",
+                PlaceholderResolver.forPlayerName("Aria").substituteLiteral("plain text").getString());
+    }
+
+    @Test
     void templateSpecKeepsRawObjectives() {
         String json = "{\"variables\":{\"count\":{\"kind\":\"int\",\"min\":1,\"max\":3}},"
                 + "\"objectives\":[{\"type\":\"mcaquests:obtain_item\",\"item\":\"{crop}\",\"count\":\"{count}\"}]}";

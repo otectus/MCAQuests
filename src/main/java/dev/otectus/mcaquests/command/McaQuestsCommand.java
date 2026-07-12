@@ -157,9 +157,10 @@ public final class McaQuestsCommand {
     private static int titleGrant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         ResourceLocation title = ResourceLocationArgument.getId(ctx, "title");
+        String name = McaCompat.getPlayerName(target);
         boolean added = TitleService.grantGlobal(target, title);
         ctx.getSource().sendSuccess(() -> Component.literal((added ? "Granted" : "Already had")
-                + " global title '" + title + "' to " + target.getGameProfile().getName() + "."), true);
+                + " global title '" + title + "' to " + name + "."), true);
         return added ? 1 : 0;
     }
 
@@ -167,22 +168,24 @@ public final class McaQuestsCommand {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         ResourceLocation title = ResourceLocationArgument.getId(ctx, "title");
         int village = IntegerArgumentType.getInteger(ctx, "village");
+        String name = McaCompat.getPlayerName(target);
         boolean added = TitleService.grantVillage(target, village, title);
         ctx.getSource().sendSuccess(() -> Component.literal((added ? "Granted" : "Already had")
-                + " title '" + title + "' to " + target.getGameProfile().getName()
+                + " title '" + title + "' to " + name
                 + " for village #" + village + "."), true);
         return added ? 1 : 0;
     }
 
     private static int titleList(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        String name = McaCompat.getPlayerName(target);
         PlayerTitles titles = QuestCapabilities.get(target).map(PlayerQuestData::titles).orElse(null);
         if (titles == null || titles.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.literal(
-                    target.getGameProfile().getName() + " has no titles."), false);
+                    name + " has no titles."), false);
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Titles for " + target.getGameProfile().getName() + ":"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("Titles for " + name + ":"), false);
         if (!titles.global().isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.literal(" global: " + titles.global()), false);
         }
@@ -193,9 +196,10 @@ public final class McaQuestsCommand {
 
     private static int titleClear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        String name = McaCompat.getPlayerName(target);
         QuestCapabilities.get(target).ifPresent(d -> d.titles().clear());
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "Cleared all titles for " + target.getGameProfile().getName() + "."), true);
+                "Cleared all titles for " + name + "."), true);
         return 1;
     }
 

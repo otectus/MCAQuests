@@ -619,6 +619,11 @@ Every variable has a `kind` discriminator.
   registry object's translated display name (`{crop_name}` → "Wheat"). Translation keys are preserved: a
   `title`/dialogue line may use `"translate"` with a `"with": ["{count}", "{crop_name}"]` list so the
   sentence stays translatable. Use `{{` and `}}` for literal braces.
+- The reserved token **`{player}`** inserts the player's MCA character name (the name set in MCA's
+  character-creation screen), falling back to their Minecraft username when MCA is absent or no name was set.
+  It works in the dialogue, title, and chain arc/chapter text of **any** quest — not just templates — and
+  cannot be shadowed by a template variable named `player`. Being dialogue-only, `{player}` is never
+  substituted into objective/reward JSON. Example: `"offer": { "text": "Well met, {player}! Could you help me?" }`.
 
 ### Validation
 

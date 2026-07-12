@@ -16,6 +16,7 @@ import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.quest.situation.state.SituationStatus;
 import dev.otectus.mcaquests.quest.situation.trigger.LowFoodTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.RaidTrigger;
+import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.core.BlockPos;
@@ -91,9 +92,12 @@ public final class SituationManager {
         if (center.isEmpty()) {
             return;
         }
-        Component title = def.offer().titleOr(Component.translatable("mcaquests.situation.generic"));
+        Component fallback = Component.translatable("mcaquests.situation.generic");
         for (ServerPlayer player : overworld.players()) {
             if (player.blockPosition().closerThan(center.get(), NOTIFY_RADIUS)) {
+                // Resolve per recipient so a {player} token in the situation title renders that player's MCA name.
+                Component title = def.offer().titleOr(fallback,
+                        PlaceholderResolver.forPlayerName(McaCompat.getPlayerName(player)));
                 QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                         new SituationToastS2CPacket(title));
             }

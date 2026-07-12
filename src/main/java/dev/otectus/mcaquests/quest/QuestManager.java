@@ -162,7 +162,7 @@ public final class QuestManager {
             QuestDefinition def = active.resolve(defOpt.get());
             boolean ready = isComplete(player, def, active) && canTurnInAt(active, def, villager);
             QuestMenuStatus status = ready ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
-            QuestCard card = buildCard(player, villager, def, active.textResolver(), active,
+            QuestCard card = buildCard(player, villager, def, active.textResolver(McaCompat.getPlayerName(player)), active,
                     ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS);
             send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, status, List.of(card)));
             return;
@@ -197,7 +197,8 @@ public final class QuestManager {
     private static Optional<QuestCard> buildOfferCard(ServerPlayer player, Entity villager, PlayerQuestData data,
                                                       QuestDefinition def) {
         if (!def.isTemplate()) {
-            return Optional.of(buildCard(player, villager, def, null, null, QuestDefinition.OFFER));
+            return Optional.of(buildCard(player, villager, def,
+                    PlaceholderResolver.forPlayerName(McaCompat.getPlayerName(player)), null, QuestDefinition.OFFER));
         }
         TemplateSpec spec = def.template().get();
         QuestContext context = new QuestContext(player, villager, data, def.id());
@@ -208,8 +209,8 @@ public final class QuestManager {
             return Optional.empty();
         }
         QuestDefinition resolved = def.withConcrete(concrete.get());
-        return Optional.of(buildCard(player, villager, resolved, new PlaceholderResolver(values.get()), null,
-                QuestDefinition.OFFER));
+        return Optional.of(buildCard(player, villager, resolved,
+                new PlaceholderResolver(values.get(), McaCompat.getPlayerName(player)), null, QuestDefinition.OFFER));
     }
 
     private static QuestCard buildCard(ServerPlayer player, @Nullable Entity villager, QuestDefinition def,
@@ -218,7 +219,7 @@ public final class QuestManager {
         // Situation offers reuse the chain-label slot for a "village needs help" tag so the player can tell
         // an emergent, time-limited request from a standing offer (0.8.0).
         boolean situation = def.category().map(SituationOffer.CATEGORY::equals).orElse(false);
-        Component label = situation ? Component.translatable("mcaquests.situation.card_tag") : chainLabel(def);
+        Component label = situation ? Component.translatable("mcaquests.situation.card_tag") : chainLabel(def, resolver);
         // An add-on (e.g. MCA: Conversations) may voice this line in the villager's personality; falls back to
         // the quest's own static dialogue text when none is registered (QuestDialogueHooks).
         Component dialogue = QuestDialogueHooks.resolve(player, villager, def, dialogueState,
@@ -228,8 +229,8 @@ public final class QuestManager {
     }
 
     /** The relationship-arc context line for the UI (arc / "Part 2 of 4" / chapter), or empty for standalone quests. */
-    private static Component chainLabel(QuestDefinition def) {
-        return def.chain().flatMap(ChainSpec::label).orElse(Component.empty());
+    private static Component chainLabel(QuestDefinition def, @Nullable PlaceholderResolver resolver) {
+        return def.chain().flatMap(chain -> chain.label(resolver)).orElse(Component.empty());
     }
 
     private static boolean isChainContinuation(QuestDefinition def) {
@@ -261,7 +262,8 @@ public final class QuestManager {
         // shown today) so objectives/rewards never reroll for this accepted copy.
         ResolvedTemplate frozen = null;
         QuestDefinition accepted = def;
-        PlaceholderResolver resolver = null;
+        String mcaName = McaCompat.getPlayerName(player);
+        PlaceholderResolver resolver = PlaceholderResolver.forPlayerName(mcaName);
         if (def.isTemplate()) {
             TemplateSpec spec = def.template().get();
             QuestContext context = new QuestContext(player, villager, data, def.id());
@@ -272,7 +274,7 @@ public final class QuestManager {
             }
             frozen = values.get();
             accepted = def.withConcrete(concrete.get());
-            resolver = new PlaceholderResolver(frozen);
+            resolver = new PlaceholderResolver(frozen, mcaName);
         }
 
         // A situation offer is anchored to its open instance: start time = the instance's open time so
@@ -382,7 +384,8 @@ public final class QuestManager {
         MinecraftForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             player.sendSystemMessage(QuestDialogueHooks.resolve(player, grantVillager, def, QuestDefinition.COMPLETE,
-                    Component.translatable("mcaquests.message.quest_completed", def.title(active.textResolver()))));
+                    Component.translatable("mcaquests.message.quest_completed",
+                            def.title(active.textResolver(McaCompat.getPlayerName(player))))));
         }
         // A situation offer resolves its shared situation on the first participant's completion (0.8.0).
         active.situationInstance().ifPresent(instanceId -> {
@@ -474,9 +477,10 @@ public final class QuestManager {
 
         MinecraftForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+            PlaceholderResolver failResolver = active.textResolver(McaCompat.getPlayerName(player));
             Component failLine = def.dialogueOr(QuestDefinition.FAILED,
-                    Component.translatable("mcaquests.message.quest_failed", def.title(active.textResolver())),
-                    active.textResolver());
+                    Component.translatable("mcaquests.message.quest_failed", def.title(failResolver)),
+                    failResolver);
             player.sendSystemMessage(QuestDialogueHooks.resolve(player, resolvedGiver, def, QuestDefinition.FAILED,
                     failLine));
         }
@@ -826,6 +830,7 @@ public final class QuestManager {
      * {@link QuestReadyEvent}); resets the flag if a possession objective later drops below target.
      */
     public static void checkReadyTransitions(ServerPlayer player) {
+        String mcaName = McaCompat.getPlayerName(player);
         QuestCapabilities.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
@@ -835,7 +840,7 @@ public final class QuestManager {
                         active.setReadyNotified(true);
                         MinecraftForge.EVENT_BUS.post(new QuestReadyEvent(player, def));
                         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                                new QuestReadyToastS2CPacket(def.title(active.textResolver())));
+                                new QuestReadyToastS2CPacket(def.title(active.textResolver(mcaName))));
                     } else if (!complete && active.readyNotified()) {
                         active.setReadyNotified(false);
                     }
@@ -846,6 +851,7 @@ public final class QuestManager {
 
     /** Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker. */
     public static void syncLog(ServerPlayer player) {
+        String mcaName = McaCompat.getPlayerName(player);
         QuestCapabilities.get(player).ifPresent(data -> {
             List<QuestLogEntry> entries = new ArrayList<>();
             for (ActiveQuest active : data.active()) {
@@ -854,8 +860,9 @@ public final class QuestManager {
                     java.util.OptionalLong deadline = def.failure()
                             .map(failure -> failure.deadlineGameTime(active.startGameTime()))
                             .orElse(java.util.OptionalLong.empty());
-                    entries.add(new QuestLogEntry(active.questId(), def.title(active.textResolver()), active.villagerName(),
-                            chainLabel(def), objectiveLines(player, def, active), isComplete(player, def, active),
+                    PlaceholderResolver resolver = active.textResolver(mcaName);
+                    entries.add(new QuestLogEntry(active.questId(), def.title(resolver), active.villagerName(),
+                            chainLabel(def, resolver), objectiveLines(player, def, active), isComplete(player, def, active),
                             deadline));
                 });
             }

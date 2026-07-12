@@ -4,6 +4,28 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-07-11
+
+Address the player by their **MCA character name** (the name set in MCA's character-creation screen)
+instead of their Minecraft username wherever the mod names them. Existing saves and datapacks are
+unaffected — the new `{player}` token is optional, and every name lookup falls back to the Minecraft
+username when MCA is absent or no character name was set.
+
+### Added
+
+- **`{player}` dialogue token** — quest authors can now write the player's MCA character name into any
+  quest's `dialogue`, `title`, and chain arc/chapter text (e.g. `"Well met, {player}!"`), not just
+  template quests. It is a reserved token that cannot be shadowed by a template variable named `player`,
+  falls back to the Minecraft username when MCA is absent or no name is set, and is dialogue-only (never
+  substituted into objective/reward JSON). Resolved server-side per recipient, so situation broadcasts
+  name each nearby player correctly. Documented in `DATAPACK.md`.
+
+### Changed
+
+- **Admin command feedback uses the MCA name** — the chat messages from `/mcaquests title grant|list|clear`
+  now show the target player's MCA character name instead of their Minecraft username (with the username
+  as a safe fallback). Debug logs continue to use the username for account-level troubleshooting.
+
 ## [0.9.0] - 2026-07-07
 
 An **MCA: Conversations** add-on bridge, lead-style escorts, and a substantial quest-pack expansion.

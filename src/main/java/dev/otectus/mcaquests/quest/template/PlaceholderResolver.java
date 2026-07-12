@@ -7,6 +7,7 @@ import com.google.gson.JsonPrimitive;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -20,18 +21,43 @@ import java.util.Map;
  *       codecs parse it. Unknown whole-token strings are left in place so the subsequent parse fails
  *       loudly (validation reports them).</li>
  *   <li>{@link #substituteLiteral(String)} — renders a dialogue/title string, replacing
- *       {@code {token}} (value) and {@code {token_name}} (registry display name) with components and
- *       honoring {@code {{}}}/{@code }}} escapes.</li>
+ *       {@code {token}} (value), {@code {token_name}} (registry display name) and the reserved
+ *       {@code {player}} (the player's MCA character name) with components and honoring
+ *       {@code {{}}}/{@code }}} escapes.</li>
  * </ul>
  */
 public final class PlaceholderResolver {
 
     private static final String NAME_SUFFIX = "_name";
 
+    /**
+     * Reserved dialogue token for the player's MCA character name. Checked before the template
+     * {@link #values} map (so a template variable cannot shadow it) and deliberately absent from the
+     * whole-token JSON path ({@link #substitute(JsonElement)}) so it is dialogue-only.
+     */
+    private static final String RESERVED_PLAYER = "player";
+
     private final Map<String, ResolvedValue> values;
 
+    /** The player's MCA name for the {@code {player}} token, or {@code null} when no player is in scope. */
+    @Nullable
+    private final String playerName;
+
     public PlaceholderResolver(ResolvedTemplate resolved) {
+        this(resolved, null);
+    }
+
+    public PlaceholderResolver(ResolvedTemplate resolved, @Nullable String playerName) {
         this.values = resolved.values();
+        this.playerName = playerName;
+    }
+
+    /**
+     * A resolver for a non-template quest that still resolves the reserved {@code {player}} token. The
+     * empty value map means any other {@code {token}} renders verbatim, matching hand-authored behavior.
+     */
+    public static PlaceholderResolver forPlayerName(@Nullable String playerName) {
+        return new PlaceholderResolver(new ResolvedTemplate(Map.of()), playerName);
     }
 
     /** Deep-substitutes whole-token {@code "{var}"} string values into their JSON form. */
@@ -103,6 +129,11 @@ public final class PlaceholderResolver {
     }
 
     private Component displayToken(String token) {
+        if (RESERVED_PLAYER.equals(token)) {
+            // Reserved and unshadowable: resolved before the values map. Renders literally when no player
+            // is in scope (validation previews) rather than throwing.
+            return Component.literal(playerName != null ? playerName : "{" + RESERVED_PLAYER + "}");
+        }
         ResolvedValue direct = values.get(token);
         if (direct != null) {
             return direct.display();

@@ -2,11 +2,13 @@ package dev.otectus.mcaquests.quest;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ExtraCodecs;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,13 +43,15 @@ public record ChainSpec(String chain,
 
     /**
      * A short context line for the UI, e.g. {@code "The Family Farm — Part 2 of 4: Harvest Day"}.
-     * Empty when there is nothing useful to show (no arc name, single stage, no chapter).
+     * Empty when there is nothing useful to show (no arc name, single stage, no chapter). The
+     * {@code resolver} (when non-null) renders inline placeholders such as {@code {player}} in the arc
+     * and chapter text.
      */
-    public Optional<Component> label() {
+    public Optional<Component> label(@Nullable PlaceholderResolver resolver) {
         MutableComponent line = Component.empty();
         boolean any = false;
         if (relationshipArc.isPresent()) {
-            line.append(relationshipArc.get().resolve());
+            line.append(resolveText(relationshipArc.get(), resolver));
             any = true;
         }
         Optional<Component> part = partLabel();
@@ -62,10 +66,14 @@ public record ChainSpec(String chain,
             if (any) {
                 line.append(Component.literal(": "));
             }
-            line.append(chapter.get().resolve());
+            line.append(resolveText(chapter.get(), resolver));
             any = true;
         }
         return any ? Optional.of(line) : Optional.empty();
+    }
+
+    private static Component resolveText(QuestText text, @Nullable PlaceholderResolver resolver) {
+        return resolver != null ? text.resolve(resolver) : text.resolve();
     }
 
     private Optional<Component> partLabel() {
