@@ -21,11 +21,13 @@ import java.util.function.Function;
  * definition on the fly. Rather than calling {@code QuestDefinitions.resolve} statically (which would
  * make this class depend on the live, datapack-populated registry and be hard to unit test),
  * {@link #matches} takes the resolver as a {@code Function<ResourceLocation, Optional<QuestDefinition>>}
- * parameter. Production callers pass {@code QuestDefinitions::resolve}; tests pass a small stub map,
- * including one keyed by a synthetic situation id mapping to an offer definition with a different real
- * id — proving id-pattern matching runs against the <em>resolved definition's id</em>, not the raw
- * history id (so a datapack author can write {@code quest_id: mcaquests:some_offer} and have it match
- * situation-offer completions too, per §15.1).
+ * parameter. Production callers pass {@code QuestDefinitions::resolve}; tests pass small stubs. What
+ * the resolution buys is the profession/chain/category checks, which read the <em>resolved offer
+ * definition</em> (its giver professions, chain block, category) — that is how situation-offer
+ * completions get filtered by their offer's attributes (§15.1). The id-pattern comparison itself is
+ * indifferent to raw-vs-resolved: {@code SituationDefinition.toOfferQuestDefinition()} builds the
+ * offer definition with {@code id = syntheticId()}, so the resolved definition's id always equals the
+ * completed history id by construction (for ordinary quests they trivially coincide too).
  *
  * <p><b>Unresolvable entries:</b> per §15.1, "entries whose definition no longer resolves match only
  * the 'any' pattern" — interpreted here as: an entry with no resolvable definition can still satisfy a

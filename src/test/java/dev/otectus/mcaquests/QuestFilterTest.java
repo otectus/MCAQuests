@@ -8,12 +8,10 @@ import dev.otectus.mcaquests.quest.OfferShaping;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.RepeatRule;
 import dev.otectus.mcaquests.quest.TurnInSpec;
-import net.minecraft.SharedConstants;
+import dev.otectus.mcaquests.support.TestBootstrap;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,21 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class QuestFilterTest {
 
     static {
-        // Constructing a QuestDefinition triggers its <clinit>, which builds its DFU codec; that
-        // reaches ObjectiveTypes -> ItemDeliveryObjective -> BuiltInRegistries.ITEM.byNameCodec(),
-        // and vanilla's MappedRegistry asserts Bootstrap.bootStrap() has run before allowing that.
-        // We don't launch a game (or even want to — the real Bootstrap.bootStrap() call in this Forge
-        // dev environment reaches net.minecraftforge.network.NetworkHooks.init(), which needs an
-        // actual running Forge instance and NPEs here). All that's really needed for building codecs
-        // is the "bootstrapped" flag itself, so flip it directly instead of running the heavy method.
-        SharedConstants.tryDetectVersion(); // needed by DataFixers.<clinit>, reached via EntityType/Items
-        try {
-            Field isBootstrapped = Bootstrap.class.getDeclaredField("isBootstrapped");
-            isBootstrapped.setAccessible(true);
-            isBootstrapped.set(null, true);
-        } catch (ReflectiveOperationException e) {
-            throw new ExceptionInInitializerError(e);
-        }
+        // Constructing real QuestDefinitions requires the vanilla "bootstrapped" state; see the
+        // helper's Javadoc for why the real Bootstrap.bootStrap() cannot be used here.
+        TestBootstrap.ensureBootstrapped();
     }
 
     private static final ResourceLocation FARMER_WHEAT = new ResourceLocation("mcaquests", "farmer_wheat_request");
@@ -106,6 +92,19 @@ class QuestFilterTest {
         QuestDefinition def = definition(OTHER_NS_QUEST, List.of(), Optional.empty(), Optional.empty());
         QuestFilter filter = new QuestFilter("", "", "", "");
         assertTrue(filter.matches(OTHER_NS_QUEST, resolverOf(def), ProfessionMatchingMode.STRICT));
+    }
+
+    @Test
+    void malformedPatternsFailClosedWithoutThrowing() {
+        // Author typos in the FTBQ editor must never match anything (and never throw): a bare "*"
+        // is compared as an exact id (ids always contain ':'), ":*" yields the empty namespace, and
+        // "ns:foo:*" yields "ns:foo" as the namespace — none can equal a real definition's namespace.
+        QuestDefinition def = definition(FARMER_WHEAT, List.of(), Optional.empty(), Optional.empty());
+        for (String malformed : List.of("*", ":*", "mcaquests:foo:*")) {
+            assertFalse(new QuestFilter(malformed, "", "", "")
+                            .matches(FARMER_WHEAT, resolverOf(def), ProfessionMatchingMode.STRICT),
+                    "pattern '" + malformed + "' should fail closed");
+        }
     }
 
     // --- profession (via ProfessionMatcher modes) ---
@@ -187,17 +186,29 @@ class QuestFilterTest {
     // --- synthetic-situation resolution ---
 
     @Test
-    void syntheticSituationIdResolvesToOfferDefinitionForMatching() {
-        ResourceLocation syntheticId = new ResourceLocation("mcaquests", "situation_offer_1234");
-        ResourceLocation offerDefinitionId = new ResourceLocation("mcaquests", "barn_raising_offer");
-        QuestDefinition offerDefinition = definition(offerDefinitionId,
-                List.of(new ResourceLocation("minecraft", "farmer")), Optional.empty(), Optional.empty());
+    void syntheticSituationIdIsFilteredByItsResolvedOfferDefinitionAttributes() {
+        // Mirrors production: SituationDefinition.toOfferQuestDefinition() builds the offer
+        // definition with id = syntheticId(), so the resolved id equals the completed history id by
+        // construction. The interesting behavior is that profession/chain/category are read from the
+        // RESOLVED OFFER DEFINITION — a situation completion is filterable by its offer's attributes
+        // even though the raw history entry carries none of them.
+        ResourceLocation syntheticId = new ResourceLocation("mcaquests", "situation/mcaquests/barn_raising");
+        QuestDefinition offerDefinition = definition(syntheticId,
+                List.of(new ResourceLocation("minecraft", "farmer")), Optional.of("village_life"),
+                Optional.of(chain("barn_arc", 1, Optional.empty())));
         Function<ResourceLocation, Optional<QuestDefinition>> stubResolver =
                 id -> id.equals(syntheticId) ? Optional.of(offerDefinition) : Optional.empty();
 
-        QuestFilter filter = new QuestFilter("mcaquests:barn_raising_offer", "", "", "");
-        assertTrue(filter.matches(syntheticId, stubResolver, ProfessionMatchingMode.STRICT),
-                "the id pattern should match the resolved OFFER definition's id, not the synthetic history id");
+        QuestFilter byAttributes = new QuestFilter("", "minecraft:farmer", "barn_arc", "village_life");
+        assertTrue(byAttributes.matches(syntheticId, stubResolver, ProfessionMatchingMode.STRICT),
+                "profession/chain/category must come from the resolved offer definition");
+
+        QuestFilter wrongProfession = new QuestFilter("", "minecraft:cleric", "", "");
+        assertFalse(wrongProfession.matches(syntheticId, stubResolver, ProfessionMatchingMode.STRICT));
+
+        QuestFilter byExactId = new QuestFilter(syntheticId.toString(), "", "", "");
+        assertTrue(byExactId.matches(syntheticId, stubResolver, ProfessionMatchingMode.STRICT),
+                "the synthetic id itself is targetable since raw and resolved ids coincide");
     }
 
     // --- unresolvable definitions ---
