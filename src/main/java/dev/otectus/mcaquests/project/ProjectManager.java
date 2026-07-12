@@ -27,6 +27,7 @@ import dev.otectus.mcaquests.project.state.SharedObjectiveProgress;
 import dev.otectus.mcaquests.api.event.ProjectEvent;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.PlayerQuestData;
+import dev.otectus.mcaquests.state.ProgressionStats;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -360,7 +361,7 @@ public final class ProjectManager {
             } else {
                 state.setStatus(ProjectStatus.COMPLETED);
                 addReputation(server, data, state, def.reputation().onProjectComplete());
-                MinecraftForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
+                completeProject(server, def, state);
                 def.followUp().ifPresent(target -> seedFollowUp(server, level, data, state, target));
                 return;
             }
@@ -529,6 +530,9 @@ public final class ProjectManager {
             return;
         }
         state.addParticipant(player.getUUID());
+        // ProgressionStats (spec section 11.2): +amount for the contributing player, keyed by project id.
+        QuestCapabilities.get(player).ifPresent(pdata ->
+                ProgressionStats.increment(pdata.stats().projectContributions(), state.projectId(), amount));
         MinecraftForge.EVENT_BUS.post(new ProjectEvent.Contributed(def, state, player, objectiveIndex, amount));
     }
 
@@ -581,9 +585,26 @@ public final class ProjectManager {
             case TURN_IN_TO_VILLAGE -> {
                 addReputation(server, data, state, def.reputation().onProjectComplete());
                 state.setStatus(ProjectStatus.COMPLETED);
-                MinecraftForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
+                completeProject(server, def, state);
             }
         }
+    }
+
+    /**
+     * The single funnel through which every project completion — the normal phase-advance path in
+     * {@link #checkPhaseAdvance} and the sponsor-death turn-in path in {@link #applySponsorLoss} — records
+     * ProgressionStats (spec section 11.2: +1 per online participant, keyed by project definition id) and
+     * posts {@link ProjectEvent.Completed}, so no completion path can double-post or skip the counter.
+     */
+    private static void completeProject(MinecraftServer server, ProjectDefinition def, ProjectState state) {
+        for (UUID uuid : state.participants()) {
+            ServerPlayer participant = server.getPlayerList().getPlayer(uuid);
+            if (participant != null) {
+                QuestCapabilities.get(participant).ifPresent(pdata ->
+                        ProgressionStats.increment(pdata.stats().projectCompletions(), state.projectId(), 1));
+            }
+        }
+        MinecraftForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
     }
 
     private static boolean tryTransfer(MinecraftServer server, ProjectState state, ProjectDefinition def) {

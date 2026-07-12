@@ -19,6 +19,7 @@ public final class PlayerQuestData {
     private final List<ActiveQuest> active = new ArrayList<>();
     private final QuestHistory history = new QuestHistory();
     private final PlayerTitles titles = new PlayerTitles();
+    private final ProgressionStats stats = new ProgressionStats();
 
     public List<ActiveQuest> active() {
         return active;
@@ -30,6 +31,10 @@ public final class PlayerQuestData {
 
     public PlayerTitles titles() {
         return titles;
+    }
+
+    public ProgressionStats stats() {
+        return stats;
     }
 
     public int activeCount() {
@@ -63,6 +68,7 @@ public final class PlayerQuestData {
         active.addAll(other.active);
         history.copyFrom(other.history);
         titles.copyFrom(other.titles);
+        stats.copyFrom(other.stats);
     }
 
     public CompoundTag save() {
@@ -74,6 +80,7 @@ public final class PlayerQuestData {
         tag.put("active", list);
         tag.put("history", history.save());
         tag.put("titles", titles.save());
+        tag.put("stats", stats.save());
         return tag;
     }
 
@@ -85,5 +92,6 @@ public final class PlayerQuestData {
         }
         history.load(tag.getCompound("history"));
         titles.load(tag.getCompound("titles")); // absent on pre-0.7.0 saves -> empty
+        stats.load(tag.getCompound("stats")); // absent on pre-1.0.0 saves -> empty
     }
 }

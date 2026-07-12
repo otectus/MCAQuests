@@ -19,6 +19,7 @@ import dev.otectus.mcaquests.quest.situation.trigger.LowFoodTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.RaidTrigger;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.state.ActiveQuest;
+import dev.otectus.mcaquests.state.ProgressionStats;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -174,8 +175,24 @@ public final class SituationManager {
             McaQuests.LOGGER.info("[MCA: Quests] Situation '{}' in village {} resolved: SUCCESS.",
                     instance.defId(), instance.villageId());
             data.removeInstance(instanceId);
+            recordSituationSuccess(server, instance);
             postResolved(instance, SituationResolvedEvent.Resolution.SUCCESS, player);
         });
+    }
+
+    /**
+     * ProgressionStats (spec section 11.2): +1 per online participant, keyed by the situation's SOURCE
+     * definition id. Success only — failure/cleared resolutions do not count. Inline at this funnel
+     * (not an event listener) so it lands the same tick as the resolution itself.
+     */
+    private static void recordSituationSuccess(MinecraftServer server, SituationInstance instance) {
+        for (UUID uuid : instance.participants()) {
+            ServerPlayer participant = server.getPlayerList().getPlayer(uuid);
+            if (participant != null) {
+                QuestCapabilities.get(participant).ifPresent(pdata ->
+                        ProgressionStats.increment(pdata.stats().situationSuccesses(), instance.defId(), 1));
+            }
+        }
     }
 
     /**
