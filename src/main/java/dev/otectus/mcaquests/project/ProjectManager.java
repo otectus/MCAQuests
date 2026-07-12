@@ -143,7 +143,7 @@ public final class ProjectManager {
             int cap = objective.perPlayerCap() > 0 ? objective.perPlayerCap() : defaultCap;
             int banked = objective.contribute(player, state.progress(i), cap);
             if (banked > 0) {
-                state.addParticipant(player.getUUID());
+                bankContribution(def, state, player, i, banked);
                 contributed = true;
             }
         }
@@ -435,7 +435,7 @@ public final class ProjectManager {
         creditEvent(player, killed.blockPosition(), (state, def, phase, i) -> {
             ProjectObjective objective = def.phase(phase).objectives().get(i);
             if (objective instanceof ProjectKillObjective kill && kill.matches(killed)) {
-                credit(state, i, player.getUUID(), 1);
+                credit(def, state, i, player, 1);
                 return true;
             }
             return false;
@@ -446,7 +446,7 @@ public final class ProjectManager {
         creditEvent(player, pos, (state, def, phase, i) -> {
             ProjectObjective objective = def.phase(phase).objectives().get(i);
             if (objective instanceof ProjectPlaceBlockObjective place && place.matches(placed)) {
-                credit(state, i, player.getUUID(), 1);
+                credit(def, state, i, player, 1);
                 return true;
             }
             return false;
@@ -460,7 +460,7 @@ public final class ProjectManager {
             ProjectObjective objective = def.phase(phase).objectives().get(i);
             if (objective instanceof ProjectTalkObjective talk && talk.matches(profession)
                     && state.progress(i).markTalkedTo(villagerUuid)) {
-                credit(state, i, player.getUUID(), 1);
+                credit(def, state, i, player, 1);
                 return true;
             }
             return false;
@@ -507,11 +507,29 @@ public final class ProjectManager {
         }
     }
 
-    private static void credit(ProjectState state, int objectiveIndex, UUID player, int amount) {
+    private static void credit(ProjectDefinition def, ProjectState state, int objectiveIndex, ServerPlayer player,
+                               int amount) {
         SharedObjectiveProgress progress = state.progress(objectiveIndex);
         progress.add(amount);
-        progress.addContribution(player, amount);
-        state.addParticipant(player);
+        progress.addContribution(player.getUUID(), amount);
+        bankContribution(def, state, player, objectiveIndex, amount);
+    }
+
+    /**
+     * The single funnel through which every banked contribution — the packet-driven donate objectives
+     * ({@code contributeFromPacket}) and the event-driven kill/place/talk objectives ({@code credit}) —
+     * records the participant and posts {@link ProjectEvent.Contributed} (Risk R1): both paths already
+     * mutate {@code SharedObjectiveProgress} themselves (a donate objective consumes items atomically in
+     * {@code ProjectObjective.contribute}; event-driven credit adds directly), so this method owns only
+     * the bookkeeping and event post common to both, called exactly once per bank.
+     */
+    private static void bankContribution(ProjectDefinition def, ProjectState state, ServerPlayer player,
+                                         int objectiveIndex, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        state.addParticipant(player.getUUID());
+        MinecraftForge.EVENT_BUS.post(new ProjectEvent.Contributed(def, state, player, objectiveIndex, amount));
     }
 
     private static boolean inScopeAt(ServerLevel level, ProjectState state, BlockPos where) {

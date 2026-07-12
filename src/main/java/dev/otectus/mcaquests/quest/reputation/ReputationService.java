@@ -1,8 +1,10 @@
 package dev.otectus.mcaquests.quest.reputation;
 
+import dev.otectus.mcaquests.api.event.ReputationTierReachedEvent;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.MinecraftForge;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -44,6 +46,8 @@ public final class ReputationService {
         if (reached.isPresent()) {
             data.setTierHighWater(identity, reached.get().id());
             onTierUp(server, player, villageId.getAsInt(), reached.get());
+            MinecraftForge.EVENT_BUS.post(new ReputationTierReachedEvent(player, villageId.getAsInt(),
+                    ReputationTiers.DEFAULT_ID, reached.get().id(), ladder.indexOf(reached.get().id())));
         }
         return newRep;
     }

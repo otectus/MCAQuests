@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.title;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.api.event.TitleGrantedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -8,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraftforge.common.MinecraftForge;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -25,9 +27,32 @@ public final class TitleService {
     }
 
     public static boolean grant(ServerPlayer player, TitleScope scope, ResourceLocation title, @Nullable Entity giver) {
-        return scope == TitleScope.GLOBAL
-                ? grantGlobal(player, title)
-                : resolveVillage(player, giver).stream().anyMatch(id -> grantVillage(player, id, title));
+        if (scope == TitleScope.GLOBAL) {
+            boolean granted = grantGlobal(player, title);
+            if (granted) {
+                postGranted(player, title, TitleScope.GLOBAL, OptionalInt.empty());
+            }
+            return granted;
+        }
+        OptionalInt villageId = resolveVillage(player, giver);
+        if (villageId.isEmpty()) {
+            return false;
+        }
+        boolean granted = grantVillage(player, villageId.getAsInt(), title);
+        if (granted) {
+            postGranted(player, title, scope, villageId);
+        }
+        return granted;
+    }
+
+    /**
+     * The single funnel through which {@link TitleGrantedEvent} is posted (Risk R1): only {@link #grant}
+     * calls this, and only when {@code PlayerTitles} reports the title as newly added, so a re-grant (or
+     * the admin {@code /mcaquests title} command, which calls {@link #grantGlobal}/{@link #grantVillage}
+     * directly) never double-posts.
+     */
+    private static void postGranted(ServerPlayer player, ResourceLocation title, TitleScope scope, OptionalInt villageId) {
+        MinecraftForge.EVENT_BUS.post(new TitleGrantedEvent(player, title, scope, villageId));
     }
 
     public static boolean grantGlobal(ServerPlayer player, ResourceLocation title) {

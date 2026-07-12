@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.api.event;
 
 import dev.otectus.mcaquests.project.ProjectDefinition;
 import dev.otectus.mcaquests.project.state.ProjectState;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.eventbus.api.Event;
 
 /**
@@ -51,6 +52,33 @@ public abstract class ProjectEvent extends Event {
     public static final class Failed extends ProjectEvent {
         public Failed(ProjectDefinition definition, ProjectState state) {
             super(definition, state);
+        }
+    }
+
+    /** Fired by {@code ProjectManager} after a contribution is banked (per contribute call, server-side). */
+    public static final class Contributed extends ProjectEvent {
+        private final ServerPlayer player;
+        private final int objectiveIndex;
+        private final int amount;
+
+        public Contributed(ProjectDefinition definition, ProjectState state, ServerPlayer player,
+                           int objectiveIndex, int amount) {
+            super(definition, state);
+            this.player = player;
+            this.objectiveIndex = objectiveIndex;
+            this.amount = amount;
+        }
+
+        public ServerPlayer player() {
+            return player;
+        }
+
+        public int objectiveIndex() {
+            return objectiveIndex;
+        }
+
+        public int amount() {
+            return amount;
         }
     }
 }

@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.situation;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
+import dev.otectus.mcaquests.api.event.SituationResolvedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.SituationToastS2CPacket;
@@ -25,6 +26,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -171,6 +174,7 @@ public final class SituationManager {
             McaQuests.LOGGER.info("[MCA: Quests] Situation '{}' in village {} resolved: SUCCESS.",
                     instance.defId(), instance.villageId());
             data.removeInstance(instanceId);
+            postResolved(instance, SituationResolvedEvent.Resolution.SUCCESS, player);
         });
     }
 
@@ -188,6 +192,7 @@ public final class SituationManager {
             McaQuests.LOGGER.info("[MCA: Quests] Situation '{}' in village {} resolved: FAILURE.",
                     instance.defId(), instance.villageId());
             data.removeInstance(instanceId);
+            postResolved(instance, SituationResolvedEvent.Resolution.FAILURE, null);
         });
     }
 
@@ -204,7 +209,19 @@ public final class SituationManager {
             McaQuests.LOGGER.info("[MCA: Quests] Situation '{}' in village {} resolved: CLEARED.",
                     instance.defId(), instance.villageId());
             data.removeInstance(instanceId);
+            postResolved(instance, SituationResolvedEvent.Resolution.CLEARED, null);
         });
+    }
+
+    /**
+     * The single funnel through which every resolution posts {@link SituationResolvedEvent} (Risk R1):
+     * {@code resolveSuccess}/{@code resolveFailure}/{@code resolveCleared} each call this exactly once,
+     * after their outcome has applied and the instance has been removed, so no path double-posts.
+     */
+    private static void postResolved(SituationInstance instance, SituationResolvedEvent.Resolution resolution,
+                                     @Nullable ServerPlayer resolvingPlayer) {
+        MinecraftForge.EVENT_BUS.post(new SituationResolvedEvent(instance.defId(), instance.villageId(), resolution,
+                Set.copyOf(instance.participants()), resolvingPlayer));
     }
 
     /** Periodic maintenance: expire situations past their deadline and clear ones whose condition lifted. */
