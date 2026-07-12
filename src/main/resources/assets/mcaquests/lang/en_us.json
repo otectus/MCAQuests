@@ -298,5 +298,26 @@
   "ftbquests.reward.mcaquests.grant_title.title_id_dropdown": "Title ID (known)",
   "ftbquests.reward.mcaquests.grant_title.scope": "Scope",
   "ftbquests.reward.mcaquests.grant_title.scope.global": "Global",
-  "ftbquests.reward.mcaquests.grant_title.scope.village": "Village"
+  "ftbquests.reward.mcaquests.grant_title.scope.village": "Village",
+
+  "mcaquests.command.ftbq.status.not_installed": "FTB Quests is not installed; the ftbq integration is inactive.",
+  "mcaquests.command.ftbq.status.detected": "FTB Quests detected: v%s.",
+  "mcaquests.command.ftbq.status.bridge_active": "Bridge: active.",
+  "mcaquests.command.ftbq.status.bridge_inactive": "Bridge: inactive (integration failed to start; see the server log).",
+  "mcaquests.command.ftbq.status.master_switch_on": "Integration master switch (enableFtbQuestsIntegration): on.",
+  "mcaquests.command.ftbq.status.master_switch_off": "Integration master switch (enableFtbQuestsIntegration): off.",
+  "mcaquests.command.ftbq.status.book_objects": "Book objects: %s mcaquests task(s), %s mcaquests reward(s).",
+  "mcaquests.command.ftbq.status.ids_sync_on": "Editor known-ids sync (syncFtbqEditorIds): on.",
+  "mcaquests.command.ftbq.status.ids_sync_off": "Editor known-ids sync (syncFtbqEditorIds): off.",
+
+  "mcaquests.command.ftbq.validate.inactive": "FTB Quests integration is not active (absent or disabled); nothing to validate.",
+  "mcaquests.command.ftbq.validate.all_valid": "No ftbq cross-references found any problems.",
+  "mcaquests.command.ftbq.validate.book_errors_header": "%s ftbq book error(s):",
+  "mcaquests.command.ftbq.validate.book_finding": " - Chapter '%s', quest [%s], task/reward '%s', field '%s': references unknown id '%s'.",
+  "mcaquests.command.ftbq.validate.datapack_warnings_header": "%s ftbq datapack warning(s):",
+  "mcaquests.command.ftbq.validate.datapack_finding": " - Quest '%s', field '%s': FTB %s id '%s' does not resolve in the current book.",
+  "mcaquests.command.ftbq.validate.summary": "%s error(s), %s warning(s).",
+
+  "mcaquests.command.ftbq.recheck.inactive": "FTB Quests integration is not active (absent or disabled); nothing to recheck.",
+  "mcaquests.command.ftbq.recheck.done": "Rechecked FTB Quests progress for %s."
 }

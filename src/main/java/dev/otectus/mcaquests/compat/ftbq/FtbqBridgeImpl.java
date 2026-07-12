@@ -11,7 +11,18 @@ import dev.ftb.mods.ftbquests.quest.task.Task;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.FtbqBridge;
+import dev.otectus.mcaquests.data.QuestRegistry;
+import dev.otectus.mcaquests.project.data.ProjectRegistry;
+import dev.otectus.mcaquests.quest.reputation.ReputationTierSet;
+import dev.otectus.mcaquests.quest.reputation.ReputationTiers;
+import dev.otectus.mcaquests.quest.situation.SituationRegistry;
+import dev.otectus.mcaquests.quest.title.Titles;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * The real {@link FtbqBridge} implementation, backed by FTB Quests' server book
@@ -163,6 +174,148 @@ public final class FtbqBridgeImpl implements FtbqBridge {
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("[MCA: Quests] FTBQ bridge {} failed", "integrationObjectCounts", t);
             return new int[]{0, 0};
+        }
+    }
+
+    @Override
+    public boolean isReal() {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc} The Book → MCA half of {@code /mcaquests ftbq validate} (spec §21): walks every
+     * {@code mcaquests:}-namespaced task and reward currently in the server book and cross-checks each
+     * one's referenced MCA registry id(s) against the live registries (the same lookups
+     * {@code FtbqEditorIdsSync} performs for the M5.1 known-ids sync, run in parallel here rather than
+     * shared — that class additionally wants display names per id, which would make a shared helper
+     * more awkward than two small independent scans). An empty/wildcard field (e.g. an unset
+     * {@code quest_id}, or the {@code "ns:*"} namespace wildcard on {@code McaQuestCompletedTask}) is a
+     * deliberate "any" and is never a finding.
+     */
+    @Override
+    public List<FtbqBridge.BookReference> validateBookReferences() {
+        try {
+            if (ServerQuestFile.INSTANCE == null) {
+                return List.of();
+            }
+            List<FtbqBridge.BookReference> findings = new ArrayList<>();
+            for (Task task : ServerQuestFile.INSTANCE.<Task>collect(o -> o instanceof Task t
+                    && McaQuests.MOD_ID.equals(t.getType().getTypeId().getNamespace()))) {
+                checkTask(task, findings);
+            }
+            for (Reward reward : ServerQuestFile.INSTANCE.<Reward>collect(o -> o instanceof Reward r
+                    && McaQuests.MOD_ID.equals(r.getType().getTypeId().getNamespace()))) {
+                checkReward(reward, findings);
+            }
+            return findings;
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("[MCA: Quests] FTBQ bridge {} failed", "validateBookReferences", t);
+            return List.of();
+        }
+    }
+
+    private static void checkTask(Task task, List<FtbqBridge.BookReference> findings) {
+        String chapter = task.getQuestChapter().getTitle().getString();
+        String questCode = task.getQuest().getCodeString();
+        String taskName = task.getType().getTypeId() + " [" + task.getCodeString() + "]";
+
+        if (task instanceof McaQuestCompletedTask t) {
+            checkQuestId(chapter, questCode, taskName, "quest_id", t.questId(), findings);
+            checkChainId(chapter, questCode, taskName, "chain_id", t.chainId(), findings);
+        } else if (task instanceof McaChainCompletedTask t) {
+            checkChainId(chapter, questCode, taskName, "chain_id", t.chainId(), findings);
+        } else if (task instanceof McaReputationTierTask t) {
+            checkLadderTier(chapter, questCode, taskName, t.ladder(), t.tier(), findings);
+        } else if (task instanceof McaTitleTask t) {
+            checkTitleId(chapter, questCode, taskName, "title_id", t.titleId(), findings);
+        } else if (task instanceof McaProjectCompletedTask t) {
+            checkProjectId(chapter, questCode, taskName, "project_id", t.projectId(), findings);
+        } else if (task instanceof McaProjectContributionTask t) {
+            checkProjectId(chapter, questCode, taskName, "project_id", t.projectId(), findings);
+        } else if (task instanceof McaSituationResolvedTask t) {
+            checkSituationId(chapter, questCode, taskName, "situation_id", t.situationId(), findings);
+        }
+        // McaReputationTask / McaHeartsTask / McaMarriedTask reference no MCA registry id.
+    }
+
+    private static void checkReward(Reward reward, List<FtbqBridge.BookReference> findings) {
+        if (!(reward instanceof McaGrantTitleReward t)) {
+            return; // McaVillageReputationReward / McaHeartsReward reference no MCA registry id.
+        }
+        String chapter = reward.getQuestChapter().getTitle().getString();
+        String questCode = reward.getQuest().getCodeString();
+        String taskName = reward.getType().getTypeId() + " [" + reward.getCodeString() + "]";
+        checkTitleId(chapter, questCode, taskName, "title_id", t.titleId(), findings);
+    }
+
+    /** {@code quest_id} is empty ("any"), a {@code "ns:*"} namespace wildcard, or a concrete quest id. */
+    private static void checkQuestId(String chapter, String questCode, String taskName, String field,
+                                      String rawId, List<FtbqBridge.BookReference> findings) {
+        if (rawId == null || rawId.isEmpty() || rawId.endsWith(":*")) {
+            return;
+        }
+        ResourceLocation id = ResourceLocation.tryParse(rawId);
+        if (id == null || !QuestRegistry.contains(id)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, rawId));
+        }
+    }
+
+    private static void checkChainId(String chapter, String questCode, String taskName, String field,
+                                      String chainId, List<FtbqBridge.BookReference> findings) {
+        if (chainId == null || chainId.isEmpty()) {
+            return;
+        }
+        if (!QuestRegistry.chainIds().contains(chainId)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, chainId));
+        }
+    }
+
+    private static void checkLadderTier(String chapter, String questCode, String taskName,
+                                         String ladder, String tier, List<FtbqBridge.BookReference> findings) {
+        if (ladder == null || ladder.isEmpty()) {
+            return;
+        }
+        ResourceLocation ladderId = ResourceLocation.tryParse(ladder);
+        Optional<ReputationTierSet> set = ladderId == null ? Optional.empty() : ReputationTiers.get(ladderId);
+        if (set.isEmpty()) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "ladder", ladder));
+            return;
+        }
+        if (tier != null && !tier.isEmpty() && set.get().indexOf(tier) < 0) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "tier", tier));
+        }
+    }
+
+    private static void checkTitleId(String chapter, String questCode, String taskName, String field,
+                                      String titleId, List<FtbqBridge.BookReference> findings) {
+        if (titleId == null || titleId.isEmpty()) {
+            return;
+        }
+        ResourceLocation id = ResourceLocation.tryParse(titleId);
+        if (id == null || !Titles.isDefined(id)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, titleId));
+        }
+    }
+
+    private static void checkProjectId(String chapter, String questCode, String taskName, String field,
+                                        String projectId, List<FtbqBridge.BookReference> findings) {
+        if (projectId == null || projectId.isEmpty()) {
+            return;
+        }
+        ResourceLocation id = ResourceLocation.tryParse(projectId);
+        if (id == null || !ProjectRegistry.contains(id)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, projectId));
+        }
+    }
+
+    private static void checkSituationId(String chapter, String questCode, String taskName, String field,
+                                          String situationId, List<FtbqBridge.BookReference> findings) {
+        if (situationId == null || situationId.isEmpty()) {
+            return;
+        }
+        ResourceLocation id = ResourceLocation.tryParse(situationId);
+        if (id == null || !SituationRegistry.contains(id)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, situationId));
         }
     }
 

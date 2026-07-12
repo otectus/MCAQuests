@@ -4,9 +4,11 @@ import dev.otectus.mcaquests.quest.QuestDefinition;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The server-side set of currently-loaded quest definitions, swapped atomically by
@@ -41,6 +43,20 @@ public final class QuestRegistry {
 
     public static int size() {
         return quests.size();
+    }
+
+    /**
+     * Every distinct {@code chain} id referenced by a loaded quest's {@link dev.otectus.mcaquests.quest.ChainSpec}
+     * (spec §21 {@code ftbq validate} — "is this chain id known" without re-scanning every quest at
+     * each call site; {@code FtbqEditorIdsSync} additionally wants display names per id, so it keeps
+     * its own parallel scan rather than sharing this one).
+     */
+    public static Set<String> chainIds() {
+        Set<String> ids = new LinkedHashSet<>();
+        for (QuestDefinition def : quests.values()) {
+            def.chain().ifPresent(chain -> ids.add(chain.chain()));
+        }
+        return ids;
     }
 
     public static List<String> lastErrors() {

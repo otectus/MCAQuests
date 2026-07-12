@@ -54,6 +54,15 @@ public class McaReputationTierTask extends McaBooleanTaskBase {
         return FtbqTaskTypes.REPUTATION_TIER;
     }
 
+    /** Package-private accessors for {@code FtbqBridgeImpl}'s book→MCA validate sweep (spec §21). */
+    String ladder() {
+        return ladder;
+    }
+
+    String tier() {
+        return tier;
+    }
+
     @Override
     protected boolean check(ServerPlayer player) {
         ResourceLocation ladderId = ResourceLocation.tryParse(ladder);

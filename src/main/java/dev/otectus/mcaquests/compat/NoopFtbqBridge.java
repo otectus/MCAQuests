@@ -5,7 +5,9 @@ import net.minecraft.server.level.ServerPlayer;
 /**
  * The default {@link FtbqBridge}: FTB Quests is absent, disabled, or its bootstrap failed. Every
  * method returns its documented safe default. Zero FTB imports (enforced by
- * {@code NoFtbqClassloadTest}).
+ * {@code NoFtbqClassloadTest}). {@link #isReal()} and {@link #validateBookReferences()} are not
+ * overridden here — their interface defaults ({@code false} / empty list) already are this class's
+ * documented behaviour.
  */
 final class NoopFtbqBridge implements FtbqBridge {
 

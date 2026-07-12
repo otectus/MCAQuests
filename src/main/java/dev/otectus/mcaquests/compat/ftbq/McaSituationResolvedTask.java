@@ -36,6 +36,11 @@ public class McaSituationResolvedTask extends McaCounterTaskBase {
         return FtbqTaskTypes.SITUATION_RESOLVED;
     }
 
+    /** Package-private accessor for {@code FtbqBridgeImpl}'s book→MCA validate sweep (spec §21). */
+    String situationId() {
+        return situationId;
+    }
+
     @Override
     protected long currentValue(ServerPlayer player) {
         Optional<PlayerQuestData> data = QuestCapabilities.get(player);

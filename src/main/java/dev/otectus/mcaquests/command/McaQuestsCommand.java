@@ -5,14 +5,17 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.FtbqBridge;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.data.FtbqReferenceWalker;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
 import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.project.state.ProjectState;
+import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.QuestManager;
 import dev.otectus.mcaquests.quest.reputation.ReputationService;
 import dev.otectus.mcaquests.quest.reputation.ReputationTier;
@@ -38,14 +41,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Admin/debug commands under {@code /mcaquests} (spec section 24). Phase 0 ships only
@@ -153,7 +159,19 @@ public final class McaQuestsCommand {
                         .then(Commands.literal("clear")
                                 .requires(src -> src.hasPermission(3))
                                 .then(Commands.argument("player", EntityArgument.player())
-                                        .executes(McaQuestsCommand::titleClear)))));
+                                        .executes(McaQuestsCommand::titleClear))))
+                .then(Commands.literal("ftbq")
+                        .then(Commands.literal("status")
+                                .requires(src -> src.hasPermission(2))
+                                .executes(McaQuestsCommand::ftbqStatus))
+                        .then(Commands.literal("validate")
+                                .requires(src -> src.hasPermission(3))
+                                .executes(McaQuestsCommand::ftbqValidate))
+                        .then(Commands.literal("recheck")
+                                .requires(src -> src.hasPermission(2))
+                                .executes(McaQuestsCommand::ftbqRecheckSelf)
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(McaQuestsCommand::ftbqRecheckPlayer)))));
     }
 
     /**
@@ -213,6 +231,123 @@ public final class McaQuestsCommand {
         QuestCapabilities.get(target).ifPresent(d -> d.titles().clear());
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "Cleared all titles for " + name + "."), true);
+        return 1;
+    }
+
+    // ---------------------------------------------------------------- ftbq (spec §21, task M5.3)
+
+    /**
+     * {@code /mcaquests ftbq status}: whether FTB Quests is present, its version (via {@link ModList},
+     * core-safe — no {@code compat.ftbq} import needed), whether the real bridge started, the
+     * {@code enableFtbQuestsIntegration} master switch, the mcaquests task/reward counts currently in
+     * the book, and whether the editor known-ids sync is active. Degrades to a single line when FTB
+     * Quests isn't even installed (spec §24).
+     */
+    private static int ftbqStatus(CommandContext<CommandSourceStack> ctx) {
+        boolean detected = ModList.get() != null && ModList.get().isLoaded("ftbquests");
+        if (!detected) {
+            ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.status.not_installed"), false);
+            return 0;
+        }
+        String version = ModList.get().getModContainerById("ftbquests")
+                .map(container -> container.getModInfo().getVersion().toString())
+                .orElse("?");
+        FtbqBridge bridge = FtbqBridge.Holder.get();
+        boolean bridgeActive = bridge.isReal();
+        boolean masterSwitch = McaQuestsConfig.COMMON.enableFtbQuestsIntegration.get();
+        int[] counts = bridge.integrationObjectCounts();
+        boolean idsSync = FtbqEditorIdsSync.shouldSync();
+
+        ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.status.detected", version), false);
+        ctx.getSource().sendSuccess(() -> Component.translatable(bridgeActive
+                ? "mcaquests.command.ftbq.status.bridge_active"
+                : "mcaquests.command.ftbq.status.bridge_inactive"), false);
+        ctx.getSource().sendSuccess(() -> Component.translatable(masterSwitch
+                ? "mcaquests.command.ftbq.status.master_switch_on"
+                : "mcaquests.command.ftbq.status.master_switch_off"), false);
+        ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.status.book_objects",
+                counts[0], counts[1]), false);
+        ctx.getSource().sendSuccess(() -> Component.translatable(idsSync
+                ? "mcaquests.command.ftbq.status.ids_sync_on"
+                : "mcaquests.command.ftbq.status.ids_sync_off"), false);
+        return 1;
+    }
+
+    /**
+     * {@code /mcaquests ftbq validate}: the two §21 sweeps. Book → MCA findings (an {@code mcaquests:}
+     * task/reward in the server book referencing an unknown MCA registry id) are reported as errors —
+     * the book already exists and MCA's own ids are the server owner's authoritative, already-loaded
+     * state, so a mismatch here is a real problem (stale/typo'd id, removed content). MCA → book
+     * findings (a datapack {@code ftbq_*} reference whose FTB hex id doesn't resolve) are reported as
+     * warnings only: {@link dev.otectus.mcaquests.compat.FtbqIds}' own javadoc documents that a
+     * datapack may legitimately reference a book chapter/quest/task that hasn't been built yet, so an
+     * unresolved MCA-side reference is not necessarily wrong. Degrades to a single line when FTB
+     * Quests is absent or the integration is disabled (spec §24).
+     */
+    private static int ftbqValidate(CommandContext<CommandSourceStack> ctx) {
+        FtbqBridge bridge = FtbqBridge.Holder.get();
+        if (!bridge.isAvailable()) {
+            ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.inactive"), false);
+            return 1;
+        }
+
+        List<FtbqBridge.BookReference> bookFindings = bridge.validateBookReferences();
+        List<FtbqReferenceWalker.Reference> datapackFindings = new ArrayList<>();
+        for (QuestDefinition def : QuestRegistry.all()) {
+            for (FtbqReferenceWalker.Reference ref : FtbqReferenceWalker.collect(def)) {
+                boolean resolves = switch (ref.kind()) {
+                    case QUEST -> bridge.questIdExists(ref.hexId());
+                    case CHAPTER -> bridge.chapterIdExists(ref.hexId());
+                    case TASK -> bridge.taskIdExists(ref.hexId());
+                };
+                if (!resolves) {
+                    datapackFindings.add(ref);
+                }
+            }
+        }
+
+        if (bookFindings.isEmpty() && datapackFindings.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.all_valid"), false);
+        }
+        if (!bookFindings.isEmpty()) {
+            ctx.getSource().sendFailure(Component.translatable("mcaquests.command.ftbq.validate.book_errors_header",
+                    bookFindings.size()));
+            bookFindings.forEach(ref -> ctx.getSource().sendFailure(Component.translatable(
+                    "mcaquests.command.ftbq.validate.book_finding",
+                    ref.chapterName(), ref.questCode(), ref.taskName(), ref.field(), ref.unknownId())));
+        }
+        if (!datapackFindings.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.datapack_warnings_header",
+                    datapackFindings.size()), false);
+            datapackFindings.forEach(ref -> ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "mcaquests.command.ftbq.validate.datapack_finding",
+                    ref.questId(), ref.field(), ref.kind().name().toLowerCase(Locale.ROOT), ref.hexId()), false));
+        }
+        int errorCount = bookFindings.size();
+        int warningCount = datapackFindings.size();
+        ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.summary",
+                errorCount, warningCount), false);
+        return errorCount == 0 ? 1 : 0;
+    }
+
+    private static int ftbqRecheckSelf(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ftbqRecheck(ctx, ctx.getSource().getPlayerOrException());
+    }
+
+    private static int ftbqRecheckPlayer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ftbqRecheck(ctx, EntityArgument.getPlayer(ctx, "player"));
+    }
+
+    /** {@code /mcaquests ftbq recheck [player]}: {@code bridge.recheckAll} for {@code target} (default self). */
+    private static int ftbqRecheck(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
+        FtbqBridge bridge = FtbqBridge.Holder.get();
+        if (!bridge.isAvailable()) {
+            ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.recheck.inactive"), false);
+            return 0;
+        }
+        String name = adminName(target);
+        bridge.recheckAll(target);
+        ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.recheck.done", name), true);
         return 1;
     }
 

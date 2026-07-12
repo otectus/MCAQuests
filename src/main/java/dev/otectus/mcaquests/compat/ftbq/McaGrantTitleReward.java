@@ -64,6 +64,11 @@ public class McaGrantTitleReward extends McaRewardBase {
         return FtbqRewardTypes.GRANT_TITLE;
     }
 
+    /** Package-private accessor for {@code FtbqBridgeImpl}'s book→MCA validate sweep (spec §21). */
+    String titleId() {
+        return titleId;
+    }
+
     @Override
     protected void doClaim(ServerPlayer player, boolean notify) {
         ResourceLocation id = titleId.isEmpty() ? null : ResourceLocation.tryParse(titleId);

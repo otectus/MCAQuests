@@ -44,7 +44,12 @@ public final class FtbqEditorIdsSync {
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), buildPacket());
     }
 
-    private static boolean shouldSync() {
+    /**
+     * Whether the known-ids packet would actually be sent right now — FTB Quests loaded server-side
+     * AND {@code syncFtbqEditorIds} on. Public so {@code /mcaquests ftbq status} (M5.3) can report the
+     * same live answer rather than re-deriving it.
+     */
+    public static boolean shouldSync() {
         return ModList.get().isLoaded("ftbquests") && McaQuestsConfig.COMMON.syncFtbqEditorIds.get();
     }
 

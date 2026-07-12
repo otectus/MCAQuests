@@ -38,6 +38,11 @@ public class McaProjectContributionTask extends McaCounterTaskBase {
         return FtbqTaskTypes.PROJECT_CONTRIBUTION;
     }
 
+    /** Package-private accessor for {@code FtbqBridgeImpl}'s book→MCA validate sweep (spec §21). */
+    String projectId() {
+        return projectId;
+    }
+
     @Override
     protected long currentValue(ServerPlayer player) {
         Optional<PlayerQuestData> data = QuestCapabilities.get(player);

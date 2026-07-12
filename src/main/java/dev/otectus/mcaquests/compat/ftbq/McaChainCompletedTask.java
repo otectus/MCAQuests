@@ -42,6 +42,11 @@ public class McaChainCompletedTask extends McaBooleanTaskBase {
         return FtbqTaskTypes.CHAIN_COMPLETED;
     }
 
+    /** Package-private accessor for {@code FtbqBridgeImpl}'s book→MCA validate sweep (spec §21). */
+    String chainId() {
+        return chainId;
+    }
+
     @Override
     protected boolean check(ServerPlayer player) {
         if (chainId.isEmpty()) {

@@ -44,6 +44,15 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
         return FtbqTaskTypes.QUEST_COMPLETED;
     }
 
+    /** Package-private accessors for {@code FtbqBridgeImpl}'s book→MCA validate sweep (spec §21). */
+    String questId() {
+        return questId;
+    }
+
+    String chainId() {
+        return chainId;
+    }
+
     @Override
     protected long currentValue(ServerPlayer player) {
         Optional<PlayerQuestData> data = QuestCapabilities.get(player);
