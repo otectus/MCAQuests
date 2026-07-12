@@ -50,4 +50,9 @@ class McaCompatSafeFailTest {
     void maxHeartsWithinDefaultsEmptyOnMissingData() {
         assertTrue(McaCompat.maxHeartsWithin(null, 16.0).isEmpty(), "maxHeartsWithin");
     }
+
+    @Test
+    void nearestVillagerWithinDefaultsEmptyOnMissingData() {
+        assertTrue(McaCompat.nearestVillagerWithin(null, 16.0).isEmpty(), "nearestVillagerWithin");
+    }
 }

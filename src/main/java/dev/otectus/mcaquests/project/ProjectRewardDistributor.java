@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.project;
 
+import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.project.state.BankedReward;
 import dev.otectus.mcaquests.project.state.PendingReward;
@@ -83,9 +84,9 @@ public final class ProjectRewardDistributor {
      * surroundings — called from {@code ProjectManager.deliverPending} on login and once per in-game day
      * while online. Returns {@code true} once a target resolved and the reward was delivered (safe to
      * drop from the pending list); {@code false} if it is still undeliverable (stays banked, retried
-     * again next time). Every McaCompat lookup used below already defaults safely on its own failure;
-     * this method's own catch exists only so an unexpected exception here can never escape into the
-     * caller's login/tick path — it degrades to "still banked" instead.
+     * again next time). Fail-safe per §10.2: any {@link Throwable} is logged at DEBUG and degrades to
+     * the documented default ({@code false} — "still banked"), so a failure here can never escape into
+     * the caller's login/tick path.
      */
     public static boolean attemptBankedDelivery(MinecraftServer server, ServerLevel level, ServerPlayer player,
                                                 BankedReward reward) {
@@ -95,7 +96,9 @@ public final class ProjectRewardDistributor {
                 case HEARTS -> deliverBankedHearts(level, player, reward);
                 case TITLE -> deliverBankedTitle(level, player, reward);
             };
-        } catch (RuntimeException e) {
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("[MCA: Quests] banked {} delivery failed for {}; staying banked",
+                    reward.type(), player.getGameProfile().getName(), t);
             return false;
         }
     }
@@ -131,13 +134,9 @@ public final class ProjectRewardDistributor {
         return true;
     }
 
-    /**
-     * {@link McaCompat} exposes no plain nearest-by-distance villager lookup, only the hearts-ranked
-     * scan used for spouse resolution; reused here too (best-hearts-nearby as a stand-in for "the
-     * nearest loaded adult villager") rather than adding a new McaCompat surface for this task.
-     */
+    /** Genuinely nearest-by-distance (§16.2 "nearest loaded MCA villager"), via {@link McaCompat#nearestVillagerWithin}. */
     private static boolean deliverNearestVillagerHearts(ServerPlayer player, int amount) {
-        Optional<Entity> candidate = McaCompat.bestHeartsVillagerWithin(player, VILLAGER_RESOLUTION_RADIUS);
+        Optional<Entity> candidate = McaCompat.nearestVillagerWithin(player, VILLAGER_RESOLUTION_RADIUS);
         if (candidate.isEmpty()) {
             return false;
         }

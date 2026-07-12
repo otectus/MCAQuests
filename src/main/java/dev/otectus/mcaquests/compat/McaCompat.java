@@ -948,4 +948,32 @@ public final class McaCompat {
             return Optional.empty();
         }
     }
+
+    /**
+     * The loaded MCA villager within {@code radius} blocks of the player that is genuinely nearest by
+     * (squared) distance — the distance-ranked sibling of {@link #bestHeartsVillagerWithin}, added for
+     * the banked {@code mcaquests:hearts} claim's {@code NEAREST_VILLAGER} target (spec §16.2, task
+     * M3.1), which the spec words as "nearest", not "best hearts". One bounded
+     * {@code getEntitiesOfClass} call — callers must throttle. Safe default: {@code empty} (none
+     * loaded / MCA absent / any failure).
+     */
+    public static Optional<Entity> nearestVillagerWithin(ServerPlayer player, double radius) {
+        try {
+            AABB box = player.getBoundingBox().inflate(radius);
+            List<VillagerEntityMCA> nearby = player.level().getEntitiesOfClass(VillagerEntityMCA.class, box);
+            VillagerEntityMCA nearest = null;
+            double nearestDistSqr = Double.MAX_VALUE;
+            for (VillagerEntityMCA villager : nearby) {
+                double distSqr = villager.distanceToSqr(player);
+                if (nearest == null || distSqr < nearestDistSqr) {
+                    nearest = villager;
+                    nearestDistSqr = distSqr;
+                }
+            }
+            return Optional.ofNullable(nearest);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA nearestVillagerWithin failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
 }

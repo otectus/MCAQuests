@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.project.state;
 
+import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -169,10 +170,12 @@ public final class ProjectSavedData extends SavedData {
                     // Per-entry guard (forward-compat, task M3.1): an unrecognised kind/type, or a
                     // malformed tag that throws while parsing (e.g. an invalid ResourceLocation), is
                     // skipped without dropping this player's other, well-formed pending rewards.
+                    // Fail-safe per §10.2: catch Throwable, log at DEBUG, skip the entry.
                     try {
                         PendingReward.load(rewards.getCompound(i)).ifPresent(list::add);
-                    } catch (RuntimeException ignored) {
-                        // skip malformed entry; siblings still load
+                    } catch (Throwable t) {
+                        McaQuests.LOGGER.debug("[MCA: Quests] skipping malformed pending-reward entry for {}",
+                                key, t);
                     }
                 }
                 if (!list.isEmpty()) {
