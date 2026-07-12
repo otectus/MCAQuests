@@ -2,10 +2,6 @@ package dev.otectus.mcaquests.quest.reward;
 
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
-import dev.otectus.mcaquests.compat.FtbqBridge;
-import net.minecraft.server.level.ServerPlayer;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,22 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * - Hex id validation: accepts valid ids, rejects bad format
  * - Action field is required (no default)
  * - describe() renders for each action
- * - grant() delegates safely to the bridge
+ *
+ * <p>grant() is not unit-tested here — it needs a ServerPlayer and loaded Forge config, neither of
+ * which exists in this no-runtime test environment; it is exercised in-world via the §29.2 matrix.
  */
 class FtbqProgressRewardTest {
 
     private static final String HEX = "F00DF00DF00DF00D";
-    private FtbqBridge previous;
-
-    @BeforeEach
-    void captureExistingBridge() {
-        previous = FtbqBridge.Holder.get();
-    }
-
-    @AfterEach
-    void restoreExistingBridge() {
-        FtbqBridge.Holder.set(previous);
-    }
 
     private static boolean parses(String json) {
         var result = FtbqProgressReward.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json));
@@ -126,19 +113,5 @@ class FtbqProgressRewardTest {
         var reward = result.result().get();
         var description = reward.describe().getString();
         assertTrue(description.length() > 0, "describe must render text");
-    }
-
-
-    private static final class NoopBridge implements FtbqBridge {
-        @Override public boolean isAvailable() { return false; }
-        @Override public boolean isQuestCompleted(ServerPlayer p, String id) { return false; }
-        @Override public boolean isChapterCompleted(ServerPlayer p, String id) { return false; }
-        @Override public boolean isTaskCompleted(ServerPlayer p, String id) { return false; }
-        @Override public boolean questIdExists(String id) { return false; }
-        @Override public boolean chapterIdExists(String id) { return false; }
-        @Override public boolean taskIdExists(String id) { return false; }
-        @Override public boolean grantProgress(ServerPlayer p, ProgressAction a, String id) { return false; }
-        @Override public void recheckAll(ServerPlayer p) {}
-        @Override public int[] integrationObjectCounts() { return new int[]{0, 0}; }
     }
 }
