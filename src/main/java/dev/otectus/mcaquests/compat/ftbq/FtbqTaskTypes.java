@@ -66,7 +66,8 @@ public final class FtbqTaskTypes {
     }
 
     /** Number of {@code mcaquests:} task types registered so far — grows with each M2.x task. Used
-     * only for the {@code FtbqBootstrap} startup log line so it never needs a manual count bump. */
+     * only for the {@code FtbqBootstrap} startup log line; this is a manual literal, not derived
+     * from {@link #register()}, so it must be bumped whenever a task type is added or removed. */
     public static int count() {
         return 10;
     }

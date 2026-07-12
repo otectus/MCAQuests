@@ -245,4 +245,34 @@ class ProjectStateTest {
         assertEquals(1, owed.size());
         assertEquals(BankedReward.Type.HEARTS, owed.get(0).banked().type());
     }
+
+    /**
+     * A {@code TITLE} banked entry with no {@code titleId} key is meaningless (nothing to grant) and is
+     * skipped rather than round-tripping with a null {@code titleId}, the same forward-compat skip-not-throw
+     * pattern as an unrecognised {@code kind}/{@code type}.
+     */
+    @Test
+    void bankedTitleMissingTitleIdSkippedWithoutCorruptingSiblings() {
+        UUID player = UUID.randomUUID();
+        CompoundTag root = new CompoundTag();
+        CompoundTag pend = new CompoundTag();
+        ListTag rewards = new ListTag();
+
+        CompoundTag titlelessBanked = new CompoundTag();
+        titlelessBanked.putString("kind", "banked");
+        CompoundTag titlelessBankedPayload = new CompoundTag();
+        titlelessBankedPayload.putString("type", "TITLE");
+        // deliberately no "titleId" key
+        titlelessBanked.put("banked", titlelessBankedPayload);
+        rewards.add(titlelessBanked);
+
+        rewards.add(PendingReward.ofBanked(BankedReward.reputation(7)).save());
+        pend.put(player.toString(), rewards);
+        root.put("pending", pend);
+
+        ProjectSavedData loaded = ProjectSavedData.load(root);
+        List<PendingReward> owed = loaded.drainPending(player);
+        assertEquals(1, owed.size()); // the titleless TITLE entry is skipped; the sibling survives
+        assertEquals(BankedReward.Type.REPUTATION, owed.get(0).banked().type());
+    }
 }

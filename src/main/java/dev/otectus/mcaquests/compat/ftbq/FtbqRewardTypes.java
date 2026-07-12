@@ -40,7 +40,8 @@ public final class FtbqRewardTypes {
     }
 
     /** Number of {@code mcaquests:} reward types registered so far. Used only for the
-     * {@code FtbqBootstrap} startup log line so it never needs a manual count bump. */
+     * {@code FtbqBootstrap} startup log line; this is a manual literal, not derived from
+     * {@link #register()}, so it must be bumped whenever a reward type is added or removed. */
     public static int count() {
         return 3;
     }
