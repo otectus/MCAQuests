@@ -17,11 +17,19 @@ public interface FtbqBridge {
     /**
      * One Book&nbsp;→&nbsp;MCA finding for {@code /mcaquests ftbq validate} (spec §21): an
      * {@code mcaquests:}-namespaced task/reward in the FTB book whose referenced MCA registry id
-     * (quest/chain/ladder/tier/title/project/situation) does not resolve. Deliberately FTB-free
-     * (plain {@code String}s only) so it can cross the {@link FtbqBridge} seam and be formatted by
-     * the always-loaded command class without either side needing FTB types.
+     * (quest/chain/ladder/tier/title/project/situation) is a problem. Deliberately FTB-free
+     * (plain {@code String}s + a {@code boolean} only) so it can cross the {@link FtbqBridge} seam
+     * and be formatted by the always-loaded command class without either side needing FTB types.
+     *
+     * <p>{@code malformed} distinguishes the two §21 severities: {@code true} means the id could
+     * never resolve against any registry state (not a valid {@code ResourceLocation}, or a
+     * chain/tier id containing the reserved {@code '|'} separator) — a genuine authoring error.
+     * {@code false} means the id is well-formed but absent from the current registries — the
+     * sanctioned forward-reference pattern (spec §20: authors legitimately reference ids from
+     * datapacks they haven't written yet), reported as a warning, not an error.
      */
-    record BookReference(String chapterName, String questCode, String taskName, String field, String unknownId) {
+    record BookReference(String chapterName, String questCode, String taskName, String field, String unknownId,
+                         boolean malformed) {
     }
 
     boolean isAvailable();                       // real impl present AND enableFtbQuestsIntegration

@@ -255,7 +255,6 @@ public final class McaQuestsCommand {
         FtbqBridge bridge = FtbqBridge.Holder.get();
         boolean bridgeActive = bridge.isReal();
         boolean masterSwitch = McaQuestsConfig.COMMON.enableFtbQuestsIntegration.get();
-        int[] counts = bridge.integrationObjectCounts();
         boolean idsSync = FtbqEditorIdsSync.shouldSync();
 
         ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.status.detected", version), false);
@@ -265,8 +264,15 @@ public final class McaQuestsCommand {
         ctx.getSource().sendSuccess(() -> Component.translatable(masterSwitch
                 ? "mcaquests.command.ftbq.status.master_switch_on"
                 : "mcaquests.command.ftbq.status.master_switch_off"), false);
-        ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.status.book_objects",
-                counts[0], counts[1]), false);
+        if (bridgeActive) {
+            int[] counts = bridge.integrationObjectCounts();
+            ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.status.book_objects",
+                    counts[0], counts[1]), false);
+        } else {
+            // The Noop bridge can only ever answer {0, 0} — an honest "unavailable" beats a fake zero count.
+            ctx.getSource().sendSuccess(
+                    () -> Component.translatable("mcaquests.command.ftbq.status.book_objects_unavailable"), false);
+        }
         ctx.getSource().sendSuccess(() -> Component.translatable(idsSync
                 ? "mcaquests.command.ftbq.status.ids_sync_on"
                 : "mcaquests.command.ftbq.status.ids_sync_off"), false);
@@ -274,15 +280,18 @@ public final class McaQuestsCommand {
     }
 
     /**
-     * {@code /mcaquests ftbq validate}: the two §21 sweeps. Book → MCA findings (an {@code mcaquests:}
-     * task/reward in the server book referencing an unknown MCA registry id) are reported as errors —
-     * the book already exists and MCA's own ids are the server owner's authoritative, already-loaded
-     * state, so a mismatch here is a real problem (stale/typo'd id, removed content). MCA → book
-     * findings (a datapack {@code ftbq_*} reference whose FTB hex id doesn't resolve) are reported as
-     * warnings only: {@link dev.otectus.mcaquests.compat.FtbqIds}' own javadoc documents that a
-     * datapack may legitimately reference a book chapter/quest/task that hasn't been built yet, so an
-     * unresolved MCA-side reference is not necessarily wrong. Degrades to a single line when FTB
-     * Quests is absent or the integration is disabled (spec §24).
+     * {@code /mcaquests ftbq validate}: the two §21 sweeps, with the severity model both spec passages
+     * imply. A finding is an <b>error</b> only when the id is genuinely malformed (could never resolve
+     * against any registry state — {@link FtbqBridge.BookReference#malformed()}); an unresolved but
+     * well-formed reference is a <b>warning</b> in BOTH directions, because both directions bless the
+     * forward-reference pattern: spec §20 says book authors "legitimately reference ids from datapacks
+     * they haven't written yet", and §17 (via {@link dev.otectus.mcaquests.compat.FtbqIds}) says a
+     * datapack may reference a book chapter/quest/task that hasn't been built yet. The MCA → book
+     * sweep can only ever produce warnings here: {@code FtbqIds.hexIdCodec} already rejects malformed
+     * hex ids at datapack load, so every id the walker sees is well-formed by construction. Errors go
+     * through {@code sendFailure}; warnings through {@code sendSuccess}, so a forward reference never
+     * renders as a failure. Degrades to a single line when FTB Quests is absent or the integration is
+     * disabled (spec §24).
      */
     private static int ftbqValidate(CommandContext<CommandSourceStack> ctx) {
         FtbqBridge bridge = FtbqBridge.Holder.get();
@@ -291,8 +300,12 @@ public final class McaQuestsCommand {
             return 1;
         }
 
-        List<FtbqBridge.BookReference> bookFindings = bridge.validateBookReferences();
-        List<FtbqReferenceWalker.Reference> datapackFindings = new ArrayList<>();
+        List<FtbqBridge.BookReference> bookErrors = new ArrayList<>();
+        List<FtbqBridge.BookReference> bookWarnings = new ArrayList<>();
+        for (FtbqBridge.BookReference ref : bridge.validateBookReferences()) {
+            (ref.malformed() ? bookErrors : bookWarnings).add(ref);
+        }
+        List<FtbqReferenceWalker.Reference> datapackWarnings = new ArrayList<>();
         for (QuestDefinition def : QuestRegistry.all()) {
             for (FtbqReferenceWalker.Reference ref : FtbqReferenceWalker.collect(def)) {
                 boolean resolves = switch (ref.kind()) {
@@ -301,30 +314,37 @@ public final class McaQuestsCommand {
                     case TASK -> bridge.taskIdExists(ref.hexId());
                 };
                 if (!resolves) {
-                    datapackFindings.add(ref);
+                    datapackWarnings.add(ref);
                 }
             }
         }
 
-        if (bookFindings.isEmpty() && datapackFindings.isEmpty()) {
+        if (bookErrors.isEmpty() && bookWarnings.isEmpty() && datapackWarnings.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.all_valid"), false);
         }
-        if (!bookFindings.isEmpty()) {
+        if (!bookErrors.isEmpty()) {
             ctx.getSource().sendFailure(Component.translatable("mcaquests.command.ftbq.validate.book_errors_header",
-                    bookFindings.size()));
-            bookFindings.forEach(ref -> ctx.getSource().sendFailure(Component.translatable(
-                    "mcaquests.command.ftbq.validate.book_finding",
+                    bookErrors.size()));
+            bookErrors.forEach(ref -> ctx.getSource().sendFailure(Component.translatable(
+                    "mcaquests.command.ftbq.validate.book_finding.malformed",
                     ref.chapterName(), ref.questCode(), ref.taskName(), ref.field(), ref.unknownId())));
         }
-        if (!datapackFindings.isEmpty()) {
+        if (!bookWarnings.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.book_warnings_header",
+                    bookWarnings.size()), false);
+            bookWarnings.forEach(ref -> ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "mcaquests.command.ftbq.validate.book_finding.unresolved",
+                    ref.chapterName(), ref.questCode(), ref.taskName(), ref.field(), ref.unknownId()), false));
+        }
+        if (!datapackWarnings.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.datapack_warnings_header",
-                    datapackFindings.size()), false);
-            datapackFindings.forEach(ref -> ctx.getSource().sendSuccess(() -> Component.translatable(
+                    datapackWarnings.size()), false);
+            datapackWarnings.forEach(ref -> ctx.getSource().sendSuccess(() -> Component.translatable(
                     "mcaquests.command.ftbq.validate.datapack_finding",
                     ref.questId(), ref.field(), ref.kind().name().toLowerCase(Locale.ROOT), ref.hexId()), false));
         }
-        int errorCount = bookFindings.size();
-        int warningCount = datapackFindings.size();
+        int errorCount = bookErrors.size();
+        int warningCount = bookWarnings.size() + datapackWarnings.size();
         ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.ftbq.validate.summary",
                 errorCount, warningCount), false);
         return errorCount == 0 ? 1 : 0;

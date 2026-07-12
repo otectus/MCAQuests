@@ -248,6 +248,12 @@ public final class FtbqBridgeImpl implements FtbqBridge {
         checkTitleId(chapter, questCode, taskName, "title_id", t.titleId(), findings);
     }
 
+    // Severity split (M5.3 review): a MALFORMED id (not a valid ResourceLocation; or a chain/tier id
+    // containing the reserved '|' separator, which the datapack loaders reject at their own load time)
+    // could never resolve against any registry state → error. A WELL-FORMED id that is merely absent
+    // from the current registries is the sanctioned forward-reference pattern (spec §20: authors
+    // legitimately reference ids from datapacks they haven't written yet) → warning.
+
     /** {@code quest_id} is empty ("any"), a {@code "ns:*"} namespace wildcard, or a concrete quest id. */
     private static void checkQuestId(String chapter, String questCode, String taskName, String field,
                                       String rawId, List<FtbqBridge.BookReference> findings) {
@@ -255,8 +261,10 @@ public final class FtbqBridgeImpl implements FtbqBridge {
             return;
         }
         ResourceLocation id = ResourceLocation.tryParse(rawId);
-        if (id == null || !QuestRegistry.contains(id)) {
-            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, rawId));
+        if (id == null) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, rawId, true));
+        } else if (!QuestRegistry.contains(id)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, rawId, false));
         }
     }
 
@@ -265,8 +273,10 @@ public final class FtbqBridgeImpl implements FtbqBridge {
         if (chainId == null || chainId.isEmpty()) {
             return;
         }
-        if (!QuestRegistry.chainIds().contains(chainId)) {
-            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, chainId));
+        if (chainId.indexOf('|') >= 0) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, chainId, true));
+        } else if (!QuestRegistry.chainIds().contains(chainId)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, chainId, false));
         }
     }
 
@@ -276,46 +286,55 @@ public final class FtbqBridgeImpl implements FtbqBridge {
             return;
         }
         ResourceLocation ladderId = ResourceLocation.tryParse(ladder);
-        Optional<ReputationTierSet> set = ladderId == null ? Optional.empty() : ReputationTiers.get(ladderId);
-        if (set.isEmpty()) {
-            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "ladder", ladder));
+        if (ladderId == null) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "ladder", ladder, true));
             return;
         }
-        if (tier != null && !tier.isEmpty() && set.get().indexOf(tier) < 0) {
-            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "tier", tier));
+        Optional<ReputationTierSet> set = ReputationTiers.get(ladderId);
+        if (set.isEmpty()) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "ladder", ladder, false));
+            return; // tier membership is meaningless without its ladder; one finding is enough.
+        }
+        if (tier == null || tier.isEmpty()) {
+            return;
+        }
+        if (tier.indexOf('|') >= 0) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "tier", tier, true));
+        } else if (set.get().indexOf(tier) < 0) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, "tier", tier, false));
         }
     }
 
     private static void checkTitleId(String chapter, String questCode, String taskName, String field,
                                       String titleId, List<FtbqBridge.BookReference> findings) {
-        if (titleId == null || titleId.isEmpty()) {
-            return;
-        }
-        ResourceLocation id = ResourceLocation.tryParse(titleId);
-        if (id == null || !Titles.isDefined(id)) {
-            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, titleId));
-        }
+        checkResourceId(chapter, questCode, taskName, field, titleId,
+                id -> Titles.isDefined(id), findings);
     }
 
     private static void checkProjectId(String chapter, String questCode, String taskName, String field,
                                         String projectId, List<FtbqBridge.BookReference> findings) {
-        if (projectId == null || projectId.isEmpty()) {
-            return;
-        }
-        ResourceLocation id = ResourceLocation.tryParse(projectId);
-        if (id == null || !ProjectRegistry.contains(id)) {
-            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, projectId));
-        }
+        checkResourceId(chapter, questCode, taskName, field, projectId,
+                ProjectRegistry::contains, findings);
     }
 
     private static void checkSituationId(String chapter, String questCode, String taskName, String field,
                                           String situationId, List<FtbqBridge.BookReference> findings) {
-        if (situationId == null || situationId.isEmpty()) {
+        checkResourceId(chapter, questCode, taskName, field, situationId,
+                SituationRegistry::contains, findings);
+    }
+
+    /** Shared shape for the plain ResourceLocation-keyed registries: unparsable = malformed, absent = unresolved. */
+    private static void checkResourceId(String chapter, String questCode, String taskName, String field,
+                                         String rawId, java.util.function.Predicate<ResourceLocation> exists,
+                                         List<FtbqBridge.BookReference> findings) {
+        if (rawId == null || rawId.isEmpty()) {
             return;
         }
-        ResourceLocation id = ResourceLocation.tryParse(situationId);
-        if (id == null || !SituationRegistry.contains(id)) {
-            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, situationId));
+        ResourceLocation id = ResourceLocation.tryParse(rawId);
+        if (id == null) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, rawId, true));
+        } else if (!exists.test(id)) {
+            findings.add(new FtbqBridge.BookReference(chapter, questCode, taskName, field, rawId, false));
         }
     }
 
