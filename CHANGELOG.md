@@ -4,12 +4,57 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-07-12
 
-Follow-up fixes to the 0.9.1 `{player}` / MCA-name feature after a code review. The headline fixes make
-`{player}` actually usable in the cases 0.9.1 documented but broke: it no longer fails validation in
-template quests, custom accept/complete dialogue now renders, and players without an MCA character name
-are named correctly again.
+The headline release: an optional, two-way **FTB Quests** integration (see the new
+**[FTBQUESTS.md](FTBQUESTS.md)**) — ten FTB-side task types, three FTB-side reward types, and three
+MCA-side conditions plus an objective and a reward that read/write FTB Quests book progress. Fully
+optional in both directions: nothing here requires FTB Quests to be installed, and MCA: Quests' own
+datapack format is unaffected either way. Also folds in the follow-up fixes to 0.9.1's `{player}` /
+MCA-name feature (template quests, custom dialogue, username fallback) that had been sitting unreleased.
+
+### Added
+
+- **FTB Quests integration** (optional; see [FTBQUESTS.md](FTBQUESTS.md)):
+  - Ten `mcaquests:` FTB Quests **task** types reading real MCA: Quests progress: `quest_completed`,
+    `chain_completed`, `reputation`, `reputation_tier`, `title`, `project_completed`,
+    `project_contribution`, `situation_resolved`, `hearts`, `married`.
+  - Three `mcaquests:` FTB Quests **reward** types granting MCA: Quests effects from the book:
+    `village_reputation`, `hearts`, `grant_title` — with automatic banking and retry (on login, and once
+    per in-game day while online) when no target village/villager can be found at claim time.
+  - Three MCA: Quests **conditions** (`mcaquests:ftbq_quest_completed`, `mcaquests:ftbq_chapter_completed`,
+    `mcaquests:ftbq_task_completed`), one **objective** (`mcaquests:ftbq_complete_quest`), and one
+    **reward** (`mcaquests:ftbq_progress`) that read and write FTB book progress from a datapack quest.
+  - A synced editor experience: FTB editor id fields (quest/chain/tier/title/project/situation ids) offer
+    a dropdown built from the server's known ids, alongside the usual free-text entry.
+  - `/mcaquests ftbq status|validate|recheck` commands.
+  - New `[compat.ftbquests]` config block — see [CONFIG.md](CONFIG.md#compatftbquests).
+- **Core API additions** powering the integration (also usable by other add-ons):
+  - Four new Forge events: `SituationResolvedEvent`, `ReputationTierReachedEvent`, `TitleGrantedEvent`,
+    and `ProjectEvent.Contributed`.
+  - `ProgressionStats` — a per-player snapshot of quest/project/situation completion counts, persisted
+    alongside the player's existing quest data.
+  - `PollingObjective` — a new objective interface for objectives that need a periodic server-side check
+    rather than pure event-driven progress.
+  - New `ReputationService` read accessors: `tierIndex`, `villageReputation`, `allVillageReputations`,
+    `currentTier`.
+  - New `McaCompat` helpers: `isPlayerMarried`, `maxHeartsWithin`, `bestHeartsVillagerWithin`,
+    `nearestVillagerWithin`, `nearestAdultVillagerWithin`.
+
+### Changed
+
+- **Network protocol bumped `"4"` → `"5"`**, to carry the new FTB-editor known-ids packet. Client and
+  server must run **matching versions** — the existing strict handshake already rejects a mismatch, so
+  this is an enforced lockstep update, not a soft one.
+- **Admin title-command feedback identifies the account** — `/mcaquests title grant|list|clear` feedback
+  now shows the MCA character name **and** the Minecraft username (which is unique) when they differ, so a
+  mistargeted command is no longer indistinguishable in the output.
+- **A template variable named `player` is now rejected at load time** — it would resolve in objective/reward
+  JSON but be shadowed by the reserved token in dialogue, silently disagreeing. `/mcaquests validate` now
+  reports it (rename the variable).
+- Internal cleanup with no behavior change: consolidated the player-name → placeholder-resolver plumbing,
+  removed a per-tick MCA save-data lookup on the quest-progress path, and dropped now-unreachable code
+  branches.
 
 ### Fixed
 
@@ -25,17 +70,16 @@ are named correctly again.
   fallback. That placeholder is now treated as "no name set", so cards, messages, toasts, and command
   feedback no longer address players as "Unnamed Adventurer".
 
-### Changed
+### Compatibility
 
-- **A template variable named `player` is now rejected at load time** — it would resolve in objective/reward
-  JSON but be shadowed by the reserved token in dialogue, silently disagreeing. `/mcaquests validate` now
-  reports it (rename the variable).
-- **Admin title-command feedback identifies the account** — `/mcaquests title grant|list|clear` feedback now
-  shows the MCA character name **and** the Minecraft username (which is unique) when they differ, so a
-  mistargeted command is no longer indistinguishable in the output.
-- Internal cleanup with no behavior change: consolidated the player-name → placeholder-resolver plumbing,
-  removed a per-tick MCA save-data lookup on the quest-progress path, and dropped now-unreachable code
-  branches.
+- **Fully save-compatible** — existing worlds and datapacks load unchanged; no migration needed.
+- `ProgressionStats` is new per-player save state: on a save from before 1.0.0 it loads **empty**, not
+  absent or an error, and simply starts accumulating from first load onward.
+- Banked FTB-reward pending entries are new kinds within the existing per-player pending-rewards list;
+  they are simply **absent** on saves that predate this release, same as any other save that never
+  queued one.
+- **Clients running 0.9.x or earlier are rejected by the network handshake** (protocol `"4"` vs `"5"`) —
+  this is intentional; update client and server together.
 
 ## [0.9.1] - 2026-07-11
 

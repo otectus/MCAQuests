@@ -71,6 +71,17 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 | `maxSituationOffersPerMenu` | `2` | Cap on how many situation offers a single villager surfaces at once (they compete with static offers via the usual priority/weight shaping). |
 | `situationDefaultPriority` | `5` | Default offer-priority tier for situation offers that don't set their own, so the village's needs fill menu slots first. |
 
+### `[compat.ftbquests]`
+| Option | Default | What it does |
+|---|---|---|
+| `enableFtbQuestsIntegration` | `true` | Master switch for the [FTB Quests integration](FTBQUESTS.md) (1.0.0). When off (or FTB Quests isn't installed): `mcaquests:` FTB tasks never progress, `mcaquests:` FTB rewards no-op with a one-time server-log WARN, `ftbq_*` datapack conditions follow their `when_missing` policy, the `mcaquests:ftbq_progress` reward no-ops, and `/mcaquests ftbq *` commands report "disabled". The task/reward **types stay registered** either way — only the behavior is gated. |
+| `ftbqStatePollIntervalTicks` | `100` | How often (ticks) the poll-driven FTB tasks re-check MCA: Quests state as a safety net (event pushes are primary). Clamp `20`–`1200`. |
+| `ftbqHeartsScanRadius` | `16.0` | Block radius the `mcaquests:hearts` FTB task scans for nearby villagers. Clamp `4.0`–`64.0`. |
+| `allowFtbqProgressRewards` | `true` | Gates the MCA-side `mcaquests:ftbq_progress` reward (pushes FTB book progress at turn-in). Scope is limited to quest-book progress, hence default-on; still a server-owner lever. |
+| `syncFtbqEditorIds` | `true` | Send MCA: Quests' known ids (quests, chains, tiers, titles, projects, situations) to the client on login/reload, so the FTB editor's id fields can offer a dropdown. Purely an editor convenience — free-text entry always works regardless. |
+
+See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
+
 ---
 
 ## Client (`mcaquests-client.toml`)

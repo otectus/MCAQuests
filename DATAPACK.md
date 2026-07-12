@@ -1158,6 +1158,65 @@ situations for the nearest villager's village), and `validate` (op 3) report pro
 
 ---
 
+## FTB Quests integration (optional)
+
+*(1.0.0; requires the optional [FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge) mod — see [FTBQUESTS.md](FTBQUESTS.md) for the full guide, including the ten FTB-side task types and three FTB-side reward types you can use inside an FTB Quests book.)*
+
+Three conditions, one objective, and one reward let your **datapack** quests read and write **FTB Quests book** progress. They're registered whether or not FTB Quests is installed — a datapack using them loads and validates identically either way, they just always fall back to their documented default when FTB Quests can't be consulted.
+
+### Conditions
+
+| `type` | Fields |
+|---|---|
+| `mcaquests:ftbq_quest_completed` | `quest` (FTB hex id), `when_missing` (`not_met`/`met`, default `not_met`) |
+| `mcaquests:ftbq_chapter_completed` | `chapter` (FTB hex id), `when_missing` |
+| `mcaquests:ftbq_task_completed` | `task` (FTB hex id), `when_missing` |
+
+The id is FTB Quests' own 16-hex-digit code string (regex `#?[0-9a-fA-F]{1,16}`, leading `#` tolerated) — copy it straight out of the FTB editor. `when_missing` is the result used whenever the real answer can't be checked (FTB Quests absent, the integration disabled in config, the id not resolving to anything in the loaded book, or any internal failure) — `not_met` for "bonus content gated behind the book", `met` (usually paired with `not`) for "catch-up content hidden once the book is done".
+
+```json
+{ "type": "mcaquests:ftbq_quest_completed", "quest": "1A2B3C4D5E6F7081", "when_missing": "not_met" }
+```
+
+### Objective — `mcaquests:ftbq_complete_quest`
+
+| Field | Default | Meaning |
+|---|---|---|
+| `quest` | (required) | FTB hex id. |
+| `already_complete` | `satisfy` | `satisfy` — an FTB quest already done before accept satisfies this objective on the first check. `block_offer` — additionally hides the offer once the linked FTB quest is done (desugars into an implicit `not(ftbq_quest_completed)` condition). |
+| `display_name` | *(none)* | Optional `QuestText` naming the FTB quest in the objective line; falls back to a generic line naming the raw hex id. |
+
+If FTB Quests isn't installed, any quest using this objective is skipped at load (lenient mode, logged) rather than being offered unsatisfiable; strict mode treats it as a load error.
+
+### Reward — `mcaquests:ftbq_progress`
+
+| Field | Values |
+|---|---|
+| `action` | `complete_task`, `complete_quest`, `reset_task` |
+| `id` | FTB hex id of the target task/quest |
+
+Gated by the `allowFtbqProgressRewards` config option (on by default) — when disabled, the reward's description still renders on the card, but claiming it silently does nothing.
+
+### Example
+
+```json
+{
+  "id": "mypack:archivist_bonus",
+  "giver": { "professions": ["minecraft:librarian"], "min_hearts": 20 },
+  "dialogue": { "offer": {"text": "You finished the Ancient Tome chapter? Then you're ready for this."}, "...": "..." },
+  "conditions": { "all_of": [
+      { "type": "mcaquests:ftbq_chapter_completed", "chapter": "0123456789ABCDEF", "when_missing": "not_met" } ] },
+  "objectives": [ { "type": "mcaquests:ftbq_complete_quest", "quest": "1A2B3C4D5E6F7081",
+      "display_name": {"text": "the Librarian's Challenge"}, "already_complete": "block_offer" } ],
+  "rewards": [ { "type": "mcaquests:hearts", "amount": 30 },
+               { "type": "mcaquests:ftbq_progress", "action": "complete_task", "id": "F00DF00DF00DF00D" } ]
+}
+```
+
+`/mcaquests ftbq validate` flags an `id` that doesn't currently resolve as a **warning** (not an error) in this direction too — datapacks legitimately reference FTB book content that hasn't been built yet. See [FTBQUESTS.md](FTBQUESTS.md#commands) for the full command reference.
+
+---
+
 ## Complete example
 
 `/mcaquests export-schema` writes this to `config/mcaquests/example_quest.json`:
