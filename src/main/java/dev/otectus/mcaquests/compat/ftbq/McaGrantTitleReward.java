@@ -148,10 +148,6 @@ public class McaGrantTitleReward extends McaRewardBase {
     }
 
     private static TitleScope parseScope(String raw) {
-        try {
-            return TitleScope.valueOf(raw);
-        } catch (IllegalArgumentException e) {
-            return TitleScope.GLOBAL;
-        }
+        return parseEnum(TitleScope.class, raw, TitleScope.GLOBAL);
     }
 }

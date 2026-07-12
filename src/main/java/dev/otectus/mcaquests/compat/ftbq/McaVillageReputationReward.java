@@ -143,11 +143,7 @@ public class McaVillageReputationReward extends McaRewardBase {
     }
 
     private static Target parseTarget(String raw) {
-        try {
-            return Target.valueOf(raw);
-        } catch (IllegalArgumentException e) {
-            return Target.NEAREST;
-        }
+        return parseEnum(Target.class, raw, Target.NEAREST);
     }
 
     public enum Target {

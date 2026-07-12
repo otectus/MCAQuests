@@ -179,11 +179,7 @@ public class McaHeartsReward extends McaRewardBase {
     }
 
     private static Target parseTarget(String raw) {
-        try {
-            return Target.valueOf(raw);
-        } catch (IllegalArgumentException e) {
-            return Target.NEAREST_VILLAGER;
-        }
+        return parseEnum(Target.class, raw, Target.NEAREST_VILLAGER);
     }
 
     public enum Target {

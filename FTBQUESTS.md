@@ -50,6 +50,8 @@ Notes on a few of the trickier ones:
 | `mcaquests:hearts` | `amount·int·10`, `target·enum·NEAREST_VILLAGER` (`NEAREST_VILLAGER`, `SPOUSE`, `VILLAGE_RESIDENTS`) | `NEAREST_VILLAGER` finds the nearest loaded **adult** MCA villager within 16 blocks (a nearby child is skipped in favor of a slightly farther adult); `VILLAGE_RESIDENTS` pushes hearts to every resident of the nearest village, loaded or not; `SPOUSE` needs the spouse loaded nearby. The same `heartsRewardMultiplier`/min/max clamp as the native `mcaquests:hearts` reward applies. No target found → banked. |
 | `mcaquests:grant_title` | `title_id·String·""` (required), `scope·enum·GLOBAL` (`GLOBAL`, `VILLAGE`) | Grants the title via the normal `TitleService` path. `VILLAGE` scope with no village nearby → banked. Unknown title id → a warning to the player and the server log, no-op (also flagged by `ftbq validate`). |
 
+The `target`/`scope` enum values are persisted in SNBT as the constant names shown above (e.g. `NEAREST_VILLAGER`), but parsing is **case-insensitive** — a hand-edited `nearest_villager` works too; a genuinely unrecognized value falls back to the default (with a debug log line).
+
 **Banked rewards.** When a reward can't find its target (no village or villager nearby to receive it), it is never silently dropped — it's queued in the player's persistent pending-rewards list and automatically re-delivered **on that player's next login, and again once per in-game day while they're online**, until a target resolves. The player is told the reward is banked at claim time.
 
 **FTB per-team/per-player claiming.** Whether a reward pays out once per team or once per player is entirely FTB's own reward-claim setting (untouched by this integration) — our rewards default to whatever FTB's own default is.
@@ -99,7 +101,7 @@ Gated by `allowFtbqProgressRewards` (default on) — when disabled, the reward c
 {
     title: "A Friend of Oakvale"
     tasks: [{ id: "5F3C0A1B2D4E6F70", type: "mcaquests:reputation_tier", ladder: "mcaquests:default", tier: "friend", village_count: 1 }]
-    rewards: [{ id: "70E1D2C3B4A59687", type: "mcaquests:hearts", amount: 15, target: "nearest_villager" }]
+    rewards: [{ id: "70E1D2C3B4A59687", type: "mcaquests:hearts", amount: 15, target: "NEAREST_VILLAGER" }]
 }
 ```
 
