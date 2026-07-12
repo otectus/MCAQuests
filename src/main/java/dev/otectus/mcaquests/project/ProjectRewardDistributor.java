@@ -113,11 +113,18 @@ public final class ProjectRewardDistributor {
         return true;
     }
 
+    /**
+     * Re-derives the multiplier/clamp at delivery time (task M3.2 finding: the configured
+     * {@code heartsRewardMultiplier}/min/max clamp lives in {@link HeartsReward#effectiveAmount()}, not
+     * in {@link McaCompat#addHearts}) rather than banking the already-clamped value, so a config change
+     * between claim and delivery is honoured exactly like every other hearts path.
+     */
     private static boolean deliverBankedHearts(ServerLevel level, ServerPlayer player, BankedReward reward) {
+        int amount = new HeartsReward(reward.amount()).effectiveAmount();
         return switch (reward.target()) {
-            case "SPOUSE" -> deliverSpouseHearts(player, reward.amount());
-            case "VILLAGE_RESIDENTS" -> deliverVillageResidentHearts(level, player, reward.amount());
-            default -> deliverNearestVillagerHearts(player, reward.amount()); // NEAREST_VILLAGER + unknown fallback
+            case "SPOUSE" -> deliverSpouseHearts(player, amount);
+            case "VILLAGE_RESIDENTS" -> deliverVillageResidentHearts(level, player, amount);
+            default -> deliverNearestVillagerHearts(player, amount); // NEAREST_VILLAGER + unknown fallback
         };
     }
 
@@ -134,9 +141,14 @@ public final class ProjectRewardDistributor {
         return true;
     }
 
-    /** Genuinely nearest-by-distance (§16.2 "nearest loaded MCA villager"), via {@link McaCompat#nearestVillagerWithin}. */
+    /**
+     * Genuinely nearest-by-distance among <em>adult</em> MCA villagers (spec §16.2: "nearest loaded adult
+     * MCA villager"), via {@link McaCompat#nearestAdultVillagerWithin} (task M3.2) — aligned with the
+     * {@code mcaquests:hearts} reward's own {@code NEAREST_VILLAGER} claim path so claim-now and
+     * deliver-later agree on what "nearest" means.
+     */
     private static boolean deliverNearestVillagerHearts(ServerPlayer player, int amount) {
-        Optional<Entity> candidate = McaCompat.nearestVillagerWithin(player, VILLAGER_RESOLUTION_RADIUS);
+        Optional<Entity> candidate = McaCompat.nearestAdultVillagerWithin(player, VILLAGER_RESOLUTION_RADIUS);
         if (candidate.isEmpty()) {
             return false;
         }

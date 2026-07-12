@@ -99,6 +99,11 @@
   "mcaquests.message.escort_target_died": "The one you were escorting has fallen.",
 
   "mcaquests.ftbq.reward.banked_delivered": "A reward you claimed earlier has finally reached you.",
+  "mcaquests.ftbq.reward.banked_reputation": "The nearest village will remember this — visit one to receive your standing.",
+  "mcaquests.ftbq.reward.banked_hearts": "This affection is waiting for the right villager — it will be delivered when one is nearby.",
+  "mcaquests.ftbq.reward.banked_title": "This title awaits a village to claim it — visit one to receive it.",
+  "mcaquests.ftbq.reward.unknown_title": "That title doesn't exist — nothing was granted.",
+  "mcaquests.ftbq.reward.claim_failed": "Something went wrong claiming that reward.",
 
   "mcaquests.objective.donate_item": "Donate %s× %s",
   "mcaquests.objective.project_kill_entity": "Defeat %s× %s near the village",
@@ -261,5 +266,24 @@
   "ftbquests.task.mcaquests.hearts.hearts": "Hearts",
   "ftbquests.task.mcaquests.hearts.spouse_only": "Spouse Only",
   "ftbquests.task.mcaquests.hearts.alt_title.spouse": "Earn %s hearts with your spouse",
-  "ftbquests.task.mcaquests.hearts.alt_title.any": "Earn %s hearts with a villager"
+  "ftbquests.task.mcaquests.hearts.alt_title.any": "Earn %s hearts with a villager",
+
+  "ftbquests.reward.mcaquests.village_reputation": "Village Reputation",
+  "ftbquests.reward.mcaquests.village_reputation.amount": "Amount",
+  "ftbquests.reward.mcaquests.village_reputation.target": "Target",
+  "ftbquests.reward.mcaquests.village_reputation.target.nearest": "Nearest Village",
+  "ftbquests.reward.mcaquests.village_reputation.target.highest_reputation": "Highest-Reputation Village",
+
+  "ftbquests.reward.mcaquests.hearts": "Villager Hearts",
+  "ftbquests.reward.mcaquests.hearts.amount": "Amount",
+  "ftbquests.reward.mcaquests.hearts.target": "Target",
+  "ftbquests.reward.mcaquests.hearts.target.nearest_villager": "Nearest Villager",
+  "ftbquests.reward.mcaquests.hearts.target.spouse": "Spouse",
+  "ftbquests.reward.mcaquests.hearts.target.village_residents": "Village Residents",
+
+  "ftbquests.reward.mcaquests.grant_title": "Grant Title",
+  "ftbquests.reward.mcaquests.grant_title.title_id": "Title ID",
+  "ftbquests.reward.mcaquests.grant_title.scope": "Scope",
+  "ftbquests.reward.mcaquests.grant_title.scope.global": "Global",
+  "ftbquests.reward.mcaquests.grant_title.scope.village": "Village"
 }
