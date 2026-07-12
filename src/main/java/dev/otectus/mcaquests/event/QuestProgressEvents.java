@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.event;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.FailureSpec;
@@ -306,6 +307,11 @@ public final class QuestProgressEvents {
                 (objective, active, progress) -> objective.poll(player, progress, level));
         forActiveObjectives(player, ReachLocationObjective.class,
                 (objective, active, progress) -> objective.poll(player, active, progress, level));
+        // Generic poll pass (spec section 11.3): any objective type implementing PollingObjective is
+        // picked up here automatically, after all built-ins above, so this is a pure additive extension
+        // point — new poll-driven objective types no longer require editing this method.
+        forActiveObjectives(player, PollingObjective.class,
+                (objective, active, progress) -> objective.poll(player, active, progress));
         highlightTargets(player, level);
         checkFailureTriggers(player);
         autoCompleteSelfQuests(player);
