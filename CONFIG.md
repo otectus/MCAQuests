@@ -17,7 +17,7 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 | `enableDefaultQuestPack` | `true` | Load the 38 built-in quests. Set `false` to ship only your own datapack quests. |
 | `maxActiveQuestsPerPlayer` | `10` | Hard cap on a player's simultaneously-active quests. |
 | `maxActiveQuestsPerVillager` | `1` | Cap on active quests per individual villager, per player. |
-| `offersPerVillager` | `3` | How many quest cards a villager shows at once. |
+| `offersPerVillager` | `3` | How many quest cards a villager shows at once. The cards scroll, so this is not limited by screen height. |
 | `offerRefreshTicks` | `24000` | Ticks before a villager's offered set rerolls (24000 = 1 MC day). |
 | `defaultQuestCooldownTicks` | `24000` | Cooldown applied to quests that don't define their own. |
 

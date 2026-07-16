@@ -24,7 +24,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 - 🎁 **7 reward types** — items, XP, XP levels, status effects, loot tables, commands (off by default), and **MCA hearts**.
 - 🔒 **25 condition types** + `all_of` / `any_of` / `not` composites — gate offers by hearts, profession, biome, dimension, time, weather, held item, advancement, level, random chance, and quest history (completed / not-completed / failed / abandoned).
 - 💞 **MCA-aware conditions** — gate quests on the villager's life-sim state: whether they're your **spouse** or **family**, their **relationship status**, **age**, **personality**, **mood**, **village/home**, **health**, or **infection**, and even whether a **relative is missing or has died**. All optional, datapack-driven, and fail-safe; 6 sample quests included (spouse errand, child's request, sick-villager remedy, guard patrol, missing-child search, memorial).
-- 🧭 **Quest tracking** — a keybind-toggled **Quest Log**, a fully repositionable **HUD tracker** that names the giver, and a **toast + sound** when a quest is ready to turn in.
+- 🧭 **Quest tracking** — a keybind-toggled **Quest Log** (with an **Abandon** button per quest, so you can always drop one even if its giver is gone), a fully repositionable **HUD tracker** that names the giver, and a **toast + sound** when a quest is ready to turn in.
 - 🛡️ **Server-authoritative & exploit-resistant** — all selection, validation, and reward granting happen on the server; turn-in is atomic and idempotent, so packet-spam can't duplicate rewards.
 - 🧩 **Extensible** — a public Java API lets add-ons register their own objective/reward/condition types, and five Forge events (`QuestAccepted/Ready/Completed/Abandoned/Failed`) let other mods react.
 - 💬 **MCA: Conversations integration** (optional) — with the **MCA: Conversations** add-on installed, villagers **speak** a quest's offer / progress / completion / failure line in their own personality instead of the static text, and "talk to this villager" objectives progress from an **actual conversation**. MCA: Quests ships only the hooks and safe fallbacks — without the add-on, dialogue stays as written and nothing else changes.
@@ -51,7 +51,7 @@ MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
 ## How it works
 
-Right-click a villager → **Quests** → pick an offer → **Accept**. Track it via the HUD or the Quest Log keybind (bind "Open Quest Log" in Controls). When the objective is done you'll get a toast; return to an eligible villager and **Complete** it to claim your rewards and earn hearts.
+Right-click a villager → **Quests** → pick an offer → **Accept**. Track it via the HUD or the Quest Log keybind (bind "Open Quest Log" in Controls). When the objective is done you'll get a toast; return to an eligible villager and **Complete** it to claim your rewards and earn hearts. Changed your mind? **Abandon** it from the villager's menu or straight from the Quest Log.
 
 ## Configuration
 

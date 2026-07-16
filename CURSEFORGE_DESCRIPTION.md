@@ -21,7 +21,7 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 - **FTB Quests integration** *(optional)* — build FTB Quests books that read your villager quests, reputation, titles, and hearts, and grant those same rewards straight from the book. Not installed? Nothing changes.
 - **Real variety** — deliver and gather, craft and fish, hunt monsters, mine and build, and explore distant biomes and dimensions. Some quests only appear at night, or in the rain.
 - **Earn hearts that matter** — rewards feed directly into MCA's relationship system, alongside emeralds, XP, and more.
-- **Track everything** — a toggleable Quest Log, an on-screen tracker you can place in any corner, and a satisfying chime when a quest is ready to hand in.
+- **Track everything** — a toggleable Quest Log, an on-screen tracker you can place in any corner, and a satisfying chime when a quest is ready to hand in. Changed your mind? Abandon any quest right from the log, even if its villager is long gone.
 - **Built for modpacks** — every quest is a simple JSON file. Pack makers can add, remove, or rebalance quests with a datapack, no code required. A full config lets you tune offer counts, cooldowns, heart rewards, and more.
 
 ## 🎮 How to play
