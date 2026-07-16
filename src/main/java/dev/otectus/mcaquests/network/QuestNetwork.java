@@ -11,11 +11,12 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 5 for task M5.1 — adds the FTB editor known-ids sync packet. (4 was v0.8.0: the
-    // "village needs help" situation toast packet; 3 was v0.7.0: the reputation tier-up toast and
-    // journal request/sync packets; 2 was v0.4.0: the community-project menu/log/contribute packets.)
+    // Bumped to 6 — adds the abandon-from-log packet and a giver UUID to QuestLogEntry. (5 was task
+    // M5.1: the FTB editor known-ids sync packet; 4 was v0.8.0: the "village needs help" situation toast
+    // packet; 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0:
+    // the community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "5";
+    private static final String PROTOCOL_VERSION = "6";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -70,5 +71,11 @@ public final class QuestNetwork {
         // gated on FTB Quests being loaded + syncFtbqEditorIds, see FtbqEditorIdsSync).
         CHANNEL.registerMessage(nextId++, FtbqEditorIdsS2CPacket.class,
                 FtbqEditorIdsS2CPacket::encode, FtbqEditorIdsS2CPacket::decode, FtbqEditorIdsS2CPacket::handle);
+
+        // Abandon from the quest log — no villager interaction required, so a quest whose giver is gone
+        // is still droppable.
+        CHANNEL.registerMessage(nextId++, QuestAbandonFromLogC2SPacket.class,
+                QuestAbandonFromLogC2SPacket::encode, QuestAbandonFromLogC2SPacket::decode,
+                QuestAbandonFromLogC2SPacket::handle);
     }
 }

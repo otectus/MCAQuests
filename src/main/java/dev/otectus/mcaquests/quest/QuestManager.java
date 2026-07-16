@@ -121,6 +121,19 @@ public final class QuestManager {
         syncLog(player);
     }
 
+    /**
+     * Abandon driven from the quest log screen, where there is no villager interaction to validate
+     * against: the giver may be dead, unloaded, or in another dimension. {@code find} is the
+     * authorization — a client can only abandon a quest it actually holds — and the giver is resolved
+     * best-effort purely so listeners see it when it happens to be around.
+     */
+    public static void abandonFromLog(ServerPlayer player, UUID villagerUuid, ResourceLocation questId) {
+        QuestCapabilities.get(player).ifPresent(data -> data.find(questId, villagerUuid).ifPresent(active -> {
+            abandon(player, active, resolveGiver(player, active), data);
+            syncLog(player);
+        }));
+    }
+
     @Nullable
     private static Entity resolve(ServerPlayer player, UUID villagerUuid) {
         if (!(player.level() instanceof ServerLevel level)) {
@@ -434,13 +447,30 @@ public final class QuestManager {
             return false;
         }
         Optional<ActiveQuest> active = dataOpt.get().find(questId, villager.getUUID());
-        if (active.isEmpty()) {
-            return false;
+        return active.isPresent() && abandon(player, active.get(), villager, dataOpt.get());
+    }
+
+    /**
+     * Server-authoritative, idempotent abandon — the single point every abandon path routes through.
+     * Removes the quest, records an ABANDONED outcome (so {@code quest_abandoned} follow-ups can branch
+     * on it), releases any escort movement, and posts {@link QuestAbandonedEvent}. No cooldown and no
+     * {@code failure} outcome is applied: abandoning is free, exactly as it has always been from the
+     * villager menu.
+     *
+     * <p>{@code villager} may be null (giver dead / unloaded / in another dimension) — the stored
+     * {@link ActiveQuest} carries every identity this needs, so a quest is always abandonable even when
+     * its giver is unreachable. The removal happens outside the definition lookup, so a quest whose
+     * definition vanished on a datapack reload still clears.
+     */
+    public static boolean abandon(ServerPlayer player, ActiveQuest active, @Nullable Entity villager,
+                                  PlayerQuestData data) {
+        if (!data.active().contains(active)) {
+            return false; // already reached a terminal state this tick — never abandon twice
         }
-        dataOpt.get().remove(active.get());
-        QuestDefinitions.resolve(questId).ifPresent(def -> {
-            releaseEscortMovement(player, active.get().resolve(def), active.get());
-            dataOpt.get().history().recordOutcome(def.id(), active.get().villagerUuid(), QuestHistory.Outcome.ABANDONED);
+        data.remove(active);
+        QuestDefinitions.resolve(active.questId()).ifPresent(def -> {
+            releaseEscortMovement(player, active.resolve(def), active);
+            data.history().recordOutcome(def.id(), active.villagerUuid(), QuestHistory.Outcome.ABANDONED);
             MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
         });
         return true;
@@ -860,16 +890,23 @@ public final class QuestManager {
             // Resolve the MCA name once, and only when there is at least one quest to render.
             String mcaName = data.active().isEmpty() ? null : McaCompat.getPlayerName(player);
             for (ActiveQuest active : data.active()) {
-                QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
+                QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base -> {
                     QuestDefinition def = active.resolve(base);
                     java.util.OptionalLong deadline = def.failure()
                             .map(failure -> failure.deadlineGameTime(active.startGameTime()))
                             .orElse(java.util.OptionalLong.empty());
                     PlaceholderResolver resolver = active.textResolver(mcaName);
-                    entries.add(new QuestLogEntry(active.questId(), def.title(resolver), active.villagerName(),
-                            chainLabel(def, resolver), objectiveLines(player, def, active), isComplete(player, def, active),
-                            deadline));
-                });
+                    entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), def.title(resolver),
+                            active.villagerName(), chainLabel(def, resolver), objectiveLines(player, def, active),
+                            isComplete(player, def, active), deadline));
+                }, () ->
+                    // The definition disappeared on a datapack reload (spec section 36). Still list it, under
+                    // its raw id — otherwise the quest is invisible in the log yet keeps occupying an active
+                    // slot, leaving the player no way to abandon it.
+                    entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
+                            Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
+                            active.villagerName(), Component.empty(), List.of(), false,
+                            java.util.OptionalLong.empty())));
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
         });

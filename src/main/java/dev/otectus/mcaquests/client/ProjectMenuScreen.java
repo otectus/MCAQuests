@@ -28,10 +28,19 @@ public class ProjectMenuScreen extends Screen {
 
     private static final int CARD_WIDTH = 280;
     private static final int BAR_HEIGHT = 2;
+    /** Top of the card viewport — just below the title. */
+    private static final int VIEWPORT_TOP = 26;
 
     private final UUID villagerUuid;
     private final List<ProjectCard> cards;
+    /** Card tops in content space (0 = first card), turned into screen y through {@link #view}. */
     private final List<Integer> cardTops = new ArrayList<>();
+    private final List<ScrolledButton> scrolledButtons = new ArrayList<>();
+    private final ScrollView view = new ScrollView();
+
+    /** A Contribute button, remembered with its content-space y so scrolling can reposition it. */
+    private record ScrolledButton(Button button, int contentY) {
+    }
 
     public ProjectMenuScreen(UUID villagerUuid, List<ProjectCard> cards) {
         super(Component.translatable("mcaquests.screen.projects.title"));
@@ -50,22 +59,39 @@ public class ProjectMenuScreen extends Screen {
     @Override
     protected void init() {
         cardTops.clear();
+        scrolledButtons.clear();
         int centerX = this.width / 2;
-        int y = 30;
+
+        // Cards live in their own space starting at 0, clipped between the title and the Back button,
+        // so a village with several projects doesn't run off the bottom (see QuestMenuScreen).
+        view.setViewport(VIEWPORT_TOP, Math.max(VIEWPORT_TOP, this.height - 32));
+
+        int y = 0;
         for (ProjectCard card : cards) {
             cardTops.add(y);
             int height = cardHeight(card);
             if (card.status() != ProjectMenuStatus.COMPLETE) {
-                addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.project.contribute"),
+                int contentY = y + height - 22;
+                Button contribute = Button.builder(Component.translatable("mcaquests.button.project.contribute"),
                                 b -> contribute(card.projectId()))
-                        .bounds(centerX - 60, y + height - 22, 120, 20)
-                        .build());
+                        .bounds(centerX - 60, view.screenY(contentY), 120, 20)
+                        .build();
+                addRenderableWidget(contribute);
+                scrolledButtons.add(new ScrolledButton(contribute, contentY));
             }
             y += height + 4;
         }
+        view.setContentHeight(y);
+
         addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose())
                 .bounds(centerX - 50, this.height - 26, 100, 20)
                 .build());
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        view.scrollBy(-(int) (delta * 12));
+        return true;
     }
 
     private void contribute(ResourceLocation projectId) {
@@ -98,11 +124,30 @@ public class ProjectMenuScreen extends Screen {
             graphics.drawCenteredString(this.font, Component.translatable("mcaquests.status.no_quests"),
                     centerX, this.height / 2, 0xFFFFFF);
         } else {
-            for (int i = 0; i < cards.size(); i++) {
-                renderCard(graphics, cards.get(i), left, cardTops.get(i));
+            // Hidden rather than clipped: super.render draws widgets outside our scissor, and an
+            // invisible widget is also unclickable (AbstractWidget.clicked tests visible).
+            for (ScrolledButton scrolled : scrolledButtons) {
+                scrolled.button().setY(view.screenY(scrolled.contentY()));
+                scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 20);
             }
+            int right = left + wrapWidth();
+            graphics.enableScissor(left, view.top(), right, view.bottom());
+            for (int i = 0; i < cards.size(); i++) {
+                renderCard(graphics, cards.get(i), left, view.screenY(cardTops.get(i)));
+            }
+            graphics.disableScissor();
+            renderScrollbar(graphics, right + 4);
         }
         super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    /** Thin track + thumb, drawn just right of the cards, only when there is something to scroll. */
+    private void renderScrollbar(GuiGraphics graphics, int x) {
+        if (!view.overflows()) {
+            return;
+        }
+        graphics.fill(x, view.top(), x + 3, view.bottom(), 0x40FFFFFF);
+        graphics.fill(x, view.thumbTop(), x + 3, view.thumbTop() + view.thumbHeight(), 0xC0FFFFFF);
     }
 
     private void renderCard(GuiGraphics graphics, ProjectCard card, int left, int top) {
