@@ -36,9 +36,9 @@ public record RecordIncidentReward(ResourceLocation incident, Optional<Integer> 
     public static final Codec<RecordIncidentReward> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
                     ResourceLocation.CODEC.fieldOf("incident").forGetter(RecordIncidentReward::incident),
-                    Codec.INT.optionalFieldOf("delta").forGetter(RecordIncidentReward::delta),
-                    Codec.STRING.optionalFieldOf("visibility").forGetter(RecordIncidentReward::visibility),
-                    Codec.STRING.listOf().optionalFieldOf("tags", List.of())
+                    Codec.INT.lenientOptionalFieldOf("delta").forGetter(RecordIncidentReward::delta),
+                    Codec.STRING.lenientOptionalFieldOf("visibility").forGetter(RecordIncidentReward::visibility),
+                    Codec.STRING.listOf().lenientOptionalFieldOf("tags", List.of())
                             .forGetter(RecordIncidentReward::tags)
             ).apply(instance, RecordIncidentReward::new));
 

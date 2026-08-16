@@ -63,20 +63,20 @@ public record QuestDefinition(
 
     public static final Codec<QuestDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("id").forGetter(QuestDefinition::id),
-            Codec.BOOL.optionalFieldOf("enabled", true).forGetter(QuestDefinition::enabled),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("weight", 1).forGetter(QuestDefinition::weight),
-            Codec.STRING.optionalFieldOf("category").forGetter(QuestDefinition::category),
-            QuestText.CODEC.optionalFieldOf("title").forGetter(QuestDefinition::titleOverride),
-            RepeatRule.CODEC.optionalFieldOf("repeat", RepeatRule.DEFAULT).forGetter(QuestDefinition::repeat),
+            Codec.BOOL.lenientOptionalFieldOf("enabled", true).forGetter(QuestDefinition::enabled),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("weight", 1).forGetter(QuestDefinition::weight),
+            Codec.STRING.lenientOptionalFieldOf("category").forGetter(QuestDefinition::category),
+            QuestText.CODEC.lenientOptionalFieldOf("title").forGetter(QuestDefinition::titleOverride),
+            RepeatRule.CODEC.lenientOptionalFieldOf("repeat", RepeatRule.DEFAULT).forGetter(QuestDefinition::repeat),
             GiverSpec.CODEC.fieldOf("giver").forGetter(QuestDefinition::giver),
             Codec.unboundedMap(Codec.STRING, QuestText.CODEC).fieldOf("dialogue").forGetter(QuestDefinition::dialogue),
-            ObjectiveTypes.CODEC.listOf().optionalFieldOf("objectives", List.of()).forGetter(QuestDefinition::objectives),
-            RewardTypes.CODEC.listOf().optionalFieldOf("rewards", List.of()).forGetter(QuestDefinition::rewards),
-            TurnInSpec.CODEC.optionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(QuestDefinition::turnIn),
-            ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(QuestDefinition::conditions),
-            ChainSpec.CODEC.optionalFieldOf("chain").forGetter(QuestDefinition::chain),
-            FailureSpec.CODEC.optionalFieldOf("failure").forGetter(QuestDefinition::failure),
-            TemplateSpec.CODEC.optionalFieldOf("template").forGetter(QuestDefinition::template),
+            ObjectiveTypes.CODEC.listOf().lenientOptionalFieldOf("objectives", List.of()).forGetter(QuestDefinition::objectives),
+            RewardTypes.CODEC.listOf().lenientOptionalFieldOf("rewards", List.of()).forGetter(QuestDefinition::rewards),
+            TurnInSpec.CODEC.lenientOptionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(QuestDefinition::turnIn),
+            ConditionTypes.CODEC.lenientOptionalFieldOf("conditions").forGetter(QuestDefinition::conditions),
+            ChainSpec.CODEC.lenientOptionalFieldOf("chain").forGetter(QuestDefinition::chain),
+            FailureSpec.CODEC.lenientOptionalFieldOf("failure").forGetter(QuestDefinition::failure),
+            TemplateSpec.CODEC.lenientOptionalFieldOf("template").forGetter(QuestDefinition::template),
             // DataFixerUpper's RecordCodecBuilder tops out at 16 grouped fields, and this definition
             // was already at 16. Rather than restructure the whole quest format to add one optional
             // block, the last two are read as a pair — the JSON shape is unchanged, since a MapCodec
@@ -84,7 +84,7 @@ public record QuestDefinition(
             Codec.mapPair(
                             OfferShaping.MAP_CODEC,
                             dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.CODEC
-                                    .optionalFieldOf("reputation",
+                                    .lenientOptionalFieldOf("reputation",
                                             dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE))
                     .forGetter(def -> com.mojang.datafixers.util.Pair.of(def.offerShaping(), def.reputation()))
     ).apply(instance, (id, enabled, weight, category, title, repeat, giver, dialogue, objectives, rewards,

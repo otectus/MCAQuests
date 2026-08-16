@@ -25,12 +25,12 @@ public record ProtectEntityObjective(VillagerTarget villager, int durationTicks,
                                      boolean failOnDeath) implements QuestObjective, VillagerTargeted {
 
     public static final Codec<ProtectEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(ProtectEntityObjective::villager),
-            Codec.intRange(20, Integer.MAX_VALUE).optionalFieldOf("duration_ticks", 2400)
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager", VillagerTarget.SELF).forGetter(ProtectEntityObjective::villager),
+            Codec.intRange(20, Integer.MAX_VALUE).lenientOptionalFieldOf("duration_ticks", 2400)
                     .forGetter(ProtectEntityObjective::durationTicks),
-            Codec.BOOL.optionalFieldOf("require_near_player", false).forGetter(ProtectEntityObjective::requireNearPlayer),
-            Codec.intRange(1, 64).optionalFieldOf("near_radius", 16).forGetter(ProtectEntityObjective::nearRadius),
-            Codec.BOOL.optionalFieldOf("fail_on_death", true).forGetter(ProtectEntityObjective::failOnDeath)
+            Codec.BOOL.lenientOptionalFieldOf("require_near_player", false).forGetter(ProtectEntityObjective::requireNearPlayer),
+            Codec.intRange(1, 64).lenientOptionalFieldOf("near_radius", 16).forGetter(ProtectEntityObjective::nearRadius),
+            Codec.BOOL.lenientOptionalFieldOf("fail_on_death", true).forGetter(ProtectEntityObjective::failOnDeath)
     ).apply(instance, ProtectEntityObjective::new));
 
     @Override

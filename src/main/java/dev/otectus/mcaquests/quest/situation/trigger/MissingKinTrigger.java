@@ -16,7 +16,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record MissingKinTrigger(String relation) implements SituationTrigger {
 
     public static final Codec<MissingKinTrigger> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("relation", "any").forGetter(MissingKinTrigger::relation)
+            Codec.STRING.lenientOptionalFieldOf("relation", "any").forGetter(MissingKinTrigger::relation)
     ).apply(instance, MissingKinTrigger::new));
 
     @Override

@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class BuiltinPackParsesTest {
 
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path DATA = dev.otectus.mcaquests.support.TestPaths.resolve("src/main/resources/data/mcaquests/mcaquests");
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -121,7 +121,7 @@ class BuiltinPackParsesTest {
     private static <T> T parseOrThrow(Path file, com.mojang.serialization.Codec<T> codec) {
         DataResult<T> result = codec.parse(JsonOps.INSTANCE, json(file));
         return result.result().orElseThrow(() -> new AssertionError(
-                file + " did not parse: " + result.error().map(DataResult.PartialResult::message).orElse("?")));
+                file + " did not parse: " + result.error().map(DataResult.Error::message).orElse("?")));
     }
 
     private static List<Path> jsonUnder(String folder) {

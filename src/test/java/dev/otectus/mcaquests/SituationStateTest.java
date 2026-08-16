@@ -82,7 +82,7 @@ class SituationStateTest {
         assertEquals(2, data.openCountInVillage(12));
         assertEquals(0, data.openCountInVillage(99)); // EXPIRED is not open
 
-        SituationSavedData loaded = SituationSavedData.load(data.save(new CompoundTag()));
+        SituationSavedData loaded = SituationSavedData.load(data.save(new CompoundTag(), net.minecraft.core.RegistryAccess.EMPTY));
         assertEquals(3, loaded.allInstances().size());
         assertEquals(2, loaded.openInstancesInVillage(12).size());
         assertEquals(8000L, loaded.cooldownUntil(12, defId));

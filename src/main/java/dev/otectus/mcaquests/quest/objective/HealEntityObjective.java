@@ -26,12 +26,12 @@ public record HealEntityObjective(VillagerTarget villager, ItemTarget item,
                                   double belowHealthFraction, int count, boolean consume) implements QuestObjective, VillagerTargeted {
 
     public static final Codec<HealEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(HealEntityObjective::villager),
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager", VillagerTarget.SELF).forGetter(HealEntityObjective::villager),
             ItemTarget.MAP_CODEC.forGetter(HealEntityObjective::item),
-            Codec.doubleRange(0.0D, 1.0D).optionalFieldOf("below_health_fraction", 1.0D)
+            Codec.doubleRange(0.0D, 1.0D).lenientOptionalFieldOf("below_health_fraction", 1.0D)
                     .forGetter(HealEntityObjective::belowHealthFraction),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(HealEntityObjective::count),
-            Codec.BOOL.optionalFieldOf("consume", false).forGetter(HealEntityObjective::consume)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(HealEntityObjective::count),
+            Codec.BOOL.lenientOptionalFieldOf("consume", false).forGetter(HealEntityObjective::consume)
     ).apply(instance, HealEntityObjective::new));
 
     @Override

@@ -25,8 +25,8 @@ import java.util.Optional;
 public record StructureTarget(Optional<ResourceLocation> structure, Optional<TagKey<Structure>> tag) {
 
     public static final MapCodec<StructureTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceLocation.CODEC.optionalFieldOf("structure").forGetter(StructureTarget::structure),
-            TagKey.codec(Registries.STRUCTURE).optionalFieldOf("structure_tag").forGetter(StructureTarget::tag)
+            ResourceLocation.CODEC.lenientOptionalFieldOf("structure").forGetter(StructureTarget::structure),
+            TagKey.codec(Registries.STRUCTURE).lenientOptionalFieldOf("structure_tag").forGetter(StructureTarget::tag)
     ).apply(instance, StructureTarget::new));
 
     /** True when {@code pos} is inside a generated piece of the targeted structure. */

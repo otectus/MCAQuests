@@ -13,6 +13,6 @@ public record TitleDefinition(String name, TitleScope scope) {
 
     public static final Codec<TitleDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("name").forGetter(TitleDefinition::name),
-            TitleScope.CODEC.optionalFieldOf("scope", TitleScope.VILLAGE).forGetter(TitleDefinition::scope)
+            TitleScope.CODEC.lenientOptionalFieldOf("scope", TitleScope.VILLAGE).forGetter(TitleDefinition::scope)
     ).apply(instance, TitleDefinition::new));
 }

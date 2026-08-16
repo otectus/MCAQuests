@@ -105,23 +105,23 @@ public class McaReputationTierTask extends McaBooleanTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("ladder", ladder);
         nbt.putString("tier", tier);
         nbt.putInt("village_count", villageCount);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         ladder = nbt.contains("ladder") ? nbt.getString("ladder") : "mcaquests:default";
         tier = nbt.getString("tier");
         villageCount = Math.max(1, nbt.getInt("village_count"));
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(ladder, Short.MAX_VALUE);
         buffer.writeUtf(tier, Short.MAX_VALUE);
@@ -129,7 +129,7 @@ public class McaReputationTierTask extends McaBooleanTaskBase {
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         ladder = buffer.readUtf(Short.MAX_VALUE);
         tier = buffer.readUtf(Short.MAX_VALUE);

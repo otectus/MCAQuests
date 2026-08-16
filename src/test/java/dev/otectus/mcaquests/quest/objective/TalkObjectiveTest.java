@@ -1,6 +1,5 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
@@ -41,9 +40,7 @@ class TalkObjectiveTest {
 
     @BeforeAll
     static void loadCommonConfigDefaults() {
-        CommentedConfig config = CommentedConfig.inMemory();
-        McaQuestsConfig.COMMON_SPEC.correct(config);
-        McaQuestsConfig.COMMON_SPEC.acceptConfig(config);
+        dev.otectus.mcaquests.support.TestConfigs.loadDefaults(McaQuestsConfig.COMMON_SPEC);
     }
 
     @AfterEach

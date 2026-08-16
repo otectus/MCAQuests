@@ -13,7 +13,7 @@ public record FishItemObjective(ItemTarget target, int count) implements QuestOb
 
     public static final Codec<FishItemObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(FishItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(FishItemObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(FishItemObjective::count)
     ).apply(instance, FishItemObjective::new));
 
     @Override

@@ -54,9 +54,9 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
 
     public static final MapCodec<LocationAnchor> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             TYPE_CODEC.fieldOf("anchor").forGetter(LocationAnchor::type),
-            Codec.INT.optionalFieldOf("radius").forGetter(LocationAnchor::radius),
-            VillagerTarget.CODEC.optionalFieldOf("villager").forGetter(LocationAnchor::villager),
-            BlockPos.CODEC.optionalFieldOf("pos").forGetter(LocationAnchor::pos)
+            Codec.INT.lenientOptionalFieldOf("radius").forGetter(LocationAnchor::radius),
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager").forGetter(LocationAnchor::villager),
+            BlockPos.CODEC.lenientOptionalFieldOf("pos").forGetter(LocationAnchor::pos)
     ).apply(instance, LocationAnchor::new));
 
     public static final Codec<LocationAnchor> CODEC = MAP_CODEC.codec();

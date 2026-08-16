@@ -23,7 +23,7 @@ public record IsFamilyMemberCondition(String relation) implements QuestCondition
 
     public static final Codec<IsFamilyMemberCondition> CODEC = RecordCodecBuilder.<IsFamilyMemberCondition>create(
             instance -> instance.group(
-                    Codec.STRING.optionalFieldOf("relation", "any").forGetter(IsFamilyMemberCondition::relation)
+                    Codec.STRING.lenientOptionalFieldOf("relation", "any").forGetter(IsFamilyMemberCondition::relation)
             ).apply(instance, IsFamilyMemberCondition::new)).flatXmap(IsFamilyMemberCondition::validate, IsFamilyMemberCondition::validate);
 
     private static DataResult<IsFamilyMemberCondition> validate(IsFamilyMemberCondition condition) {

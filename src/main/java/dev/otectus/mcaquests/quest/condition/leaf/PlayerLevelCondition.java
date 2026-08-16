@@ -13,8 +13,8 @@ import java.util.Optional;
 public record PlayerLevelCondition(Optional<Integer> min, Optional<Integer> max) implements QuestCondition {
 
     public static final Codec<PlayerLevelCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(PlayerLevelCondition::min),
-            Codec.INT.optionalFieldOf("max").forGetter(PlayerLevelCondition::max)
+            Codec.INT.lenientOptionalFieldOf("min").forGetter(PlayerLevelCondition::min),
+            Codec.INT.lenientOptionalFieldOf("max").forGetter(PlayerLevelCondition::max)
     ).apply(instance, PlayerLevelCondition::new));
 
     @Override

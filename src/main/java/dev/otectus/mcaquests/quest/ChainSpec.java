@@ -32,12 +32,12 @@ public record ChainSpec(String chain,
 
     public static final Codec<ChainSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("chain").forGetter(ChainSpec::chain),
-            Codec.INT.optionalFieldOf("stage", 1).forGetter(ChainSpec::stage),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("stage_total").forGetter(ChainSpec::stageTotal),
-            QuestText.CODEC.optionalFieldOf("chapter").forGetter(ChainSpec::chapter),
-            QuestText.CODEC.optionalFieldOf("relationship_arc").forGetter(ChainSpec::relationshipArc),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("prerequisites", List.of()).forGetter(ChainSpec::prerequisites),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("unlocks", List.of()).forGetter(ChainSpec::unlocks)
+            Codec.INT.lenientOptionalFieldOf("stage", 1).forGetter(ChainSpec::stage),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("stage_total").forGetter(ChainSpec::stageTotal),
+            QuestText.CODEC.lenientOptionalFieldOf("chapter").forGetter(ChainSpec::chapter),
+            QuestText.CODEC.lenientOptionalFieldOf("relationship_arc").forGetter(ChainSpec::relationshipArc),
+            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("prerequisites", List.of()).forGetter(ChainSpec::prerequisites),
+            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("unlocks", List.of()).forGetter(ChainSpec::unlocks)
     ).apply(instance, ChainSpec::new));
 
     /**

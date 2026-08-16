@@ -15,7 +15,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record LowFoodTrigger(int threshold) implements SituationTrigger {
 
     public static final Codec<LowFoodTrigger> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("threshold", 16).forGetter(LowFoodTrigger::threshold)
+            Codec.INT.lenientOptionalFieldOf("threshold", 16).forGetter(LowFoodTrigger::threshold)
     ).apply(instance, LowFoodTrigger::new));
 
     @Override

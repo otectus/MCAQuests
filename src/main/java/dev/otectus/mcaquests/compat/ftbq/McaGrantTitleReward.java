@@ -110,28 +110,28 @@ public class McaGrantTitleReward extends McaRewardBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("title_id", titleId);
         nbt.putString("scope", scope.name());
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         titleId = nbt.getString("title_id");
         scope = parseScope(nbt.getString("scope"));
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(titleId, Short.MAX_VALUE);
         SCOPE_NAME_MAP.write(buffer, scope);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         titleId = buffer.readUtf(Short.MAX_VALUE);
         scope = SCOPE_NAME_MAP.read(buffer);

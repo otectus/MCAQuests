@@ -250,7 +250,7 @@ class ReputationIntegrationTest {
     // Source-level assertions (§29.1, §36.3)
     // ------------------------------------------------------------------
 
-    private static final Path SOURCE_ROOT = Paths.get("src/main/java/dev/otectus/mcaquests");
+    private static final Path SOURCE_ROOT = dev.otectus.mcaquests.support.TestPaths.resolve("src/main/java/dev/otectus/mcaquests");
 
     /**
      * §29.1: no gameplay path may read or write the legacy shared reputation map. Only the store
@@ -319,12 +319,13 @@ class ReputationIntegrationTest {
 
     @Test
     void modsTomlDeclaresReputationAsOptional() throws IOException {
-        String toml = Files.readString(Paths.get("src/main/resources/META-INF/mods.toml"),
+        String toml = Files.readString(dev.otectus.mcaquests.support.TestPaths.resolve("src/main/resources/META-INF/neoforge.mods.toml"),
                 StandardCharsets.UTF_8);
         int index = toml.indexOf("modId=\"mcareputation\"");
         assertTrue(index > 0, "the optional dependency entry is missing");
         String block = toml.substring(index, Math.min(toml.length(), index + 200));
-        assertTrue(block.contains("mandatory=false"), "MCA: Reputation must never become mandatory");
+        // PORT: NeoForge's dependency syntax is type="optional" (Forge 1.20.1 was mandatory=false).
+        assertTrue(block.contains("type=\"optional\""), "MCA: Reputation must never become mandatory");
         assertTrue(block.contains("ordering=\"AFTER\""),
                 "Quests must load after Reputation so the bridge sees a ready API");
     }

@@ -22,9 +22,9 @@ public record MoodCondition(Optional<Integer> min, Optional<Integer> max, Option
         implements QuestCondition {
 
     public static final Codec<MoodCondition> CODEC = RecordCodecBuilder.<MoodCondition>create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(MoodCondition::min),
-            Codec.INT.optionalFieldOf("max").forGetter(MoodCondition::max),
-            McaConditionCodecs.lowercaseNonEmptyList("mood").optionalFieldOf("moods").forGetter(MoodCondition::moods)
+            Codec.INT.lenientOptionalFieldOf("min").forGetter(MoodCondition::min),
+            Codec.INT.lenientOptionalFieldOf("max").forGetter(MoodCondition::max),
+            McaConditionCodecs.lowercaseNonEmptyList("mood").lenientOptionalFieldOf("moods").forGetter(MoodCondition::moods)
     ).apply(instance, MoodCondition::new)).flatXmap(MoodCondition::validate, MoodCondition::validate);
 
     private static DataResult<MoodCondition> validate(MoodCondition condition) {

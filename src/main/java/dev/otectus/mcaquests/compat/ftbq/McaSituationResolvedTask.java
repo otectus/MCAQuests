@@ -59,25 +59,25 @@ public class McaSituationResolvedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("situation_id", situationId);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         situationId = nbt.getString("situation_id");
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(situationId, Short.MAX_VALUE);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         situationId = buffer.readUtf(Short.MAX_VALUE);
     }

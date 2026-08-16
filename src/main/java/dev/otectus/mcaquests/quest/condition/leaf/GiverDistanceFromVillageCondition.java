@@ -27,8 +27,8 @@ public record GiverDistanceFromVillageCondition(double minDistance, boolean requ
 
     public static final Codec<GiverDistanceFromVillageCondition> CODEC =
             RecordCodecBuilder.<GiverDistanceFromVillageCondition>create(instance -> instance.group(
-                    Codec.DOUBLE.optionalFieldOf("min_distance", 0.0D).forGetter(GiverDistanceFromVillageCondition::minDistance),
-                    Codec.BOOL.optionalFieldOf("require_outside_border", false).forGetter(GiverDistanceFromVillageCondition::requireOutsideBorder)
+                    Codec.DOUBLE.lenientOptionalFieldOf("min_distance", 0.0D).forGetter(GiverDistanceFromVillageCondition::minDistance),
+                    Codec.BOOL.lenientOptionalFieldOf("require_outside_border", false).forGetter(GiverDistanceFromVillageCondition::requireOutsideBorder)
             ).apply(instance, GiverDistanceFromVillageCondition::new))
             .flatXmap(GiverDistanceFromVillageCondition::validate, GiverDistanceFromVillageCondition::validate);
 

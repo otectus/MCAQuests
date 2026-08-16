@@ -139,6 +139,9 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // The MDG unitTest runner's working dir is build/minecraft-junit; the repo-introspection
+    // tests (pack parsing, locale parity, classfile scans) resolve paths through this property.
+    systemProperty 'mcaquests.projectRoot', project.projectDir.absolutePath
 }
 
 // Expand metadata placeholders into neoforge.mods.toml at build time.

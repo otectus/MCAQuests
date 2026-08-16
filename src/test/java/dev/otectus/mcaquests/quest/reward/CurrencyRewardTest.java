@@ -1,6 +1,5 @@
 package dev.otectus.mcaquests.quest.reward;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.CurrencyFallback;
 import dev.otectus.mcaquests.McaQuestsConfig.CurrencyProviderMode;
@@ -40,9 +39,7 @@ class CurrencyRewardTest {
     /** Loads config defaults so {@code .get()} returns the declared default instead of "config not loaded". */
     @BeforeAll
     static void loadCommonConfigDefaults() {
-        CommentedConfig config = CommentedConfig.inMemory();
-        McaQuestsConfig.COMMON_SPEC.correct(config);
-        McaQuestsConfig.COMMON_SPEC.acceptConfig(config);
+        dev.otectus.mcaquests.support.TestConfigs.loadDefaults(McaQuestsConfig.COMMON_SPEC);
     }
 
     @AfterEach

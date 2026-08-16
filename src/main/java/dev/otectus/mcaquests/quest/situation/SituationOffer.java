@@ -45,16 +45,16 @@ public record SituationOffer(
     public static final String CATEGORY = "situation";
 
     public static final Codec<SituationOffer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            net.minecraft.util.ExtraCodecs.POSITIVE_INT.optionalFieldOf("weight", 1).forGetter(SituationOffer::weight),
-            QuestText.CODEC.optionalFieldOf("title").forGetter(SituationOffer::title),
-            GiverSpec.CODEC.optionalFieldOf("giver", GiverSpec.ANY).forGetter(SituationOffer::giver),
-            Codec.unboundedMap(Codec.STRING, QuestText.CODEC).optionalFieldOf("dialogue", Map.of())
+            net.minecraft.util.ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("weight", 1).forGetter(SituationOffer::weight),
+            QuestText.CODEC.lenientOptionalFieldOf("title").forGetter(SituationOffer::title),
+            GiverSpec.CODEC.lenientOptionalFieldOf("giver", GiverSpec.ANY).forGetter(SituationOffer::giver),
+            Codec.unboundedMap(Codec.STRING, QuestText.CODEC).lenientOptionalFieldOf("dialogue", Map.of())
                     .forGetter(SituationOffer::dialogue),
-            ObjectiveTypes.CODEC.listOf().optionalFieldOf("objectives", List.of()).forGetter(SituationOffer::objectives),
-            RewardTypes.CODEC.listOf().optionalFieldOf("rewards", List.of()).forGetter(SituationOffer::rewards),
-            TurnInSpec.CODEC.optionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(SituationOffer::turnIn),
-            FailureSpec.CODEC.optionalFieldOf("failure").forGetter(SituationOffer::failure),
-            TemplateSpec.CODEC.optionalFieldOf("template").forGetter(SituationOffer::template),
+            ObjectiveTypes.CODEC.listOf().lenientOptionalFieldOf("objectives", List.of()).forGetter(SituationOffer::objectives),
+            RewardTypes.CODEC.listOf().lenientOptionalFieldOf("rewards", List.of()).forGetter(SituationOffer::rewards),
+            TurnInSpec.CODEC.lenientOptionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(SituationOffer::turnIn),
+            FailureSpec.CODEC.lenientOptionalFieldOf("failure").forGetter(SituationOffer::failure),
+            TemplateSpec.CODEC.lenientOptionalFieldOf("template").forGetter(SituationOffer::template),
             OfferShaping.MAP_CODEC.forGetter(SituationOffer::offerShaping)
     ).apply(instance, SituationOffer::new));
 

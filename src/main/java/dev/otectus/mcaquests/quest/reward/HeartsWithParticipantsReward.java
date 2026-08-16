@@ -21,7 +21,7 @@ public record HeartsWithParticipantsReward(int amount, boolean includeResidents)
 
     public static final Codec<HeartsWithParticipantsReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.fieldOf("amount").forGetter(HeartsWithParticipantsReward::amount),
-            Codec.BOOL.optionalFieldOf("include_residents", false).forGetter(HeartsWithParticipantsReward::includeResidents)
+            Codec.BOOL.lenientOptionalFieldOf("include_residents", false).forGetter(HeartsWithParticipantsReward::includeResidents)
     ).apply(instance, HeartsWithParticipantsReward::new));
 
     @Override

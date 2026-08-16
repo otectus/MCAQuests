@@ -142,28 +142,28 @@ public class McaHeartsReward extends McaRewardBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putInt("amount", amount);
         nbt.putString("target", target.name());
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         amount = nbt.getInt("amount");
         target = parseTarget(nbt.getString("target"));
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeVarInt(amount);
         TARGET_NAME_MAP.write(buffer, target);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         amount = buffer.readVarInt();
         target = TARGET_NAME_MAP.read(buffer);

@@ -70,25 +70,25 @@ public class McaChainCompletedTask extends McaBooleanTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("chain_id", chainId);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         chainId = nbt.getString("chain_id");
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(chainId, Short.MAX_VALUE);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         chainId = buffer.readUtf(Short.MAX_VALUE);
     }

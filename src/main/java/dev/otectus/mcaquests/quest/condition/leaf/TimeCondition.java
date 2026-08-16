@@ -40,9 +40,9 @@ public record TimeCondition(TimePeriod period, Optional<Integer> minTick, Option
     }
 
     public static final Codec<TimeCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            TimePeriod.CODEC.optionalFieldOf("period", TimePeriod.ANY).forGetter(TimeCondition::period),
-            Codec.INT.optionalFieldOf("min").forGetter(TimeCondition::minTick),
-            Codec.INT.optionalFieldOf("max").forGetter(TimeCondition::maxTick)
+            TimePeriod.CODEC.lenientOptionalFieldOf("period", TimePeriod.ANY).forGetter(TimeCondition::period),
+            Codec.INT.lenientOptionalFieldOf("min").forGetter(TimeCondition::minTick),
+            Codec.INT.lenientOptionalFieldOf("max").forGetter(TimeCondition::maxTick)
     ).apply(instance, TimeCondition::new));
 
     @Override

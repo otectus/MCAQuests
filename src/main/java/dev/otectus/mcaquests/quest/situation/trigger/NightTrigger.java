@@ -15,7 +15,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record NightTrigger(boolean requireFullMoon) implements SituationTrigger {
 
     public static final Codec<NightTrigger> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.BOOL.optionalFieldOf("require_full_moon", false).forGetter(NightTrigger::requireFullMoon)
+            Codec.BOOL.lenientOptionalFieldOf("require_full_moon", false).forGetter(NightTrigger::requireFullMoon)
     ).apply(instance, NightTrigger::new));
 
     @Override

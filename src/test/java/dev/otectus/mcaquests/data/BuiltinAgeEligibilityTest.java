@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class BuiltinAgeEligibilityTest {
 
-    private static final Path QUESTS = Path.of("src/main/resources/data/mcaquests/mcaquests/quests");
+    private static final Path QUESTS = dev.otectus.mcaquests.support.TestPaths.resolve("src/main/resources/data/mcaquests/mcaquests/quests");
 
     /** Ages that cannot deliver a written quest line in MCA. */
     private static final Set<String> NON_SPEAKING = Set.of("baby", "toddler");

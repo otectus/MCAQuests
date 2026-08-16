@@ -21,7 +21,7 @@ public record GrantTitleReward(ResourceLocation title, TitleScope scope) impleme
 
     public static final Codec<GrantTitleReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("title").forGetter(GrantTitleReward::title),
-            TitleScope.CODEC.optionalFieldOf("scope", TitleScope.VILLAGE).forGetter(GrantTitleReward::scope)
+            TitleScope.CODEC.lenientOptionalFieldOf("scope", TitleScope.VILLAGE).forGetter(GrantTitleReward::scope)
     ).apply(instance, GrantTitleReward::new));
 
     @Override

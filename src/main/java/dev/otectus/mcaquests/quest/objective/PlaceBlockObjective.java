@@ -13,7 +13,7 @@ public record PlaceBlockObjective(BlockTarget target, int count) implements Ques
 
     public static final Codec<PlaceBlockObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(PlaceBlockObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(PlaceBlockObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(PlaceBlockObjective::count)
     ).apply(instance, PlaceBlockObjective::new));
 
     @Override

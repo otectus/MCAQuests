@@ -13,8 +13,8 @@ import java.util.Optional;
 public record HeartsCondition(Optional<Integer> min, Optional<Integer> max) implements QuestCondition {
 
     public static final Codec<HeartsCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(HeartsCondition::min),
-            Codec.INT.optionalFieldOf("max").forGetter(HeartsCondition::max)
+            Codec.INT.lenientOptionalFieldOf("min").forGetter(HeartsCondition::min),
+            Codec.INT.lenientOptionalFieldOf("max").forGetter(HeartsCondition::max)
     ).apply(instance, HeartsCondition::new));
 
     @Override

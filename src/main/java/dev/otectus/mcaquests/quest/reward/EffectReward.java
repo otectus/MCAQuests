@@ -20,8 +20,8 @@ public record EffectReward(Holder<MobEffect> effect, int duration, int amplifier
     // "effect": "<id>" datapack format.
     public static final Codec<EffectReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BuiltInRegistries.MOB_EFFECT.holderByNameCodec().fieldOf("effect").forGetter(EffectReward::effect),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("duration", 600).forGetter(EffectReward::duration),
-            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("amplifier", 0).forGetter(EffectReward::amplifier)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("duration", 600).forGetter(EffectReward::duration),
+            ExtraCodecs.NON_NEGATIVE_INT.lenientOptionalFieldOf("amplifier", 0).forGetter(EffectReward::amplifier)
     ).apply(instance, EffectReward::new));
 
     @Override

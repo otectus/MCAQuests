@@ -18,7 +18,7 @@ public record QuestCompletedCondition(ResourceLocation quest, HistoryScope scope
 
     public static final Codec<QuestCompletedCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("quest").forGetter(QuestCompletedCondition::quest),
-            HistoryScope.CODEC.optionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestCompletedCondition::scope)
+            HistoryScope.CODEC.lenientOptionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestCompletedCondition::scope)
     ).apply(instance, QuestCompletedCondition::new));
 
     @Override

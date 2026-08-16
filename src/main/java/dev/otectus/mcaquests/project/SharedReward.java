@@ -15,6 +15,6 @@ public record SharedReward(QuestReward reward, SharedRewardTarget target) {
 
     public static final Codec<SharedReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RewardTypes.CODEC.fieldOf("reward").forGetter(SharedReward::reward),
-            SharedRewardTarget.CODEC.optionalFieldOf("target", SharedRewardTarget.CONTRIBUTORS).forGetter(SharedReward::target)
+            SharedRewardTarget.CODEC.lenientOptionalFieldOf("target", SharedRewardTarget.CONTRIBUTORS).forGetter(SharedReward::target)
     ).apply(instance, SharedReward::new));
 }

@@ -19,7 +19,7 @@ public record TalkToProfessionObjective(ResourceLocation profession, int count) 
 
     public static final Codec<TalkToProfessionObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("profession").forGetter(TalkToProfessionObjective::profession),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(TalkToProfessionObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(TalkToProfessionObjective::count)
     ).apply(instance, TalkToProfessionObjective::new));
 
     @Override

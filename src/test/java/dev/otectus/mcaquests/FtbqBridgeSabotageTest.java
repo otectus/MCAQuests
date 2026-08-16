@@ -1,6 +1,5 @@
 package dev.otectus.mcaquests;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
 import dev.otectus.mcaquests.compat.FtbqBridge;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
@@ -63,9 +62,7 @@ class FtbqBridgeSabotageTest {
      */
     @BeforeAll
     static void loadCommonConfigDefaults() {
-        CommentedConfig config = CommentedConfig.inMemory();
-        McaQuestsConfig.COMMON_SPEC.correct(config);
-        McaQuestsConfig.COMMON_SPEC.acceptConfig(config);
+        dev.otectus.mcaquests.support.TestConfigs.loadDefaults(McaQuestsConfig.COMMON_SPEC);
     }
 
     /** Every method throws, including the interface's {@code default} methods. */

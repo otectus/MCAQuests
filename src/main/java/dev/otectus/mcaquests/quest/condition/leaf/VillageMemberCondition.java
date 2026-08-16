@@ -14,7 +14,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 public record VillageMemberCondition(boolean value) implements QuestCondition {
 
     public static final Codec<VillageMemberCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.BOOL.optionalFieldOf("value", true).forGetter(VillageMemberCondition::value)
+            Codec.BOOL.lenientOptionalFieldOf("value", true).forGetter(VillageMemberCondition::value)
     ).apply(instance, VillageMemberCondition::new));
 
     @Override

@@ -184,7 +184,7 @@ class ProjectStateTest {
         data.addBankedReward(player, BankedReward.reputation(15));
         data.addBankedReward(player, BankedReward.hearts(5, "VILLAGE_RESIDENTS"));
 
-        ProjectSavedData loaded = ProjectSavedData.load(data.save(new CompoundTag()));
+        ProjectSavedData loaded = ProjectSavedData.load(data.save(new CompoundTag(), net.minecraft.core.RegistryAccess.EMPTY));
         List<PendingReward> owed = loaded.drainPending(player);
         assertEquals(3, owed.size());
         assertEquals(PendingReward.Kind.PROJECT_PHASE, owed.get(0).kind());

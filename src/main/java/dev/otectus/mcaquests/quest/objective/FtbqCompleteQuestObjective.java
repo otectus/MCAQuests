@@ -41,9 +41,9 @@ public record FtbqCompleteQuestObjective(String quest, AlreadyCompleteMode alrea
 
     public static final Codec<FtbqCompleteQuestObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             FtbqIds.hexIdCodec(TYPE_ID, "quest").fieldOf("quest").forGetter(FtbqCompleteQuestObjective::quest),
-            AlreadyCompleteMode.CODEC.optionalFieldOf("already_complete", AlreadyCompleteMode.SATISFY)
+            AlreadyCompleteMode.CODEC.lenientOptionalFieldOf("already_complete", AlreadyCompleteMode.SATISFY)
                     .forGetter(FtbqCompleteQuestObjective::alreadyComplete),
-            QuestText.CODEC.optionalFieldOf("display_name").forGetter(FtbqCompleteQuestObjective::displayName)
+            QuestText.CODEC.lenientOptionalFieldOf("display_name").forGetter(FtbqCompleteQuestObjective::displayName)
     ).apply(instance, FtbqCompleteQuestObjective::new));
 
     @Override

@@ -24,7 +24,7 @@ public record ReachLocationObjective(LocationAnchor location, int radius) implem
 
     public static final Codec<ReachLocationObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(ReachLocationObjective::location),
-            Codec.intRange(1, 64).optionalFieldOf("radius", 6).forGetter(ReachLocationObjective::radius)
+            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 6).forGetter(ReachLocationObjective::radius)
     ).apply(instance, ReachLocationObjective::new));
 
     @Override

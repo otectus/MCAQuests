@@ -19,8 +19,8 @@ import java.util.Optional;
 public record ItemTarget(Optional<Item> item, Optional<TagKey<Item>> tag) {
 
     public static final MapCodec<ItemTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("item").forGetter(ItemTarget::item),
-            TagKey.codec(Registries.ITEM).optionalFieldOf("tag").forGetter(ItemTarget::tag)
+            BuiltInRegistries.ITEM.byNameCodec().lenientOptionalFieldOf("item").forGetter(ItemTarget::item),
+            TagKey.codec(Registries.ITEM).lenientOptionalFieldOf("tag").forGetter(ItemTarget::tag)
     ).apply(instance, ItemTarget::new));
 
     public boolean matches(ItemStack stack) {

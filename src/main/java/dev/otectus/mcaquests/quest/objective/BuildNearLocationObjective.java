@@ -28,8 +28,8 @@ public record BuildNearLocationObjective(BlockTarget block, LocationAnchor locat
     public static final Codec<BuildNearLocationObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(BuildNearLocationObjective::block),
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(BuildNearLocationObjective::location),
-            Codec.intRange(1, 64).optionalFieldOf("radius", 8).forGetter(BuildNearLocationObjective::radius),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 8).forGetter(BuildNearLocationObjective::count)
+            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 8).forGetter(BuildNearLocationObjective::radius),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 8).forGetter(BuildNearLocationObjective::count)
     ).apply(instance, BuildNearLocationObjective::new));
 
     @Override

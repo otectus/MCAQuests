@@ -18,8 +18,8 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume) imple
 
     public static final Codec<ItemDeliveryObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemDeliveryObjective::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
-            Codec.BOOL.optionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
+            Codec.BOOL.lenientOptionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume)
     ).apply(instance, ItemDeliveryObjective::new));
 
     @Override

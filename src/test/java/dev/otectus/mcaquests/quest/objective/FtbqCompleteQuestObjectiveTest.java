@@ -6,7 +6,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.quest.QuestText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.contents.LiteralContents;
+import net.minecraft.network.chat.contents.PlainTextContents.LiteralContents;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import org.junit.jupiter.api.Test;
 
@@ -83,6 +83,8 @@ class FtbqCompleteQuestObjectiveTest {
         // Matches the pre-existing OptionalFieldCodec quirk documented in FtbqConditionPolicyTest: a
         // present-but-invalid optional enum value silently falls back to the default rather than
         // failing to parse. Asserting the (surprising but pre-existing) fallback, not a parse error.
+        // PORT: DFU on 1.21 made optionalFieldOf strict; the mod's codecs use lenientOptionalFieldOf
+        // to reproduce the 1.20.1 parse behavior (rule 0.2.1 — a port, not a refactor).
         assertTrue(result.result().isPresent());
         assertEquals(AlreadyCompleteMode.SATISFY, result.result().get().alreadyComplete());
     }

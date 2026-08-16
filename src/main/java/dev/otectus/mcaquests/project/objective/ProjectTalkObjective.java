@@ -19,7 +19,7 @@ public record ProjectTalkObjective(ResourceLocation profession, int count) imple
 
     public static final Codec<ProjectTalkObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("profession").forGetter(ProjectTalkObjective::profession),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ProjectTalkObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ProjectTalkObjective::count)
     ).apply(instance, ProjectTalkObjective::new));
 
     @Override

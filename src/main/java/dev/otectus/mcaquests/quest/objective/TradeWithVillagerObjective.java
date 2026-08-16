@@ -25,9 +25,9 @@ public record TradeWithVillagerObjective(Optional<VillagerTarget> villager,
                                          Optional<ResourceLocation> profession, int count) implements QuestObjective {
 
     public static final Codec<TradeWithVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            VillagerTarget.CODEC.optionalFieldOf("villager").forGetter(TradeWithVillagerObjective::villager),
-            ResourceLocation.CODEC.optionalFieldOf("profession").forGetter(TradeWithVillagerObjective::profession),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(TradeWithVillagerObjective::count)
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager").forGetter(TradeWithVillagerObjective::villager),
+            ResourceLocation.CODEC.lenientOptionalFieldOf("profession").forGetter(TradeWithVillagerObjective::profession),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(TradeWithVillagerObjective::count)
     ).apply(instance, TradeWithVillagerObjective::new));
 
     @Override

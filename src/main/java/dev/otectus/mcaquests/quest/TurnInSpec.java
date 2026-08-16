@@ -15,7 +15,7 @@ public record TurnInSpec(TurnInMode mode, List<ResourceLocation> professions) {
     public static final TurnInSpec DEFAULT = new TurnInSpec(TurnInMode.ORIGINAL_GIVER, List.of());
 
     public static final Codec<TurnInSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            TurnInMode.CODEC.optionalFieldOf("mode", TurnInMode.ORIGINAL_GIVER).forGetter(TurnInSpec::mode),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("professions", List.of()).forGetter(TurnInSpec::professions)
+            TurnInMode.CODEC.lenientOptionalFieldOf("mode", TurnInMode.ORIGINAL_GIVER).forGetter(TurnInSpec::mode),
+            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("professions", List.of()).forGetter(TurnInSpec::professions)
     ).apply(instance, TurnInSpec::new));
 }

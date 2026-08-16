@@ -17,7 +17,7 @@ public record ObtainItemObjective(ItemTarget target, int count) implements Quest
 
     public static final Codec<ObtainItemObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(ObtainItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ObtainItemObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ObtainItemObjective::count)
     ).apply(instance, ObtainItemObjective::new));
 
     @Override

@@ -72,8 +72,8 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("quest_id", questId);
         nbt.putString("profession", profession);
         nbt.putString("chain_id", chainId);
@@ -81,8 +81,8 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         questId = nbt.getString("quest_id");
         profession = nbt.getString("profession");
         chainId = nbt.getString("chain_id");
@@ -90,7 +90,7 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(questId, Short.MAX_VALUE);
         buffer.writeUtf(profession, Short.MAX_VALUE);
@@ -99,7 +99,7 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         questId = buffer.readUtf(Short.MAX_VALUE);
         profession = buffer.readUtf(Short.MAX_VALUE);

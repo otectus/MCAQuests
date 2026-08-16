@@ -16,7 +16,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record VillagerDeathTrigger(String relation) implements SituationTrigger {
 
     public static final Codec<VillagerDeathTrigger> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("relation", "any").forGetter(VillagerDeathTrigger::relation)
+            Codec.STRING.lenientOptionalFieldOf("relation", "any").forGetter(VillagerDeathTrigger::relation)
     ).apply(instance, VillagerDeathTrigger::new));
 
     @Override

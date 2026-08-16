@@ -28,8 +28,8 @@ public record DefendLocationObjective(LocationAnchor location, EntityTarget thre
     public static final Codec<DefendLocationObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(DefendLocationObjective::location),
             EntityTarget.MAP_CODEC.fieldOf("threat").forGetter(DefendLocationObjective::threat),
-            Codec.intRange(1, 64).optionalFieldOf("radius", 16).forGetter(DefendLocationObjective::radius),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 5).forGetter(DefendLocationObjective::count)
+            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 16).forGetter(DefendLocationObjective::radius),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 5).forGetter(DefendLocationObjective::count)
     ).apply(instance, DefendLocationObjective::new));
 
     @Override

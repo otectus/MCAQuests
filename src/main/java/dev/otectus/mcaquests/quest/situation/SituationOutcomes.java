@@ -20,9 +20,9 @@ public record SituationOutcomes(Outcome success, Outcome failure, Outcome cleare
     public static final SituationOutcomes NONE = new SituationOutcomes(Outcome.NONE, Outcome.NONE, Outcome.NONE);
 
     public static final Codec<SituationOutcomes> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Outcome.CODEC.optionalFieldOf("success", Outcome.NONE).forGetter(SituationOutcomes::success),
-            Outcome.CODEC.optionalFieldOf("failure", Outcome.NONE).forGetter(SituationOutcomes::failure),
-            Outcome.CODEC.optionalFieldOf("cleared", Outcome.NONE).forGetter(SituationOutcomes::cleared)
+            Outcome.CODEC.lenientOptionalFieldOf("success", Outcome.NONE).forGetter(SituationOutcomes::success),
+            Outcome.CODEC.lenientOptionalFieldOf("failure", Outcome.NONE).forGetter(SituationOutcomes::failure),
+            Outcome.CODEC.lenientOptionalFieldOf("cleared", Outcome.NONE).forGetter(SituationOutcomes::cleared)
     ).apply(instance, SituationOutcomes::new));
 
     /** A single outcome branch: a village-reputation delta and a villager-hearts delta. */
@@ -31,8 +31,8 @@ public record SituationOutcomes(Outcome success, Outcome failure, Outcome cleare
         public static final Outcome NONE = new Outcome(0, 0);
 
         public static final Codec<Outcome> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Codec.INT.optionalFieldOf("reputation", 0).forGetter(Outcome::reputation),
-                Codec.INT.optionalFieldOf("hearts", 0).forGetter(Outcome::hearts)
+                Codec.INT.lenientOptionalFieldOf("reputation", 0).forGetter(Outcome::reputation),
+                Codec.INT.lenientOptionalFieldOf("hearts", 0).forGetter(Outcome::hearts)
         ).apply(instance, Outcome::new));
     }
 }

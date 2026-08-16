@@ -35,15 +35,52 @@ public final class StrictCodecs {
      * Adapts a plain {@link Codec} for {@code Codec.dispatch}, whose per-type function must return
      * a {@link MapCodec} since DFU 7 (1.20.5+).
      *
-     * <p>PORT: this reproduces the pre-1.20.5 plain-Codec dispatch semantics exactly — old DFU
-     * applied the same split internally: a record codec ({@code MapCodec.MapCodecCodec}) decodes
-     * its fields inline next to {@code "type"}, any other codec decodes from the {@code "value"}
-     * field. Datapack format is unchanged.
+     * <p>PORT: this reproduces the pre-1.20.5 plain-Codec dispatch semantics exactly. Old DFU's
+     * {@code KeyDispatchCodec} ran with {@code assumeMap=true}: a record codec
+     * ({@code MapCodec.MapCodecCodec}) decodes its fields inline next to {@code "type"}, and any
+     * other codec (e.g. one wrapped by {@code flatXmap} validation, like
+     * {@code HealthBelowCondition.CODEC}) decodes against the <em>whole</em> inline map — never a
+     * {@code "value"} sub-field. Datapack format is unchanged.
      */
     public static <A> MapCodec<A> dispatchMap(Codec<A> codec) {
-        return codec instanceof MapCodec.MapCodecCodec<A> mapCodecCodec
-                ? mapCodecCodec.codec()
-                : codec.fieldOf("value");
+        if (codec instanceof MapCodec.MapCodecCodec<A> mapCodecCodec) {
+            return mapCodecCodec.codec();
+        }
+        return new MapCodec<>() {
+
+            @Override
+            public <T> DataResult<A> decode(DynamicOps<T> ops, MapLike<T> input) {
+                return codec.parse(ops, ops.createMap(input.entries()));
+            }
+
+            @Override
+            public <T> RecordBuilder<T> encode(A input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
+                DataResult<T> encoded = codec.encodeStart(ops, input);
+                Optional<T> value = encoded.result();
+                if (value.isEmpty()) {
+                    return prefix.withErrorsFrom(encoded);
+                }
+                DataResult<MapLike<T>> asMap = ops.getMap(value.get());
+                Optional<MapLike<T>> map = asMap.result();
+                if (map.isEmpty()) {
+                    return prefix.withErrorsFrom(asMap);
+                }
+                map.get().entries().forEach(entry -> prefix.add(entry.getFirst(), entry.getSecond()));
+                return prefix;
+            }
+
+            @Override
+            public <T> Stream<T> keys(DynamicOps<T> ops) {
+                // Unknowable for an opaque codec; only compressed ops consult this, and the
+                // dispatch users here always run against uncompressed JSON/NBT ops.
+                return Stream.empty();
+            }
+
+            @Override
+            public String toString() {
+                return "AssumeMap[" + codec + "]";
+            }
+        };
     }
 
     /** Absent → empty; present and valid → value; present and invalid → error naming the field. */

@@ -37,8 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class LocaleParityTest {
 
-    private static final Path LANG = Path.of("src/main/resources/assets/mcaquests/lang");
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path LANG = dev.otectus.mcaquests.support.TestPaths.resolve("src/main/resources/assets/mcaquests/lang");
+    private static final Path DATA = dev.otectus.mcaquests.support.TestPaths.resolve("src/main/resources/data/mcaquests/mcaquests");
     private static final String SOURCE_LOCALE = "en_us";
 
     /** {@code %s}, {@code %d}, and the positional {@code %1$s} forms Minecraft's formatter accepts. */

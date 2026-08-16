@@ -15,7 +15,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record InfectionTrigger(float minProgress) implements SituationTrigger {
 
     public static final Codec<InfectionTrigger> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.floatRange(0.0f, 1.0f).optionalFieldOf("min_progress", 0.0f).forGetter(InfectionTrigger::minProgress)
+            Codec.floatRange(0.0f, 1.0f).lenientOptionalFieldOf("min_progress", 0.0f).forGetter(InfectionTrigger::minProgress)
     ).apply(instance, InfectionTrigger::new));
 
     @Override

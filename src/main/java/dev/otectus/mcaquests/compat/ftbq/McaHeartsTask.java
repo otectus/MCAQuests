@@ -60,28 +60,28 @@ public class McaHeartsTask extends McaBooleanTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putInt("hearts", hearts);
         nbt.putBoolean("spouse_only", spouseOnly);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, net.minecraft.core.HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         hearts = nbt.getInt("hearts");
         spouseOnly = nbt.getBoolean("spouse_only");
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeVarInt(hearts);
         buffer.writeBoolean(spouseOnly);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         hearts = buffer.readVarInt();
         spouseOnly = buffer.readBoolean();

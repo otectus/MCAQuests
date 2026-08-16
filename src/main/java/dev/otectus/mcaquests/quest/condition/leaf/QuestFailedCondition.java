@@ -18,7 +18,7 @@ public record QuestFailedCondition(ResourceLocation quest, HistoryScope scope) i
 
     public static final Codec<QuestFailedCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("quest").forGetter(QuestFailedCondition::quest),
-            HistoryScope.CODEC.optionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestFailedCondition::scope)
+            HistoryScope.CODEC.lenientOptionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestFailedCondition::scope)
     ).apply(instance, QuestFailedCondition::new));
 
     @Override

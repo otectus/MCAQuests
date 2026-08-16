@@ -25,10 +25,10 @@ public record DefendVillagerObjective(VillagerTarget villager, EntityTarget thre
                                       int radius, int count) implements QuestObjective, VillagerTargeted {
 
     public static final Codec<DefendVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(DefendVillagerObjective::villager),
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager", VillagerTarget.SELF).forGetter(DefendVillagerObjective::villager),
             EntityTarget.MAP_CODEC.fieldOf("threat").forGetter(DefendVillagerObjective::threat),
-            Codec.intRange(1, 64).optionalFieldOf("radius", 16).forGetter(DefendVillagerObjective::radius),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 5).forGetter(DefendVillagerObjective::count)
+            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 16).forGetter(DefendVillagerObjective::radius),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 5).forGetter(DefendVillagerObjective::count)
     ).apply(instance, DefendVillagerObjective::new));
 
     @Override

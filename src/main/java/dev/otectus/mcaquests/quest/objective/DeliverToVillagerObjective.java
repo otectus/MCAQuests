@@ -27,8 +27,8 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     public static final Codec<DeliverToVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             VillagerTarget.MAP_CODEC.fieldOf("recipient").forGetter(DeliverToVillagerObjective::recipient),
             ItemTarget.MAP_CODEC.forGetter(DeliverToVillagerObjective::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(DeliverToVillagerObjective::itemCount),
-            Codec.BOOL.optionalFieldOf("consume", true).forGetter(DeliverToVillagerObjective::consume)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(DeliverToVillagerObjective::itemCount),
+            Codec.BOOL.lenientOptionalFieldOf("consume", true).forGetter(DeliverToVillagerObjective::consume)
     ).apply(instance, DeliverToVillagerObjective::new));
 
     @Override

@@ -23,9 +23,9 @@ public record IntVariable(int min, int max, double perPlayerLevel, double perHea
     public static final Codec<IntVariable> CODEC = RecordCodecBuilder.<IntVariable>create(instance -> instance.group(
             Codec.INT.fieldOf("min").forGetter(IntVariable::min),
             Codec.INT.fieldOf("max").forGetter(IntVariable::max),
-            Codec.DOUBLE.optionalFieldOf("per_player_level", 0.0).forGetter(IntVariable::perPlayerLevel),
-            Codec.DOUBLE.optionalFieldOf("per_heart", 0.0).forGetter(IntVariable::perHeart),
-            Codec.INT.optionalFieldOf("limit").forGetter(v -> v.limit.isPresent() ? Optional.of(v.limit.getAsInt()) : Optional.empty())
+            Codec.DOUBLE.lenientOptionalFieldOf("per_player_level", 0.0).forGetter(IntVariable::perPlayerLevel),
+            Codec.DOUBLE.lenientOptionalFieldOf("per_heart", 0.0).forGetter(IntVariable::perHeart),
+            Codec.INT.lenientOptionalFieldOf("limit").forGetter(v -> v.limit.isPresent() ? Optional.of(v.limit.getAsInt()) : Optional.empty())
     ).apply(instance, (min, max, perLevel, perHeart, limit) ->
             new IntVariable(min, max, perLevel, perHeart, limit.map(OptionalInt::of).orElse(OptionalInt.empty()))))
             .flatXmap(IntVariable::validate, IntVariable::validate);

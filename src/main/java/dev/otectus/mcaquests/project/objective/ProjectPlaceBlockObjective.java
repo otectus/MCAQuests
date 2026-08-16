@@ -15,7 +15,7 @@ public record ProjectPlaceBlockObjective(BlockTarget target, int count) implemen
 
     public static final Codec<ProjectPlaceBlockObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(ProjectPlaceBlockObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ProjectPlaceBlockObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ProjectPlaceBlockObjective::count)
     ).apply(instance, ProjectPlaceBlockObjective::new));
 
     @Override

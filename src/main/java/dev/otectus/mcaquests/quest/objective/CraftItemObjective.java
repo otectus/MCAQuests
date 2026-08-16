@@ -13,7 +13,7 @@ public record CraftItemObjective(ItemTarget target, int count) implements QuestO
 
     public static final Codec<CraftItemObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(CraftItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(CraftItemObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(CraftItemObjective::count)
     ).apply(instance, CraftItemObjective::new));
 
     @Override

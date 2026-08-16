@@ -13,7 +13,7 @@ public record KillEntityObjective(EntityTarget target, int count) implements Que
 
     public static final Codec<KillEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(KillEntityObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(KillEntityObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(KillEntityObjective::count)
     ).apply(instance, KillEntityObjective::new));
 
     @Override

@@ -13,7 +13,7 @@ public record BreakBlockObjective(BlockTarget target, int count) implements Ques
 
     public static final Codec<BreakBlockObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(BreakBlockObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(BreakBlockObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(BreakBlockObjective::count)
     ).apply(instance, BreakBlockObjective::new));
 
     @Override

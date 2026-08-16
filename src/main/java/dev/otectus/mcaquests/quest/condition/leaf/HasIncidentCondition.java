@@ -44,15 +44,15 @@ public record HasIncidentCondition(Optional<ResourceLocation> incident, List<Str
 
     public static final Codec<HasIncidentCondition> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
-                    ResourceLocation.CODEC.optionalFieldOf("incident")
+                    ResourceLocation.CODEC.lenientOptionalFieldOf("incident")
                             .forGetter(HasIncidentCondition::incident),
-                    Codec.STRING.listOf().optionalFieldOf("status", List.of())
+                    Codec.STRING.listOf().lenientOptionalFieldOf("status", List.of())
                             .forGetter(HasIncidentCondition::status),
-                    Codec.STRING.listOf().optionalFieldOf("tags", List.of())
+                    Codec.STRING.listOf().lenientOptionalFieldOf("tags", List.of())
                             .forGetter(HasIncidentCondition::tags),
-                    Codec.BOOL.optionalFieldOf("known_to_giver", false)
+                    Codec.BOOL.lenientOptionalFieldOf("known_to_giver", false)
                             .forGetter(HasIncidentCondition::knownToGiver),
-                    Codec.BOOL.optionalFieldOf("negate", false).forGetter(HasIncidentCondition::negate)
+                    Codec.BOOL.lenientOptionalFieldOf("negate", false).forGetter(HasIncidentCondition::negate)
             ).apply(instance, HasIncidentCondition::new));
 
     public HasIncidentCondition {

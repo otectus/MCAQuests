@@ -28,8 +28,8 @@ public record RepeatRule(RepeatType type, int cooldownTicks) {
     public static final RepeatRule DEFAULT = new RepeatRule(RepeatType.COOLDOWN, 24000);
 
     public static final Codec<RepeatRule> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            RepeatType.CODEC.optionalFieldOf("type", RepeatType.COOLDOWN).forGetter(RepeatRule::type),
-            Codec.INT.optionalFieldOf("cooldown_ticks", 24000).forGetter(RepeatRule::cooldownTicks)
+            RepeatType.CODEC.lenientOptionalFieldOf("type", RepeatType.COOLDOWN).forGetter(RepeatRule::type),
+            Codec.INT.lenientOptionalFieldOf("cooldown_ticks", 24000).forGetter(RepeatRule::cooldownTicks)
     ).apply(instance, RepeatRule::new));
 
     public boolean isRepeatable() {

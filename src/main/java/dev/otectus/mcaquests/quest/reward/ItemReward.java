@@ -19,7 +19,7 @@ public record ItemReward(Item item, int count) implements QuestReward {
 
     public static final Codec<ItemReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemReward::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ItemReward::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ItemReward::count)
     ).apply(instance, ItemReward::new));
 
     @Override
