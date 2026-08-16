@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_guard_village_patrol",
+  "weight": 12,
+  "category": "combat",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_guard_village_patrol.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 5
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:village_member",
+    "value": true
+  }
+}

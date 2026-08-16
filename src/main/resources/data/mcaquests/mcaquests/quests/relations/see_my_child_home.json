@@ -1,0 +1,94 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_see_my_child_home",
+  "weight": 10,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_see_my_child_home.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.failed"
+    }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -8,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "family",
+        "relation": "child"
+      },
+      "destination": {
+        "anchor": "home_village"
+      },
+      "radius": 8,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:related_villager_status",
+        "relation": "child",
+        "status": "nearby"
+      },
+      {
+        "any_of": [
+          {
+            "type": "mcaquests:giver_distance_from_village",
+            "min_distance": 48,
+            "require_outside_border": true
+          },
+          {
+            "type": "mcaquests:time",
+            "period": "NIGHT"
+          }
+        ]
+      }
+    ]
+  }
+}

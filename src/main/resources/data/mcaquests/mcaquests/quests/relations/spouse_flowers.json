@@ -1,0 +1,65 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_spouse_flowers",
+  "weight": 14,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_spouse_flowers.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_spouse_flowers.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_spouse_flowers.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_spouse_flowers.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_spouse_flowers.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_spouse_flowers.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_spouse_flowers.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:poppy",
+      "count": 5,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:is_player_spouse"
+      },
+      {
+        "type": "mcaquests:hearts",
+        "min": 50
+      }
+    ]
+  }
+}

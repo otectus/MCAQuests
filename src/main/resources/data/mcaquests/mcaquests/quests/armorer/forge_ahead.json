@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:armorer_forge_ahead",
+  "weight": 10,
+  "category": "crafting",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:armorer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.armorer_forge_ahead.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.armorer_forge_ahead.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.armorer_forge_ahead.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.armorer_forge_ahead.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.armorer_forge_ahead.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.armorer_forge_ahead.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.armorer_forge_ahead.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:craft_item",
+      "item": "minecraft:shield",
+      "count": 2
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

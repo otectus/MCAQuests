@@ -1,0 +1,67 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_childs_first_toy",
+  "weight": 10,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_childs_first_toy.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_childs_first_toy.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_childs_first_toy.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_childs_first_toy.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_childs_first_toy.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_childs_first_toy.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_childs_first_toy.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "family",
+        "relation": "child"
+      },
+      "item": "minecraft:white_wool",
+      "count": 3,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 16
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "child",
+    "status": "nearby"
+  }
+}

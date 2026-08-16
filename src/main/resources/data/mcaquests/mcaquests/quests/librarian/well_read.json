@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_well_read",
+  "weight": 10,
+  "category": "delivery",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:librarian"
+    ],
+    "adult_only": true,
+    "min_hearts": 10
+  },
+  "title": {
+    "translate": "mcaquests.quest.librarian_well_read.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.librarian_well_read.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.librarian_well_read.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.librarian_well_read.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.librarian_well_read.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.librarian_well_read.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.librarian_well_read.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:book",
+      "count": 3,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

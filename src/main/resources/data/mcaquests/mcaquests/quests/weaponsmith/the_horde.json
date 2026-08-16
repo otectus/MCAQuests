@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:weaponsmith_the_horde",
+  "weight": 11,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:weaponsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.weaponsmith_the_horde.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.weaponsmith_the_horde.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.weaponsmith_the_horde.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.weaponsmith_the_horde.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.weaponsmith_the_horde.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.weaponsmith_the_horde.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.weaponsmith_the_horde.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 8
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 28
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

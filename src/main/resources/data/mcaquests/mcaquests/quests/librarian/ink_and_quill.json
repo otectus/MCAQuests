@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_ink_and_quill",
+  "weight": 12,
+  "category": "gathering",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:librarian"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.librarian_ink_and_quill.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.librarian_ink_and_quill.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.librarian_ink_and_quill.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.librarian_ink_and_quill.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.librarian_ink_and_quill.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.librarian_ink_and_quill.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.librarian_ink_and_quill.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:ink_sac",
+      "count": 4
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

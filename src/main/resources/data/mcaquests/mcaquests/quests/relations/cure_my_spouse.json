@@ -1,0 +1,68 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_cure_my_spouse",
+  "weight": 12,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 96000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_cure_my_spouse.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_cure_my_spouse.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_cure_my_spouse.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_cure_my_spouse.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_cure_my_spouse.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_cure_my_spouse.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_cure_my_spouse.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:cure_villager",
+      "villager": {
+        "mode": "self"
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:is_player_spouse"
+      },
+      {
+        "type": "mcaquests:infected"
+      }
+    ]
+  }
+}

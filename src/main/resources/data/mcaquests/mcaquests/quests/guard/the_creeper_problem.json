@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_the_creeper_problem",
+  "weight": 11,
+  "category": "combat",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_the_creeper_problem.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.guard_the_creeper_problem.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_the_creeper_problem.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_the_creeper_problem.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_the_creeper_problem.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_the_creeper_problem.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_the_creeper_problem.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:creeper",
+      "count": 4
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

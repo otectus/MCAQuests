@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fletcher_knapping",
+  "weight": 14,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fletcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fletcher_knapping.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:flint",
+      "count": 12,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 15
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

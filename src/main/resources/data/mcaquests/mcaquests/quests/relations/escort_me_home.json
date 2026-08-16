@@ -1,0 +1,85 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_escort_me_home",
+  "weight": 10,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_escort_me_home.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_escort_me_home.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_escort_me_home.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_escort_me_home.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_escort_me_home.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_escort_me_home.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_escort_me_home.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_escort_me_home.dialogue.failed"
+    }
+  },
+  "failure": {
+    "deadline_time": 13000,
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "home_village"
+      },
+      "radius": 8,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:giver_distance_from_village",
+        "min_distance": 48,
+        "require_outside_border": true
+      },
+      {
+        "type": "mcaquests:time",
+        "period": "DAY"
+      }
+    ]
+  }
+}

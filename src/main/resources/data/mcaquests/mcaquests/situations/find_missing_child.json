@@ -1,0 +1,71 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:find_missing_child",
+  "scope": "family",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 72000,
+  "trigger": {
+    "type": "mcaquests:missing_kin",
+    "relation": "child"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -8
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "difficulty": "hard",
+    "giver": {
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.find_missing_child.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:visit_biome",
+        "tag": "minecraft:is_forest"
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 25
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ]
+  }
+}

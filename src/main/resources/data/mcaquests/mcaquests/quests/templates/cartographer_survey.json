@@ -1,0 +1,89 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_cartographer_survey",
+  "weight": 12,
+  "category": "exploration",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "turn_in": {
+    "mode": "self_complete"
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_cartographer_survey.title",
+    "with": [
+      "{place_name}"
+    ]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.template_cartographer_survey.dialogue.offer",
+      "with": [
+        "{place_name}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_cartographer_survey.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_cartographer_survey.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_cartographer_survey.dialogue.in_progress",
+      "with": [
+        "{place_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_cartographer_survey.dialogue.ready",
+      "with": [
+        "{place_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_cartographer_survey.dialogue.complete"
+    }
+  },
+  "template": {
+    "variables": {
+      "place": {
+        "kind": "biome",
+        "ids": [
+          "minecraft:desert",
+          "minecraft:savanna",
+          "minecraft:jungle",
+          "minecraft:taiga",
+          "minecraft:badlands",
+          "minecraft:snowy_plains"
+        ]
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:visit_biome",
+        "biome": "{place}"
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 20
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_clear_the_night",
+  "enabled": true,
+  "weight": 15,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": ["mca:guard"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "translate": "mcaquests.quest.guard_clear_the_night.offer" },
+    "accept": { "translate": "mcaquests.quest.guard_clear_the_night.accept" },
+    "decline": { "translate": "mcaquests.quest.guard_clear_the_night.decline" },
+    "in_progress": { "translate": "mcaquests.quest.guard_clear_the_night.in_progress" },
+    "ready": { "translate": "mcaquests.quest.guard_clear_the_night.ready" },
+    "complete": { "translate": "mcaquests.quest.guard_clear_the_night.complete" }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 5
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 35 },
+    { "type": "mcaquests:hearts", "amount": 14 }
+  ]
+}

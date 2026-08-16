@@ -1,0 +1,88 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_reunite_with_spouse",
+  "weight": 9,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_reunite_with_spouse.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_reunite_with_spouse.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_reunite_with_spouse.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_reunite_with_spouse.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_reunite_with_spouse.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_reunite_with_spouse.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_reunite_with_spouse.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_reunite_with_spouse.dialogue.failed"
+    }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "villager",
+        "villager": {
+          "mode": "family",
+          "relation": "spouse"
+        }
+      },
+      "radius": 6,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:related_villager_status",
+        "relation": "spouse",
+        "status": "nearby"
+      },
+      {
+        "type": "mcaquests:time",
+        "period": "NIGHT"
+      }
+    ]
+  }
+}

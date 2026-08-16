@@ -1,0 +1,72 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_heal_my_beloved",
+  "weight": 11,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_heal_my_beloved.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_heal_my_beloved.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_heal_my_beloved.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_heal_my_beloved.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_heal_my_beloved.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_heal_my_beloved.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_heal_my_beloved.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:heal_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "item": "minecraft:golden_carrot",
+      "below_health_fraction": 0.6,
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:is_player_spouse"
+      },
+      {
+        "type": "mcaquests:health_below",
+        "threshold": 0.6
+      }
+    ]
+  }
+}

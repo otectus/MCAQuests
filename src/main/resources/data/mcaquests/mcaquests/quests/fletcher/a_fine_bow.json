@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fletcher_a_fine_bow",
+  "weight": 10,
+  "category": "crafting",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fletcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fletcher_a_fine_bow.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.fletcher_a_fine_bow.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fletcher_a_fine_bow.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fletcher_a_fine_bow.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fletcher_a_fine_bow.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fletcher_a_fine_bow.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fletcher_a_fine_bow.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:craft_item",
+      "item": "minecraft:bow",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

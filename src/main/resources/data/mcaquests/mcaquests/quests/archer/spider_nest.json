@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:archer_spider_nest",
+  "weight": 11,
+  "category": "combat",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:archer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.archer_spider_nest.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.archer_spider_nest.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.archer_spider_nest.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.archer_spider_nest.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.archer_spider_nest.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.archer_spider_nest.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.archer_spider_nest.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:spider",
+      "count": 6
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cartographer_guide_the_surveyor",
+  "weight": 10,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cartographer_guide_the_surveyor.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cartographer_guide_the_surveyor.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cartographer_guide_the_surveyor.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cartographer_guide_the_surveyor.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cartographer_guide_the_surveyor.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cartographer_guide_the_surveyor.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cartographer_guide_the_surveyor.dialogue.complete"
+    }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "workstation"
+      },
+      "radius": 6,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

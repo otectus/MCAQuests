@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_grandparents_blanket",
+  "weight": 9,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 96000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_grandparents_blanket.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_grandparents_blanket.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_grandparents_blanket.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_grandparents_blanket.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_grandparents_blanket.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_grandparents_blanket.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_grandparents_blanket.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:white_bed",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:is_family_member",
+    "relation": "grandparent"
+  }
+}

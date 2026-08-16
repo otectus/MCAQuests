@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:weaponsmith_temper_the_blade",
+  "weight": 14,
+  "category": "delivery",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:weaponsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.weaponsmith_temper_the_blade.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.weaponsmith_temper_the_blade.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.weaponsmith_temper_the_blade.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.weaponsmith_temper_the_blade.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.weaponsmith_temper_the_blade.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.weaponsmith_temper_the_blade.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.weaponsmith_temper_the_blade.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:iron_ingot",
+      "count": 6,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

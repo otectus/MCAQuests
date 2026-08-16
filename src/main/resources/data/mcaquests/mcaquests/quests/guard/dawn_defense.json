@@ -1,0 +1,72 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_dawn_defense",
+  "weight": 10,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_dawn_defense.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.failed"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 6
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  },
+  "failure": {
+    "deadline_time": 23000,
+    "failure_hearts": -5,
+    "retry_after": 24000
+  },
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 32
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

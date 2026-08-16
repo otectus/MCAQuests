@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cartographer_high_ground",
+  "weight": 10,
+  "category": "exploration",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cartographer_high_ground.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_mountain"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

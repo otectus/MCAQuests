@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_repair_the_well",
+  "weight": 11,
+  "category": "building",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_repair_the_well.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:stone_bricks",
+      "location": {
+        "anchor": "nearest_village",
+        "radius": 96
+      },
+      "radius": 12,
+      "count": 8
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

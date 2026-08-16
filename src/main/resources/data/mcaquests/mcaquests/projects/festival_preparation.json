@@ -1,0 +1,50 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:festival_preparation",
+  "scope": "village",
+  "sponsor": { "professions": [], "on_death": "pause" },
+  "title": { "translate": "mcaquests.project.festival_preparation.title" },
+  "category": "celebration",
+  "reputation": { "on_project_complete": 10 },
+  "phases": [
+    {
+      "key": "gather_food",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.festival_preparation.gather_food.offer" },
+        "in_progress": { "translate": "mcaquests.project.festival_preparation.gather_food.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:bread", "count": 32 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:cooked_beef", "count": 16 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:currency", "difficulty": "medium" }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "decorate",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.festival_preparation.decorate.offer" },
+        "in_progress": { "translate": "mcaquests.project.festival_preparation.decorate.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_place_block", "block": "minecraft:torch", "count": 12 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:cake", "count": 1 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "celebrate",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.festival_preparation.celebrate.offer" },
+        "in_progress": { "translate": "mcaquests.project.festival_preparation.celebrate.in_progress" }
+      },
+      "objectives": [],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 15, "include_residents": true }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:village_reputation", "amount": 5 }, "target": "sponsor_village" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fletcher_full_quiver",
+  "weight": 15,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fletcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fletcher_full_quiver.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:arrow",
+      "count": 32,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

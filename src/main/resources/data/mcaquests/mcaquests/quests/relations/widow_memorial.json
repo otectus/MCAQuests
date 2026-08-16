@@ -1,0 +1,58 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_widow_memorial",
+  "weight": 16,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_widow_memorial.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_widow_memorial.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_widow_memorial.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_widow_memorial.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_widow_memorial.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_widow_memorial.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_widow_memorial.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:poppy",
+      "count": 3,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "spouse",
+    "status": "dead"
+  }
+}

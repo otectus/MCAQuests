@@ -1,0 +1,106 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_farmer_crop_request",
+  "weight": 14,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_farmer_crop_request.title",
+    "with": [
+      "{crop_name}"
+    ]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.template_farmer_crop_request.dialogue.offer",
+      "with": [
+        "{crop_name}",
+        "{count}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_farmer_crop_request.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_farmer_crop_request.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_farmer_crop_request.dialogue.in_progress",
+      "with": [
+        "{crop_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_farmer_crop_request.dialogue.ready",
+      "with": [
+        "{count}",
+        "{crop_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_farmer_crop_request.dialogue.complete"
+    }
+  },
+  "template": {
+    "variables": {
+      "crop": {
+        "kind": "item",
+        "ids": [
+          "minecraft:wheat",
+          "minecraft:carrot",
+          "minecraft:potato",
+          "minecraft:beetroot",
+          "minecraft:pumpkin",
+          "minecraft:melon_slice"
+        ]
+      },
+      "count": {
+        "kind": "int",
+        "min": 8,
+        "max": 20,
+        "per_player_level": 0.5,
+        "limit": 48
+      },
+      "bounty": {
+        "kind": "int",
+        "min": 2,
+        "max": 4,
+        "per_heart": 0.04,
+        "limit": 12
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "{crop}",
+        "count": "{count}",
+        "consume": true
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:item",
+        "item": "minecraft:emerald",
+        "count": "{bounty}"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": "{count}"
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
+    ]
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:rebuild_the_walls",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:mason"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.rebuild_the_walls.title"
+  },
+  "category": "infrastructure",
+  "reputation": {
+    "on_phase_complete": 2,
+    "on_project_complete": 10
+  },
+  "phases": [
+    {
+      "key": "gather_stone",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.rebuild_the_walls.gather_stone.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.rebuild_the_walls.gather_stone.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:stone_bricks",
+          "count": 96
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:torch",
+          "count": 16
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 30
+          },
+          "target": "contributors"
+        }
+      ]
+    },
+    {
+      "key": "raise_the_wall",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.rebuild_the_walls.raise_the_wall.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.rebuild_the_walls.raise_the_wall.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:project_place_block",
+          "block": "minecraft:stone_bricks",
+          "count": 16
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 10
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency",
+            "difficulty": "medium"
+          },
+          "target": "top_contributor"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 5
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

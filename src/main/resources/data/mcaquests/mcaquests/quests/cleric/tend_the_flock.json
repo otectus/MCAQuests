@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_tend_the_flock",
+  "weight": 12,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cleric_tend_the_flock.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cleric_tend_the_flock.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cleric_tend_the_flock.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cleric_tend_the_flock.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cleric_tend_the_flock.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cleric_tend_the_flock.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cleric_tend_the_flock.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:none",
+      "count": 3
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

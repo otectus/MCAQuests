@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_egg_hunt",
+  "weight": 13,
+  "category": "errand",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:none",
+      "minecraft:nitwit"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.unemployed_egg_hunt.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.unemployed_egg_hunt.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.unemployed_egg_hunt.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.unemployed_egg_hunt.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.unemployed_egg_hunt.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.unemployed_egg_hunt.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.unemployed_egg_hunt.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:egg",
+      "count": 6
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 12
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

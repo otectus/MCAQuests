@@ -1,0 +1,89 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_fisherman_catch",
+  "weight": 14,
+  "category": "gathering",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_fisherman_catch.title",
+    "with": [
+      "{catch_name}"
+    ]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.offer",
+      "with": [
+        "{count}",
+        "{catch_name}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.in_progress",
+      "with": [
+        "{catch_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.ready",
+      "with": [
+        "{count}",
+        "{catch_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.complete"
+    }
+  },
+  "template": {
+    "variables": {
+      "catch": {
+        "kind": "item",
+        "tags": [
+          "minecraft:fishes"
+        ]
+      },
+      "count": {
+        "kind": "int",
+        "min": 1,
+        "max": 3
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:fish_item",
+        "item": "{catch}",
+        "count": "{count}"
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 12
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
+    ]
+  }
+}

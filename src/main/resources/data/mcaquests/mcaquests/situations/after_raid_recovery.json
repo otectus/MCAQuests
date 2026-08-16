@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:after_raid_recovery",
+  "scope": "village",
+  "duration_ticks": 9600,
+  "cooldown_ticks": 48000,
+  "trigger": {
+    "type": "mcaquests:raid"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 18
+    },
+    "failure": {
+      "reputation": -12
+    }
+  },
+  "offer": {
+    "weight": 12,
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "mca:guard"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.after_raid_recovery.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.after_raid_recovery.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.after_raid_recovery.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.after_raid_recovery.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.after_raid_recovery.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.after_raid_recovery.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.after_raid_recovery.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.after_raid_recovery.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "minecraft:zombie",
+        "count": 6
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 40
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ]
+  }
+}

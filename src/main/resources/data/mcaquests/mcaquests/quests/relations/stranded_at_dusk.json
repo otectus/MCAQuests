@@ -1,0 +1,85 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_stranded_at_dusk",
+  "weight": 11,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_stranded_at_dusk.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.failed"
+    }
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -6,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "nearest_village",
+        "radius": 160
+      },
+      "radius": 10,
+      "lead": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 32
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:giver_distance_from_village",
+        "min_distance": 96,
+        "require_outside_border": true
+      },
+      {
+        "type": "mcaquests:time",
+        "period": "NIGHT"
+      }
+    ]
+  }
+}

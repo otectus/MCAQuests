@@ -1,0 +1,95 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_guard_mob_cull",
+  "weight": 14,
+  "category": "combat",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_guard_mob_cull.title",
+    "with": [
+      "{foe_name}"
+    ]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.offer",
+      "with": [
+        "{foe_name}",
+        "{count}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.in_progress",
+      "with": [
+        "{foe_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.ready",
+      "with": [
+        "{count}",
+        "{foe_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.complete"
+    }
+  },
+  "template": {
+    "variables": {
+      "foe": {
+        "kind": "entity",
+        "ids": [
+          "minecraft:zombie",
+          "minecraft:husk",
+          "minecraft:skeleton",
+          "minecraft:spider",
+          "minecraft:creeper"
+        ]
+      },
+      "count": {
+        "kind": "int",
+        "min": 5,
+        "max": 10,
+        "per_player_level": 0.3,
+        "limit": 24
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "{foe}",
+        "count": "{count}"
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": "{count}"
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
+    ]
+  }
+}

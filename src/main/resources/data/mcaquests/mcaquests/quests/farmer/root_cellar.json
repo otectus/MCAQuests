@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_root_cellar",
+  "weight": 18,
+  "category": "delivery",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.farmer_root_cellar.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.farmer_root_cellar.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_root_cellar.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_root_cellar.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_root_cellar.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_root_cellar.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_root_cellar.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:carrot",
+      "count": 16,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

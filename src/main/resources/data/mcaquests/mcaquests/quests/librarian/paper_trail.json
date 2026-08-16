@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_paper_trail",
+  "weight": 15,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:librarian"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.librarian_paper_trail.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:paper",
+      "count": 20,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

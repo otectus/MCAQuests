@@ -1,0 +1,70 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_urgent_medicine_recovery",
+  "weight": 20,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cleric_urgent_medicine_recovery.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cleric_urgent_medicine_recovery.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cleric_urgent_medicine_recovery.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cleric_urgent_medicine_recovery.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cleric_urgent_medicine_recovery.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cleric_urgent_medicine_recovery.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cleric_urgent_medicine_recovery.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:sweet_berries",
+      "count": 6,
+      "consume": true
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:honey_bottle",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:quest_failed",
+    "quest": "mcaquests:cleric_urgent_medicine"
+  },
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 28
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

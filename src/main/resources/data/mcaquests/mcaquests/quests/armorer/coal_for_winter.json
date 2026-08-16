@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:armorer_coal_for_winter",
+  "weight": 14,
+  "category": "gathering",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:armorer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.armorer_coal_for_winter.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.armorer_coal_for_winter.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.armorer_coal_for_winter.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.armorer_coal_for_winter.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.armorer_coal_for_winter.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.armorer_coal_for_winter.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.armorer_coal_for_winter.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:coal",
+      "count": 24
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:template_kin_errand",
+  "weight": 10,
+  "category": "social",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_kin_errand.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.template_kin_errand.dialogue.offer",
+      "with": [
+        "{count}",
+        "{gift_name}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_kin_errand.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_kin_errand.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_kin_errand.dialogue.in_progress",
+      "with": [
+        "{gift_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_kin_errand.dialogue.ready",
+      "with": [
+        "{count}",
+        "{gift_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_kin_errand.dialogue.complete"
+    }
+  },
+  "template": {
+    "variables": {
+      "gift": {
+        "kind": "item",
+        "ids": [
+          "minecraft:poppy",
+          "minecraft:cookie",
+          "minecraft:bread",
+          "minecraft:cooked_cod",
+          "minecraft:sweet_berries",
+          "minecraft:white_wool",
+          "minecraft:apple"
+        ]
+      },
+      "count": {
+        "kind": "int",
+        "min": 3,
+        "max": 8,
+        "per_player_level": 0.2,
+        "limit": 16
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:deliver_to_villager",
+        "recipient": {
+          "mode": "family",
+          "relation": "any"
+        },
+        "item": "{gift}",
+        "count": "{count}",
+        "consume": true
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
+    ]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "any",
+    "status": "same_village"
+  }
+}

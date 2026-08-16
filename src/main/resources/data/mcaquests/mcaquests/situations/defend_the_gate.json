@@ -1,0 +1,80 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:defend_the_gate",
+  "scope": "village",
+  "duration_ticks": 11000,
+  "cooldown_ticks": 72000,
+  "trigger": {
+    "type": "mcaquests:night"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 10
+    },
+    "failure": {
+      "reputation": -6
+    }
+  },
+  "offer": {
+    "weight": 7,
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "mca:guard"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.defend_the_gate.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.defend_the_gate.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.defend_the_gate.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.defend_the_gate.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.defend_the_gate.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.defend_the_gate.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.defend_the_gate.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.defend_the_gate.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:defend_location",
+        "location": {
+          "anchor": "home_village"
+        },
+        "threat": {
+          "entity": "minecraft:zombie"
+        },
+        "radius": 24,
+        "count": 8
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 28
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ]
+  }
+}

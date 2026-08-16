@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_family_1_wheat",
+  "weight": 14,
+  "category": "chain",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.farmer_family_1_wheat.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:wheat",
+      "count": 16,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:farmer_family",
+    "stage": 1,
+    "stage_total": 4,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.farmer_family_1_wheat.chain.chapter"
+    },
+    "unlocks": [
+      "mcaquests:farmer_family_2_expand"
+    ]
+  }
+}

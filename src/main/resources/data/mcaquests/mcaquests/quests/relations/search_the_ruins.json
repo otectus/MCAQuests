@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_search_the_ruins",
+  "weight": 9,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_search_the_ruins.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_search_the_ruins.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_search_the_ruins.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_search_the_ruins.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_search_the_ruins.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_search_the_ruins.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_search_the_ruins.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:enter_structure",
+      "structure_tag": "minecraft:mineshaft"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "sibling",
+    "status": "missing"
+  }
+}

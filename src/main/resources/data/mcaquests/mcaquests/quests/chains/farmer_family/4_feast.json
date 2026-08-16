@@ -1,0 +1,79 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_family_4_feast",
+  "weight": 14,
+  "category": "chain",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.farmer_family_4_feast.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cake",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:item",
+      "item": "minecraft:golden_apple",
+      "count": 1
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 40
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:farmer_family",
+    "stage": 4,
+    "stage_total": 4,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.farmer_family_4_feast.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:farmer_family_3_apprentice"
+    ]
+  }
+}

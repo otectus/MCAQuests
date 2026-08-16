@@ -1,0 +1,89 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:aging_parent_1_warm_meal",
+  "weight": 12,
+  "category": "chain",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.aging_parent_1_warm_meal.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "family",
+        "relation": "parent"
+      },
+      "item": "minecraft:bread",
+      "count": 6,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:aging_parent",
+    "stage": 1,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.chain.chapter"
+    },
+    "unlocks": [
+      "mcaquests:aging_parent_2_remedy"
+    ]
+  },
+  "weight_bonus": [
+    {
+      "when": {
+        "type": "mcaquests:hearts",
+        "min": 25
+      },
+      "amount": 6
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "parent",
+    "status": "nearby"
+  }
+}

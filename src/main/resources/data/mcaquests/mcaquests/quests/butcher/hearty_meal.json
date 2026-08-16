@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:butcher_hearty_meal",
+  "weight": 15,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.butcher_hearty_meal.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_beef",
+      "count": 6,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

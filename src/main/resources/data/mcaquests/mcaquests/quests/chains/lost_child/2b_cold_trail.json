@@ -1,0 +1,76 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:lost_child_2b_cold_trail",
+  "weight": 15,
+  "category": "chain",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.lost_child_2b_cold_trail.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:candle",
+      "count": 3,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:lost_child",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.chain.chapter"
+    },
+    "unlocks": [
+      "mcaquests:lost_child_3_homecoming"
+    ]
+  },
+  "conditions": {
+    "type": "mcaquests:quest_failed",
+    "quest": "mcaquests:lost_child_2_deeper",
+    "scope": "giver"
+  }
+}

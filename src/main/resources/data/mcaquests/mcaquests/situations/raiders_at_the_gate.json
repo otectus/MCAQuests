@@ -1,0 +1,80 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:raiders_at_the_gate",
+  "scope": "village",
+  "duration_ticks": 9600,
+  "cooldown_ticks": 48000,
+  "trigger": {
+    "type": "mcaquests:raid"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 16
+    },
+    "failure": {
+      "reputation": -10
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "mca:guard"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.raiders_at_the_gate.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.raiders_at_the_gate.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.raiders_at_the_gate.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.raiders_at_the_gate.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.raiders_at_the_gate.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.raiders_at_the_gate.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.raiders_at_the_gate.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.raiders_at_the_gate.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:defend_location",
+        "location": {
+          "anchor": "home_village"
+        },
+        "threat": {
+          "tag": "minecraft:raiders"
+        },
+        "radius": 24,
+        "count": 8
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 36
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ]
+  }
+}

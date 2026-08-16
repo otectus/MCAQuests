@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:archer_fletchings",
+  "weight": 13,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:archer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.archer_fletchings.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:feather",
+      "count": 16,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

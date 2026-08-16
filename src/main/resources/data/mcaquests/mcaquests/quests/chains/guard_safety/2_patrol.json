@@ -1,0 +1,84 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_safety_2_patrol",
+  "weight": 14,
+  "category": "chain",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_safety_2_patrol.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.failed"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:spider",
+      "count": 4
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 28
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:guard_safety",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:guard_safety_1_clear"
+    ],
+    "unlocks": [
+      "mcaquests:guard_safety_3_militia",
+      "mcaquests:guard_safety_2b_amends"
+    ]
+  },
+  "failure": {
+    "deadline_ticks": 6000,
+    "retry_after": 24000
+  }
+}

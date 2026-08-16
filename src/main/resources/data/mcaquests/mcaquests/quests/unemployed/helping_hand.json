@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:unemployed_helping_hand",
+  "weight": 12,
+  "category": "errand",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:none",
+      "minecraft:nitwit"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.unemployed_helping_hand.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.unemployed_helping_hand.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.unemployed_helping_hand.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.unemployed_helping_hand.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.unemployed_helping_hand.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.unemployed_helping_hand.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.unemployed_helping_hand.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:bread",
+      "count": 6,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 12
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

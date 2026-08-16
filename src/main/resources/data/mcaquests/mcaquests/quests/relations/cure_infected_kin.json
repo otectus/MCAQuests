@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_cure_infected_kin",
+  "weight": 6,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 96000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_cure_infected_kin.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_cure_infected_kin.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_cure_infected_kin.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_cure_infected_kin.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_cure_infected_kin.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_cure_infected_kin.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_cure_infected_kin.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:cure_villager",
+      "villager": {
+        "mode": "family",
+        "relation": "any"
+      },
+      "cure_item": {
+        "item": "minecraft:golden_apple"
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 40
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

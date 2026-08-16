@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:toolsmith_a_proper_kit",
+  "weight": 10,
+  "category": "crafting",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:toolsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.toolsmith_a_proper_kit.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.toolsmith_a_proper_kit.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.toolsmith_a_proper_kit.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.toolsmith_a_proper_kit.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.toolsmith_a_proper_kit.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.toolsmith_a_proper_kit.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.toolsmith_a_proper_kit.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:craft_item",
+      "item": "minecraft:iron_pickaxe",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

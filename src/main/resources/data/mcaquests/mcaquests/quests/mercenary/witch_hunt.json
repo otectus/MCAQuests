@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mercenary_witch_hunt",
+  "weight": 10,
+  "category": "combat",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:mercenary"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.mercenary_witch_hunt.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.mercenary_witch_hunt.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.mercenary_witch_hunt.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.mercenary_witch_hunt.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.mercenary_witch_hunt.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.mercenary_witch_hunt.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.mercenary_witch_hunt.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:witch",
+      "count": 3
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 35
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

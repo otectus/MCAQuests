@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_grim_harvest",
+  "weight": 15,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cleric_grim_harvest.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:rotten_flesh",
+      "count": 10,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 15
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

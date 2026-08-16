@@ -1,0 +1,78 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:lost_child_2_deeper",
+  "weight": 15,
+  "category": "chain",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.lost_child_2_deeper.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.complete"
+    }
+  },
+  "failure": {
+    "deadline_ticks": 12000,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:enter_structure",
+      "structure_tag": "minecraft:mineshaft"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:lost_child",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:lost_child_1_trail"
+    ],
+    "unlocks": [
+      "mcaquests:lost_child_3_homecoming",
+      "mcaquests:lost_child_2b_cold_trail"
+    ]
+  }
+}

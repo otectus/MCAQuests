@@ -1,0 +1,68 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cleric_tend_the_wounded",
+  "weight": 11,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cleric_tend_the_wounded.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cleric_tend_the_wounded.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cleric_tend_the_wounded.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cleric_tend_the_wounded.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cleric_tend_the_wounded.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cleric_tend_the_wounded.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cleric_tend_the_wounded.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:heal_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "item": "minecraft:golden_carrot",
+      "below_health_fraction": 0.7,
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:health_below",
+    "threshold": 0.7
+  }
+}

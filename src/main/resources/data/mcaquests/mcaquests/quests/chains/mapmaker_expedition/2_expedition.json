@@ -1,0 +1,101 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:mapmaker_expedition_2_expedition",
+  "weight": 13,
+  "category": "chain",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.dialogue.failed"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:compass",
+      "count": 1,
+      "consume": true
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:glass_pane",
+      "count": 4,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:mapmaker_expedition",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.mapmaker_expedition_2_expedition.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:mapmaker_expedition_1_survey"
+    ],
+    "unlocks": [
+      "mcaquests:mapmaker_expedition_3_frontier",
+      "mcaquests:mapmaker_expedition_2b_salvage"
+    ]
+  },
+  "failure": {
+    "deadline_time": 13000,
+    "retry_after": 24000
+  },
+  "priority": 2,
+  "weight_bonus": [
+    {
+      "when": {
+        "type": "mcaquests:hearts",
+        "min": 40
+      },
+      "amount": 10
+    }
+  ]
+}

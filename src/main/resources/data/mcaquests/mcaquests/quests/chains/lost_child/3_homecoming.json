@@ -1,0 +1,82 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:lost_child_3_homecoming",
+  "weight": 15,
+  "category": "chain",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.lost_child_3_homecoming.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cake",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 38
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:lost_child",
+    "stage": 3,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.chain.chapter"
+    }
+  },
+  "conditions": {
+    "any_of": [
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:lost_child_2_deeper",
+        "scope": "giver"
+      },
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:lost_child_2b_cold_trail",
+        "scope": "giver"
+      }
+    ]
+  }
+}

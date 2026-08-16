@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:adventurer_trailblazer",
+  "weight": 10,
+  "category": "exploration",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:adventurer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.adventurer_trailblazer.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_mountain"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:courting_4_the_proposal",
+  "weight": 14,
+  "category": "chain",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.courting_4_the_proposal.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.dialogue.complete"
+    }
+  },
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 40
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:gold_ingot",
+      "count": 4,
+      "consume": true
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:courting",
+    "stage": 4,
+    "stage_total": 4,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.courting_4_the_proposal.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:courting_3_meet_the_family"
+    ]
+  }
+}

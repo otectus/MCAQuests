@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fisherman_storm_catch",
+  "weight": 10,
+  "category": "fishing",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fisherman_storm_catch.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:fish_item",
+      "item": "minecraft:cod",
+      "count": 4
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:weather",
+    "weather": "RAIN"
+  },
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

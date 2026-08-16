@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:missing_villager_search",
+  "scope": "village",
+  "sponsor": { "professions": [], "on_death": "pause" },
+  "title": { "translate": "mcaquests.project.missing_villager_search.title" },
+  "category": "social",
+  "phases": [
+    {
+      "key": "ask_around",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.missing_villager_search.ask_around.offer" },
+        "in_progress": { "translate": "mcaquests.project.missing_villager_search.ask_around.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_talk_to_profession", "profession": "minecraft:cartographer", "count": 3 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 20 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "bring_supplies",
+      "dialogue": {
+        "offer": { "translate": "mcaquests.project.missing_villager_search.bring_supplies.offer" },
+        "in_progress": { "translate": "mcaquests.project.missing_villager_search.bring_supplies.in_progress" }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:bread", "count": 16 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:torch", "count": 16 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 20 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:currency", "difficulty": "medium" }, "target": "contributors" }
+      ]
+    }
+  ]
+}

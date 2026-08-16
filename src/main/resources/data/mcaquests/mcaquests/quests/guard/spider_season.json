@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_spider_season",
+  "weight": 12,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_spider_season.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.guard_spider_season.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_spider_season.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_spider_season.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_spider_season.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_spider_season.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_spider_season.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:spider",
+      "count": 4
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

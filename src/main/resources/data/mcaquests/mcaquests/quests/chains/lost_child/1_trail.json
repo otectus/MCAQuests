@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:lost_child_1_trail",
+  "weight": 13,
+  "category": "chain",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.lost_child_1_trail.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.lost_child_1_trail.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.lost_child_1_trail.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.lost_child_1_trail.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.lost_child_1_trail.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.lost_child_1_trail.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.lost_child_1_trail.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_forest"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:lost_child",
+    "stage": 1,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.lost_child_1_trail.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.lost_child_1_trail.chain.chapter"
+    },
+    "unlocks": [
+      "mcaquests:lost_child_2_deeper"
+    ]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "child",
+    "status": "missing"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:courting_3_meet_the_family",
+  "weight": 14,
+  "category": "chain",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.courting_3_meet_the_family.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cake",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:courting",
+    "stage": 3,
+    "stage_total": 4,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.courting_3_meet_the_family.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:courting_2_walk_together"
+    ],
+    "unlocks": [
+      "mcaquests:courting_4_the_proposal"
+    ]
+  }
+}

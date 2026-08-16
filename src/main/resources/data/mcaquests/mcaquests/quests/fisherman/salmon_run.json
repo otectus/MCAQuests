@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fisherman_salmon_run",
+  "weight": 10,
+  "category": "fishing",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fisherman_salmon_run.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.fisherman_salmon_run.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fisherman_salmon_run.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fisherman_salmon_run.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fisherman_salmon_run.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fisherman_salmon_run.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fisherman_salmon_run.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:fish_item",
+      "item": "minecraft:salmon",
+      "count": 5
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

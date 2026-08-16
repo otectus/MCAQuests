@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:leatherworker_cobblers_apprentice",
+  "weight": 12,
+  "category": "crafting",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:leatherworker"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:craft_item",
+      "item": "minecraft:leather_boots",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 16
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

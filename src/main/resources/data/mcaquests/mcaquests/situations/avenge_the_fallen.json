@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:avenge_the_fallen",
+  "scope": "village",
+  "duration_ticks": 14000,
+  "cooldown_ticks": 48000,
+  "trigger": {
+    "type": "mcaquests:villager_death"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -6
+    }
+  },
+  "offer": {
+    "weight": 8,
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "mca:guard"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.avenge_the_fallen.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "minecraft:zombie",
+        "count": 8
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 35
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ]
+  }
+}

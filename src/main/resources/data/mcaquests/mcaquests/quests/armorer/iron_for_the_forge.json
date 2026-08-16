@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:armorer_iron_for_the_forge",
+  "weight": 15,
+  "category": "delivery",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:armorer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.armorer_iron_for_the_forge.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.armorer_iron_for_the_forge.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.armorer_iron_for_the_forge.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.armorer_iron_for_the_forge.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.armorer_iron_for_the_forge.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.armorer_iron_for_the_forge.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.armorer_iron_for_the_forge.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:iron_ingot",
+      "count": 6,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:adventurer_relic_hunt",
+  "weight": 9,
+  "category": "exploration",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "mca:adventurer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.adventurer_relic_hunt.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:enter_structure",
+      "structure": "minecraft:ancient_city"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 40
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

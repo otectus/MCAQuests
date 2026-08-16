@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:leatherworker_the_tannery",
+  "weight": 14,
+  "category": "delivery",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:leatherworker"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.leatherworker_the_tannery.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.leatherworker_the_tannery.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.leatherworker_the_tannery.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.leatherworker_the_tannery.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.leatherworker_the_tannery.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.leatherworker_the_tannery.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.leatherworker_the_tannery.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:leather",
+      "count": 12,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

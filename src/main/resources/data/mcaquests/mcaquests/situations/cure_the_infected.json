@@ -1,0 +1,77 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cure_the_infected",
+  "scope": "village",
+  "duration_ticks": 6000,
+  "cooldown_ticks": 36000,
+  "trigger": {
+    "type": "mcaquests:infection",
+    "min_progress": 0.1
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 14
+    },
+    "failure": {
+      "reputation": -10
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "difficulty": "hard",
+    "giver": {
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.cure_the_infected.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.cure_the_infected.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.cure_the_infected.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.cure_the_infected.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.cure_the_infected.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.cure_the_infected.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.cure_the_infected.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.cure_the_infected.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:cure_villager",
+        "villager": {
+          "mode": "family",
+          "relation": "any"
+        },
+        "cure_item": {
+          "item": "minecraft:golden_apple"
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 35
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ]
+  }
+}

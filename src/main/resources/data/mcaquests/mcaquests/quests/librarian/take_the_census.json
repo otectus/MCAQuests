@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:librarian_take_the_census",
+  "weight": 12,
+  "category": "social",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:librarian"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.librarian_take_the_census.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.librarian_take_the_census.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.librarian_take_the_census.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.librarian_take_the_census.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.librarian_take_the_census.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.librarian_take_the_census.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.librarian_take_the_census.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:farmer",
+      "count": 3
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 16
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

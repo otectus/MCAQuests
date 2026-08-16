@@ -1,0 +1,57 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_trade_with_blacksmith",
+  "weight": 12,
+  "category": "social",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_trade_with_blacksmith.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_trade_with_blacksmith.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_trade_with_blacksmith.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_trade_with_blacksmith.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_trade_with_blacksmith.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_trade_with_blacksmith.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_trade_with_blacksmith.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:trade_with_villager",
+      "profession": "minecraft:weaponsmith",
+      "count": 2
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 16
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

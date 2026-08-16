@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_phantom_vigil",
+  "weight": 10,
+  "category": "combat",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_phantom_vigil.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:phantom",
+      "count": 3
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 28
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  }
+}

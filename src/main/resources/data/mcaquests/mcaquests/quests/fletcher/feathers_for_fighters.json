@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fletcher_feathers_for_fighters",
+  "weight": 11,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fletcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fletcher_feathers_for_fighters.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.fletcher_feathers_for_fighters.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fletcher_feathers_for_fighters.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fletcher_feathers_for_fighters.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fletcher_feathers_for_fighters.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fletcher_feathers_for_fighters.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fletcher_feathers_for_fighters.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:arrow",
+      "count": 16,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 16
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

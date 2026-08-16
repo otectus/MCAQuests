@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_sow_before_the_rain",
+  "weight": 10,
+  "category": "gathering",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.farmer_sow_before_the_rain.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:wheat_seeds",
+      "count": 16
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:weather",
+    "weather": "RAIN"
+  },
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 14
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

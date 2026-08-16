@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cartographer_edge_of_the_world",
+  "weight": 6,
+  "category": "exploration",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 96000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true,
+    "min_hearts": 20
+  },
+  "title": {
+    "translate": "mcaquests.quest.cartographer_edge_of_the_world.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cartographer_edge_of_the_world.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cartographer_edge_of_the_world.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cartographer_edge_of_the_world.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cartographer_edge_of_the_world.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cartographer_edge_of_the_world.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cartographer_edge_of_the_world.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:visit_dimension",
+      "dimension": "minecraft:the_end"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 50
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

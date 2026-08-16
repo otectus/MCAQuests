@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:fisherman_fresh_catch",
+  "weight": 15,
+  "category": "delivery",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fisherman_fresh_catch.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cod",
+      "count": 8,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

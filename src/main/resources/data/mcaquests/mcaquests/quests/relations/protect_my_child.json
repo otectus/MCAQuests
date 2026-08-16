@@ -1,0 +1,66 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_protect_my_child",
+  "weight": 9,
+  "category": "social",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_protect_my_child.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_protect_my_child.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_protect_my_child.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_protect_my_child.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_protect_my_child.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_protect_my_child.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_protect_my_child.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_protect_my_child.dialogue.failed"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:protect_entity",
+      "villager": {
+        "mode": "family",
+        "relation": "child"
+      },
+      "duration_ticks": 2400,
+      "require_near_player": true,
+      "near_radius": 16,
+      "fail_on_death": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

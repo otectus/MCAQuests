@@ -1,0 +1,83 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:aging_parent_2_remedy",
+  "weight": 14,
+  "category": "chain",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.aging_parent_2_remedy.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:heal_entity",
+      "villager": {
+        "mode": "family",
+        "relation": "parent"
+      },
+      "item": "minecraft:golden_carrot",
+      "below_health_fraction": 0.8,
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 26
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "mcaquests:aging_parent",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.aging_parent_2_remedy.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:aging_parent_1_warm_meal"
+    ],
+    "unlocks": [
+      "mcaquests:aging_parent_3_last_walk"
+    ]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "parent",
+    "status": "nearby"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:cartographer_spare_parchment",
+  "weight": 14,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cartographer_spare_parchment.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:paper",
+      "count": 12,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ]
+}

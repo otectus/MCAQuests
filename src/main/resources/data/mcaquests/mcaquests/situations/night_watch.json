@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:night_watch",
+  "scope": "village",
+  "duration_ticks": 11000,
+  "cooldown_ticks": 72000,
+  "trigger": {
+    "type": "mcaquests:night"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 8
+    },
+    "failure": {
+      "reputation": -4
+    }
+  },
+  "offer": {
+    "weight": 6,
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "mca:guard"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.night_watch.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "minecraft:zombie",
+        "count": 5
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 20
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:guard_night_watch",
+  "weight": 12,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_night_watch.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.guard_night_watch.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_night_watch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_night_watch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_night_watch.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_night_watch.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_night_watch.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 4
+    }
+  ],
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  },
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 28
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

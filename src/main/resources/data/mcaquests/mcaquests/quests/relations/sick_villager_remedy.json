@@ -1,0 +1,66 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:relations_sick_villager_remedy",
+  "weight": 16,
+  "category": "social",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_sick_villager_remedy.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.relations_sick_villager_remedy.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_sick_villager_remedy.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_sick_villager_remedy.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_sick_villager_remedy.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_sick_villager_remedy.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_sick_villager_remedy.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:golden_apple",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "any_of": [
+      {
+        "type": "mcaquests:health_below",
+        "threshold": 0.5
+      },
+      {
+        "type": "mcaquests:infected",
+        "min_progress": 0.01
+      }
+    ]
+  }
+}
