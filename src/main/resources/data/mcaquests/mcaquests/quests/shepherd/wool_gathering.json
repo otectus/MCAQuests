@@ -3,23 +3,59 @@
   "id": "mcaquests:shepherd_wool_gathering",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:shepherd"], "adult_only": true },
-  "title": { "text": "A Bit of Wool" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:shepherd"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.shepherd_wool_gathering.title"
+  },
   "dialogue": {
-    "offer": { "text": "The flock's been stubborn at shearing time. Bring me 12 wool and I'll make it worth the trouble." },
-    "accept": { "text": "Mind the sheep — they bite when they're cross." },
-    "decline": { "text": "Suit yourself. The looms can wait." },
-    "in_progress": { "text": "Got that wool yet?" },
-    "ready": { "text": "Soft and clean — just what I needed. Let's settle up." },
-    "complete": { "text": "The whole village will be warmer for this." }
+    "offer": {
+      "translate": "mcaquests.quest.shepherd_wool_gathering.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.shepherd_wool_gathering.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.shepherd_wool_gathering.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.shepherd_wool_gathering.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.shepherd_wool_gathering.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.shepherd_wool_gathering.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:white_wool", "count": 12, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:white_wool",
+      "count": 12,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 15 },
-    { "type": "mcaquests:hearts", "amount": 15 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 15
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

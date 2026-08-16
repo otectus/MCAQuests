@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -52,7 +53,12 @@ public record TalkToProfessionObjective(ResourceLocation profession, int count) 
         return true;
     }
 
+    /**
+     * Profession match under the configured {@code professionMatchingMode}, so a datapack asking for
+     * {@code minecraft:cartographer} still matches an MCA villager whose profession id is namespaced
+     * differently (the default {@code NORMALIZED} mode ignores the namespace).
+     */
     public boolean matches(@Nullable ResourceLocation talkedToProfession) {
-        return profession.equals(talkedToProfession);
+        return ProfessionMatcher.matches(profession, talkedToProfession);
     }
 }

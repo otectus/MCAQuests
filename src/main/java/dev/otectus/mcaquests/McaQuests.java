@@ -63,5 +63,9 @@ public final class McaQuests {
         ProjectObjectiveTypes.bootstrap();
         SituationTriggerTypes.bootstrap();
         event.enqueueWork(QuestNetwork::register);
+        // Choose the reputation backend once every mod has loaded, so ModList is authoritative. This
+        // is the only place the optional MCA: Reputation integration is ever switched on; without the
+        // call Quests simply uses its own per-player standing store (spec 29.1).
+        event.enqueueWork(dev.otectus.mcaquests.compat.ReputationBridge::init);
     }
 }

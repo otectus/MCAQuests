@@ -51,7 +51,7 @@ class FtbqReferenceWalkerTest {
                                                    List<QuestReward> rewards) {
         return new QuestDefinition(QUEST_ID, true, 1, Optional.empty(), Optional.empty(), RepeatRule.DEFAULT,
                 GiverSpec.ANY, Map.of(), objectives, rewards, TurnInSpec.DEFAULT, conditions, Optional.empty(),
-                Optional.empty(), Optional.empty(), OfferShaping.NONE);
+                Optional.empty(), Optional.empty(), OfferShaping.NONE, dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE);
     }
 
     @Test

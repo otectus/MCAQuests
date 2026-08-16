@@ -3,23 +3,58 @@
   "id": "mcaquests:leatherworker_cobblers_apprentice",
   "weight": 12,
   "category": "crafting",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
-  "giver": { "professions": ["minecraft:leatherworker"], "adult_only": true },
-  "title": { "text": "Cobbler's Apprentice" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:leatherworker"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.title"
+  },
   "dialogue": {
-    "offer": { "text": "A child's gone barefoot through the mud all week. Stitch up a pair of leather boots for the poor thing?" },
-    "accept": { "text": "Snug and dry, mind. Little feet deserve better." },
-    "decline": { "text": "Cold toes it is, then." },
-    "in_progress": { "text": "Are the boots finished?" },
-    "ready": { "text": "Sturdy little boots! That child will dance through puddles now." },
-    "complete": { "text": "Kindness stitched into leather. Bless you." }
+    "offer": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.leatherworker_cobblers_apprentice.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:craft_item", "item": "minecraft:leather_boots", "count": 1 }
+    {
+      "type": "mcaquests:craft_item",
+      "item": "minecraft:leather_boots",
+      "count": 1
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 16 },
-    { "type": "mcaquests:hearts", "amount": 16 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 16
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

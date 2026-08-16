@@ -3,23 +3,58 @@
   "id": "mcaquests:farmer_build_the_hayloft",
   "weight": 12,
   "category": "building",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
-  "title": { "text": "Build the Hayloft" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.farmer_build_the_hayloft.title"
+  },
   "dialogue": {
-    "offer": { "text": "The hayloft's bare and the beasts are hungry. Stack 8 hay bales up by the barn for me?" },
-    "accept": { "text": "Right up against the north wall, if you would." },
-    "decline": { "text": "The cows will grumble, but so be it." },
-    "in_progress": { "text": "Hayloft filling up yet?" },
-    "ready": { "text": "Eight bales, neatly stacked. The herd will eat well." },
-    "complete": { "text": "Good honest stacking. Much obliged." }
+    "offer": {
+      "translate": "mcaquests.quest.farmer_build_the_hayloft.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_build_the_hayloft.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_build_the_hayloft.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_build_the_hayloft.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_build_the_hayloft.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_build_the_hayloft.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:place_block", "block": "minecraft:hay_block", "count": 8 }
+    {
+      "type": "mcaquests:place_block",
+      "block": "minecraft:hay_block",
+      "count": 8
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 15 },
-    { "type": "mcaquests:hearts", "amount": 15 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 15
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

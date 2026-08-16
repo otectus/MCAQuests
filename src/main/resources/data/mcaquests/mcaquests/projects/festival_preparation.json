@@ -18,7 +18,7 @@
         { "type": "mcaquests:donate_item", "item": "minecraft:cooked_beef", "count": 16 }
       ],
       "rewards": [
-        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 }, "target": "contributors" }
+        { "reward": { "type": "mcaquests:currency", "difficulty": "medium" }, "target": "contributors" }
       ]
     },
     {

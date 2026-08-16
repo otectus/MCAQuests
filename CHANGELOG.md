@@ -4,6 +4,194 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-13
+
+### Added — MCA: Reputation integration (optional)
+
+**MCA: Quests now speaks to [MCA: Reputation](https://github.com/otectus/MCAReputation) when it is
+installed, and is completely unchanged when it is not.** Reputation becomes the canonical owner of
+village standing; Quests supplies the deeds and keeps a mirrored fallback copy so removing it later
+does not reset anybody.
+
+- **Village standing is now per player.** This is the headline fix, and it applies *whether or not*
+  Reputation is installed. Quests' own store was keyed by village and shared by the entire world, so on
+  a server every player read the same number even though the Journal calls it "your standing" — one
+  group's quest work silently moved everyone's reputation. The new store (`standingV2`) is keyed by
+  player UUID first.
+- **Village standing is now dimension-aware.** MCA allocates village ids per level, so village 3 in the
+  Nether and village 3 in the overworld shared one entry. They no longer do.
+- **The v1 tags are retained, read-only.** `reputation` and `repTierHW` are still written on every save
+  so a pre-1.1.0 world stays hand-recoverable and the one-time import can read them. A build-time
+  assertion fails the build if a gameplay call site starts using them again.
+- **A top-level `reputation` block on quest definitions**, with optional `complete`, `fail`, and
+  `abandon` outcomes. Failure and abandonment default to **nothing**: abandoning has always been free
+  from the villager menu, and attaching a penalty by default would change every existing pack.
+- **Project and situation reputation now names its recipients.** Each field still accepts the legacy
+  bare integer and means what it always did, but the delta is applied per eligible contributor instead
+  of once anonymously to a shared village total. `sponsor_village` is read as "every participant", with
+  a one-time warning recommending explicit `recipients`.
+- **New conditions and rewards**, registered unconditionally so a suite-authored pack still loads on a
+  Quests-only install (where they simply never match): `mcareputation:has_incident`,
+  `mcareputation:resolve_incident`, `mcareputation:record_incident`. Together they make a restitution
+  quest possible — the villager offers amends only for something you actually did, and finishing the
+  work softens the original deed without erasing it.
+- **Every reputation path is deduplicated.** Quest, project, situation, and FTB outcomes each carry a
+  stable key, so a duplicated turn-in packet, a doubled event, or a relog mid-claim cannot pay twice.
+- **The Journal, the commands, and the FTB tasks and rewards all delegate** through one bridge, so the
+  numbers they show can never disagree with each other or with Reputation's own screen.
+- **A one-time legacy import.** With Reputation installed, an eligible player's pre-Reputation village
+  scores, tier high-water marks, and titles are copied once into their canonical record — as a
+  non-decaying baseline rather than as invented deeds, because the old data cannot say who earned what.
+  See MCA: Reputation's `MIGRATION.md`.
+- **Legacy events are translated exactly once.** Reputation's first-time upward tier change becomes
+  `ReputationTierReachedEvent`, and a new title becomes `TitleGrantedEvent`, so existing consumers and
+  title-chain quests keep working.
+
+### Changed
+
+- `ReputationService` is now a thin, deprecated shim over the new `QuestReputation` facade. It still
+  works for outside callers, but its signatures cannot express a player or a dimension, so it has to
+  assume both. New code should use `QuestReputation` with an explicit community.
+- `gradle.properties` no longer hardcodes an absolute Linux JDK path, which made the build fail on any
+  other machine. Set `JAVA_HOME` to a JDK 17 instead.
+- Optional datapack fields in the new reputation blocks report a malformed value rather than silently
+  substituting the default — a misspelled `recipients` used to mean "pay nobody", with no diagnostic.
+
+### Compatibility
+
+- **MCA: Reputation is entirely optional.** Without it Quests uses its own store and every reputation
+  surface behaves as before; the bridge is reached by name after a `ModList` check and every failure is
+  contained to one ERROR.
+- Existing quest, project, and situation JSON needs no edits. `mcaquests:default`,
+  `mcaquests:honored_of_village`, and `mcaquests:revered_of_village` all still resolve.
+- 306 automated tests pass, including all 285 that existed before this work.
+
+### Earlier in 1.1.0
+
+
+A compatibility, clarity, balance, and localization pass driven by player feedback. The headline fix
+removes a leftover debug shortcut that had been quietly breaking MCA's own villager interactions and
+other mods; alongside it, the "talk to three cartographers" project now actually completes, babies no
+longer offer adult errands, family objectives say *whose* relative they mean, relationship progression
+is no longer trivially farmable into marriage, and the whole built-in pack is finally translatable —
+with Brazilian Portuguese shipping alongside English.
+
+### Removed
+
+- **The sneak-right-click quest shortcut is gone.** A Phase 0 debug behaviour opened the quest menu on
+  sneak-right-click and then cancelled *every* such interaction with an MCA villager, whatever the player
+  was holding. That swallowed MCA's own sneak actions (the villager editor book, inventory, trading) and
+  any other mod bound to sneak-right-click — and, because Forge does not deliver a cancelled event to
+  later listeners, it could also starve MCA: Quests' own progress handlers, which is one reason project
+  contributions went missing. **MCA: Quests now never cancels an entity interaction.** The injected
+  **Quests** button is the only entry point.
+
+### Fixed
+
+- **"Talk to N villagers of a profession" objectives now work as advertised.** Two defects fed the
+  "cartographer project stuck at 0/3" report:
+  - Both the quest and project talk objectives compared profession ids with `equals`, ignoring the
+    configured `professionMatchingMode` — so a datapack asking for `minecraft:cartographer` never matched
+    a villager whose profession id carried a different namespace. Both now use `ProfessionMatcher`, so
+    `STRICT` / `NORMALIZED` / `LOOSE` behave identically for quests and projects.
+  - The quest-side objective counted *interactions* rather than *distinct villagers*. It now dedupes by
+    villager UUID, matching the project side (and the objective text now says "different villagers").
+- **`mcaquests:missing_villager_search` is village-scoped**, not family-scoped. Family scope resolves to a
+  fixed radius around wherever the sponsor happened to be standing, so cartographers elsewhere in the
+  village silently didn't count. Its objective and dialogue now state plainly that you must talk to three
+  *different* cartographers *in this village*, and the ambiguous verb "Rally" is gone.
+- **Saved project instances are quarantined when a pack changes a project's scope.** Every lookup keys on
+  the current scope, so an instance created under the old one becomes unreachable — but was still being
+  credited and still paying out phase rewards in parallel with its replacement, a double payout. Such an
+  instance now stops accruing and stops paying, while its data stays in the save (reverting the pack
+  restores it).
+- **Babies and toddlers no longer offer written quests.** `relations/child_treat` was the only built-in
+  quest with `adult_only: false`, which opted out of the *only* age gate and let any age offer it. It is
+  now gated to `child` and `teen` via `age_group`, combined with its existing family requirement through
+  `all_of`. A new loader warning flags any datapack quest that sets `adult_only: false` without saying
+  which ages it means, and `BuiltinAgeEligibilityTest` holds the shipped pack to the stricter rule.
+- **Family objectives say whose relative they mean.** `VillagerTarget` resolves `family` relations
+  relative to the *quest giver*, but the labels read "your sibling", sending players to look for their own
+  relative. They now read "the quest giver's sibling", and so on for spouse, parent, child, and family.
+  Resolved targets still show the actual name and village, and target glow is unchanged.
+- **A conversation is counted once.** Quest and project talk credit now share a single gate and both
+  dedupe by villager UUID, so a conversation reported by both the interaction hook and MCA: Conversations
+  advances progress once. Talk progress is also synced immediately rather than on the next per-second tick.
+
+### Added
+
+- **`mcaquests:currency` reward** — semantic money. A datapack asks for *currency*; the server chooses what
+  currency is via `currencyProvider`: vanilla emeralds (default), **Create: Numismatics** coins, or any
+  custom item. Numismatics is resolved by **registry id** and never linked against, so MCA: Quests cannot
+  classload it and an absent Numismatics is just an unresolvable id — handled by `currencyFallback`
+  (`EMERALDS` or `DISABLE`), logged once per id rather than once per turn-in.
+  - The amount is **rolled exactly once, at accept time**, and persisted with the quest (or, for a project
+    phase, with the project). Reopening the menu, reconnecting, reloading, or a retried turn-in packet all
+    read the same stored number, so a payout can never be rerolled. Offers show an honest range; accepted
+    quests show the frozen amount, which is what is paid.
+  - Built-in emerald payouts are migrated to it; explicit `mcaquests:item` rewards are untouched.
+- **Optional `difficulty` metadata** (`easy` / `medium` / `hard`) on a quest, supplying default reward
+  ranges per band. Backward compatible: a quest without it keeps its explicit rewards exactly as written.
+- **`currencyRewardMultiplier` and `xpRewardMultiplier`** server-side scaling levers, applied *before* the
+  amount is displayed so a card never shows a number different from what is granted.
+- **Brazilian Portuguese (`pt_br`) — the complete pack**, all 1,582 strings: interface, objectives,
+  rewards, quest titles and dialogue, relationship arcs, village projects, and situations. This required
+  first making the pack translatable at all: the 1,283 hard-coded English strings in the built-in quests,
+  situations, and projects are now translation keys (literal `text` remains fully supported for
+  third-party packs), and template placeholders became positional `with` arguments so a translation can
+  reorder them where Portuguese word order differs.
+- **Locale parity tests** — every locale must cover all of `en_us` and define nothing `en_us` lacks,
+  placeholders must agree with the source, no value may be blank or a leftover `TODO`, no value may mix
+  in a non-Latin writing system, and no built-in data file may go back to hard-coding English.
+- **Debug tracing for unrewarded contributions.** With `debugLogging` on, a rejected villager interaction
+  now says *why*: inactive project, wrong phase, out of scope, profession mismatch, duplicate villager,
+  cancelled event, held item, or invalid player.
+- **`McaQuestsApi.notifyVillagerConversation(player, villager)`** so MCA: Conversations can credit a real
+  conversation the interaction hook cannot see. Safe to double-report — credit is deduped by villager.
+
+### Changed
+
+- **Relationship progression is materially harder to farm.** MCA needs **100** hearts to marry (50 to
+  engage, 40 for friendship); the pack previously granted up to **35** hearts for a repeatable quest on a
+  one-day cooldown, putting marriage about **three in-game days** away via a single trivial errand.
+  Built-in hearts rewards are now banded by difficulty — **4 / 8 / 14** — situations (which are throttled
+  and time-limited) sit one band higher, and hard repeatables carry at least a two-day cooldown. Marriage
+  now takes roughly **12–25 in-game days** of sustained attention to one villager. `heartsRewardMultiplier`
+  remains the lever for servers that want it faster or slower, and is now documented prominently in
+  [CONFIG.md](CONFIG.md#relationship-pacing).
+- **Talk objectives count only a real conversation**: a main-hand, empty-handed, non-cancelled interaction
+  with an MCA villager, or an explicit MCA: Conversations signal. Holding the MCA editor book or another
+  mod's interaction item is no longer "talking". Item-driven objectives (deliver, heal, cure) are
+  unaffected and still work with something in hand.
+
+### Compatibility
+
+- **Fully save-compatible** — existing worlds and datapacks load unchanged; no migration needed.
+- Two new NBT fields are additive and simply **absent** on saves from 1.0.0 or earlier: `talked_to` on a
+  quest objective's progress (the distinct-villager set) and `frozen_rewards` on an active quest and on a
+  project instance (the rolled currency amounts). Both load as empty and start accumulating from first
+  load; an objective or quest that uses neither serialises to exactly the tag it always did.
+- **Third-party datapacks are unaffected.** `difficulty` and `mcaquests:currency` are both optional and
+  purely additive, literal `"text"` remains fully supported, and a quest that declares no difficulty keeps
+  its explicit reward amounts exactly as written.
+- **A project instance whose definition changed `scope` is quarantined, not deleted** — it stops accruing
+  and stops paying out, but its data stays in the save and reverting the pack's `scope` restores it. This
+  affects the built-in `mcaquests:missing_villager_search`, which moved from family to village scope.
+- **Clients running 1.0.0 or earlier are rejected by the network handshake** (protocol `"6"` vs `"7"`) —
+  this is intentional; update client and server together. The packet shapes did not change, but the whole
+  built-in pack now travels as translation keys, and a pre-1.1.0 client has none of them in its lang file:
+  connecting anyway would render raw ids like `mcaquests.quest.farmer_wheat_request.dialogue.offer` in
+  place of every quest title and line.
+
+### Notes
+
+- **The Portuguese translation should be reviewed by a fluent speaker before release.** It is complete
+  and the automated checks pass, but tone and idiom across ~14,000 words of flavour prose are worth a
+  human read.
+- **The FTB Quests "hidden functions/images" report is not addressed here.** It could not be reproduced
+  from the description. Reporting it usefully needs: the other mod's name and version, which screen
+  (FTB editor / quest-book page / HUD / MCA's interaction screen), the GUI scale, and a screenshot.
+
 ## [1.0.0] - 2026-07-16
 
 The headline release: an optional, two-way **FTB Quests** integration (see the new
@@ -561,6 +749,7 @@ and **Architectury API**. Prod-tested against MCA Reborn 7.6.20.
 - MCA Reborn exposes no public API, so this release links against MCA's internal classes and is pinned to the **7.6.x** line; all access is isolated behind a single `McaCompat` adapter.
 - Turn-in is atomic and idempotent — rewards cannot be duplicated by packet spam.
 
+[1.1.0]: https://github.com/otectus/MCAQuests/releases/tag/v1.1.0
 [0.9.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.9.0
 [0.2.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.2.0
 [0.1.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.1.0

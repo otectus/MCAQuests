@@ -58,8 +58,8 @@ public final class JournalService {
         data.titles().global().forEach(id -> globalTitles.add(Titles.displayName(id)));
 
         List<JournalVillageEntry> villages = new ArrayList<>();
-        for (int villageId : knownVillages(saved, data)) {
-            villages.add(villageEntry(level, saved, data, ladder, villageId));
+        for (int villageId : knownVillages(level, player, data)) {
+            villages.add(villageEntry(level, player, data, ladder, villageId));
         }
 
         // The journal is this player's history, so resolve {player} in archived titles to their MCA name.
@@ -72,22 +72,30 @@ public final class JournalService {
                 new JournalSyncS2CPacket(globalTitles, villages, archive));
     }
 
-    /** Villages the player "knows": any with a reputation value, plus any they hold a title with. */
-    private static Set<Integer> knownVillages(ProjectSavedData saved, PlayerQuestData data) {
-        Set<Integer> ids = new LinkedHashSet<>();
-        for (String key : saved.reputationKeys()) {
-            ReputationService.parseVillageId(key).ifPresent(ids::add);
-        }
+    /**
+     * Villages the player "knows": any they have standing with, plus any they hold a title with.
+     *
+     * <p>Reads through the bridge rather than the saved data directly, so with MCA: Reputation
+     * installed the Journal lists the villages <em>this player</em> actually has a history with
+     * instead of every village anyone has ever touched (§29.7).
+     */
+    private static Set<Integer> knownVillages(ServerLevel level, ServerPlayer player, PlayerQuestData data) {
+        Set<Integer> ids = new LinkedHashSet<>(
+                dev.otectus.mcaquests.quest.reputation.QuestReputation.villageScores(level.getServer(), player.getUUID(),
+                        level.dimension().location()).keySet());
         ids.addAll(data.titles().byVillage().keySet());
         return ids;
     }
 
-    private static JournalVillageEntry villageEntry(ServerLevel level, ProjectSavedData saved, PlayerQuestData data,
-                                                    ReputationTierSet ladder, int villageId) {
+    private static JournalVillageEntry villageEntry(ServerLevel level, ServerPlayer player,
+                                                    PlayerQuestData data, ReputationTierSet ladder,
+                                                    int villageId) {
         Component name = McaCompat.villageName(level, villageId)
                 .map(s -> (Component) Component.literal(s))
                 .orElseGet(() -> Component.translatable("mcaquests.journal.village_fallback", villageId));
-        int rep = saved.reputation("v:" + villageId);
+        // Canonical when MCA: Reputation is installed, Quests' own per-player store otherwise —
+        // either way the Journal never maintains a contradictory local score of its own (§29.7).
+        int rep = dev.otectus.mcaquests.quest.reputation.QuestReputation.score(player, dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(level, villageId));
         Component currentTier = Component.literal(ladder.tierFor(rep).name());
         ReputationTier next = ladder.nextTier(rep).orElse(null);
         Component nextTier = next != null ? Component.literal(next.name()) : Component.empty();

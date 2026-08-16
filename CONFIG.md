@@ -14,7 +14,7 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 ### `[quests]`
 | Option | Default | What it does |
 |---|---|---|
-| `enableDefaultQuestPack` | `true` | Load the 38 built-in quests. Set `false` to ship only your own datapack quests. |
+| `enableDefaultQuestPack` | `true` | Load the 165 built-in quests. Set `false` to ship only your own datapack quests. |
 | `maxActiveQuestsPerPlayer` | `10` | Hard cap on a player's simultaneously-active quests. |
 | `maxActiveQuestsPerVillager` | `1` | Cap on active quests per individual villager, per player. |
 | `offersPerVillager` | `3` | How many quest cards a villager shows at once. The cards scroll, so this is not limited by screen height. |
@@ -33,9 +33,49 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 |---|---|---|
 | `allowCommandRewards` | `false` | Master switch for `mcaquests:command` rewards. **Off by default for safety** — only enable for trusted packs. |
 | `allowLootTableRewards` | `true` | Allow `mcaquests:loot_table` rewards. |
-| `heartsRewardMultiplier` | `1.0` | Scales every hearts reward (e.g. `0.5` halves all relationship gains). |
+| `heartsRewardMultiplier` | `1.0` | **The relationship-pacing lever.** Scales every hearts reward before the clamps below. See [Relationship pacing](#relationship-pacing) for what to set it to. |
 | `minHeartsReward` | `0` | Lower clamp on a single hearts reward after scaling. |
 | `maxHeartsReward` | `100` | Upper clamp on a single hearts reward after scaling. |
+| `currencyRewardMultiplier` | `1.0` | Scales every `mcaquests:currency` reward. Explicit `mcaquests:item` rewards are **not** scaled — only semantic currency is. |
+| `xpRewardMultiplier` | `1.0` | Scales every `mcaquests:xp` and `mcaquests:xp_levels` reward. |
+
+Scaling is applied **before** the amount is displayed, and a randomized currency amount is frozen when the quest is accepted — so the number on the card is always exactly the number you are paid.
+
+### `[rewards.currency]`
+
+*(1.1.0)*
+
+The `mcaquests:currency` reward says *"pay the player some money"* and lets the server decide what money is. Switching every currency reward in every installed pack to another mod's coin is one config line; no datapack is rewritten.
+
+| Option | Default | What it does |
+|---|---|---|
+| `currencyProvider` | `VANILLA` | What currency is paid in: `VANILLA` (emeralds), `NUMISMATICS` (Create: Numismatics coins), or `CUSTOM`. |
+| `numismaticsCurrencyItem` | `numismatics:spur` | Item id used when the provider is `NUMISMATICS`. The spur is the smallest denomination, so small datapack amounts stay meaningful. |
+| `customCurrencyItem` | `minecraft:emerald` | Item id used when the provider is `CUSTOM`. |
+| `currencyFallback` | `EMERALDS` | What happens when the configured item cannot be resolved (mod not installed, id typo): `EMERALDS` pays emeralds instead, `DISABLE` grants nothing. Either way the problem is logged **once**, not once per turn-in. |
+| `easyCurrencyMin` / `easyCurrencyMax` | `1` / `2` | Payout range for a quest with `"difficulty": "easy"`. |
+| `mediumCurrencyMin` / `mediumCurrencyMax` | `2` / `4` | Payout range for `"difficulty": "medium"`. |
+| `hardCurrencyMin` / `hardCurrencyMax` | `4` / `8` | Payout range for `"difficulty": "hard"`. |
+
+**Numismatics is never a hard dependency.** The coin is looked up by registry id at runtime; MCA: Quests contains no reference to any Numismatics class and cannot classload one. An uninstalled Numismatics is simply an id that does not resolve, and takes the `currencyFallback` path.
+
+The band defaults reproduce the built-in pack's pre-1.1.0 emerald payouts, so enabling nothing changes nothing.
+
+### Relationship pacing
+
+MCA Reborn's own thresholds (7.6.x defaults) are what quest rewards are pacing you towards:
+
+| Milestone | Hearts |
+|---|---|
+| Gift a bouquet / begin courting | 10 |
+| Considered a friend | 40 |
+| Engagement | 50 |
+| Greeting threshold | 75 |
+| **Marriage** | **100** |
+
+Before 1.1.0 the built-in pack granted up to 35 hearts for a single repeatable quest on a one-day cooldown, so a player could reach marriage with a villager in about **three in-game days** of repeating one trivial errand. Built-in hearts rewards are now banded by difficulty — **4 / 8 / 14** for easy / medium / hard — and hard repeatables carry at least a two-day cooldown, putting marriage at roughly 12–25 in-game days of sustained attention to *one* villager.
+
+To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the number of quests needed, `2.0` restores something close to the old speed.
 
 ### `[matching]`
 | Option | Default | What it does |

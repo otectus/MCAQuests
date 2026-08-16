@@ -3,30 +3,61 @@
   "id": "mcaquests:relations_a_meal_for_mother",
   "weight": 10,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "A Meal for a Parent" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_a_meal_for_mother.title"
+  },
   "dialogue": {
-    "offer": { "text": "My parent grows frail and forgets to eat. Would you carry six loaves of bread to them yourself, and see they take a proper meal?" },
-    "accept": { "text": "Bless you. You'll find them near home, slow as they move these days." },
-    "decline": { "text": "I'll go myself when I can get away, then." },
-    "in_progress": { "text": "Have you reached my parent with that bread?" },
-    "ready": { "text": "They ate? Truly ate? Oh, what a weight off me." },
-    "complete": { "text": "You fed my parent when I couldn't be there. That is no small kindness." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_a_meal_for_mother.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_a_meal_for_mother.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_a_meal_for_mother.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_a_meal_for_mother.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_a_meal_for_mother.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_a_meal_for_mother.dialogue.complete"
+    }
   },
   "objectives": [
     {
       "type": "mcaquests:deliver_to_villager",
-      "recipient": { "mode": "family", "relation": "parent" },
+      "recipient": {
+        "mode": "family",
+        "relation": "parent"
+      },
       "item": "minecraft:bread",
       "count": 6,
       "consume": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "type": "mcaquests:related_villager_status",

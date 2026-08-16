@@ -3,17 +3,39 @@
   "id": "mcaquests:relations_see_my_child_home",
   "weight": 10,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "See My Child Home" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_see_my_child_home.title"
+  },
   "dialogue": {
-    "offer": { "text": "My little one wandered out and now it's dark. They can walk on their own legs — just guard them while they lead the way back to the village. Please, hurry." },
-    "accept": { "text": "Stay between them and the shadows. I'll keep a lamp in the window." },
-    "decline": { "text": "Please — don't leave them out there alone." },
-    "in_progress": { "text": "Are they safe? Are they close? I can't bear the waiting." },
-    "ready": { "text": "Is that— it's them! Home and whole!" },
-    "complete": { "text": "You watched over my child as if they were your own. I will never forget it." },
-    "failed": { "text": "No... not my child. I can't speak of it. Leave me." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_see_my_child_home.dialogue.failed"
+    }
   },
   "failure": {
     "fail_on_giver_death": true,
@@ -23,24 +45,50 @@
   "objectives": [
     {
       "type": "mcaquests:escort_entity",
-      "villager": { "mode": "family", "relation": "child" },
-      "destination": { "anchor": "home_village" },
+      "villager": {
+        "mode": "family",
+        "relation": "child"
+      },
+      "destination": {
+        "anchor": "home_village"
+      },
       "radius": 8,
       "lead": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
-    { "type": "mcaquests:xp", "amount": 30 },
-    { "type": "mcaquests:hearts", "amount": 30 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ],
   "conditions": {
     "all_of": [
-      { "type": "mcaquests:related_villager_status", "relation": "child", "status": "nearby" },
-      { "any_of": [
-          { "type": "mcaquests:giver_distance_from_village", "min_distance": 48, "require_outside_border": true },
-          { "type": "mcaquests:time", "period": "NIGHT" }
-      ] }
+      {
+        "type": "mcaquests:related_villager_status",
+        "relation": "child",
+        "status": "nearby"
+      },
+      {
+        "any_of": [
+          {
+            "type": "mcaquests:giver_distance_from_village",
+            "min_distance": 48,
+            "require_outside_border": true
+          },
+          {
+            "type": "mcaquests:time",
+            "period": "NIGHT"
+          }
+        ]
+      }
     ]
   }
 }

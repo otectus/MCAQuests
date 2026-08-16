@@ -3,23 +3,58 @@
   "id": "mcaquests:toolsmith_deep_delve",
   "weight": 12,
   "category": "mining",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:toolsmith"], "adult_only": true },
-  "title": { "text": "Deep Delve" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:toolsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.toolsmith_deep_delve.title"
+  },
   "dialogue": {
-    "offer": { "text": "I need raw iron straight from the rock. Mine 5 iron ore and I'll handle the smelting." },
-    "accept": { "text": "Take a torch and watch for cave-ins." },
-    "decline": { "text": "The veins will keep, I suppose." },
-    "in_progress": { "text": "Struck any iron down there?" },
-    "ready": { "text": "Five good ores! The furnace is already warm." },
-    "complete": { "text": "Honest work. Come back when your pick is sharp again." }
+    "offer": {
+      "translate": "mcaquests.quest.toolsmith_deep_delve.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.toolsmith_deep_delve.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.toolsmith_deep_delve.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.toolsmith_deep_delve.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.toolsmith_deep_delve.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.toolsmith_deep_delve.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:break_block", "tag": "minecraft:iron_ores", "count": 5 }
+    {
+      "type": "mcaquests:break_block",
+      "tag": "minecraft:iron_ores",
+      "count": 5
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 22 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

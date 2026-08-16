@@ -3,32 +3,93 @@
   "id": "mcaquests:template_guard_mob_cull",
   "weight": 14,
   "category": "combat",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["mca:guard"], "adult_only": true },
-  "title": { "text": "Bounty: {foe_name}" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_guard_mob_cull.title",
+    "with": [
+      "{foe_name}"
+    ]
+  },
   "dialogue": {
-    "offer": { "text": "The roads aren't safe — too many {foe_name} about. Cull {count} of them and the village will rest easier." },
-    "accept": { "text": "Good. Keep your blade close and your wits closer." },
-    "decline": { "text": "Then we post a double watch tonight. Be careful out there." },
-    "in_progress": { "text": "How many {foe_name} have you put down?" },
-    "ready": { "text": "{count} {foe_name} dealt with. Fine work, soldier." },
-    "complete": { "text": "The watch owes you a quiet night. Take this for your trouble." }
+    "offer": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.offer",
+      "with": [
+        "{foe_name}",
+        "{count}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.in_progress",
+      "with": [
+        "{foe_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.ready",
+      "with": [
+        "{count}",
+        "{foe_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_guard_mob_cull.dialogue.complete"
+    }
   },
   "template": {
     "variables": {
       "foe": {
         "kind": "entity",
-        "ids": ["minecraft:zombie", "minecraft:husk", "minecraft:skeleton", "minecraft:spider", "minecraft:creeper"]
+        "ids": [
+          "minecraft:zombie",
+          "minecraft:husk",
+          "minecraft:skeleton",
+          "minecraft:spider",
+          "minecraft:creeper"
+        ]
       },
-      "count": { "kind": "int", "min": 5, "max": 10, "per_player_level": 0.3, "limit": 24 }
+      "count": {
+        "kind": "int",
+        "min": 5,
+        "max": 10,
+        "per_player_level": 0.3,
+        "limit": 24
+      }
     },
     "objectives": [
-      { "type": "mcaquests:kill_entity", "entity": "{foe}", "count": "{count}" }
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "{foe}",
+        "count": "{count}"
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-      { "type": "mcaquests:xp", "amount": "{count}" },
-      { "type": "mcaquests:hearts", "amount": 12 }
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": "{count}"
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
     ]
   }
 }

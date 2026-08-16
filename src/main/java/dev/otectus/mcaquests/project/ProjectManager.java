@@ -347,7 +347,8 @@ public final class ProjectManager {
             }
             if (state.tryMarkPhaseDistributed(current)) {
                 ProjectRewardDistributor.distribute(server, level, data, state, def, current);
-                addReputation(server, data, state, def.reputation().onPhaseComplete());
+                ProjectReputation.apply(server, level, state, def, def.reputation().phaseOutcome(),
+                        "phase", current);
                 MinecraftForge.EVENT_BUS.post(new ProjectEvent.PhaseAdvanced(def, state, current));
                 broadcastToast(server, state, def, current);
             }
@@ -360,7 +361,8 @@ public final class ProjectManager {
                 state.enterPhase(next, nextPhase.objectives().size());
             } else {
                 state.setStatus(ProjectStatus.COMPLETED);
-                addReputation(server, data, state, def.reputation().onProjectComplete());
+                ProjectReputation.apply(server, level, state, def, def.reputation().completeOutcome(),
+                        "complete", -1);
                 completeProject(server, def, state);
                 def.followUp().ifPresent(target -> seedFollowUp(server, level, data, state, target));
                 return;
@@ -409,8 +411,17 @@ public final class ProjectManager {
         }
     }
 
-    static void addReputation(MinecraftServer server, ProjectSavedData data, ProjectState state, int delta) {
-        dev.otectus.mcaquests.quest.reputation.ReputationService.award(data, server, state.identity(), delta, null);
+    /**
+     * Applies a project reputation outcome to its recipients.
+     *
+     * <p>Kept as a thin call-through so the several completion paths in this class read the same, but
+     * the work — and in particular the per-recipient split that replaced the old anonymous award — is
+     * {@link ProjectReputation}'s (§29.4).
+     */
+    static void addReputation(MinecraftServer server, ProjectState state, ProjectDefinition def,
+                              dev.otectus.mcaquests.quest.reputation.ReputationOutcome outcome,
+                              String outcomeKey, int phaseIndex) {
+        ProjectReputation.apply(server, server.overworld(), state, def, outcome, outcomeKey, phaseIndex);
     }
 
     /** Seeds a follow-up project in the same scope identity. Public for the reward distributor. */
@@ -454,18 +465,43 @@ public final class ProjectManager {
         });
     }
 
+    /**
+     * Credits one conversation with {@code villager} to every active project's {@code project_talk_to_profession}
+     * objectives. Counts distinct villagers only — the villager UUID is recorded on the shared progress, so
+     * re-talking to the same villager never advances the objective again, and the credit is idempotent if
+     * both the interaction hook and MCA: Conversations report the same conversation.
+     */
     public static void onProjectTalk(ServerPlayer player, Entity villager) {
         ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
         UUID villagerUuid = villager.getUUID();
         creditEvent(player, villager.blockPosition(), (state, def, phase, i) -> {
             ProjectObjective objective = def.phase(phase).objectives().get(i);
-            if (objective instanceof ProjectTalkObjective talk && talk.matches(profession)
-                    && state.progress(i).markTalkedTo(villagerUuid)) {
-                credit(def, state, i, player, 1);
-                return true;
+            if (!(objective instanceof ProjectTalkObjective talk)) {
+                return false;
             }
-            return false;
+            if (!talk.matches(profession)) {
+                debugReject(def, "profession mismatch (wanted " + talk.profession() + ", villager is "
+                        + profession + ")");
+                return false;
+            }
+            if (!state.progress(i).markTalkedTo(villagerUuid)) {
+                debugReject(def, "duplicate villager " + villagerUuid + " — already counted");
+                return false;
+            }
+            credit(def, state, i, player, 1);
+            return true;
         });
+    }
+
+    private static void debugReject(ProjectDefinition def, String reason) {
+        debugLog("project '{}' did not credit a conversation: {}", def.id(), reason);
+    }
+
+    /** Verbose per-contribution tracing, gated behind {@code debugLogging} so it costs nothing when off. */
+    private static void debugLog(String message, Object... args) {
+        if (McaQuestsConfig.COMMON.debugLogging.get()) {
+            McaQuests.LOGGER.debug("[MCA: Quests] " + message, args);
+        }
     }
 
     private interface ObjectiveCredit {
@@ -478,16 +514,34 @@ public final class ProjectManager {
         }
         MinecraftServer server = player.getServer();
         if (server == null) {
+            debugLog("no server for player {} — contribution dropped", player.getGameProfile().getName());
             return;
         }
         ProjectSavedData data = ProjectSavedData.get(server);
         boolean dirty = false;
         for (ProjectState state : data.allInstances()) {
-            if (state.status() != ProjectStatus.ACTIVE || !inScopeAt(level, state, where)) {
+            if (state.status() != ProjectStatus.ACTIVE) {
+                debugLog("project '{}' is {}, not ACTIVE", state.projectId(), state.status());
+                continue;
+            }
+            if (isScopeStale(state)) {
+                debugLog("project '{}' instance is quarantined: saved scope {} no longer matches the pack",
+                        state.projectId(), state.scope());
+                continue;
+            }
+            if (!inScopeAt(level, state, where)) {
+                debugLog("project '{}' is out of scope at {} (scope={}, village={}, anchor={})",
+                        state.projectId(), where, state.scope(), state.villageId(), state.anchorPos());
                 continue;
             }
             ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
-            if (def == null || state.currentPhase() >= def.phaseCount()) {
+            if (def == null) {
+                debugLog("project '{}' has no loaded definition", state.projectId());
+                continue;
+            }
+            if (state.currentPhase() >= def.phaseCount()) {
+                debugLog("project '{}' phase {} is past its last phase ({})", state.projectId(),
+                        state.currentPhase(), def.phaseCount());
                 continue;
             }
             ProjectPhase phase = def.phase(state.currentPhase());
@@ -536,6 +590,25 @@ public final class ProjectManager {
         MinecraftForge.EVENT_BUS.post(new ProjectEvent.Contributed(def, state, player, objectiveIndex, amount));
     }
 
+    /**
+     * True when a saved instance's scope no longer matches its definition's current {@code scope} — i.e.
+     * the pack changed the project's scope after this instance was created.
+     *
+     * <p>Every by-key lookup (menu, offers, contribution) builds its key from {@code def.scopeType()}, so
+     * such an instance can never be found, shown, or resumed again, and a fresh instance is created
+     * alongside it. Left unchecked it would still be reached through {@code allInstances()} and keep
+     * accruing progress and paying out phase rewards in parallel with its replacement — a double payout.
+     *
+     * <p>So it is <b>quarantined, not deleted</b>: it stops accruing and stops paying, but its data stays
+     * in the save. Reverting the pack's {@code scope} brings it back exactly as it was. Admins can still
+     * see it via {@code /mcaquests project} and clear it with {@code adminReset}.
+     */
+    public static boolean isScopeStale(ProjectState state) {
+        return ProjectRegistry.get(state.projectId())
+                .map(def -> def.scopeType() != state.scope())
+                .orElse(false); // unknown definition — a missing datapack, not a scope change
+    }
+
     private static boolean inScopeAt(ServerLevel level, ProjectState state, BlockPos where) {
         return state.anchorDimension().equals(level.dimension().location())
                 && ScopeResolver.isWithinScope(level, state.scope(), state.villageId(), state.anchorPos(),
@@ -573,7 +646,7 @@ public final class ProjectManager {
         switch (behavior) {
             case FAIL -> {
                 state.setStatus(ProjectStatus.FAILED);
-                addReputation(server, data, state, def.reputation().onFail());
+                addReputation(server, state, def, def.reputation().failOutcome(), "fail", -1);
                 MinecraftForge.EVENT_BUS.post(new ProjectEvent.Failed(def, state));
             }
             case PAUSE -> state.setStatus(ProjectStatus.PAUSED);
@@ -583,7 +656,7 @@ public final class ProjectManager {
                 }
             }
             case TURN_IN_TO_VILLAGE -> {
-                addReputation(server, data, state, def.reputation().onProjectComplete());
+                addReputation(server, state, def, def.reputation().completeOutcome(), "complete", -1);
                 state.setStatus(ProjectStatus.COMPLETED);
                 completeProject(server, def, state);
             }
@@ -635,8 +708,9 @@ public final class ProjectManager {
         UUID uuid = player.getUUID();
         List<ProjectLogEntry> entries = new ArrayList<>();
         for (ProjectState state : data.allInstances()) {
-            if (state.status() != ProjectStatus.ACTIVE || !state.participants().contains(uuid)) {
-                continue;
+            if (state.status() != ProjectStatus.ACTIVE || !state.participants().contains(uuid)
+                    || isScopeStale(state)) {
+                continue; // a quarantined instance is no longer reachable, so don't list it as active
             }
             ProjectRegistry.get(state.projectId()).ifPresent(def -> entries.add(new ProjectLogEntry(
                     state.projectId(), def.displayTitle(), sponsorLogLabel(player, state),
@@ -687,7 +761,7 @@ public final class ProjectManager {
                 continue;
             }
             data.allInstances().stream()
-                    .filter(s -> s.projectId().equals(reward.projectId()))
+                    .filter(s -> s.projectId().equals(reward.projectId()) && !isScopeStale(s))
                     .findFirst()
                     .ifPresent(state -> ProjectRewardDistributor.grantPending(level, state, player, def,
                             reward.phase(), reward.rewardIndex()));
@@ -765,7 +839,9 @@ public final class ProjectManager {
     }
 
     public static int reputationOf(MinecraftServer server, String identity) {
-        return ProjectSavedData.get(server).reputation(identity);
+        // Project scope identities are not per-player standing; the shared value is gone, and the
+        // honest answer for a scope query is 0 (see QuestReputation for the per-player reads).
+        return 0;
     }
 
     // ---------------------------------------------------------------- debug

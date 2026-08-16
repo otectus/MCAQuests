@@ -56,7 +56,9 @@ public class McaReputationTask extends McaCounterTaskBase {
         if (server == null) {
             return 0L;
         }
-        Map<Integer, Integer> reputations = ReputationService.allVillageReputations(server);
+        // Per-player now: an FTB task asks about THIS player's standing, which is what it always
+        // claimed to do even when the underlying number was world-shared (§29.9).
+        Map<Integer, Integer> reputations = dev.otectus.mcaquests.quest.reputation.QuestReputation.overworldVillageScores(server, player.getUUID());
         if (villageCount <= 1) {
             int best = 0;
             for (int rep : reputations.values()) {

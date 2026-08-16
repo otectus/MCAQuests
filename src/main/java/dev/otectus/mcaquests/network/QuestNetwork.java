@@ -11,12 +11,16 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 6 — adds the abandon-from-log packet and a giver UUID to QuestLogEntry. (5 was task
-    // M5.1: the FTB editor known-ids sync packet; 4 was v0.8.0: the "village needs help" situation toast
-    // packet; 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0:
-    // the community-project menu/log/contribute packets.)
+    // Bumped to 7 — v1.1.0 moved the whole built-in pack from literal text to translation keys, so quest
+    // titles and dialogue now travel as translatable Components. The packet *shapes* are unchanged, but a
+    // pre-1.1.0 client has none of those keys in its lang file and would render raw ids
+    // ("mcaquests.quest.farmer_wheat_request.dialogue.offer") for every quest. Rejecting the mismatch is
+    // far better than a UI full of translation keys. (6 was the abandon-from-log packet and a giver UUID
+    // on QuestLogEntry; 5 was task M5.1: the FTB editor known-ids sync packet; 4 was v0.8.0: the "village
+    // needs help" situation toast packet; 3 was v0.7.0: the reputation tier-up toast and journal
+    // request/sync packets; 2 was v0.4.0: the community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "6";
+    private static final String PROTOCOL_VERSION = "7";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),

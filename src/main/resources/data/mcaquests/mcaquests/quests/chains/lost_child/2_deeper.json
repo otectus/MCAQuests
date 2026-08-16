@@ -3,16 +3,35 @@
   "id": "mcaquests:lost_child_2_deeper",
   "weight": 15,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "adult_only": true },
-  "title": { "text": "Bring Them Home" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.lost_child_2_deeper.title"
+  },
   "dialogue": {
-    "offer": { "text": "The trail leads to the old mineshaft. They must have sheltered down there in the dark — go quickly, before the cold or the creatures find them first. Hurry, I beg you." },
-    "accept": { "text": "Take a torch and don't stop. Every moment matters now." },
-    "decline": { "text": "Don't give up on them — not when we're this close!" },
-    "in_progress": { "text": "Are you in the tunnels yet? Time is everything!" },
-    "ready": { "text": "You went down into the mine? Tell me what you found, quickly!" },
-    "complete": { "text": "Sheltering in the dark, frightened but whole — you found them. You actually found them. Bless you a thousand times." }
+    "offer": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.dialogue.complete"
+    }
   },
   "failure": {
     "deadline_ticks": 12000,
@@ -20,20 +39,40 @@
     "retry_after": 24000
   },
   "objectives": [
-    { "type": "mcaquests:enter_structure", "structure_tag": "minecraft:mineshaft" }
+    {
+      "type": "mcaquests:enter_structure",
+      "structure_tag": "minecraft:mineshaft"
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
-    { "type": "mcaquests:xp", "amount": 30 },
-    { "type": "mcaquests:hearts", "amount": 28 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ],
   "chain": {
     "chain": "mcaquests:lost_child",
     "stage": 2,
     "stage_total": 3,
-    "relationship_arc": { "text": "Bring Them Home" },
-    "chapter": { "text": "Into the Dark" },
-    "prerequisites": ["mcaquests:lost_child_1_trail"],
-    "unlocks": ["mcaquests:lost_child_3_homecoming", "mcaquests:lost_child_2b_cold_trail"]
+    "relationship_arc": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.lost_child_2_deeper.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:lost_child_1_trail"
+    ],
+    "unlocks": [
+      "mcaquests:lost_child_3_homecoming",
+      "mcaquests:lost_child_2b_cold_trail"
+    ]
   }
 }

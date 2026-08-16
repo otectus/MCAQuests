@@ -3,23 +3,59 @@
   "id": "mcaquests:armorer_copper_plating",
   "weight": 13,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:armorer"], "adult_only": true },
-  "title": { "text": "Copper Plating" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:armorer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.armorer_copper_plating.title"
+  },
   "dialogue": {
-    "offer": { "text": "I'm trying a new trim — copper takes a lovely shine. Sixteen ingots and I'll plate a parade set." },
-    "accept": { "text": "It'll green with age, but oh, the gleam at first! Thank you." },
-    "decline": { "text": "Plain steel for the parade, then. Dull." },
-    "in_progress": { "text": "Any copper for the project?" },
-    "ready": { "text": "Sixteen bright ingots! The captain's armor will dazzle." },
-    "complete": { "text": "A craftsman appreciates good materials. As do I, you." }
+    "offer": {
+      "translate": "mcaquests.quest.armorer_copper_plating.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.armorer_copper_plating.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.armorer_copper_plating.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.armorer_copper_plating.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.armorer_copper_plating.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.armorer_copper_plating.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:copper_ingot", "count": 16, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:copper_ingot",
+      "count": 16,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

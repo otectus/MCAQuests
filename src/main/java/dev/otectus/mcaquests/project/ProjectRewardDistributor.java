@@ -9,6 +9,7 @@ import dev.otectus.mcaquests.project.state.ProjectState;
 import dev.otectus.mcaquests.project.state.SharedObjectiveProgress;
 import dev.otectus.mcaquests.quest.reputation.ReputationService;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
+import dev.otectus.mcaquests.quest.reward.CurrencyReward;
 import dev.otectus.mcaquests.quest.reward.HeartsWithParticipantsReward;
 import dev.otectus.mcaquests.quest.reward.HeartsWithSponsorReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
@@ -59,22 +60,68 @@ public final class ProjectRewardDistributor {
                 continue;
             }
             if (reward instanceof VillageReputationReward rep) {
-                dev.otectus.mcaquests.quest.reputation.ReputationService.award(
-                        data, server, state.identity(), rep.amount(), null);
+                // The legacy shared reward, reinterpreted per §29.4: `sponsor_village` used to mean
+                // "add this to the village's one number", which under per-player standing can only
+                // sensibly mean "credit everyone who helped". Other shared targets keep their own
+                // recipient sets, which is why the target is consulted rather than assumed.
+                var outcome = dev.otectus.mcaquests.quest.reputation.ReputationOutcome
+                        .ofShorthand(rep.amount())
+                        .withDefaultRecipients(recipientsKindFor(shared.target()))
+                        .withDefaultIncident(dev.otectus.mcaquests.quest.reputation
+                                .QuestReputationBlock.Incidents.PROJECT_PHASE_COMPLETED);
+                ProjectReputation.apply(server, level, state, def, outcome, "phase", phaseIndex);
                 continue;
+            }
+
+            // Roll a randomized reward once, here, before any recipient is paid, so everyone who helped —
+            // including anyone offline who collects it later — receives the same amount.
+            if (reward instanceof CurrencyReward currency) {
+                state.freezeReward(phaseIndex, ri, currency.roll(level.getRandom()));
             }
 
             Collection<UUID> recipients = recipientsFor(shared.target(), state, phaseContributors, top);
             for (UUID pid : recipients) {
                 ServerPlayer player = server.getPlayerList().getPlayer(pid);
                 if (player != null) {
-                    grantPlayerReward(level, state, player, reward, sponsor);
+                    grantPlayerReward(level, state, player, reward, sponsor, state.frozenReward(phaseIndex, ri));
                 } else if (canQueueOffline(reward)) {
                     data.addPending(pid, PendingReward.ofPhase(def.id(), phaseIndex, ri));
                 }
             }
         }
     }
+
+    /**
+     * Maps a shared-reward target onto a reputation recipient set (§29.4).
+     *
+     * <p>{@code sponsor_village} is the interesting case. Under the old shared score it meant "add
+     * this to the village's single number", which per-player standing simply cannot express. §29.4
+     * directs it to be read as "everyone who took part", which is the closest thing to what the
+     * author meant, and warns once so they can state it explicitly.
+     */
+    private static dev.otectus.mcaquests.quest.reputation.ReputationOutcome.Recipients recipientsKindFor(
+            SharedRewardTarget target) {
+        return switch (target) {
+            case CONTRIBUTORS, TOP_CONTRIBUTOR ->
+                    dev.otectus.mcaquests.quest.reputation.ReputationOutcome.Recipients.PHASE_CONTRIBUTORS;
+            case ALL_PARTICIPANTS ->
+                    dev.otectus.mcaquests.quest.reputation.ReputationOutcome.Recipients.ALL_PARTICIPANTS;
+            case SPONSOR_VILLAGE -> {
+                if (!sponsorVillageWarned) {
+                    sponsorVillageWarned = true;
+                    dev.otectus.mcaquests.McaQuests.LOGGER.warn(
+                            "[MCA: Quests] a project reward targets 'sponsor_village' with "
+                            + "village_reputation. Village standing is per player from 1.1.0, so it is "
+                            + "credited to every participant instead. State an explicit \"recipients\" "
+                            + "in the project's reputation block to be unambiguous.");
+                }
+                yield dev.otectus.mcaquests.quest.reputation.ReputationOutcome.Recipients.ALL_PARTICIPANTS;
+            }
+        };
+    }
+
+    /** One warning per session is enough to be useful without being noise. */
+    private static boolean sponsorVillageWarned;
 
     private static final int VILLAGE_RESOLUTION_RADIUS = 128; // matches mcaquests:village_reputation §16.1
     private static final double VILLAGER_RESOLUTION_RADIUS = 16; // matches mcaquests:hearts §16.2
@@ -198,7 +245,10 @@ public final class ProjectRewardDistributor {
             return;
         }
         Entity sponsor = ProjectManager.resolveSponsor(player.getServer(), state);
-        grantPlayerReward(level, state, player, rewards.get(rewardIndex).reward(), sponsor);
+        // Reads the amount frozen when the phase was distributed, so a player who was offline then is paid
+        // exactly what everyone else was — never a fresh roll on login.
+        grantPlayerReward(level, state, player, rewards.get(rewardIndex).reward(), sponsor,
+                state.frozenReward(phase, rewardIndex));
     }
 
     private static Collection<UUID> recipientsFor(SharedRewardTarget target, ProjectState state,
@@ -212,9 +262,11 @@ public final class ProjectRewardDistributor {
     }
 
     private static void grantPlayerReward(ServerLevel level, ProjectState state, ServerPlayer player,
-                                          QuestReward reward, @Nullable Entity sponsor) {
+                                          QuestReward reward, @Nullable Entity sponsor, OptionalInt frozenAmount) {
         if (reward instanceof HeartsWithParticipantsReward hearts) {
             grantParticipantHearts(level, state, player, hearts);
+        } else if (reward instanceof CurrencyReward currency && frozenAmount.isPresent()) {
+            currency.grantAmount(player, frozenAmount.getAsInt());
         } else {
             reward.grant(player, sponsor);
         }

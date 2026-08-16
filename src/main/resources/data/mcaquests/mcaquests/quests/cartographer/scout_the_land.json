@@ -4,6 +4,7 @@
   "enabled": true,
   "weight": 10,
   "category": "exploration",
+  "difficulty": "medium",
   "repeat": {
     "type": "cooldown",
     "cooldown_ticks": 48000
@@ -29,6 +30,6 @@
   "rewards": [
     { "type": "mcaquests:item", "item": "minecraft:map", "count": 1 },
     { "type": "mcaquests:xp", "amount": 20 },
-    { "type": "mcaquests:hearts", "amount": 20 }
+    { "type": "mcaquests:hearts", "amount": 8 }
   ]
 }

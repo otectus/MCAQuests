@@ -3,23 +3,59 @@
   "id": "mcaquests:unemployed_a_splash_of_color",
   "weight": 12,
   "category": "gathering",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
-  "title": { "text": "A Splash of Color" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:none",
+      "minecraft:nitwit"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.unemployed_a_splash_of_color.title"
+  },
   "dialogue": {
-    "offer": { "text": "My windowsill is so drab. Could you pick me 8 wildflowers? Any colors will do." },
-    "accept": { "text": "Oh, how lovely of you! The meadows are full this time of year." },
-    "decline": { "text": "Ah well. Grey days suit me, I suppose." },
-    "in_progress": { "text": "Found any pretty flowers?" },
-    "ready": { "text": "Eight blooms! My window will be the cheeriest on the lane." },
-    "complete": { "text": "You've brightened more than the sill, friend." }
+    "offer": {
+      "translate": "mcaquests.quest.unemployed_a_splash_of_color.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.unemployed_a_splash_of_color.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.unemployed_a_splash_of_color.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.unemployed_a_splash_of_color.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.unemployed_a_splash_of_color.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.unemployed_a_splash_of_color.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:obtain_item", "tag": "minecraft:small_flowers", "count": 8 }
+    {
+      "type": "mcaquests:obtain_item",
+      "tag": "minecraft:small_flowers",
+      "count": 8
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 12 },
-    { "type": "mcaquests:hearts", "amount": 14 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 12
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

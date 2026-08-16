@@ -31,6 +31,8 @@ public final class ProjectSavedData extends SavedData {
     private final Map<String, Integer> reputation = new LinkedHashMap<>();
     private final Map<String, String> tierHighWater = new LinkedHashMap<>();
     private final Map<UUID, List<PendingReward>> pending = new LinkedHashMap<>();
+    private dev.otectus.mcaquests.state.VillageStanding standing =
+            new dev.otectus.mcaquests.state.VillageStanding();
 
     public ProjectSavedData() {
     }
@@ -65,17 +67,51 @@ public final class ProjectSavedData extends SavedData {
         return new ArrayList<>(instances.values());
     }
 
-    // --- reputation (independent mod-side, keyed by scope identity) ---
+    // --- village standing v2 (per player, dimension-aware; spec 1.1.0 §29.2) ---
 
+    /**
+     * The per-player, dimension-aware standing store. This is what every reputation read and write
+     * goes through from 1.1.0 onward, whether Quests owns the number itself or is mirroring MCA:
+     * Reputation's canonical state.
+     *
+     * <p>The v1 accessors below are retained but are no longer a live gameplay path: they exist so the
+     * one-time migration can read them and so an administrator can recover a pre-1.1.0 world by hand
+     * (§32.3). {@code ReputationAssertionsTest} fails the build if a gameplay call site starts using
+     * them again.
+     */
+    public dev.otectus.mcaquests.state.VillageStanding standing() {
+        return standing;
+    }
+
+    /** Marks the store dirty after a standing mutation. Callers must use this, not {@code setDirty}. */
+    public void standingChanged() {
+        setDirty();
+    }
+
+    // --- reputation v1 (LEGACY: world-shared, dimension-blind; retained read-only) ---
+
+    /**
+     * @deprecated v1 shared-scope reputation. Superseded by {@link #standing()}, which is per player
+     *         and dimension-aware. Retained only so the one-time migration can read it and so a
+     *         pre-1.1.0 world stays hand-recoverable (§32.3); never write to it from gameplay.
+     */
+    @Deprecated
     public int reputation(String identity) {
         return reputation.getOrDefault(identity, 0);
     }
 
-    /** A snapshot of all scope identities that currently carry a reputation value (0.7.0). */
+    /**
+     * A snapshot of all v1 scope identities that carry a legacy reputation value.
+     *
+     * @deprecated see {@link #reputation(String)}; migration and manual recovery only.
+     */
+    @Deprecated
     public java.util.Set<String> reputationKeys() {
         return new java.util.LinkedHashSet<>(reputation.keySet());
     }
 
+    /** @deprecated see {@link #reputation(String)}; migration and manual recovery only. */
+    @Deprecated
     public void addReputation(String identity, int delta) {
         if (delta == 0) {
             return;
@@ -84,11 +120,18 @@ public final class ProjectSavedData extends SavedData {
         setDirty();
     }
 
-    /** Highest reputation tier id ever reached for this identity, or {@code null} if none recorded (0.7.0). */
+    /**
+     * Highest v1 tier id ever reached for this scope identity, or {@code null}.
+     *
+     * @deprecated see {@link #reputation(String)}; migration and manual recovery only.
+     */
+    @Deprecated
     public String tierHighWater(String identity) {
         return tierHighWater.get(identity);
     }
 
+    /** @deprecated see {@link #reputation(String)}; migration and manual recovery only. */
+    @Deprecated
     public void setTierHighWater(String identity, String tierId) {
         if (!tierId.equals(tierHighWater.get(identity))) {
             tierHighWater.put(identity, tierId);
@@ -135,6 +178,13 @@ public final class ProjectSavedData extends SavedData {
         tierHighWater.forEach(hw::putString);
         tag.put("repTierHW", hw);
 
+        // v2 per-player, dimension-aware standing. Written alongside the v1 tags above, never
+        // instead of them: 32.3 requires the legacy compounds retained for rollback and manual
+        // recovery, and they cost nothing once migration has stopped reading them.
+        if (!standing.isEmpty()) {
+            tag.put("standingV2", standing.save());
+        }
+
         CompoundTag pend = new CompoundTag();
         pending.forEach((uuid, list) -> {
             ListTag rewards = new ListTag();
@@ -160,6 +210,7 @@ public final class ProjectSavedData extends SavedData {
         for (String key : hw.getAllKeys()) {
             data.tierHighWater.put(key, hw.getString(key));
         }
+        data.standing = dev.otectus.mcaquests.state.VillageStanding.load(tag.getCompound("standingV2"));
         CompoundTag pend = tag.getCompound("pending");
         for (String key : pend.getAllKeys()) {
             try {

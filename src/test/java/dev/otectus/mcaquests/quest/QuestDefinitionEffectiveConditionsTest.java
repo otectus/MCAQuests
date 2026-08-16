@@ -48,7 +48,7 @@ class QuestDefinitionEffectiveConditionsTest {
                                                    QuestObjective... objectives) {
         return new QuestDefinition(QUEST_ID, true, 1, Optional.empty(), Optional.empty(), RepeatRule.DEFAULT,
                 GiverSpec.ANY, Map.of(), List.of(objectives), List.of(), TurnInSpec.DEFAULT, conditions, chain,
-                Optional.empty(), Optional.empty(), OfferShaping.NONE);
+                Optional.empty(), Optional.empty(), OfferShaping.NONE, dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE);
     }
 
     private static FtbqCompleteQuestObjective ftbqObjective(AlreadyCompleteMode mode) {

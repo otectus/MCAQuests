@@ -308,7 +308,7 @@ class QuestLogicTest {
         return new QuestDefinition(new ResourceLocation("mcaquests", path), true, 1, Optional.empty(),
                 Optional.empty(), RepeatRule.DEFAULT, giver, Map.of(), List.of(), List.of(),
                 TurnInSpec.DEFAULT, Optional.empty(), Optional.of(chain), Optional.empty(),
-                Optional.empty(), OfferShaping.NONE);
+                Optional.empty(), OfferShaping.NONE, dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE);
     }
 
     @Test

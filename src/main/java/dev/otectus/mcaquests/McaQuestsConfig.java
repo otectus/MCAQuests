@@ -44,6 +44,20 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue minHeartsReward;
         public final ForgeConfigSpec.IntValue maxHeartsReward;
         public final ForgeConfigSpec.EnumValue<ProfessionMatchingMode> professionMatchingMode;
+
+        // Semantic currency + reward scaling (spec 1.1.0).
+        public final ForgeConfigSpec.DoubleValue currencyRewardMultiplier;
+        public final ForgeConfigSpec.DoubleValue xpRewardMultiplier;
+        public final ForgeConfigSpec.EnumValue<CurrencyProviderMode> currencyProvider;
+        public final ForgeConfigSpec.ConfigValue<String> customCurrencyItem;
+        public final ForgeConfigSpec.ConfigValue<String> numismaticsCurrencyItem;
+        public final ForgeConfigSpec.EnumValue<CurrencyFallback> currencyFallback;
+        public final ForgeConfigSpec.IntValue easyCurrencyMin;
+        public final ForgeConfigSpec.IntValue easyCurrencyMax;
+        public final ForgeConfigSpec.IntValue mediumCurrencyMin;
+        public final ForgeConfigSpec.IntValue mediumCurrencyMax;
+        public final ForgeConfigSpec.IntValue hardCurrencyMin;
+        public final ForgeConfigSpec.IntValue hardCurrencyMax;
         public final ForgeConfigSpec.BooleanValue followGiverAfterAccept;
         public final ForgeConfigSpec.DoubleValue leadVillagerSpeed;
         public final ForgeConfigSpec.BooleanValue highlightQuestTargets;
@@ -105,9 +119,55 @@ public final class McaQuestsConfig {
             allowCommandRewards = b.comment("Command rewards are disabled by default for safety (spec section 26).")
                     .define("allowCommandRewards", false);
             allowLootTableRewards = b.define("allowLootTableRewards", true);
-            heartsRewardMultiplier = b.defineInRange("heartsRewardMultiplier", 1.0, 0.0, 100.0);
+            heartsRewardMultiplier = b.comment(
+                    "Scales every hearts reward before the min/max clamp below. THE key relationship-pacing",
+                    "lever: MCA needs 100 hearts to marry (50 to engage, 40 to be a friend), so halving this",
+                    "roughly doubles how many quests a player must complete with one villager to court them.")
+                    .defineInRange("heartsRewardMultiplier", 1.0, 0.0, 100.0);
             minHeartsReward = b.defineInRange("minHeartsReward", 0, -1000, 1000);
             maxHeartsReward = b.defineInRange("maxHeartsReward", 100, 0, 10000);
+            currencyRewardMultiplier = b.comment(
+                    "Scales every mcaquests:currency reward. Applied to the rolled amount, then clamped to at",
+                    "least 0. Explicit mcaquests:item rewards are NOT scaled - only semantic currency is.")
+                    .defineInRange("currencyRewardMultiplier", 1.0, 0.0, 100.0);
+            xpRewardMultiplier = b.comment(
+                    "Scales every mcaquests:xp and mcaquests:xp_levels reward.")
+                    .defineInRange("xpRewardMultiplier", 1.0, 0.0, 100.0);
+            b.pop();
+
+            b.push("rewards.currency");
+            currencyProvider = b.comment(
+                    "Which item the semantic mcaquests:currency reward pays out in.",
+                    "  VANILLA      - emeralds (default; always available)",
+                    "  NUMISMATICS  - Create: Numismatics coins, resolved by registry id at runtime",
+                    "  CUSTOM       - the item named by customCurrencyItem below",
+                    "MCA: Quests never links against Numismatics classes; the item is looked up by id, so an",
+                    "absent mod is simply an unresolvable id, handled by currencyFallback.")
+                    .defineEnum("currencyProvider", CurrencyProviderMode.VANILLA);
+            customCurrencyItem = b.comment(
+                    "Item id used when currencyProvider = CUSTOM.")
+                    .define("customCurrencyItem", "minecraft:emerald");
+            numismaticsCurrencyItem = b.comment(
+                    "Item id used when currencyProvider = NUMISMATICS. Defaults to the spur, Numismatics'",
+                    "smallest denomination, so datapack amounts stay meaningful at small numbers.")
+                    .define("numismaticsCurrencyItem", "numismatics:spur");
+            currencyFallback = b.comment(
+                    "What to do when the configured provider's item cannot be resolved (mod absent, id typo):",
+                    "  EMERALDS - pay out vanilla emeralds instead (default; the reward still happens)",
+                    "  DISABLE  - grant nothing for that reward",
+                    "Either way the problem is logged once per provider, never once per quest turn-in.")
+                    .defineEnum("currencyFallback", CurrencyFallback.EMERALDS);
+            // Defaults chosen to reproduce the built-in pack's pre-1.1.0 emerald economy (which ranged 1-8,
+            // clustered on 2-3), so switching those payouts to semantic currency changed nothing in practice.
+            easyCurrencyMin = b.comment("Currency range for a quest with \"difficulty\": \"easy\".")
+                    .defineInRange("easyCurrencyMin", 1, 0, 10000);
+            easyCurrencyMax = b.defineInRange("easyCurrencyMax", 2, 0, 10000);
+            mediumCurrencyMin = b.comment("Currency range for a quest with \"difficulty\": \"medium\".")
+                    .defineInRange("mediumCurrencyMin", 2, 0, 10000);
+            mediumCurrencyMax = b.defineInRange("mediumCurrencyMax", 4, 0, 10000);
+            hardCurrencyMin = b.comment("Currency range for a quest with \"difficulty\": \"hard\".")
+                    .defineInRange("hardCurrencyMin", 4, 0, 10000);
+            hardCurrencyMax = b.defineInRange("hardCurrencyMax", 8, 0, 10000);
             b.pop();
 
             b.push("matching");
@@ -275,6 +335,24 @@ public final class McaQuestsConfig {
         STRICT,
         NORMALIZED,
         LOOSE
+    }
+
+    /** Which item the semantic {@code mcaquests:currency} reward pays out in (spec 1.1.0). */
+    public enum CurrencyProviderMode {
+        /** Vanilla emeralds. Always resolvable, so this is the default and the universal fallback. */
+        VANILLA,
+        /** Create: Numismatics coins, resolved by registry id — never by linking against its classes. */
+        NUMISMATICS,
+        /** Whatever item {@code customCurrencyItem} names. */
+        CUSTOM
+    }
+
+    /** What a currency reward does when its configured provider item cannot be resolved (spec 1.1.0). */
+    public enum CurrencyFallback {
+        /** Pay vanilla emeralds instead, so the player is still rewarded. */
+        EMERALDS,
+        /** Grant nothing for that reward. */
+        DISABLE
     }
 
     /** Screen corner the quest-tracker HUD anchors to (spec section 21). */

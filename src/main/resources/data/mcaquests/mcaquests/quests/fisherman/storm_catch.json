@@ -3,24 +3,62 @@
   "id": "mcaquests:fisherman_storm_catch",
   "weight": 10,
   "category": "fishing",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:fisherman"], "adult_only": true },
-  "title": { "text": "Storm Catch" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fisherman_storm_catch.title"
+  },
   "dialogue": {
-    "offer": { "text": "The fish bite best in the rain, if you've the patience for it. Land me 4 cod while the weather holds." },
-    "accept": { "text": "Aye, get out there before the clouds break." },
-    "decline": { "text": "The rain won't last, and neither will the chance." },
-    "in_progress": { "text": "Still casting in this downpour?" },
-    "ready": { "text": "Four fat cod, rain-caught and the best kind. Nicely done." },
-    "complete": { "text": "Only a true angler fishes through a storm. My respect." }
+    "offer": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fisherman_storm_catch.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:fish_item", "item": "minecraft:cod", "count": 4 }
+    {
+      "type": "mcaquests:fish_item",
+      "item": "minecraft:cod",
+      "count": 4
+    }
   ],
-  "conditions": { "type": "mcaquests:weather", "weather": "RAIN" },
+  "conditions": {
+    "type": "mcaquests:weather",
+    "weather": "RAIN"
+  },
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 22 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

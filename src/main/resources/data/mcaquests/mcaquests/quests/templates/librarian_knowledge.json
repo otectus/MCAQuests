@@ -3,29 +3,91 @@
   "id": "mcaquests:template_librarian_knowledge",
   "weight": 12,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:librarian"], "adult_only": true },
-  "title": { "text": "For the Archives: {supply_name}" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:librarian"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_librarian_knowledge.title",
+    "with": [
+      "{supply_name}"
+    ]
+  },
   "dialogue": {
-    "offer": { "text": "The archive runs short of {supply_name}. Bring me {count} and I'll see the records kept." },
-    "accept": { "text": "Wonderful. Knowledge survives only as long as its keepers are stocked." },
-    "decline": { "text": "A pity. The unwritten page forgets so quickly." },
-    "in_progress": { "text": "Have you found {count} {supply_name} for the archive?" },
-    "ready": { "text": "{count} {supply_name} — the shelves will breathe again. Thank you." },
-    "complete": { "text": "A scholar's gratitude is a lasting thing. This is yours." }
+    "offer": {
+      "translate": "mcaquests.quest.template_librarian_knowledge.dialogue.offer",
+      "with": [
+        "{supply_name}",
+        "{count}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_librarian_knowledge.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_librarian_knowledge.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_librarian_knowledge.dialogue.in_progress",
+      "with": [
+        "{count}",
+        "{supply_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_librarian_knowledge.dialogue.ready",
+      "with": [
+        "{count}",
+        "{supply_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_librarian_knowledge.dialogue.complete"
+    }
   },
   "template": {
     "variables": {
-      "supply": { "kind": "item", "ids": ["minecraft:book", "minecraft:paper", "minecraft:writable_book"] },
-      "count": { "kind": "int", "min": 3, "max": 8 }
+      "supply": {
+        "kind": "item",
+        "ids": [
+          "minecraft:book",
+          "minecraft:paper",
+          "minecraft:writable_book"
+        ]
+      },
+      "count": {
+        "kind": "int",
+        "min": 3,
+        "max": 8
+      }
     },
     "objectives": [
-      { "type": "mcaquests:item_delivery", "item": "{supply}", "count": "{count}", "consume": true }
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "{supply}",
+        "count": "{count}",
+        "consume": true
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-      { "type": "mcaquests:xp", "amount": 18 },
-      { "type": "mcaquests:hearts", "amount": 10 }
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 18
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
     ]
   }
 }

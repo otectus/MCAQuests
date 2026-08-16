@@ -3,29 +3,60 @@
   "id": "mcaquests:relations_repair_the_well",
   "weight": 11,
   "category": "building",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "Mend the Village Well" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_repair_the_well.title"
+  },
   "dialogue": {
-    "offer": { "text": "The stonework around our well by the village center has crumbled. Lay eight stone bricks around it and it'll hold another lifetime." },
-    "accept": { "text": "Good. Build it sturdy — the whole village draws from that well." },
-    "decline": { "text": "It'll keep crumbling, then." },
-    "in_progress": { "text": "How's the well coming along? Stone bricks, near the center." },
-    "ready": { "text": "Solid as bedrock now. Fine work." },
-    "complete": { "text": "The well will serve us for years thanks to you. The village thanks you." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_repair_the_well.dialogue.complete"
+    }
   },
   "objectives": [
     {
       "type": "mcaquests:build_near_location",
       "block": "minecraft:stone_bricks",
-      "location": { "anchor": "nearest_village", "radius": 96 },
+      "location": {
+        "anchor": "nearest_village",
+        "radius": 96
+      },
       "radius": 12,
       "count": 8
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 22 },
-    { "type": "mcaquests:hearts", "amount": 20 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

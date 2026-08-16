@@ -3,37 +3,89 @@
   "id": "mcaquests:jobless_friendship_3_friend",
   "weight": 13,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "professions": ["minecraft:none", "minecraft:nitwit"], "adult_only": true },
-  "title": { "text": "An Unlikely Friend" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:none",
+      "minecraft:nitwit"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.jobless_friendship_3_friend.title"
+  },
   "dialogue": {
-    "offer": { "text": "I want to do something for YOU for once. Help me bake — bring 8 cookies and we'll have a little party, just the two of us and whoever wanders by." },
-    "accept": { "text": "A party! Oh, it's been an age since I had a reason to smile." },
-    "decline": { "text": "Another day, then. I'll save you a seat regardless." },
-    "in_progress": { "text": "Are the cookies coming? I dusted off the good plates!" },
-    "ready": { "text": "Cookies, friends, and an old fool grinning ear to ear!" },
-    "complete": { "text": "You turned my quiet little life around. Take this — it was my dearest friend's, long ago. I'd like you to have it now." }
+    "offer": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:cookie", "count": 8, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cookie",
+      "count": 8,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
-    { "type": "mcaquests:item", "item": "minecraft:music_disc_cat", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 30 },
-    { "type": "mcaquests:hearts", "amount": 40 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:item",
+      "item": "minecraft:music_disc_cat",
+      "count": 1
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ],
   "chain": {
     "chain": "mcaquests:jobless_friendship",
     "stage": 3,
     "stage_total": 3,
-    "relationship_arc": { "text": "An Unlikely Friend" },
-    "chapter": { "text": "A Little Party" }
+    "relationship_arc": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.jobless_friendship_3_friend.chain.chapter"
+    }
   },
   "conditions": {
     "any_of": [
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:jobless_friendship_2_favor", "scope": "giver" },
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:jobless_friendship_2b_understanding", "scope": "giver" }
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:jobless_friendship_2_favor",
+        "scope": "giver"
+      },
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:jobless_friendship_2b_understanding",
+        "scope": "giver"
+      }
     ]
   }
 }

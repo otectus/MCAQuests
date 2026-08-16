@@ -48,3 +48,15 @@ description='''${mod_description}'''
     versionRange="[2001.4,)"
     ordering="AFTER"
     side="BOTH"
+
+# MCA: Reputation is an OPTIONAL integration. Quests loads and plays fully without it, using its own
+# per-player village standing store. When present we load AFTER it so its API, registries, and saved
+# data exist before ReputationBridge picks a backend; from that point Reputation owns the canonical
+# standing and Quests keeps a mirrored fallback copy so removing it later does not reset anybody
+# (spec 9.3, 32.6).
+[[dependencies.${mod_id}]]
+    modId="mcareputation"
+    mandatory=false
+    versionRange="[0.1,)"
+    ordering="AFTER"
+    side="BOTH"

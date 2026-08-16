@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.project.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -42,7 +43,11 @@ public record ProjectTalkObjective(ResourceLocation profession, int count) imple
         return true;
     }
 
+    /**
+     * Profession match under the configured {@code professionMatchingMode}, mirroring the regular
+     * {@code talk_to_profession} objective so both honour STRICT / NORMALIZED / LOOSE identically.
+     */
     public boolean matches(@Nullable ResourceLocation talkedToProfession) {
-        return profession.equals(talkedToProfession);
+        return ProfessionMatcher.matches(profession, talkedToProfession);
     }
 }

@@ -1,12 +1,9 @@
 package dev.otectus.mcaquests.event;
 
 import dev.otectus.mcaquests.McaQuests;
-import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.project.ProjectManager;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -39,13 +36,7 @@ public final class ProjectProgressEvents {
         }
     }
 
-    @SubscribeEvent
-    public static void onTalkToVillager(PlayerInteractEvent.EntityInteract event) {
-        if (event.getLevel().isClientSide() || event.getHand() != InteractionHand.MAIN_HAND) {
-            return;
-        }
-        if (event.getEntity() instanceof ServerPlayer player && McaCompat.isMcaVillager(event.getTarget())) {
-            ProjectManager.onProjectTalk(player, event.getTarget());
-        }
-    }
+    // Project talk credit is dispatched by QuestEventHandlers, which owns the single empty-hand /
+    // non-canceled "this counts as a conversation" gate for both quest and project objectives. Having a
+    // second EntityInteract listener here would have applied a different (looser) rule to projects.
 }

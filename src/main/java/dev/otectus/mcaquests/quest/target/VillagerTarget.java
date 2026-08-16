@@ -103,6 +103,15 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
         };
     }
 
+    /**
+     * A generic label for this target, used when no concrete villager has resolved yet.
+     *
+     * <p>{@code family} relations are resolved <em>relative to the quest giver</em> (see
+     * {@link McaCompat#findGiverRelative}), never to the player, so the {@code mcaquests.target.relation.*}
+     * strings must read from the giver's perspective — "the quest giver's sibling", not "your sibling".
+     * Saying "your" here told the player to look for their <em>own</em> relative, which is a different
+     * villager entirely (usually none at all).
+     */
     public Component describe() {
         return switch (mode) {
             case SELF -> Component.translatable("mcaquests.target.villager.self");

@@ -374,7 +374,12 @@ public final class McaQuestsCommand {
     private static int reputationGet(CommandContext<CommandSourceStack> ctx) {
         int village = IntegerArgumentType.getInteger(ctx, "village");
         MinecraftServer server = ctx.getSource().getServer();
-        int rep = ProjectSavedData.get(server).reputation("v:" + village);
+        // Standing is per player from 1.1.0, so this reports the executor's own standing. An
+        // administrator inspecting somebody else uses /mcareputation get <player>, which exists
+        // precisely because this command's signature cannot name one.
+        ServerPlayer viewer = asPlayer(ctx);
+        int rep = viewer == null ? 0 : dev.otectus.mcaquests.quest.reputation.QuestReputation.score(viewer,
+                dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(server.overworld(), village));
         ReputationTierSet ladder = ReputationTiers.getDefault();
         ReputationTier tier = ladder.tierFor(rep);
         String next = ladder.nextTier(rep)
@@ -389,9 +394,11 @@ public final class McaQuestsCommand {
         int village = IntegerArgumentType.getInteger(ctx, "village");
         int amount = IntegerArgumentType.getInteger(ctx, "amount");
         MinecraftServer server = ctx.getSource().getServer();
-        String identity = "v:" + village;
-        int current = ProjectSavedData.get(server).reputation(identity);
-        int newRep = ReputationService.award(server, identity, amount - current, asPlayer(ctx));
+        ServerPlayer subject = asPlayer(ctx);
+        var community = dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(server.overworld(), village);
+        int current = subject == null ? 0 : dev.otectus.mcaquests.quest.reputation.QuestReputation.score(subject, community);
+        int newRep = subject == null ? current : dev.otectus.mcaquests.quest.reputation.QuestReputation.award(server, subject.getUUID(),
+                community, amount - current, null, null, null);
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "Village #" + village + " reputation set to " + newRep + "."), true);
         return newRep;
@@ -401,7 +408,9 @@ public final class McaQuestsCommand {
         int village = IntegerArgumentType.getInteger(ctx, "village");
         int delta = IntegerArgumentType.getInteger(ctx, "delta");
         MinecraftServer server = ctx.getSource().getServer();
-        int newRep = ReputationService.award(server, "v:" + village, delta, asPlayer(ctx));
+        ServerPlayer subject = asPlayer(ctx);
+        int newRep = subject == null ? 0 : dev.otectus.mcaquests.quest.reputation.QuestReputation.award(server, subject.getUUID(),
+                dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(server.overworld(), village), delta, null, null, null);
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "Village #" + village + " reputation now " + newRep + " (" + (delta >= 0 ? "+" : "") + delta + ")."), true);
         return newRep;

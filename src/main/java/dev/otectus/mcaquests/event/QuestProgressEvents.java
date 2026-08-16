@@ -589,6 +589,14 @@ public final class QuestProgressEvents {
         }
     }
 
+    /**
+     * Item-driven villager objectives (deliver / heal / cure). Unlike a conversation these are meant to
+     * happen with something in hand, so there is no empty-hand gate here — and MCA: Quests never cancels
+     * the interaction, so MCA's own handling of the same click still runs.
+     *
+     * <p>Conversation credit is <em>not</em> done here: {@link QuestEventHandlers} owns that decision so
+     * the empty-hand / non-canceled gate lives in exactly one place.
+     */
     @SubscribeEvent
     public static void onTalkToVillager(PlayerInteractEvent.EntityInteract event) {
         if (event.getLevel().isClientSide() || event.getHand() != InteractionHand.MAIN_HAND) {
@@ -597,13 +605,6 @@ public final class QuestProgressEvents {
         if (!(event.getEntity() instanceof ServerPlayer player) || !McaCompat.isMcaVillager(event.getTarget())) {
             return;
         }
-        ResourceLocation profession = McaCompat.getProfessionId(event.getTarget()).orElse(null);
-        forActiveObjectives(player, TalkToProfessionObjective.class,
-                (objective, progress) -> {
-                    if (progress.count() < objective.required() && objective.matches(profession)) {
-                        progress.add(1);
-                    }
-                });
         if (event.getTarget() instanceof LivingEntity villager) {
             ServerLevel level = (ServerLevel) event.getLevel();
             ItemStack held = player.getMainHandItem();
@@ -613,6 +614,42 @@ public final class QuestProgressEvents {
                     (objective, active, progress) -> objective.onInteract(player, active, progress, villager, held, level));
             forActiveObjectives(player, DeliverToVillagerObjective.class,
                     (objective, active, progress) -> objective.onInteract(player, active, progress, villager, level));
+        }
+    }
+
+    /**
+     * Credits one conversation with {@code villager} to every active {@code talk_to_profession} objective
+     * whose profession matches under the configured matching mode.
+     *
+     * <p>Counts <b>distinct</b> villagers: the villager's UUID is recorded on the objective's progress and
+     * a repeat visit to the same villager never advances it again. That is what makes the credit idempotent,
+     * so the base interaction hook and an MCA: Conversations signal for the same conversation cannot both
+     * count. Progress is settled (self-complete → ready → sync) straight away rather than waiting for the
+     * next per-second tick.
+     */
+    public static void creditTalk(ServerPlayer player, Entity villager) {
+        ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
+        UUID villagerUuid = villager.getUUID();
+        boolean[] advanced = {false};
+        forActiveObjectives(player, TalkToProfessionObjective.class,
+                (objective, progress) -> {
+                    if (progress.count() >= objective.required()) {
+                        return; // already satisfied
+                    }
+                    if (!objective.matches(profession)) {
+                        QuestEventHandlers.debugReject("profession mismatch (wanted " + objective.profession()
+                                + ", villager is " + profession + ")", villager);
+                        return;
+                    }
+                    if (!progress.markTalkedTo(villagerUuid)) {
+                        QuestEventHandlers.debugReject("duplicate villager — already counted", villager);
+                        return;
+                    }
+                    progress.add(1);
+                    advanced[0] = true;
+                });
+        if (advanced[0]) {
+            QuestManager.settleProgress(player);
         }
     }
 

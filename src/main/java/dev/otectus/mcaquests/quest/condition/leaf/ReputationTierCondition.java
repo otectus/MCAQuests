@@ -3,8 +3,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
-import dev.otectus.mcaquests.compat.McaCompat;
-import dev.otectus.mcaquests.project.state.ProjectSavedData;
+import dev.otectus.mcaquests.quest.reputation.QuestReputation;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestConditionType;
@@ -43,13 +42,8 @@ public record ReputationTierCondition(String minTier, Optional<String> maxTier,
         if (!McaQuestsConfig.COMMON.enableReputationTiers.get()) {
             return false;
         }
-        ServerLevel level = context.level();
-        OptionalInt villageId = McaCompat.getHomeVillageId(context.villager());
-        if (villageId.isEmpty()) {
-            int radius = McaQuestsConfig.COMMON.defaultScopeFallbackRadius.get();
-            villageId = McaCompat.findNearestVillageId(level, context.villager().blockPosition(), radius);
-        }
-        if (villageId.isEmpty()) {
+        Optional<QuestReputation.Community> community = QuestReputation.resolve(context.villager());
+        if (community.isEmpty()) {
             return false;
         }
         ReputationTierSet set = ladder.map(ReputationTiers::getOrDefault).orElseGet(ReputationTiers::getDefault);
@@ -57,7 +51,7 @@ public record ReputationTierCondition(String minTier, Optional<String> maxTier,
         if (minIndex < 0) {
             return false; // unknown tier id — fail safe
         }
-        int rep = ProjectSavedData.get(level.getServer()).reputation("v:" + villageId.getAsInt());
+        int rep = QuestReputation.score(context.player(), community.get());
         int currentIndex = set.indexOf(set.tierFor(rep).id());
         if (currentIndex < minIndex) {
             return false;

@@ -20,14 +20,16 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 - **Villagers who actually talk to you** *(with MCA: Conversations)* — install the optional **MCA: Conversations** add-on and villagers speak their quest lines in their own voice and personality, and "go talk to so-and-so" quests progress from a real conversation instead of a checkbox. Not installed? Everything still works — dialogue just reads as written.
 - **FTB Quests integration** *(optional)* — build FTB Quests books that read your villager quests, reputation, titles, and hearts, and grant those same rewards straight from the book. Not installed? Nothing changes.
 - **Real variety** — deliver and gather, craft and fish, hunt monsters, mine and build, and explore distant biomes and dimensions. Some quests only appear at night, or in the rain.
-- **Earn hearts that matter** — rewards feed directly into MCA's relationship system, alongside emeralds, XP, and more.
+- **Earn hearts that matter** — rewards feed directly into MCA's relationship system, alongside emeralds, XP, and more. Courting a villager is a real investment now, not something you can rush in an afternoon of repeating one errand.
+- **An economy that fits your pack** — quests pay in *currency*, not hard-coded emeralds. Tag a quest easy, medium, or hard and the server picks the payout range and the coin: emeralds by default, **Create: Numismatics** coins, or any item you choose — one config line, and every installed quest pack follows. Payouts are locked in the moment you accept, so what the card promises is what you get.
+- **Agora em Português (Brasil)** — the whole mod, fully translated: menus, objectives, rewards, and every line of villager dialogue across all 150+ quests, the relationship arcs, the village projects, and the emergencies. Every built-in line is now a translation key, so more languages can follow.
 - **Track everything** — a toggleable Quest Log, an on-screen tracker you can place in any corner, and a satisfying chime when a quest is ready to hand in. Changed your mind? Abandon any quest right from the log, even if its villager is long gone.
 - **Built for modpacks** — every quest is a simple JSON file. Pack makers can add, remove, or rebalance quests with a datapack, no code required. A full config lets you tune offer counts, cooldowns, heart rewards, and more.
 
 ## 🎮 How to play
 
 1. Install **MCA Reborn**, **Architectury API**, and **MCA: Quests**.
-2. Right-click an adult villager and click **Quests**.
+2. Right-click an adult villager and click **Quests**. *(Sneak-right-click is no longer a shortcut — it was interfering with MCA's own villager menus and with other mods.)*
 3. Pick an offer, **Accept**, and head out. Watch the tracker fill up.
 4. Come back and **Complete** it to claim your rewards and win their heart.
 
@@ -43,6 +45,8 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 - **Minecraft:** 1.20.1 · **Forge** 47.4.10+
 - **Requires:** MCA Reborn 7.6.x + Architectury API
 - **Optional:** MCA: Conversations — voiced quest dialogue & conversation-driven objectives
+- **Optional:** FTB Quests — two-way book integration · **Create: Numismatics** — pay quest rewards in coins
+- **Languages:** English, Português (Brasil)
 - Server-authoritative and dup-proof — safe for multiplayer.
 - Source & docs: **https://github.com/otectus/MCAQuests**
 - Licensed under **GPL-3.0**, matching MCA Reborn.

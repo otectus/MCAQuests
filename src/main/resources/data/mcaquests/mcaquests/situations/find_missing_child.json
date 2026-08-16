@@ -4,31 +4,68 @@
   "scope": "family",
   "duration_ticks": 24000,
   "cooldown_ticks": 72000,
-  "trigger": { "type": "mcaquests:missing_kin", "relation": "child" },
+  "trigger": {
+    "type": "mcaquests:missing_kin",
+    "relation": "child"
+  },
   "outcomes": {
-    "success": { "reputation": 12 },
-    "failure": { "reputation": -8 }
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -8
+    }
   },
   "offer": {
     "weight": 10,
-    "giver": { "adult_only": true },
-    "title": { "text": "A Child Lost to the Wilds" },
+    "difficulty": "hard",
+    "giver": {
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.find_missing_child.offer.title"
+    },
     "dialogue": {
-      "offer": { "text": "A little one from our family wandered off and never came home. Search the forest where the children play — bring us any sign of them." },
-      "accept": { "text": "Bless you. Hurry — the woods are no place for a child at night." },
-      "decline": { "text": "Then we keep our own vigil, and hope." },
-      "in_progress": { "text": "Any trace out in the forest?" },
-      "ready": { "text": "You searched the wood? Tell us what you found." },
-      "complete": { "text": "At least someone cared enough to look. The family is in your debt." },
-      "failed": { "text": "The trail's gone cold now. We may never know what became of them." }
+      "offer": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.find_missing_child.offer.dialogue.failed"
+      }
     },
     "objectives": [
-      { "type": "mcaquests:visit_biome", "tag": "minecraft:is_forest" }
+      {
+        "type": "mcaquests:visit_biome",
+        "tag": "minecraft:is_forest"
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
-      { "type": "mcaquests:xp", "amount": 25 },
-      { "type": "mcaquests:hearts", "amount": 22 }
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 25
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
     ]
   }
 }

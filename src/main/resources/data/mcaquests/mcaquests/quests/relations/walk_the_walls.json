@@ -3,29 +3,66 @@
   "id": "mcaquests:relations_walk_the_walls",
   "weight": 9,
   "category": "combat",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "Walk the Walls" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_walk_the_walls.title"
+  },
   "dialogue": {
-    "offer": { "text": "I can't sleep with that moaning beyond the fence. You've a strong arm — would you walk the walls tonight and put down four of the dead for us?" },
-    "accept": { "text": "Bless you. I'll rest easier knowing you're out there." },
-    "decline": { "text": "Then I'll lie awake and listen, I suppose." },
-    "in_progress": { "text": "Still hear them out there. Four would set my mind at ease." },
-    "ready": { "text": "It's gone quiet beyond the fence. Thank you, truly." },
-    "complete": { "text": "A neighbor who stands the wall is a neighbor indeed. My thanks." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_walk_the_walls.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_walk_the_walls.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_walk_the_walls.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_walk_the_walls.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_walk_the_walls.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_walk_the_walls.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 4 }
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 4
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 20 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "all_of": [
-      { "type": "mcaquests:village_member" },
-      { "type": "mcaquests:time", "period": "NIGHT" }
+      {
+        "type": "mcaquests:village_member"
+      },
+      {
+        "type": "mcaquests:time",
+        "period": "NIGHT"
+      }
     ]
   }
 }

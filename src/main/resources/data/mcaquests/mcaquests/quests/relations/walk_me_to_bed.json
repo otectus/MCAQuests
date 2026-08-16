@@ -3,17 +3,39 @@
   "id": "mcaquests:relations_walk_me_to_bed",
   "weight": 10,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "See Me to My Door" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_walk_me_to_bed.title"
+  },
   "dialogue": {
-    "offer": { "text": "These old bones don't like the dark anymore. Would you walk beside me to my own bed? I'll lead — just see that nothing troubles us on the way." },
-    "accept": { "text": "You're a comfort. Let's go slow and steady." },
-    "decline": { "text": "Ah well. I'll sit by the lamp a while longer." },
-    "in_progress": { "text": "Nearly there, dear. Stay close." },
-    "ready": { "text": "My own door at last. What a relief." },
-    "complete": { "text": "Tucked in safe, and all thanks to you. Sleep well, friend." },
-    "failed": { "text": "Such a fright we had... I'll not venture out after dark again soon." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_walk_me_to_bed.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_walk_me_to_bed.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_walk_me_to_bed.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_walk_me_to_bed.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_walk_me_to_bed.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_walk_me_to_bed.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_walk_me_to_bed.dialogue.failed"
+    }
   },
   "failure": {
     "fail_on_giver_death": true,
@@ -23,16 +45,28 @@
   "objectives": [
     {
       "type": "mcaquests:escort_entity",
-      "villager": { "mode": "self" },
-      "destination": { "anchor": "bed" },
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "bed"
+      },
       "radius": 4,
       "lead": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 22 },
-    { "type": "mcaquests:hearts", "amount": 24 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "type": "mcaquests:time",

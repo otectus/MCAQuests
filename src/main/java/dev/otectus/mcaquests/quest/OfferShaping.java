@@ -8,18 +8,22 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Datapack-controlled offer shaping for a quest (spec section 18): an optional {@code priority} tier plus a
- * list of conditional {@code weight_bonus} entries. Both keys live at the quest's top level — this record
+ * Top-level quest keys that {@link QuestDefinition}'s own codec has no room for: an optional
+ * {@code priority} tier, a list of conditional {@code weight_bonus} entries (spec section 18), and an
+ * optional {@code difficulty} band (spec 1.1.0). Every key lives at the quest's top level — this record
  * only groups them so {@link QuestDefinition}'s codec stays within DataFixerUpper's 16-field {@code group}
- * limit. The default ({@link #NONE}) is no explicit priority and no bonuses — identical to the pre-existing
- * behaviour, so standalone quests are unaffected.
+ * limit, and {@code QuestDefinition} re-exposes each one through its own accessor. The default
+ * ({@link #NONE}) is no explicit priority, no bonuses, and no declared difficulty — identical to the
+ * pre-existing behaviour, so standalone quests are unaffected.
  */
-public record OfferShaping(Optional<Integer> priority, List<WeightBonus> weightBonus) {
+public record OfferShaping(Optional<Integer> priority, List<WeightBonus> weightBonus,
+                           Optional<QuestDifficulty> difficulty) {
 
-    public static final OfferShaping NONE = new OfferShaping(Optional.empty(), List.of());
+    public static final OfferShaping NONE = new OfferShaping(Optional.empty(), List.of(), Optional.empty());
 
     public static final MapCodec<OfferShaping> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("priority").forGetter(OfferShaping::priority),
-            WeightBonus.CODEC.listOf().optionalFieldOf("weight_bonus", List.of()).forGetter(OfferShaping::weightBonus)
+            WeightBonus.CODEC.listOf().optionalFieldOf("weight_bonus", List.of()).forGetter(OfferShaping::weightBonus),
+            QuestDifficulty.CODEC.optionalFieldOf("difficulty").forGetter(OfferShaping::difficulty)
     ).apply(instance, OfferShaping::new));
 }

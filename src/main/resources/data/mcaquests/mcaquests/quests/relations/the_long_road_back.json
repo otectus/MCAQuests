@@ -3,17 +3,39 @@
   "id": "mcaquests:relations_long_road_back",
   "weight": 10,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "The Long Road Back" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 96000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_long_road_back.title"
+  },
   "dialogue": {
-    "offer": { "text": "I'm farther from home than I've ever been, and I don't mind telling you I'm afraid. Guard me and I'll lead us back, however long the road." },
-    "accept": { "text": "Thank you. Keep your eyes on the treeline and I'll keep us moving." },
-    "decline": { "text": "Then I'm truly on my own out here. Heaven help me." },
-    "in_progress": { "text": "Still a long way yet. Don't let them flank us." },
-    "ready": { "text": "I never thought I'd see those walls again. We did it!" },
-    "complete": { "text": "You brought me back from the far wilds. I owe you my life, plainly." },
-    "failed": { "text": "It was too far, too dark... I lost everything out there but my skin. Give me time." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_long_road_back.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_long_road_back.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_long_road_back.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_long_road_back.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_long_road_back.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_long_road_back.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_long_road_back.dialogue.failed"
+    }
   },
   "failure": {
     "fail_on_giver_death": true,
@@ -23,16 +45,28 @@
   "objectives": [
     {
       "type": "mcaquests:escort_entity",
-      "villager": { "mode": "self" },
-      "destination": { "anchor": "home_village" },
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "home_village"
+      },
       "radius": 10,
       "lead": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
-    { "type": "mcaquests:xp", "amount": 36 },
-    { "type": "mcaquests:hearts", "amount": 32 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 36
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ],
   "conditions": {
     "type": "mcaquests:giver_distance_from_village",

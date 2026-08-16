@@ -3,23 +3,58 @@
   "id": "mcaquests:mason_quarry_work",
   "weight": 14,
   "category": "mining",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:mason"], "adult_only": true },
-  "title": { "text": "Quarry Work" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:mason"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.mason_quarry_work.title"
+  },
   "dialogue": {
-    "offer": { "text": "The quarry's behind schedule. Break 48 stone and we'll catch up before the frost." },
-    "accept": { "text": "Swing steady. Stone doesn't forgive a lazy arm." },
-    "decline": { "text": "The blocks won't cut themselves, but as you wish." },
-    "in_progress": { "text": "How's the digging coming?" },
-    "ready": { "text": "Forty-eight blocks' worth — the masons will be pleased." },
-    "complete": { "text": "Strong back, that one. My thanks." }
+    "offer": {
+      "translate": "mcaquests.quest.mason_quarry_work.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.mason_quarry_work.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.mason_quarry_work.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.mason_quarry_work.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.mason_quarry_work.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.mason_quarry_work.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:break_block", "block": "minecraft:stone", "count": 48 }
+    {
+      "type": "mcaquests:break_block",
+      "block": "minecraft:stone",
+      "count": 48
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 20 },
-    { "type": "mcaquests:hearts", "amount": 20 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

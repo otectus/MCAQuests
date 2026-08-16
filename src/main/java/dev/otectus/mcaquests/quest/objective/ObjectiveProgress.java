@@ -2,6 +2,8 @@ package dev.otectus.mcaquests.quest.objective;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 import javax.annotation.Nullable;
@@ -16,8 +18,9 @@ import java.util.UUID;
  *
  * <p>The NPC/village objective types (escort, protect, build-near, cure, …) need a little more state
  * than a single counter: a duration accrual ({@link #elapsedTicks}), a locked target villager
- * ({@link #targetUuid}), a deduped set of placed block positions ({@link #visitedPositions}), and a
- * free-form scratch bag ({@link #extra}) for the rare flag. Every extra field is written to NBT only
+ * ({@link #targetUuid}), a deduped set of placed block positions ({@link #visitedPositions}), a deduped
+ * set of talked-to villagers ({@link #talkedTo}), and a free-form scratch bag ({@link #extra}) for the
+ * rare flag. Every extra field is written to NBT only
  * when it carries a non-default value, so old saves (which only have {@code "count"}) load unchanged
  * and a plain counting objective serialises to exactly the same tag it always did.
  */
@@ -29,6 +32,8 @@ public final class ObjectiveProgress {
     private UUID targetUuid;
     @Nullable
     private Set<Long> visitedPositions;
+    @Nullable
+    private Set<UUID> talkedTo;
     @Nullable
     private CompoundTag extra;
 
@@ -96,6 +101,21 @@ public final class ObjectiveProgress {
         return visitedPositions == null ? 0 : visitedPositions.size();
     }
 
+    // --- Deduped villagers (talk_to_profession counts *distinct* villagers) ------------------------
+
+    /** True if {@code villager} has already been credited to this objective. */
+    public boolean hasTalkedTo(UUID villager) {
+        return talkedTo != null && talkedTo.contains(villager);
+    }
+
+    /** Records {@code villager}; returns true only on the first insert, so re-talking never re-credits. */
+    public boolean markTalkedTo(UUID villager) {
+        if (talkedTo == null) {
+            talkedTo = new HashSet<>();
+        }
+        return talkedTo.add(villager);
+    }
+
     // --- Free-form scratch (e.g. cure state flags) -----------------------------------------------
 
     /** A lazily-created scratch tag for per-objective flags the typed fields don't cover. */
@@ -118,6 +138,11 @@ public final class ObjectiveProgress {
         if (visitedPositions != null && !visitedPositions.isEmpty()) {
             tag.putLongArray("visited", visitedPositions.stream().mapToLong(Long::longValue).toArray());
         }
+        if (talkedTo != null && !talkedTo.isEmpty()) {
+            ListTag list = new ListTag();
+            talkedTo.forEach(uuid -> list.add(StringTag.valueOf(uuid.toString())));
+            tag.put("talked_to", list);
+        }
         if (extra != null && !extra.isEmpty()) {
             tag.put("extra", extra);
         }
@@ -136,6 +161,18 @@ public final class ObjectiveProgress {
                 visited.add(packed);
             }
             progress.visitedPositions = visited;
+        }
+        if (tag.contains("talked_to", Tag.TAG_LIST)) {
+            Set<UUID> talked = new HashSet<>();
+            ListTag list = tag.getList("talked_to", Tag.TAG_STRING);
+            for (int i = 0; i < list.size(); i++) {
+                try {
+                    talked.add(UUID.fromString(list.getString(i)));
+                } catch (IllegalArgumentException ignored) {
+                    // Drop an unparseable id rather than failing the whole quest load.
+                }
+            }
+            progress.talkedTo = talked;
         }
         if (tag.contains("extra", Tag.TAG_COMPOUND)) {
             progress.extra = tag.getCompound("extra");

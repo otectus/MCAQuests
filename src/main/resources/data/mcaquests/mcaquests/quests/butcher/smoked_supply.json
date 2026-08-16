@@ -3,23 +3,59 @@
   "id": "mcaquests:butcher_smoked_supply",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:butcher"], "adult_only": true },
-  "title": { "text": "Smoked Supply" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.butcher_smoked_supply.title"
+  },
   "dialogue": {
-    "offer": { "text": "The smokehouse is empty and market day's coming. Bring me 8 cooked porkchops and I'll stock the stall." },
-    "accept": { "text": "Good. Folk pay well for a proper roast." },
-    "decline": { "text": "Empty hooks make for a poor butcher." },
-    "in_progress": { "text": "Any pork for the smokehouse yet?" },
-    "ready": { "text": "Eight fine chops! The stall will sell out by noon." },
-    "complete": { "text": "You've a knack for this. Come back any time." }
+    "offer": {
+      "translate": "mcaquests.quest.butcher_smoked_supply.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.butcher_smoked_supply.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.butcher_smoked_supply.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.butcher_smoked_supply.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.butcher_smoked_supply.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.butcher_smoked_supply.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:cooked_porkchop", "count": 8, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_porkchop",
+      "count": 8,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

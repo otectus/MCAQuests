@@ -3,32 +3,75 @@
   "id": "mcaquests:farmer_family_2_expand",
   "weight": 14,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
-  "title": { "text": "The Family Farm" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.farmer_family_2_expand.title"
+  },
   "dialogue": {
-    "offer": { "text": "With your help we ate well — now I want to break new ground. Bring me 12 bone meal and I'll double the field." },
-    "accept": { "text": "New rows by spring! I can already picture it." },
-    "decline": { "text": "The old field will have to do for now." },
-    "in_progress": { "text": "Any bone meal yet? The soil's hungry." },
-    "ready": { "text": "That'll green the whole hillside. Splendid!" },
-    "complete": { "text": "Twice the harvest next year, thanks to you." }
+    "offer": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:bone_meal", "count": 12, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:bone_meal",
+      "count": 12,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 25 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "chain": {
     "chain": "mcaquests:farmer_family",
     "stage": 2,
     "stage_total": 4,
-    "relationship_arc": { "text": "The Family Farm" },
-    "chapter": { "text": "Breaking New Ground" },
-    "prerequisites": ["mcaquests:farmer_family_1_wheat"],
-    "unlocks": ["mcaquests:farmer_family_3_apprentice"]
+    "relationship_arc": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.farmer_family_2_expand.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:farmer_family_1_wheat"
+    ],
+    "unlocks": [
+      "mcaquests:farmer_family_3_apprentice"
+    ]
   }
 }

@@ -3,23 +3,59 @@
   "id": "mcaquests:fletcher_full_quiver",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:fletcher"], "adult_only": true },
-  "title": { "text": "A Full Quiver" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fletcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fletcher_full_quiver.title"
+  },
   "dialogue": {
-    "offer": { "text": "The watch is down to their last shafts. Bring me 32 arrows and the walls stay defended." },
-    "accept": { "text": "Straight shafts and sharp heads. The guards will thank you." },
-    "decline": { "text": "Empty quivers win no battles." },
-    "in_progress": { "text": "How many arrows have you for me?" },
-    "ready": { "text": "Two and thirty! Every quiver on the wall is full again." },
-    "complete": { "text": "The watch stands ready, thanks to you." }
+    "offer": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fletcher_full_quiver.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:arrow", "count": 32, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:arrow",
+      "count": 32,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

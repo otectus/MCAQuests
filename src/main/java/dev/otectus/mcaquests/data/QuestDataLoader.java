@@ -66,6 +66,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         TemplateValidator.validate(loaded, errors);
         FailureValidator.validate(loaded, errors);
         ObjectiveValidator.validate(loaded, errors);
+        AgeEligibilityValidator.validate(loaded, warnings);
         if (strict && !errors.isEmpty()) {
             throw new QuestValidationException(errors.get(errors.size() - 1));
         }

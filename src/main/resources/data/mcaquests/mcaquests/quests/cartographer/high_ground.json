@@ -3,23 +3,57 @@
   "id": "mcaquests:cartographer_high_ground",
   "weight": 10,
   "category": "exploration",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
-  "giver": { "professions": ["minecraft:cartographer"], "adult_only": true },
-  "title": { "text": "The High Ground" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cartographer_high_ground.title"
+  },
   "dialogue": {
-    "offer": { "text": "I can't map what I can't see. Climb to the mountains and take in the lay of the land for me." },
-    "accept": { "text": "From a peak you can see for leagues. Go carefully on the climb." },
-    "decline": { "text": "The highlands stay a blank on my map, then." },
-    "in_progress": { "text": "Have you reached the peaks yet?" },
-    "ready": { "text": "You've stood on the roof of the world! Tell me what you saw." },
-    "complete": { "text": "The mountains are charted at last. Wonderful work." }
+    "offer": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cartographer_high_ground.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:visit_biome", "tag": "minecraft:is_mountain" }
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_mountain"
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 22 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

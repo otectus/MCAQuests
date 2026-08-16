@@ -3,24 +3,57 @@
   "id": "mcaquests:relations_family_reunion_feast",
   "weight": 9,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "A Family Feast" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 96000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_family_reunion_feast.title"
+  },
   "dialogue": {
-    "offer": { "text": "The whole family's gathering under one roof for once, and I'll not have them go hungry. Bring me eight good cuts of cooked beef and we'll set a table to remember." },
-    "accept": { "text": "Wonderful! I'll start laying the places." },
-    "decline": { "text": "We'll make do with thin soup, then. Again." },
-    "in_progress": { "text": "How's the beef coming? They'll be here by sundown." },
-    "ready": { "text": "Eight fine cuts — the table will groan with it!" },
-    "complete": { "text": "Laughter and full plates under one roof. You gave us a night we'll always remember." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_family_reunion_feast.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_family_reunion_feast.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_family_reunion_feast.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_family_reunion_feast.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_family_reunion_feast.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_family_reunion_feast.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:cooked_beef", "count": 8, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_beef",
+      "count": 8,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 24 },
-    { "type": "mcaquests:hearts", "amount": 26 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "type": "mcaquests:is_family_member",

@@ -3,23 +3,59 @@
   "id": "mcaquests:fletcher_knapping",
   "weight": 14,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:fletcher"], "adult_only": true },
-  "title": { "text": "Knapping Day" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fletcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fletcher_knapping.title"
+  },
   "dialogue": {
-    "offer": { "text": "No flint, no arrowheads. Dig me up 12 pieces from the gravel by the river?" },
-    "accept": { "text": "Good eye for stone, I hope. Off you go." },
-    "decline": { "text": "Dull arrows for the dull-hearted." },
-    "in_progress": { "text": "Found any flint in that gravel?" },
-    "ready": { "text": "A dozen sharp flints. The knapping can begin." },
-    "complete": { "text": "You've an arrowsmith's patience. Well done." }
+    "offer": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fletcher_knapping.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:flint", "count": 12, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:flint",
+      "count": 12,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 15 },
-    { "type": "mcaquests:hearts", "amount": 15 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 15
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

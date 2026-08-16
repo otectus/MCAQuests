@@ -3,29 +3,69 @@
   "id": "mcaquests:fisherman_rain_catch",
   "weight": 9,
   "category": "fishing",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:fisherman"], "adult_only": true },
-  "title": { "text": "While the Rain Lasts" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fisherman_rain_catch.title"
+  },
   "dialogue": {
-    "offer": { "text": "The salmon run thick while it's raining and vanish the moment it clears. Land me 5 of them — but only while the rain holds. Once it stops, the chance is gone." },
-    "accept": { "text": "Then don't dawdle — cast while the clouds are with you." },
-    "decline": { "text": "Fair enough. Not everyone's mad enough to fish a downpour." },
-    "in_progress": { "text": "Still raining — still biting. Keep at it!" },
-    "ready": { "text": "Five rain-fat salmon. The river was generous today." },
-    "complete": { "text": "Caught while the sky wept — those are the sweetest. My thanks." },
-    "failed": { "text": "The rain's gone and so are the salmon. They'll not run again until the next storm. Ah well — there's always the next." }
+    "offer": {
+      "translate": "mcaquests.quest.fisherman_rain_catch.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fisherman_rain_catch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fisherman_rain_catch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fisherman_rain_catch.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fisherman_rain_catch.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fisherman_rain_catch.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.fisherman_rain_catch.dialogue.failed"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:fish_item", "item": "minecraft:salmon", "count": 5 }
+    {
+      "type": "mcaquests:fish_item",
+      "item": "minecraft:salmon",
+      "count": 5
+    }
   ],
-  "conditions": { "type": "mcaquests:weather", "weather": "RAIN" },
+  "conditions": {
+    "type": "mcaquests:weather",
+    "weather": "RAIN"
+  },
   "failure": {
     "require_weather": "rain",
     "retry_after": 12000
   },
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 24 },
-    { "type": "mcaquests:hearts", "amount": 24 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

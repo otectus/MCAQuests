@@ -49,6 +49,16 @@ public final class ProfessionMatcher {
         return false;
     }
 
+    /**
+     * Null-safe single-profession match under the configured mode. Used by the {@code talk_to_profession}
+     * objectives (quest and project), so a datapack asking for {@code minecraft:cartographer} still matches
+     * an MCA villager whose profession id is namespaced differently.
+     */
+    public static boolean matches(ResourceLocation required, @Nullable ResourceLocation actual) {
+        return actual != null
+                && matches(required, actual, McaQuestsConfig.COMMON.professionMatchingMode.get());
+    }
+
     public static boolean matches(ResourceLocation required, ResourceLocation actual, ProfessionMatchingMode mode) {
         if (required.equals(actual)) {
             return true;

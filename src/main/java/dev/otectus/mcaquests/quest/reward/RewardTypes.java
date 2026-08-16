@@ -36,6 +36,20 @@ public final class RewardTypes {
             register(new ResourceLocation(McaQuests.MOD_ID, "hearts_with_sponsor"), HeartsWithSponsorReward.CODEC);
     public static final QuestRewardType<HeartsWithParticipantsReward> HEARTS_WITH_PARTICIPANTS =
             register(new ResourceLocation(McaQuests.MOD_ID, "hearts_with_participants"), HeartsWithParticipantsReward.CODEC);
+    /**
+     * {@code mcareputation:resolve_incident} and {@code mcareputation:record_incident}.
+     *
+     * <p>Registered under the <b>mcareputation</b> namespace so their JSON reads naturally, and
+     * registered unconditionally so a pack that uses them loads on a Quests-only install. Both are
+     * silent no-ops without that mod (spec §29.6).
+     */
+    public static final QuestRewardType<ResolveIncidentReward> RESOLVE_INCIDENT =
+            register(new ResourceLocation("mcareputation", "resolve_incident"),
+                    ResolveIncidentReward.CODEC);
+    public static final QuestRewardType<RecordIncidentReward> RECORD_INCIDENT =
+            register(new ResourceLocation("mcareputation", "record_incident"),
+                    RecordIncidentReward.CODEC);
+
     public static final QuestRewardType<VillageReputationReward> VILLAGE_REPUTATION =
             register(new ResourceLocation(McaQuests.MOD_ID, "village_reputation"), VillageReputationReward.CODEC);
     public static final QuestRewardType<UnlockReward> UNLOCK =
@@ -44,6 +58,11 @@ public final class RewardTypes {
     // v0.7.0 — grants a player title (village-scoped or global).
     public static final QuestRewardType<GrantTitleReward> GRANT_TITLE =
             register(new ResourceLocation(McaQuests.MOD_ID, "grant_title"), GrantTitleReward.CODEC);
+
+    // v1.1.0 — semantic money. The item paid out is a server config choice (emeralds, Numismatics, custom),
+    // so a datapack asks for "some currency" and never hard-codes another mod's item.
+    public static final QuestRewardType<CurrencyReward> CURRENCY =
+            register(new ResourceLocation(McaQuests.MOD_ID, "currency"), CurrencyReward.CODEC);
 
     // M4 — grants FTB Quests progress for the player's team (complete task, complete quest, or reset task).
     public static final QuestRewardType<FtbqProgressReward> FTBQ_PROGRESS =

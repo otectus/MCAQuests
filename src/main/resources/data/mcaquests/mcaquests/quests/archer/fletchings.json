@@ -3,23 +3,59 @@
   "id": "mcaquests:archer_fletchings",
   "weight": 13,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["mca:archer"], "adult_only": true },
-  "title": { "text": "Fletchings" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:archer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.archer_fletchings.title"
+  },
   "dialogue": {
-    "offer": { "text": "An arrow flies no straighter than its feathers. Bring me 16 and I'll keep my quiver true." },
-    "accept": { "text": "Chase down a few birds for me. I'll wait at the range." },
-    "decline": { "text": "Crooked arrows, crooked shots. A shame." },
-    "in_progress": { "text": "Any feathers for the fletching?" },
-    "ready": { "text": "Sixteen fine feathers — every shaft will sing now." },
-    "complete": { "text": "You keep my aim honest. I won't forget it." }
+    "offer": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.archer_fletchings.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:feather", "count": 16, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:feather",
+      "count": 16,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

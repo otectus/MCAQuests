@@ -3,30 +3,70 @@
   "id": "mcaquests:guard_dawn_defense",
   "weight": 10,
   "category": "combat",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["mca:guard"], "adult_only": true },
-  "title": { "text": "Hold Till Dawn" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_dawn_defense.title"
+  },
   "dialogue": {
-    "offer": { "text": "The horde won't last past sunrise, but it'll thin us before then. Put down 6 zombies before first light and we'll all see the morning." },
-    "accept": { "text": "Then go — every one you drop is a wall we don't have to mend." },
-    "decline": { "text": "Suit yourself. I'll mind the gate alone, then." },
-    "in_progress": { "text": "Dawn's coming. How many have you felled?" },
-    "ready": { "text": "Six down and the sky's greying. We held." },
-    "complete": { "text": "Sunrise, and the village still standing. That's your doing, soldier." },
-    "failed": { "text": "The sun's up and the work's half done. They slipped past us in the dark — and folk noticed who wasn't there." }
+    "offer": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.guard_dawn_defense.dialogue.failed"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 6 }
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 6
+    }
   ],
-  "conditions": { "type": "mcaquests:time", "period": "NIGHT" },
+  "conditions": {
+    "type": "mcaquests:time",
+    "period": "NIGHT"
+  },
   "failure": {
     "deadline_time": 23000,
     "failure_hearts": -5,
     "retry_after": 24000
   },
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
-    { "type": "mcaquests:xp", "amount": 32 },
-    { "type": "mcaquests:hearts", "amount": 34 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 32
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ]
 }

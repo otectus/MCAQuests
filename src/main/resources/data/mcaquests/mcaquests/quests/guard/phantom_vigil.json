@@ -3,24 +3,59 @@
   "id": "mcaquests:guard_phantom_vigil",
   "weight": 10,
   "category": "combat",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
-  "giver": { "professions": ["mca:guard"], "adult_only": true },
-  "title": { "text": "Phantom Vigil" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_phantom_vigil.title"
+  },
   "dialogue": {
-    "offer": { "text": "Sleepless nights bring winged horrors down on us. Strike three phantoms from the sky before they carry off a sleeper." },
-    "accept": { "text": "Keep your eyes up and your aim true." },
-    "decline": { "text": "Then we duck and pray when they swoop." },
-    "in_progress": { "text": "Still hearing those shrieks overhead. Three of them." },
-    "ready": { "text": "The sky's quiet again. Good shooting." },
-    "complete": { "text": "Folk can rest without watching the rafters now. My thanks." }
+    "offer": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_phantom_vigil.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:kill_entity", "entity": "minecraft:phantom", "count": 3 }
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:phantom",
+      "count": 3
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 28 },
-    { "type": "mcaquests:hearts", "amount": 24 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 28
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "type": "mcaquests:time",

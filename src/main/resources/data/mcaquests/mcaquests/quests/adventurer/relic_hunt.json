@@ -3,23 +3,56 @@
   "id": "mcaquests:adventurer_relic_hunt",
   "weight": 9,
   "category": "exploration",
-  "repeat": { "type": "once" },
-  "giver": { "professions": ["mca:adventurer"], "adult_only": true },
-  "title": { "text": "Into the Ancient Dark" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "mca:adventurer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.adventurer_relic_hunt.title"
+  },
   "dialogue": {
-    "offer": { "text": "They say there's a city buried in the deep dark, older than any village. I'm too long in the tooth to reach it — but you? Step inside its walls and tell me it's real." },
-    "accept": { "text": "Tread softly down there. Some things sleep, and ought to keep sleeping." },
-    "decline": { "text": "Wise, perhaps. The deep dark keeps what it takes." },
-    "in_progress": { "text": "Have you found the ancient city yet? Mind the dark — and the silence." },
-    "ready": { "text": "You stood inside it? Truly? Tell me everything." },
-    "complete": { "text": "An ancient city, walked and survived. You've done what I only ever dreamed. Take this — you've more than earned it." }
+    "offer": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.adventurer_relic_hunt.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:enter_structure", "structure": "minecraft:ancient_city" }
+    {
+      "type": "mcaquests:enter_structure",
+      "structure": "minecraft:ancient_city"
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
-    { "type": "mcaquests:xp", "amount": 40 },
-    { "type": "mcaquests:hearts", "amount": 30 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 40
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ]
 }

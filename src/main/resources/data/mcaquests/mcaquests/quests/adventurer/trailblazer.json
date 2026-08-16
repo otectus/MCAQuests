@@ -3,23 +3,57 @@
   "id": "mcaquests:adventurer_trailblazer",
   "weight": 10,
   "category": "exploration",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
-  "giver": { "professions": ["mca:adventurer"], "adult_only": true },
-  "title": { "text": "Trailblazer" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "mca:adventurer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.adventurer_trailblazer.title"
+  },
   "dialogue": {
-    "offer": { "text": "They say you can see the whole world from the high peaks. Climb the mountains and let me live it through your eyes." },
-    "accept": { "text": "Pack warm and tread careful. The heights are no joke." },
-    "decline": { "text": "The summit waits for braver boots, then." },
-    "in_progress": { "text": "Have you reached the high country yet?" },
-    "ready": { "text": "You stood above the clouds! I can see it in your eyes. Magnificent." },
-    "complete": { "text": "One day I'll make that climb myself. Until then — well earned." }
+    "offer": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.adventurer_trailblazer.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:visit_biome", "tag": "minecraft:is_mountain" }
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_mountain"
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 25 },
-    { "type": "mcaquests:hearts", "amount": 25 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

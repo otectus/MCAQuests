@@ -1,65 +1,144 @@
 package dev.otectus.mcaquests.quest.reputation;
 
-import dev.otectus.mcaquests.api.event.ReputationTierReachedEvent;
-import dev.otectus.mcaquests.project.state.ProjectSavedData;
+import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.compat.ReputationAward;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.UUID;
 
 /**
- * The single funnel for all village-reputation writes (spec 0.7.0). Every quest and project reward that
- * moves reputation routes through {@link #award} so that crossing a tier threshold is detected exactly
- * once (guarded by the high-water mark in {@link ProjectSavedData}) and the consequences — granting a
- * tier's title and sending a tier-up toast — happen consistently. Tier-up logic only applies to
- * per-village reputation (identities of the form {@code "v:<id>"}); other scope identities just accrue.
+ * The pre-1.1.0 reputation entry point, retained as a thin, <b>deprecated</b> shim over
+ * {@link QuestReputation}.
  *
- * <p>Null-player safe: project rewards can move reputation with no online player. In that case the
- * high-water mark and any title grant still apply (the title is applied to the player on next login via
- * the journal sync path); the toast is simply skipped.
+ * <h2>What happened to it</h2>
+ *
+ * <p>This class used to be the funnel: it read and wrote {@code ProjectSavedData}'s shared
+ * {@code "v:<id>"} map, detected tier crossings, and granted titles. Two problems made that
+ * untenable. The map was <em>world-shared</em>, so on a server every player read the same number for a
+ * village; and it was <em>dimension-blind</em>, so village 3 in the Nether and village 3 in the
+ * overworld collided. §29 replaces it with {@link QuestReputation}, which resolves a dimension-aware
+ * community and delegates to whichever backend is live.
+ *
+ * <p>Everything here still works, and other mods that call it keep working. But the signatures cannot
+ * express a player or a dimension, so they have to guess at both: the overworld, and whichever player
+ * was passed (if any). New code — inside this mod or outside it — should call {@link QuestReputation}
+ * and pass a real {@code Community}.
+ *
+ * <p>The pure tier helpers are unchanged and undeprecated; they never touched storage.
  */
+@Deprecated
 public final class ReputationService {
 
     private ReputationService() {
     }
 
-    public static int award(MinecraftServer server, String identity, int delta, @Nullable ServerPlayer player) {
-        return award(ProjectSavedData.get(server), server, identity, delta, player);
-    }
-
-    public static int award(ProjectSavedData data, @Nullable MinecraftServer server,
-                            String identity, int delta, @Nullable ServerPlayer player) {
-        int oldRep = data.reputation(identity);
-        data.addReputation(identity, delta);
-        int newRep = data.reputation(identity);
-
+    /**
+     * Applies a delta to a legacy {@code "v:<id>"} scope identity.
+     *
+     * @param player the player who earned it. <b>Required.</b> The old signature allowed null for
+     *               project rewards with nobody online, which is exactly how a world-shared score came
+     *               about; a null player now logs and no-ops rather than moving a number that belongs
+     *               to nobody.
+     * @return the player's resulting score, or 0
+     * @deprecated use {@link QuestReputation#award(ReputationAward)} with a dimension-aware community.
+     */
+    @Deprecated
+    public static int award(MinecraftServer server, String identity, int delta,
+                            @Nullable ServerPlayer player) {
         OptionalInt villageId = parseVillageId(identity);
         if (villageId.isEmpty()) {
-            return newRep; // tier-up is only meaningful for per-village reputation
+            return 0; // tier-up and standing were only ever meaningful for village identities
         }
-
-        ReputationTierSet ladder = ReputationTiers.getDefault();
-        Optional<ReputationTier> reached = tierUpReached(ladder, oldRep, newRep, data.tierHighWater(identity));
-        if (reached.isPresent()) {
-            data.setTierHighWater(identity, reached.get().id());
-            onTierUp(server, player, villageId.getAsInt(), reached.get());
-            MinecraftForge.EVENT_BUS.post(new ReputationTierReachedEvent(player, villageId.getAsInt(),
-                    ReputationTiers.DEFAULT_ID, reached.get().id(), ladder.indexOf(reached.get().id())));
+        if (player == null) {
+            McaQuests.LOGGER.warn("[MCA: Quests] ReputationService.award was called for {} with no player. "
+                    + "Standing is per player from 1.1.0 onward, so there is nobody to award; use "
+                    + "QuestReputation with an explicit recipient instead.", identity);
+            return 0;
         }
-        return newRep;
+        QuestReputation.Community community = QuestReputation.inLevel(server.overworld(),
+                villageId.getAsInt());
+        return QuestReputation.award(ReputationAward
+                .builder(server, player.getUUID(), community.dimension(), community.villageId(),
+                        QuestReputation.SOURCE)
+                .delta(delta)
+                .build());
     }
 
     /**
-     * Pure decision: given a ladder, the reputation before/after a change, and the highest tier id ever
-     * reached for this identity ({@code null} if none), returns the newly-reached tier when the change
-     * crosses strictly above both the old tier and the high-water mark. Empty otherwise. Extracted for
-     * unit testing.
+     * @deprecated the {@code ProjectSavedData} parameter is ignored; the store is chosen by the bridge.
+     */
+    @Deprecated
+    public static int award(dev.otectus.mcaquests.project.state.ProjectSavedData ignored,
+                            @Nullable MinecraftServer server, String identity, int delta,
+                            @Nullable ServerPlayer player) {
+        return server == null ? 0 : award(server, identity, delta, player);
+    }
+
+    /**
+     * A player's standing with a village in the overworld.
+     *
+     * @deprecated use {@link QuestReputation#score} with a dimension-aware community.
+     */
+    @Deprecated
+    public static OptionalInt villageReputation(MinecraftServer server, UUID player, int villageId) {
+        return OptionalInt.of(QuestReputation.score(server, player,
+                QuestReputation.inLevel(server.overworld(), villageId)));
+    }
+
+    /**
+     * Every overworld village this player has standing with.
+     *
+     * @deprecated use {@link QuestReputation#overworldVillageScores}.
+     */
+    @Deprecated
+    public static Map<Integer, Integer> allVillageReputations(MinecraftServer server, UUID player) {
+        return new HashMap<>(QuestReputation.overworldVillageScores(server, player));
+    }
+
+    /**
+     * The player's current tier with an overworld village on a named ladder.
+     *
+     * @deprecated use {@link QuestReputation#tierId}.
+     */
+    @Deprecated
+    public static Optional<ReputationTier> currentTier(MinecraftServer server, UUID player, int villageId,
+                                                       ResourceLocation ladder) {
+        ReputationTierSet tiers = ReputationTiers.get(ladder).orElse(null);
+        if (tiers == null) {
+            return Optional.empty();
+        }
+        int score = QuestReputation.score(server, player, QuestReputation.inLevel(server.overworld(), villageId));
+        int index = tierIndex(tiers, score);
+        return index < 0 ? Optional.empty() : Optional.of(tiers.tiers().get(index));
+    }
+
+    /** Convenience for a level other than the overworld. */
+    public static Optional<ReputationTier> currentTier(MinecraftServer server, UUID player, ServerLevel level,
+                                                       int villageId, ResourceLocation ladder) {
+        ReputationTierSet tiers = ReputationTiers.get(ladder).orElse(null);
+        if (tiers == null) {
+            return Optional.empty();
+        }
+        int score = QuestReputation.score(server, player, QuestReputation.inLevel(level, villageId));
+        int index = tierIndex(tiers, score);
+        return index < 0 ? Optional.empty() : Optional.of(tiers.tiers().get(index));
+    }
+
+    // ------------------------------------------------------------------
+    // Pure helpers — never touched storage, and are unchanged
+    // ------------------------------------------------------------------
+
+    /**
+     * Given a ladder, a before/after pair, and the highest tier ever reached, the newly-reached tier
+     * when the change crosses strictly above both. Empty otherwise. Extracted for unit testing.
      */
     public static Optional<ReputationTier> tierUpReached(ReputationTierSet ladder, int oldRep, int newRep,
                                                          @Nullable String highWaterTierId) {
@@ -79,9 +158,8 @@ public final class ReputationService {
     }
 
     /**
-     * Pure decision: given a ladder and a reputation value, returns the index of the highest tier
-     * whose threshold is ≤ reputation; returns -1 if reputation is below the lowest tier's threshold
-     * or if the ladder is empty. Extracted for unit testing.
+     * The index of the highest tier whose threshold is ≤ {@code reputation}; {@code -1} when the value
+     * is below the lowest threshold or the ladder is empty. Extracted for unit testing.
      */
     public static int tierIndex(ReputationTierSet ladder, int reputation) {
         if (ladder.isEmpty()) {
@@ -98,72 +176,15 @@ public final class ReputationService {
         return index;
     }
 
-    /** Queries the village reputation for a given village id; empty when saved data absent or no entry. */
-    public static OptionalInt villageReputation(MinecraftServer server, int villageId) {
-        ProjectSavedData data = ProjectSavedData.get(server);
-        int rep = data.reputation("v:" + villageId);
-        return rep == 0 && !data.reputationKeys().contains("v:" + villageId) ? OptionalInt.empty() : OptionalInt.of(rep);
-    }
-
-    /**
-     * Queries all village reputations from saved data. Only includes "v:<id>" identity keys,
-     * parsed to integer village ids; other identity kinds are excluded. Returns an empty map
-     * when saved data is absent or contains no village reputations. The returned map is a copy
-     * and does not expose internal mutable state.
-     */
-    public static Map<Integer, Integer> allVillageReputations(MinecraftServer server) {
-        ProjectSavedData data = ProjectSavedData.get(server);
-        Map<Integer, Integer> result = new HashMap<>();
-        for (String key : data.reputationKeys()) {
-            OptionalInt villageId = parseVillageId(key);
-            if (villageId.isPresent()) {
-                result.put(villageId.getAsInt(), data.reputation(key));
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Resolves the current tier for a village's reputation against a specified ladder.
-     * A village with no reputation record is treated as reputation 0 (matching
-     * {@code ProjectSavedData.reputation}'s default everywhere else), so untouched villages
-     * still resolve to the floor tier of ladders whose lowest threshold is &le; 0. Returns
-     * empty when the ladder cannot be resolved, or when {@link #tierIndex(ReputationTierSet, int)}
-     * yields -1 (reputation below the lowest threshold, or empty ladder).
-     */
-    public static Optional<ReputationTier> currentTier(MinecraftServer server, int villageId, ResourceLocation ladder) {
-        ReputationTierSet tiers = ReputationTiers.get(ladder).orElse(null);
-        if (tiers == null) {
-            return Optional.empty();
-        }
-        int rep = villageReputation(server, villageId).orElse(0);
-        int index = tierIndex(tiers, rep);
-        return index < 0 ? Optional.empty() : Optional.of(tiers.tiers().get(index));
-    }
-
-    /** Parses {@code "v:<id>"} village identities; empty for any other scope key. */
+    /** Parses a legacy {@code "v:<id>"} scope identity; empty for any other scope key. */
     public static OptionalInt parseVillageId(String identity) {
-        if (identity.startsWith("v:")) {
+        if (identity != null && identity.startsWith("v:")) {
             try {
                 return OptionalInt.of(Integer.parseInt(identity.substring(2)));
             } catch (NumberFormatException ignored) {
-                // fall through
+                // not a village identity
             }
         }
         return OptionalInt.empty();
-    }
-
-    private static void onTierUp(@Nullable MinecraftServer server, @Nullable ServerPlayer player,
-                                 int villageId, ReputationTier reached) {
-        // Grant the tier's title (village-scoped) to the player who pushed reputation over the threshold.
-        // Offline project-driven tier-ups have no player to award; the high-water mark still advances.
-        if (player != null) {
-            reached.grantsTitle().ifPresent(title ->
-                    dev.otectus.mcaquests.quest.title.TitleService.grantVillage(player, villageId, title));
-            dev.otectus.mcaquests.network.QuestNetwork.CHANNEL.send(
-                    net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
-                    new dev.otectus.mcaquests.network.ReputationTierToastS2CPacket(
-                            net.minecraft.network.chat.Component.literal(reached.name())));
-        }
     }
 }

@@ -3,23 +3,59 @@
   "id": "mcaquests:leatherworker_tough_hide",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:leatherworker"], "adult_only": true },
-  "title": { "text": "Tough Hide" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:leatherworker"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.leatherworker_tough_hide.title"
+  },
   "dialogue": {
-    "offer": { "text": "My tannery's run dry. Eight leather would let me get back to my craft." },
-    "accept": { "text": "Good hide makes good boots. Off you go." },
-    "decline": { "text": "Bare feet for the village, then." },
-    "in_progress": { "text": "Have you any leather for me?" },
-    "ready": { "text": "Eight good hides. The tannery lives again." },
-    "complete": { "text": "I'll stitch you something fine one of these days." }
+    "offer": {
+      "translate": "mcaquests.quest.leatherworker_tough_hide.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.leatherworker_tough_hide.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.leatherworker_tough_hide.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.leatherworker_tough_hide.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.leatherworker_tough_hide.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.leatherworker_tough_hide.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:leather", "count": 8, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:leather",
+      "count": 8,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

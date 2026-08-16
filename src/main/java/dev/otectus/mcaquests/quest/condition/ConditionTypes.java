@@ -54,6 +54,18 @@ public final class ConditionTypes {
 
     private static final Map<ResourceLocation, QuestConditionType<?>> BY_ID = new LinkedHashMap<>();
 
+    /**
+     * {@code mcareputation:has_incident} — a deed on the player's public record with this village.
+     *
+     * <p>Registered under the <b>mcareputation</b> namespace, and registered <b>unconditionally</b>,
+     * even when that mod is absent. A datapack that uses it must parse cleanly either way; without
+     * Reputation the condition is simply never met (see the class docs).
+     */
+    public static final QuestConditionType<dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition>
+            HAS_INCIDENT = register(new net.minecraft.resources.ResourceLocation("mcareputation",
+                    "has_incident"),
+            dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition.CODEC);
+
     public static final QuestConditionType<HeartsCondition> HEARTS = register("hearts", HeartsCondition.CODEC);
     public static final QuestConditionType<ProfessionCondition> PROFESSION = register("profession", ProfessionCondition.CODEC);
     public static final QuestConditionType<BiomeCondition> BIOME = register("biome", BiomeCondition.CODEC);

@@ -32,7 +32,7 @@
       ],
       "rewards": [
         { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 10 }, "target": "all_participants" },
-        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 }, "target": "top_contributor" },
+        { "reward": { "type": "mcaquests:currency", "difficulty": "medium" }, "target": "top_contributor" },
         { "reward": { "type": "mcaquests:village_reputation", "amount": 5 }, "target": "sponsor_village" }
       ]
     }

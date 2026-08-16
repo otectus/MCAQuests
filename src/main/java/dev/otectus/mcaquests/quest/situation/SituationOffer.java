@@ -82,7 +82,10 @@ public record SituationOffer(
                 Optional.empty(),
                 failureOverride.isPresent() ? failureOverride : failure,
                 template,
-                offerShaping);
+                offerShaping,
+                // A situation's reputation lives on its own outcome block, not on the quest it
+                // renders as, so the derived definition carries none of its own.
+                dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE);
     }
 
     /**

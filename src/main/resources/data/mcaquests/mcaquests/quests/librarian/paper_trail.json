@@ -3,23 +3,59 @@
   "id": "mcaquests:librarian_paper_trail",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:librarian"], "adult_only": true },
-  "title": { "text": "Paper Trail" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:librarian"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.librarian_paper_trail.title"
+  },
   "dialogue": {
-    "offer": { "text": "My records are falling behind for want of paper. Could you bring me 20 sheets?" },
-    "accept": { "text": "Wonderful. Knowledge must be written down, or it is lost." },
-    "decline": { "text": "A pity. The blank pages will keep their silence." },
-    "in_progress": { "text": "Have you gathered the paper?" },
-    "ready": { "text": "Twenty crisp sheets! The archive thanks you." },
-    "complete": { "text": "Come back any time — there is always more to record." }
+    "offer": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.librarian_paper_trail.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:paper", "count": 20, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:paper",
+      "count": 20,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

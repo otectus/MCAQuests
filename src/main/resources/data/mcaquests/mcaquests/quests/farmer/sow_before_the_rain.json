@@ -3,24 +3,62 @@
   "id": "mcaquests:farmer_sow_before_the_rain",
   "weight": 10,
   "category": "gathering",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
-  "title": { "text": "Sow Before the Rain" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.farmer_sow_before_the_rain.title"
+  },
   "dialogue": {
-    "offer": { "text": "Rain's the best time to plant! Quick, gather me 16 seeds while the soil's soft." },
-    "accept": { "text": "Hurry now — a good shower won't wait for slow hands." },
-    "decline": { "text": "The rain will pass and the chance with it." },
-    "in_progress": { "text": "Got those seeds while it's still wet?" },
-    "ready": { "text": "Sixteen seeds, ready for the drills. The fields will thank you." },
-    "complete": { "text": "Planted in the rain, harvested in the sun. That's farming." }
+    "offer": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_sow_before_the_rain.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:obtain_item", "item": "minecraft:wheat_seeds", "count": 16 }
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:wheat_seeds",
+      "count": 16
+    }
   ],
-  "conditions": { "type": "mcaquests:weather", "weather": "RAIN" },
+  "conditions": {
+    "type": "mcaquests:weather",
+    "weather": "RAIN"
+  },
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 14 },
-    { "type": "mcaquests:hearts", "amount": 15 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 14
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

@@ -3,24 +3,62 @@
   "id": "mcaquests:relations_guard_village_patrol",
   "weight": 12,
   "category": "combat",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["mca:guard"], "adult_only": true },
-  "title": { "text": "Keep the Streets Safe" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_guard_village_patrol.title"
+  },
   "dialogue": {
-    "offer": { "text": "This is my village to protect, and the monsters grow bold. Help me thin them out — five of the undead should send a message." },
-    "accept": { "text": "Good. Watch the alleys and the dark corners." },
-    "decline": { "text": "Then stay indoors after dark." },
-    "in_progress": { "text": "How goes the cull? Five of them, remember." },
-    "ready": { "text": "Five down. The streets are quieter already." },
-    "complete": { "text": "The village owes you a debt. I'll not forget it." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_guard_village_patrol.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 5 }
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:zombie",
+      "count": 5
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
-    { "type": "mcaquests:xp", "amount": 30 },
-    { "type": "mcaquests:hearts", "amount": 25 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
-  "conditions": { "type": "mcaquests:village_member", "value": true }
+  "conditions": {
+    "type": "mcaquests:village_member",
+    "value": true
+  }
 }

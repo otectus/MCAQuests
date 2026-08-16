@@ -10,9 +10,11 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
@@ -41,6 +43,13 @@ public final class ProjectState {
     private ProjectStatus status = ProjectStatus.ACTIVE;
     /** Phases whose rewards have already been distributed (one-shot guard against double payout). */
     private final BitSet phaseRewardsDistributed = new BitSet();
+    /**
+     * Randomized phase-reward amounts rolled once and shared by every recipient, keyed
+     * {@code "<phase>:<rewardIndex>"} — currently only {@code mcaquests:currency}. Persisted so a player
+     * who collects a banked reward after logging back in is paid the same amount as everyone who was
+     * online at the time. Absent on pre-1.1.0 saves and on projects with no randomized reward.
+     */
+    private final Map<String, Integer> frozenRewards = new HashMap<>();
 
     public ProjectState(ResourceLocation projectId, ProjectScope scope, String identity,
                         ResourceLocation anchorDimension, BlockPos anchorPos, OptionalInt villageId,
@@ -177,6 +186,22 @@ public final class ProjectState {
         return phaseRewardsDistributed.get(phase);
     }
 
+    /**
+     * Rolls and stores {@code amount} for one randomized phase reward if nothing is stored yet, returning
+     * the stored value either way. Keyed by phase <em>and</em> reward index so every recipient of a shared
+     * phase reward — including a player who was offline and collects it later — is paid the same number,
+     * and so re-entering the distribution path can never roll a second time.
+     */
+    public int freezeReward(int phase, int rewardIndex, int amount) {
+        return frozenRewards.computeIfAbsent(phase + ":" + rewardIndex, k -> amount);
+    }
+
+    /** The amount frozen for one phase reward, or empty if it has none. */
+    public OptionalInt frozenReward(int phase, int rewardIndex) {
+        Integer value = frozenRewards.get(phase + ":" + rewardIndex);
+        return value == null ? OptionalInt.empty() : OptionalInt.of(value);
+    }
+
     /** Every player who has contributed to any objective of the current phase. */
     public Set<UUID> currentPhaseContributors() {
         Set<UUID> out = new LinkedHashSet<>();
@@ -209,6 +234,11 @@ public final class ProjectState {
             progressList.add(p.save());
         }
         tag.put("progress", progressList);
+        if (!frozenRewards.isEmpty()) {
+            CompoundTag frozen = new CompoundTag();
+            frozenRewards.forEach(frozen::putInt);
+            tag.put("frozen_rewards", frozen);
+        }
         return tag;
     }
 
@@ -252,6 +282,10 @@ public final class ProjectState {
             } catch (IllegalArgumentException ignored) {
                 // skip malformed
             }
+        }
+        if (tag.contains("frozen_rewards", Tag.TAG_COMPOUND)) {
+            CompoundTag frozen = tag.getCompound("frozen_rewards");
+            frozen.getAllKeys().forEach(key -> state.frozenRewards.put(key, frozen.getInt(key)));
         }
         return state;
     }

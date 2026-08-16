@@ -3,23 +3,59 @@
   "id": "mcaquests:cleric_glow_in_the_dark",
   "weight": 10,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
-  "giver": { "professions": ["minecraft:cleric"], "adult_only": true },
-  "title": { "text": "Glow in the Dark" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cleric_glow_in_the_dark.title"
+  },
   "dialogue": {
-    "offer": { "text": "The shrine's lanterns have gone dim. Eight glowstone dust would set them alight again." },
-    "accept": { "text": "Light drives back more than shadow. Go safely." },
-    "decline": { "text": "Then the dark endures a little longer." },
-    "in_progress": { "text": "Found any glowstone dust?" },
-    "ready": { "text": "It shimmers even now. The shrine will glow once more." },
-    "complete": { "text": "May the light you brought return to you tenfold." }
+    "offer": {
+      "translate": "mcaquests.quest.cleric_glow_in_the_dark.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cleric_glow_in_the_dark.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cleric_glow_in_the_dark.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cleric_glow_in_the_dark.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cleric_glow_in_the_dark.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cleric_glow_in_the_dark.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:glowstone_dust", "count": 8, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:glowstone_dust",
+      "count": 8,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 22 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 22
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

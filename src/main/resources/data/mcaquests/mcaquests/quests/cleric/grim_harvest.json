@@ -3,23 +3,59 @@
   "id": "mcaquests:cleric_grim_harvest",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:cleric"], "adult_only": true },
-  "title": { "text": "A Grim Harvest" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cleric_grim_harvest.title"
+  },
   "dialogue": {
-    "offer": { "text": "The rituals call for things best gathered after dark. Bring me 10 rotten flesh — don't ask why." },
-    "accept": { "text": "The dead provide, in their way. Tread carefully." },
-    "decline": { "text": "The night keeps its secrets a while longer." },
-    "in_progress": { "text": "Have you the flesh I asked for?" },
-    "ready": { "text": "Ten pieces, ripe and ready. The work can begin." },
-    "complete": { "text": "You have done the temple a quiet service." }
+    "offer": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cleric_grim_harvest.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:rotten_flesh", "count": 10, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:rotten_flesh",
+      "count": 10,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 1 },
-    { "type": "mcaquests:xp", "amount": 15 },
-    { "type": "mcaquests:hearts", "amount": 15 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 15
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

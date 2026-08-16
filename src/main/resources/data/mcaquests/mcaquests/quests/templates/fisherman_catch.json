@@ -3,29 +3,87 @@
   "id": "mcaquests:template_fisherman_catch",
   "weight": 14,
   "category": "gathering",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:fisherman"], "adult_only": true },
-  "title": { "text": "A Good Haul: {catch_name}" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_fisherman_catch.title",
+    "with": [
+      "{catch_name}"
+    ]
+  },
   "dialogue": {
-    "offer": { "text": "The smoker's cold and the nets are empty. Hook me {count} {catch_name} and we'll call it square." },
-    "accept": { "text": "Cast where the water runs deep. Patience pulls the line." },
-    "decline": { "text": "Bah. The fish can keep their secrets a while longer." },
-    "in_progress": { "text": "Any {catch_name} on your line yet?" },
-    "ready": { "text": "{count} {catch_name}, fresh off the hook! The smoker thanks you." },
-    "complete": { "text": "Now that's a haul worth bragging about. Here's your share." }
+    "offer": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.offer",
+      "with": [
+        "{count}",
+        "{catch_name}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.in_progress",
+      "with": [
+        "{catch_name}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.ready",
+      "with": [
+        "{count}",
+        "{catch_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_fisherman_catch.dialogue.complete"
+    }
   },
   "template": {
     "variables": {
-      "catch": { "kind": "item", "tags": ["minecraft:fishes"] },
-      "count": { "kind": "int", "min": 1, "max": 3 }
+      "catch": {
+        "kind": "item",
+        "tags": [
+          "minecraft:fishes"
+        ]
+      },
+      "count": {
+        "kind": "int",
+        "min": 1,
+        "max": 3
+      }
     },
     "objectives": [
-      { "type": "mcaquests:fish_item", "item": "{catch}", "count": "{count}" }
+      {
+        "type": "mcaquests:fish_item",
+        "item": "{catch}",
+        "count": "{count}"
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-      { "type": "mcaquests:xp", "amount": 12 },
-      { "type": "mcaquests:hearts", "amount": 10 }
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 12
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
     ]
   }
 }

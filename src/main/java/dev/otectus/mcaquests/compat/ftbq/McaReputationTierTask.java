@@ -80,11 +80,13 @@ public class McaReputationTierTask extends McaBooleanTaskBase {
         if (server == null) {
             return false;
         }
-        Map<Integer, Integer> reputations = ReputationService.allVillageReputations(server);
+        Map<Integer, Integer> reputations = dev.otectus.mcaquests.quest.reputation.QuestReputation.overworldVillageScores(server, player.getUUID());
         int qualifying = 0;
-        for (int villageId : reputations.keySet()) {
-            Optional<ReputationTier> current = ReputationService.currentTier(server, villageId, ladderId);
-            if (current.isPresent() && set.get().indexOf(current.get().id()) >= requiredIndex) {
+        for (Map.Entry<Integer, Integer> entry : reputations.entrySet()) {
+            // Resolve the tier from the score we already have rather than asking again: one read
+            // per village, and the tier can never disagree with the number it came from.
+            ReputationTier current = set.get().tierFor(entry.getValue());
+            if (set.get().indexOf(current.id()) >= requiredIndex) {
                 qualifying++;
             }
         }

@@ -295,8 +295,24 @@ public final class SituationManager {
 
     private static void applyOutcome(MinecraftServer server, SituationInstance instance, Outcome outcome,
                                      @Nullable ServerPlayer player) {
-        if (outcome.reputation() != 0) {
-            ReputationService.award(server, "v:" + instance.villageId(), outcome.reputation(), player);
+        // §29.5: a situation's standing goes to the player who resolved it, not to everyone nearby
+        // and not to an anonymous village total. With nobody to credit there is nothing to award.
+        if (outcome.reputation() != 0 && player != null) {
+            var community = dev.otectus.mcaquests.quest.reputation.QuestReputation
+                    .inLevel(server.overworld(), instance.villageId());
+            dev.otectus.mcaquests.quest.reputation.QuestReputation.award(
+                    dev.otectus.mcaquests.compat.ReputationAward
+                            .builder(server, player.getUUID(), community.dimension(),
+                                    community.villageId(),
+                                    dev.otectus.mcaquests.quest.reputation.QuestReputation.SOURCE)
+                            .delta(outcome.reputation())
+                            .incident(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock
+                                    .Incidents.SITUATION_RESOLVED)
+                            .dedupeKey(dev.otectus.mcaquests.quest.reputation.ReputationDedupe
+                                    .situation(instance.instanceId(), player.getUUID(),
+                                            outcome.reputation() >= 0 ? "success" : "failure"))
+                            .context("source_title", instance.defId().getPath())
+                            .build());
         }
         if (outcome.hearts() != 0) {
             instance.villagerUuid().ifPresent(uuid ->

@@ -47,7 +47,8 @@ public record QuestDefinition(
         Optional<ChainSpec> chain,
         Optional<FailureSpec> failure,
         Optional<TemplateSpec> template,
-        OfferShaping offerShaping) {
+        OfferShaping offerShaping,
+        dev.otectus.mcaquests.quest.reputation.QuestReputationBlock reputation) {
 
     /** Dialogue states (spec section 9). */
     public static final String OFFER = "offer";
@@ -76,8 +77,21 @@ public record QuestDefinition(
             ChainSpec.CODEC.optionalFieldOf("chain").forGetter(QuestDefinition::chain),
             FailureSpec.CODEC.optionalFieldOf("failure").forGetter(QuestDefinition::failure),
             TemplateSpec.CODEC.optionalFieldOf("template").forGetter(QuestDefinition::template),
-            OfferShaping.MAP_CODEC.forGetter(QuestDefinition::offerShaping)
-    ).apply(instance, QuestDefinition::new));
+            // DataFixerUpper's RecordCodecBuilder tops out at 16 grouped fields, and this definition
+            // was already at 16. Rather than restructure the whole quest format to add one optional
+            // block, the last two are read as a pair — the JSON shape is unchanged, since a MapCodec
+            // pair still reads both fields from the same object.
+            Codec.mapPair(
+                            OfferShaping.MAP_CODEC,
+                            dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.CODEC
+                                    .optionalFieldOf("reputation",
+                                            dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE))
+                    .forGetter(def -> com.mojang.datafixers.util.Pair.of(def.offerShaping(), def.reputation()))
+    ).apply(instance, (id, enabled, weight, category, title, repeat, giver, dialogue, objectives, rewards,
+                       turnIn, conditions, chain, failure, template, tail) ->
+            new QuestDefinition(id, enabled, weight, category, title, repeat, giver, dialogue, objectives,
+                    rewards, turnIn, conditions, chain, failure, template, tail.getFirst(),
+                    tail.getSecond())));
 
     /** Translation key for this quest's display title (spec section 32), e.g. {@code mcaquests.quest.<path>.title}. */
     public String titleKey() {
@@ -116,12 +130,21 @@ public record QuestDefinition(
     public QuestDefinition withConcrete(TemplateSpec.Concrete concrete) {
         return new QuestDefinition(id, enabled, weight, category, titleOverride, repeat, giver, dialogue,
                 concrete.objectives(), concrete.rewards(), turnIn, conditions, chain, failure, template,
-                offerShaping);
+                offerShaping, reputation);
     }
 
     /** Datapack offer priority tier, if set (see {@link OfferShaping}). */
     public Optional<Integer> priority() {
         return offerShaping.priority();
+    }
+
+    /**
+     * The declared difficulty band, if any (see {@link OfferShaping}). A quest that omits it keeps its
+     * explicit reward amounts untouched — difficulty only supplies defaults for rewards that ask for them,
+     * so third-party packs written before 1.1.0 behave exactly as they did.
+     */
+    public Optional<QuestDifficulty> difficulty() {
+        return offerShaping.difficulty();
     }
 
     /** Conditional selection-weight bonuses (see {@link OfferShaping}). */

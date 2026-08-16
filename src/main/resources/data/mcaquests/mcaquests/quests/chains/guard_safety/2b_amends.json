@@ -3,32 +3,73 @@
   "id": "mcaquests:guard_safety_2b_amends",
   "weight": 16,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "professions": ["mca:guard"], "adult_only": true },
-  "title": { "text": "Keeping the Peace" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_safety_2b_amends.title"
+  },
   "dialogue": {
-    "offer": { "text": "The spiders reached the houses while you tarried. No grudges — but make it right: bring me 16 torches to relight the watchtower." },
-    "accept": { "text": "A lit tower is half the battle. Off you go." },
-    "decline": { "text": "Then the tower stays dark, and so does my mood." },
-    "in_progress": { "text": "The tower's still cold. Those torches?" },
-    "ready": { "text": "Light at last. We'll call it square." },
-    "complete": { "text": "Everyone slips once. What matters is you came back. Now — the recruits." }
+    "offer": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:torch", "count": 16, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:torch",
+      "count": 16,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 20 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ],
   "chain": {
     "chain": "mcaquests:guard_safety",
     "stage": 2,
     "stage_total": 3,
-    "relationship_arc": { "text": "Keeping the Peace" },
-    "chapter": { "text": "Make It Right" },
-    "unlocks": ["mcaquests:guard_safety_3_militia"]
+    "relationship_arc": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.guard_safety_2b_amends.chain.chapter"
+    },
+    "unlocks": [
+      "mcaquests:guard_safety_3_militia"
+    ]
   },
   "conditions": {
     "type": "mcaquests:quest_failed",

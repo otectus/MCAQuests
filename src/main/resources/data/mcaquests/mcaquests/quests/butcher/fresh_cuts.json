@@ -3,23 +3,58 @@
   "id": "mcaquests:butcher_fresh_cuts",
   "weight": 14,
   "category": "gathering",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:butcher"], "adult_only": true },
-  "title": { "text": "Fresh Cuts" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.butcher_fresh_cuts.title"
+  },
   "dialogue": {
-    "offer": { "text": "My block's been bare all week. Round up 12 raw beef and I'll have something to carve." },
-    "accept": { "text": "Mind the horns. Cattle don't give up easy." },
-    "decline": { "text": "The cleaver stays clean, then." },
-    "in_progress": { "text": "Got any beef for the block?" },
-    "ready": { "text": "Twelve good cuts! Now that's a butcher's morning." },
-    "complete": { "text": "You keep the village fed. I won't forget it." }
+    "offer": {
+      "translate": "mcaquests.quest.butcher_fresh_cuts.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.butcher_fresh_cuts.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.butcher_fresh_cuts.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.butcher_fresh_cuts.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.butcher_fresh_cuts.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.butcher_fresh_cuts.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:obtain_item", "item": "minecraft:beef", "count": 12 }
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:beef",
+      "count": 12
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

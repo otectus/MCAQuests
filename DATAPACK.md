@@ -75,8 +75,25 @@ To **disable the built-in quests** entirely and ship only your own, set `enableD
 | `weight_bonus` | array | no | none | Conditional additions to `weight` (e.g. likelier as hearts rise). See [Offer priority & weight bonuses](#offer-priority--weight-bonuses). |
 | `chain` | object | no | none | Relationship-arc metadata: stage, prerequisites, unlocks. See [Quest chains](#quest-chains). |
 | `template` | object | no | none | Turns the quest into a randomized template: variable pools + the objective/reward JSON that uses them. See [Quest templates](#quest-templates). |
+| `difficulty` | string | no | — | `easy`, `medium`, or `hard`. Optional metadata that supplies default reward amounts. See [Difficulty](#difficulty). |
 
 ¹ Required for a hand-authored quest. A **template** quest omits top-level `objectives`/`rewards` and supplies them inside its `template` block instead.
+
+### Difficulty
+
+*(1.1.0)*
+
+`"difficulty"` describes how demanding a quest is, so rewards can be tuned server-side instead of hard-coded in every file:
+
+```json
+"difficulty": "hard"
+```
+
+- `easy` — a fetch-or-errand finishable without leaving the village.
+- `medium` — needs a trip or a fight.
+- `hard` — real risk, or a long expedition.
+
+It is **purely optional and purely additive**. A quest that omits it keeps every explicit reward amount exactly as written, so datapacks authored before 1.1.0 behave identically. Difficulty only supplies a default to rewards that ask for one — today that means [`mcaquests:currency`](#rewards). A currency reward with no `difficulty` of its own inherits the quest's; if neither declares one, `medium` is assumed.
 
 ### Text values
 
@@ -86,6 +103,29 @@ Any "text" field is either an inline literal or a translation key:
 { "text": "Bring me 10 wheat." }
 { "translate": "mcaquests.quest.my_quest.offer" }
 ```
+
+**Both are fully supported and always will be** — a small pack can stay inline. But only `translate` can be localized, so if you want your pack to be translatable, use keys and ship a `lang/` folder alongside it.
+
+As of 1.1.0 the entire built-in pack uses `translate`; see [Localization](#localization).
+
+#### Placeholders in translated text
+
+A template quest's `{token}` placeholders can't live inside a translation key, because a translator can't be expected to preserve them. Pass them as ordered arguments instead:
+
+```json
+{
+  "translate": "mcaquests.quest.my_quest.offer",
+  "with": ["{count}", "{crop_name}"]
+}
+```
+
+with the English string using positional format specifiers:
+
+```json
+"mcaquests.quest.my_quest.offer": "The market wants %2$s — could you bring me %1$s of them?"
+```
+
+Using `%1$s` / `%2$s` rather than bare `%s` lets a translation reorder the arguments, which many languages need. A translation whose placeholders don't match the source is a build failure, not a crash at runtime.
 
 ---
 
@@ -231,15 +271,36 @@ Granted atomically on turn-in (items insert-or-drop, then XP, effects, loot, and
 
 | `type` | Fields | Notes |
 |---|---|---|
-| `mcaquests:item` | `item`, `count` (default 1) | Item stack. |
-| `mcaquests:xp` | `amount` | XP points. |
-| `mcaquests:xp_levels` | `levels` | XP levels. |
+| `mcaquests:item` | `item`, `count` (default 1) | Item stack. Never scaled by config — an explicit item reward means exactly what it says. |
+| `mcaquests:currency` | `min`, `max`, `difficulty` — all optional | Semantic money. See [Currency rewards](#currency-rewards). |
+| `mcaquests:xp` | `amount` | XP points. Scaled by `xpRewardMultiplier`. |
+| `mcaquests:xp_levels` | `levels` | XP levels. Scaled by `xpRewardMultiplier`. |
 | `mcaquests:effect` | `effect`, `duration` (ticks), `amplifier` | Status effect. |
 | `mcaquests:hearts` | `amount` | MCA hearts with the giver. Clamped by `min/maxHeartsReward` and scaled by `heartsRewardMultiplier`. |
 | `mcaquests:loot_table` | `loot_table` (resource location) | Rolls a loot table. Requires `allowLootTableRewards` (on by default). |
 | `mcaquests:command` | `command` (string) | Runs a command. **Disabled** unless `allowCommandRewards = true`. |
 | `mcaquests:village_reputation` | `amount` | Adds independent mod-side reputation to the giver's village (see Progression). |
 | `mcaquests:grant_title` | `title` (resource location), `scope` (`village`/`global`, default `village`) | Awards a player title (see Progression). |
+
+### Currency rewards
+
+*(1.1.0)*
+
+`mcaquests:currency` asks for *money* without naming an item. The server decides what money is (emeralds by default, or Create: Numismatics coins, or any item) via `currencyProvider` — so your pack works on an economy modpack and a vanilla-ish server without being rewritten, and without depending on Numismatics.
+
+```json
+{ "type": "mcaquests:currency" }                        // range from the quest's difficulty
+{ "type": "mcaquests:currency", "difficulty": "hard" }  // range from an explicit band
+{ "type": "mcaquests:currency", "min": 4, "max": 9 }    // explicit range, ignores the bands
+```
+
+- With no `min`/`max`, the range comes from the difficulty band's `[rewards.currency]` config (see [CONFIG.md](CONFIG.md#rewardscurrency)).
+- The band is the reward's own `difficulty`, else the quest's, else `medium`.
+- `min`/`max` are validated at load: negative values or `min > max` are reported by `/mcaquests validate`.
+
+**The amount is rolled once, when the quest is accepted**, and stored with it. Reopening the menu, reconnecting, reloading the world, or a retried turn-in packet all read that same number back — a player cannot reroll a payout by reopening the UI. An offer card shows the honest *range*; an accepted quest shows the exact frozen amount, which is what turn-in pays. Project phase rewards freeze the same way, per phase, so everyone who helped — including someone who was offline and collects later — is paid the same.
+
+If the configured currency item can't be resolved (the mod isn't installed, or the id is a typo), the reward falls back to emeralds or is skipped per `currencyFallback`, and logs once.
 
 ---
 
@@ -1259,6 +1320,54 @@ Gated by the `allowFtbqProgressRewards` config option (on by default) — when d
   }
 }
 ```
+
+---
+
+## Localization
+
+*(1.1.0)*
+
+### Making your pack translatable
+
+Everything a player reads — quest titles, dialogue lines, chain arc/chapter names, project phase text, situation offers — accepts either an inline literal or a translation key:
+
+```json
+"title":    { "text": "Sweet Tooth" },                              // not translatable
+"title":    { "translate": "mypack.quest.sweet_tooth.title" }       // translatable
+```
+
+Inline `text` is **permanently supported** — small or personal packs need not bother with keys. But only `translate` can be overridden by a lang file, so a pack meant for others should use keys and ship `assets/<yournamespace>/lang/en_us.json` alongside its data.
+
+If your quest is a template, pass `{token}` placeholders as ordered `with` arguments rather than embedding them in the key — see [Placeholders in translated text](#placeholders-in-translated-text).
+
+### Key naming used by the built-in pack
+
+Follow this scheme and your keys will read the same way as the shipped ones:
+
+| Content | Key |
+|---|---|
+| Quest title | `mcaquests.quest.<quest id path>.title` |
+| Quest dialogue | `mcaquests.quest.<quest id path>.dialogue.<state>` |
+| Chain arc / chapter | `mcaquests.quest.<quest id path>.chain.arc` / `.chapter` |
+| Project title | `mcaquests.project.<project id path>.title` |
+| Project phase line | `mcaquests.project.<project id path>.<phase key>.<state>` |
+| Situation offer | `mcaquests.situation.<situation id path>.offer.title` / `.offer.dialogue.<state>` |
+
+### Shipped locales
+
+| Locale | Coverage |
+|---|---|
+| `en_us` | Source of truth — 1,582 keys |
+| `pt_br` (Português do Brasil) | Complete — all 1,582 keys |
+
+`LocaleParityTest` enforces the rules that keep this honest: every locale must cover all of `en_us` and define nothing `en_us` lacks, placeholders must agree between a translation and its source, no value may be blank or left as a `TODO` marker, no value may mix in a non-Latin writing system, and no built-in data file may go back to hard-coding English via `text`.
+
+### Contributing a translation
+
+1. Copy `assets/mcaquests/lang/en_us.json`.
+2. Translate the values; leave every key exactly as it is.
+3. Keep the placeholders. `%s` counts must match the English, and you may reorder arguments with `%1$s` / `%2$s` where your language needs a different word order.
+4. Run `./gradlew test` — the parity checks will point at anything that drifted.
 
 ---
 

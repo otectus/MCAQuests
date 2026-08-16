@@ -3,23 +3,59 @@
   "id": "mcaquests:butcher_hearty_meal",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:butcher"], "adult_only": true },
-  "title": { "text": "A Hearty Meal" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.butcher_hearty_meal.title"
+  },
   "dialogue": {
-    "offer": { "text": "Hungry mouths at the inn tonight. Bring me 6 cooked steaks and no one goes to bed empty." },
-    "accept": { "text": "Good. A full belly keeps a village content." },
-    "decline": { "text": "More gruel for them, then." },
-    "in_progress": { "text": "Is supper on its way?" },
-    "ready": { "text": "Six steaks, well cooked. The pot's saved tonight." },
-    "complete": { "text": "There's always a plate here for you." }
+    "offer": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.butcher_hearty_meal.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:cooked_beef", "count": 6, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_beef",
+      "count": 6,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

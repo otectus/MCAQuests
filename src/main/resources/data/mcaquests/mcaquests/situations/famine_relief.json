@@ -4,31 +4,73 @@
   "scope": "village",
   "duration_ticks": 24000,
   "cooldown_ticks": 72000,
-  "trigger": { "type": "mcaquests:low_food", "threshold": 16 },
+  "trigger": {
+    "type": "mcaquests:low_food",
+    "threshold": 16
+  },
   "outcomes": {
-    "success": { "reputation": 16 },
-    "failure": { "reputation": -12 }
+    "success": {
+      "reputation": 16
+    },
+    "failure": {
+      "reputation": -12
+    }
   },
   "offer": {
     "weight": 10,
-    "giver": { "professions": ["minecraft:farmer"], "adult_only": true },
-    "title": { "text": "Empty Granaries" },
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "minecraft:farmer"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.famine_relief.offer.title"
+    },
     "dialogue": {
-      "offer": { "text": "The stores are nearly bare and bellies are growling. Bring sixteen loaves of bread and we'll see the village through the lean days." },
-      "accept": { "text": "Thank you. Every loaf keeps a family fed." },
-      "decline": { "text": "Then we ration what little we have and pray for a harvest." },
-      "in_progress": { "text": "Any bread for the stores yet? Sixteen loaves." },
-      "ready": { "text": "The granary's filling again. You've done us a great kindness." },
-      "complete": { "text": "No one goes hungry tonight, thanks to you. The village won't forget it." },
-      "failed": { "text": "The hunger set in before the bread came. A hard season, this." }
+      "offer": {
+        "translate": "mcaquests.situation.famine_relief.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.famine_relief.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.famine_relief.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.famine_relief.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.famine_relief.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.famine_relief.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.famine_relief.offer.dialogue.failed"
+      }
     },
     "objectives": [
-      { "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 16, "consume": true }
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:bread",
+        "count": 16,
+        "consume": true
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
-      { "type": "mcaquests:xp", "amount": 30 },
-      { "type": "mcaquests:hearts", "amount": 22 }
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 30
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
     ]
   }
 }

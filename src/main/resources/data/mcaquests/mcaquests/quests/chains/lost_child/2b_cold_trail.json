@@ -3,32 +3,70 @@
   "id": "mcaquests:lost_child_2b_cold_trail",
   "weight": 15,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "adult_only": true },
-  "title": { "text": "Bring Them Home" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.lost_child_2b_cold_trail.title"
+  },
   "dialogue": {
-    "offer": { "text": "We were too slow at the mine and the trail went cold... but I won't stop. Light a candle at the shrine for me — three of them — so they can find their way back, wherever they are." },
-    "accept": { "text": "Thank you for not giving up on us. Three candles, for hope." },
-    "decline": { "text": "Even a flicker of light would mean so much right now." },
-    "in_progress": { "text": "Have you the candles for the shrine?" },
-    "ready": { "text": "Three little flames against all that dark. It's something. It's hope." },
-    "complete": { "text": "Maybe they'll see the light and follow it home. Maybe. You kept hope alive when I couldn't — and that's a gift in itself." }
+    "offer": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:candle", "count": 3, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:candle",
+      "count": 3,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 24 },
-    { "type": "mcaquests:hearts", "amount": 24 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "chain": {
     "chain": "mcaquests:lost_child",
     "stage": 2,
     "stage_total": 3,
-    "relationship_arc": { "text": "Bring Them Home" },
-    "chapter": { "text": "A Candle for Hope" },
-    "unlocks": ["mcaquests:lost_child_3_homecoming"]
+    "relationship_arc": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.lost_child_2b_cold_trail.chain.chapter"
+    },
+    "unlocks": [
+      "mcaquests:lost_child_3_homecoming"
+    ]
   },
   "conditions": {
     "type": "mcaquests:quest_failed",

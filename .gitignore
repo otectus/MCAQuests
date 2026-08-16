@@ -31,3 +31,6 @@ docs/summaries/
 
 # Local dependency jars (MCA Reborn is fetched from the Modrinth Maven at build time)
 libs/
+
+# Built mod jars copied to the repo root for local testing (real output lives in build/libs/)
+/*.jar

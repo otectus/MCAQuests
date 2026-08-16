@@ -4,31 +4,71 @@
   "scope": "village",
   "duration_ticks": 14000,
   "cooldown_ticks": 48000,
-  "trigger": { "type": "mcaquests:villager_death" },
+  "trigger": {
+    "type": "mcaquests:villager_death"
+  },
   "outcomes": {
-    "success": { "reputation": 12 },
-    "failure": { "reputation": -6 }
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -6
+    }
   },
   "offer": {
     "weight": 8,
-    "giver": { "professions": ["mca:guard"], "adult_only": true },
-    "title": { "text": "Avenge the Fallen" },
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "mca:guard"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.avenge_the_fallen.offer.title"
+    },
     "dialogue": {
-      "offer": { "text": "We buried one of our own today, taken by the monsters. Don't let it be for nothing — hunt down eight of the undead and make them pay." },
-      "accept": { "text": "Good. Let them fear the village again." },
-      "decline": { "text": "Then grief is all we have left." },
-      "in_progress": { "text": "How many have you put down? Eight, I said." },
-      "ready": { "text": "Eight of them. It won't bring them back, but it's something." },
-      "complete": { "text": "The village mourns easier knowing the monsters paid. Thank you." },
-      "failed": { "text": "The moment's passed. We grieve, and we move on." }
+      "offer": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.avenge_the_fallen.offer.dialogue.failed"
+      }
     },
     "objectives": [
-      { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 8 }
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "minecraft:zombie",
+        "count": 8
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
-      { "type": "mcaquests:xp", "amount": 35 },
-      { "type": "mcaquests:hearts", "amount": 20 }
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 35
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
     ]
   }
 }

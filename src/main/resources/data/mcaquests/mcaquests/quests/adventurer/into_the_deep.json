@@ -3,23 +3,58 @@
   "id": "mcaquests:adventurer_into_the_deep",
   "weight": 8,
   "category": "exploration",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
-  "giver": { "professions": ["mca:adventurer"], "adult_only": true, "min_hearts": 10 },
-  "title": { "text": "Into the Deep" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "mca:adventurer"
+    ],
+    "adult_only": true,
+    "min_hearts": 10
+  },
+  "title": {
+    "translate": "mcaquests.quest.adventurer_into_the_deep.title"
+  },
   "dialogue": {
-    "offer": { "text": "I've crossed every ridge in this world but never the fire below. Step through a portal and see the Nether for us both." },
-    "accept": { "text": "Ha! A kindred spirit. Bring back a tale worth telling." },
-    "decline": { "text": "Some doors are best left shut. I understand." },
-    "in_progress": { "text": "Have you braved the portal yet?" },
-    "ready": { "text": "You walked the burning lands and returned! Quickly — tell me everything." },
-    "complete": { "text": "Now THAT is an adventure. We'll drink to it. Take this, friend." }
+    "offer": {
+      "translate": "mcaquests.quest.adventurer_into_the_deep.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.adventurer_into_the_deep.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.adventurer_into_the_deep.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.adventurer_into_the_deep.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.adventurer_into_the_deep.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.adventurer_into_the_deep.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:visit_dimension", "dimension": "minecraft:the_nether" }
+    {
+      "type": "mcaquests:visit_dimension",
+      "dimension": "minecraft:the_nether"
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
-    { "type": "mcaquests:xp", "amount": 40 },
-    { "type": "mcaquests:hearts", "amount": 35 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 40
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ]
 }

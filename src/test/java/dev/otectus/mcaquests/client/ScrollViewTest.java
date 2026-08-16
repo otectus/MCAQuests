@@ -109,4 +109,62 @@ class ScrollViewTest {
         view.scrollBy(200);
         assertEquals(150, view.thumbTop() + height, "fully scrolled thumb ends at the track bottom");
     }
+
+    /**
+     * The original overflow report: with a full villager menu, later cards could not be reached at all.
+     * Ten 60px cards in a 100px window is well past the point where the old fixed layout ran off-screen.
+     */
+    @Test
+    void everyCardOfATenCardMenuCanBeScrolledIntoView() {
+        int cards = 10;
+        int cardHeight = 60;
+        ScrollView view = new ScrollView();
+        view.setViewport(50, 150);
+        view.setContentHeight(cards * cardHeight);
+
+        assertTrue(view.overflows(), "ten cards must not silently fit");
+        for (int i = 0; i < cards; i++) {
+            int cardTop = i * cardHeight;
+            // Scroll from the top each time, the way a player wheels down to a specific card.
+            view.scrollBy(-9999);
+            view.scrollBy(cardTop);
+            assertTrue(view.isFullyVisible(cardTop, cardHeight),
+                    "card " + i + " of " + cards + " should be fully reachable by scrolling");
+        }
+    }
+
+    /** A card scrolled out of the viewport must be reported hidden, which is what suppresses its buttons. */
+    @Test
+    void scrolledAwayCardsAreReportedHidden() {
+        ScrollView view = new ScrollView();
+        view.setViewport(50, 150);
+        view.setContentHeight(600);
+
+        // Scrolled to the very bottom: the first card is far above the viewport.
+        view.scrollBy(9999);
+        assertFalse(view.isFullyVisible(0, 60), "the first card must be hidden once scrolled past");
+        assertTrue(view.screenY(0) < 50, "and must render above the viewport's top edge");
+
+        // ...and the last card is now the visible one.
+        assertTrue(view.isFullyVisible(540, 60), "the last card should be fully visible at the bottom");
+    }
+
+    /**
+     * A tiny window (as at GUI scale 4 on a small screen) leaves a very short viewport. Scrolling must
+     * still be able to bring any card fully into view rather than leaving some permanently clipped.
+     */
+    @Test
+    void aVeryShortViewportStillReachesEveryCard() {
+        int cardHeight = 60;
+        ScrollView view = new ScrollView();
+        view.setViewport(40, 100); // 60px tall — exactly one card
+        view.setContentHeight(10 * cardHeight);
+
+        for (int i = 0; i < 10; i++) {
+            view.scrollBy(-9999);
+            view.scrollBy(i * cardHeight);
+            assertTrue(view.isFullyVisible(i * cardHeight, cardHeight),
+                    "card " + i + " should still be reachable in a one-card-tall viewport");
+        }
+    }
 }

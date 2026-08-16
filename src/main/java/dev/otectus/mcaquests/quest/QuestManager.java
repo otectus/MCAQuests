@@ -32,6 +32,7 @@ import dev.otectus.mcaquests.quest.situation.SituationManager;
 import dev.otectus.mcaquests.quest.situation.SituationOffer;
 import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
+import dev.otectus.mcaquests.quest.reward.CurrencyReward;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
@@ -60,6 +61,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.function.ToIntFunction;
 
@@ -238,7 +240,7 @@ public final class QuestManager {
         Component dialogue = QuestDialogueHooks.resolve(player, villager, def, dialogueState,
                 def.dialogueOr(dialogueState, def.title(resolver), resolver));
         return new QuestCard(def.id(), def.title(resolver), label, dialogue,
-                objectiveLines(player, def, active), rewardLines(def));
+                objectiveLines(player, def, active), rewardLines(def, active));
     }
 
     /** The relationship-arc context line for the UI (arc / "Part 2 of 4" / chapter), or empty for standalone quests. */
@@ -307,12 +309,14 @@ public final class QuestManager {
             situationLink = instanceOpt.get().instanceId();
         }
 
-        data.add(ActiveQuest.create(questId, villagerUuid,
+        ActiveQuest active = ActiveQuest.create(questId, villagerUuid,
                 McaCompat.getVillagerDisplayName(villager),
                 McaCompat.getProfessionId(villager).orElse(null),
                 player.level().dimension().location(),
                 startTime,
-                accepted.objectives().size(), frozen, situationLink));
+                accepted.objectives().size(), frozen, situationLink);
+        freezeRandomizedRewards(player, accepted, active);
+        data.add(active);
         if (situationLink != null && player.getServer() != null) {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
         }
@@ -361,6 +365,31 @@ public final class QuestManager {
     }
 
     /**
+     * Rolls every randomized reward on a freshly accepted quest and stores the result on {@code active},
+     * so the amount the player is shown is the amount they are eventually paid. Runs once, here, at the
+     * single point a quest becomes active — the menu, the log, reconnects, and turn-in all read the stored
+     * value, so there is no way to reroll a payout by reopening the UI or retrying a packet.
+     *
+     * <p>A quest whose {@code currency} reward declares no difficulty inherits the quest's own
+     * {@code difficulty} band, which is what lets a datapack set difficulty once at the top level.
+     */
+    private static void freezeRandomizedRewards(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        List<QuestReward> rewards = def.rewards();
+        for (int i = 0; i < rewards.size(); i++) {
+            if (rewards.get(i) instanceof CurrencyReward currency) {
+                active.freezeReward(i, inheritDifficulty(currency, def).roll(player.getRandom()));
+            }
+        }
+    }
+
+    /** {@code currency} with the quest's difficulty band filled in when it declares none of its own. */
+    private static CurrencyReward inheritDifficulty(CurrencyReward currency, QuestDefinition def) {
+        return currency.difficulty().isPresent()
+                ? currency
+                : new CurrencyReward(currency.min(), currency.max(), def.difficulty());
+    }
+
+    /**
      * Atomic, idempotent completion. Claims the reward slot first (blocks packet-spam dup), consumes
      * objective items, then grants rewards (hearts last), records cooldown/completion, and removes the
      * quest. {@code grantVillager} receives the hearts reward (may be null if the giver is gone).
@@ -375,17 +404,29 @@ public final class QuestManager {
         for (int i = 0; i < def.objectives().size(); i++) {
             def.objectives().get(i).consumeOnTurnIn(player, active.progress(i));
         }
-        for (QuestReward reward : def.rewards()) {
-            if (!(reward instanceof HeartsReward)) {
-                reward.grant(player, grantVillager);
+        List<QuestReward> rewards = def.rewards();
+        for (int i = 0; i < rewards.size(); i++) {
+            QuestReward reward = rewards.get(i);
+            if (reward instanceof HeartsReward) {
+                continue; // hearts run last, below
             }
+            if (reward instanceof CurrencyReward currency) {
+                // Pay the amount frozen at accept time, never a fresh roll. This method is already
+                // guarded by the rewardClaimed flag above, so a retried turn-in packet pays nothing twice.
+                OptionalInt frozenAmount = active.frozenReward(i);
+                if (frozenAmount.isPresent()) {
+                    currency.grantAmount(player, frozenAmount.getAsInt());
+                    continue;
+                }
+            }
+            reward.grant(player, grantVillager);
         }
         for (QuestReward reward : def.rewards()) {
             if (reward instanceof HeartsReward) {
                 reward.grant(player, grantVillager);
             }
         }
-        grantVillageReputationRewards(player, grantVillager, def);
+        grantQuestReputation(player, grantVillager, def, active, "complete");
 
         long now = ((ServerLevel) player.level()).getGameTime();
         data.history().recordCompletion(def.id(), active.villagerUuid());
@@ -418,28 +459,81 @@ public final class QuestManager {
      * mod-side reputation), keyed identically to village-scoped projects so the {@code village_reputation}
      * condition reads the same value. No-op when the giver has no resolvable village.
      */
-    private static void grantVillageReputationRewards(ServerPlayer player, @Nullable Entity grantVillager,
-                                                      QuestDefinition def) {
-        if (grantVillager == null || player.getServer() == null || !(player.level() instanceof ServerLevel level)) {
+    /**
+     * Records the reputation outcome of a finished quest (spec §29.3).
+     *
+     * <h2>Two ways to author it, never both applied</h2>
+     *
+     * <p>A quest may declare a top-level {@code reputation} block, or it may carry the legacy
+     * {@code mcaquests:village_reputation} rewards, or both. When the block exists it is authoritative
+     * and the legacy rewards are treated as display-only; otherwise their sum is translated into one
+     * generic completion outcome. Applying both would silently double a reward the author only meant
+     * once, which is exactly the sort of thing nobody notices until the numbers look wrong.
+     *
+     * <p>Runs inside the atomic claim flow, after the reward-claim guard and before event
+     * notification, and every failure inside the bridge is contained: the player has already done the
+     * work, so a reputation problem must never block the turn-in itself.
+     */
+    private static void grantQuestReputation(ServerPlayer player, @Nullable Entity grantVillager,
+                                             QuestDefinition def, ActiveQuest active, String outcomeKey) {
+        MinecraftServer server = player.getServer();
+        if (grantVillager == null || server == null || !(player.level() instanceof ServerLevel)) {
             return;
         }
-        int amount = def.rewards().stream()
-                .filter(r -> r instanceof dev.otectus.mcaquests.quest.reward.VillageReputationReward)
-                .mapToInt(r -> ((dev.otectus.mcaquests.quest.reward.VillageReputationReward) r).amount())
-                .sum();
-        if (amount == 0) {
+        java.util.Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community> community =
+                dev.otectus.mcaquests.quest.reputation.QuestReputation.resolve(grantVillager);
+        if (community.isEmpty()) {
+            return; // no village resolves: nobody to have an opinion (§12.2)
+        }
+
+        java.util.Optional<dev.otectus.mcaquests.quest.reputation.ReputationOutcome> authored =
+                switch (outcomeKey) {
+                    case "fail" -> def.reputation().failOutcome();
+                    case "abandon" -> def.reputation().abandonOutcome();
+                    default -> def.reputation().completeOutcome();
+                };
+
+        dev.otectus.mcaquests.quest.reputation.ReputationOutcome outcome;
+        if (authored.isPresent()) {
+            outcome = authored.get();
+        } else if ("complete".equals(outcomeKey)) {
+            int legacyAmount = def.rewards().stream()
+                    .filter(r -> r instanceof dev.otectus.mcaquests.quest.reward.VillageReputationReward)
+                    .mapToInt(r -> ((dev.otectus.mcaquests.quest.reward.VillageReputationReward) r).amount())
+                    .sum();
+            if (legacyAmount == 0) {
+                return;
+            }
+            outcome = dev.otectus.mcaquests.quest.reputation.ReputationOutcome.ofShorthand(legacyAmount)
+                    .withDefaultIncident(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock
+                            .Incidents.QUEST_COMPLETED);
+        } else {
+            // §29.3, §33 rule 6: failing or abandoning costs nothing unless the pack says so.
             return;
         }
-        java.util.OptionalInt villageId = McaCompat.getHomeVillageId(grantVillager);
-        if (villageId.isEmpty()) {
-            villageId = McaCompat.findNearestVillageId(level, grantVillager.blockPosition(),
-                    McaQuestsConfig.COMMON.defaultScopeFallbackRadius.get());
+        if (outcome.isNoOp()) {
+            return;
         }
-        if (villageId.isPresent()) {
-            dev.otectus.mcaquests.quest.reputation.ReputationService.award(
-                    player.getServer(), "v:" + villageId.getAsInt(), amount, player);
-        }
+
+        dev.otectus.mcaquests.quest.reputation.QuestReputation.award(
+                dev.otectus.mcaquests.compat.ReputationAward
+                        .builder(server, player.getUUID(), community.get().dimension(),
+                                community.get().villageId(),
+                                dev.otectus.mcaquests.quest.reputation.QuestReputation.SOURCE)
+                        .delta(outcome.delta())
+                        .incident(outcome.incident().orElse(null))
+                        .visibility(outcome.visibility().orElse(null))
+                        .tags(outcome.tags())
+                        .dedupeKey(dev.otectus.mcaquests.quest.reputation.ReputationDedupe.quest(
+                                def.id(), active.villagerUuid(), active.startGameTime(), outcomeKey))
+                        .context("source_title", def.id().getPath())
+                        .context("quest", def.id().toString())
+                        .subject(grantVillager.getUUID(),
+                                dev.otectus.mcaquests.compat.McaCompat.getVillagerDisplayName(grantVillager)
+                                        .getString(), "giver")
+                        .build());
     }
+
 
     public static boolean abandon(ServerPlayer player, Entity villager, ResourceLocation questId) {
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
@@ -712,7 +806,19 @@ public final class QuestManager {
         if (!advanced) {
             return;
         }
-        // Same order as QuestProgressEvents' per-tick sequence: auto-complete first, then ready + sync.
+        settleProgress(player);
+    }
+
+    /**
+     * Runs the same post-progress sequence as the per-tick handler (self-complete SELF_COMPLETE quests →
+     * ready transitions → log sync), so progress pushed in outside the tick loop — an external add-on
+     * signal, or a villager conversation — lands on the client immediately instead of up to a second later.
+     */
+    public static void settleProgress(ServerPlayer player) {
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null) {
+            return;
+        }
         for (ActiveQuest active : new ArrayList<>(data.active())) {
             QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                 QuestDefinition def = active.resolve(base);
@@ -847,8 +953,27 @@ public final class QuestManager {
         return lines;
     }
 
-    private static List<Component> rewardLines(QuestDefinition def) {
-        return def.rewards().stream().map(QuestReward::describe).toList();
+    /**
+     * Reward summaries for a card. An <em>offer</em> ({@code active == null}) shows a randomized reward's
+     * honest range, because no amount has been rolled yet; an <em>accepted</em> quest shows the exact
+     * amount frozen at accept time, which is also what turn-in will pay. The player therefore never sees a
+     * number that differs from what they receive.
+     */
+    private static List<Component> rewardLines(QuestDefinition def, @Nullable ActiveQuest active) {
+        List<QuestReward> rewards = def.rewards();
+        List<Component> lines = new ArrayList<>(rewards.size());
+        for (int i = 0; i < rewards.size(); i++) {
+            QuestReward reward = rewards.get(i);
+            OptionalInt frozen = active == null ? OptionalInt.empty() : active.frozenReward(i);
+            if (reward instanceof CurrencyReward currency) {
+                lines.add(frozen.isPresent()
+                        ? currency.describeFrozen(frozen.getAsInt())
+                        : inheritDifficulty(currency, def).describe());
+            } else {
+                lines.add(reward.describe());
+            }
+        }
+        return lines;
     }
 
     private static long offerSeed(ServerPlayer player, UUID villagerUuid, long worldDay) {

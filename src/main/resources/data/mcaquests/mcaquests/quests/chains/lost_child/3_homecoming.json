@@ -3,36 +3,80 @@
   "id": "mcaquests:lost_child_3_homecoming",
   "weight": 15,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "adult_only": true },
-  "title": { "text": "Bring Them Home" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.lost_child_3_homecoming.title"
+  },
   "dialogue": {
-    "offer": { "text": "Whatever this long search has cost us, I want to mark its end with warmth, not grief. Bring a cake and we'll set a table — a homecoming, in hope or in memory." },
-    "accept": { "text": "Thank you. Come share it with us. You're family now, after all this." },
-    "decline": { "text": "Please — don't let it end on a cold note. Not after everything." },
-    "in_progress": { "text": "Is the cake coming? The table feels too quiet without it." },
-    "ready": { "text": "A proper cake. Sit with us, won't you? You've earned a place at this table." },
-    "complete": { "text": "Through every dark mile of this, you never once turned away. Whatever the woods took from us, they couldn't take that. We will never forget you." }
+    "offer": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:cake", "count": 1, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cake",
+      "count": 1,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
-    { "type": "mcaquests:xp", "amount": 38 },
-    { "type": "mcaquests:hearts", "amount": 38 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 38
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ],
   "chain": {
     "chain": "mcaquests:lost_child",
     "stage": 3,
     "stage_total": 3,
-    "relationship_arc": { "text": "Bring Them Home" },
-    "chapter": { "text": "Homecoming" }
+    "relationship_arc": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.lost_child_3_homecoming.chain.chapter"
+    }
   },
   "conditions": {
     "any_of": [
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:lost_child_2_deeper", "scope": "giver" },
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:lost_child_2b_cold_trail", "scope": "giver" }
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:lost_child_2_deeper",
+        "scope": "giver"
+      },
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:lost_child_2b_cold_trail",
+        "scope": "giver"
+      }
     ]
   }
 }

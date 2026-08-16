@@ -5,6 +5,8 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.objective.FtbqCompleteQuestObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
+import dev.otectus.mcaquests.quest.reward.CurrencyReward;
+import dev.otectus.mcaquests.quest.reward.QuestReward;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModList;
 
@@ -49,6 +51,12 @@ public final class ObjectiveValidator {
                 QuestObjective objective = objectives.get(i);
                 objective.validate(def.id(), i, errors);
                 usesFtbqCompleteQuest |= objective instanceof FtbqCompleteQuestObjective;
+            }
+            List<QuestReward> rewards = def.rewards();
+            for (int i = 0; i < rewards.size(); i++) {
+                if (rewards.get(i) instanceof CurrencyReward currency) {
+                    currency.validate("Quest '" + def.id() + "' reward " + i, errors);
+                }
             }
             if (!usesFtbqCompleteQuest) {
                 continue;

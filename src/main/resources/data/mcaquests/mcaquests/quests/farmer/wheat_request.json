@@ -4,6 +4,7 @@
   "enabled": true,
   "weight": 20,
   "category": "delivery",
+  "difficulty": "medium",
   "repeat": {
     "type": "cooldown",
     "cooldown_ticks": 24000
@@ -30,8 +31,8 @@
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
+    { "type": "mcaquests:currency" },
     { "type": "mcaquests:xp", "amount": 25 },
-    { "type": "mcaquests:hearts", "amount": 25 }
+    { "type": "mcaquests:hearts", "amount": 8 }
   ]
 }

@@ -3,23 +3,59 @@
   "id": "mcaquests:fisherman_fresh_catch",
   "weight": 15,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:fisherman"], "adult_only": true },
-  "title": { "text": "A Fresh Catch" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fisherman_fresh_catch.title"
+  },
   "dialogue": {
-    "offer": { "text": "The nets came up empty today. Could you bring me 8 cod so the village eats well tonight?" },
-    "accept": { "text": "Bless you. The sea owes us all a favor now and then." },
-    "decline": { "text": "Hmph. More for the gulls, then." },
-    "in_progress": { "text": "Any luck with that cod?" },
-    "ready": { "text": "Eight fine cod! Hand them over and I'll square up." },
-    "complete": { "text": "You'll always have a place at my table." }
+    "offer": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fisherman_fresh_catch.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:cod", "count": 8, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cod",
+      "count": 8,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 20 },
-    { "type": "mcaquests:hearts", "amount": 20 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

@@ -4,31 +4,71 @@
   "scope": "village",
   "duration_ticks": 11000,
   "cooldown_ticks": 72000,
-  "trigger": { "type": "mcaquests:night" },
+  "trigger": {
+    "type": "mcaquests:night"
+  },
   "outcomes": {
-    "success": { "reputation": 8 },
-    "failure": { "reputation": -4 }
+    "success": {
+      "reputation": 8
+    },
+    "failure": {
+      "reputation": -4
+    }
   },
   "offer": {
     "weight": 6,
-    "giver": { "professions": ["mca:guard"], "adult_only": true },
-    "title": { "text": "Stand the Night Watch" },
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "mca:guard"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.night_watch.offer.title"
+    },
     "dialogue": {
-      "offer": { "text": "The dark brings monsters to our walls. Stand watch with me tonight — clear five of the undead before dawn and the village sleeps safe." },
-      "accept": { "text": "Good. Keep your blade ready and your eyes open." },
-      "decline": { "text": "Then I'll watch alone, as ever." },
-      "in_progress": { "text": "Still some lurking in the dark. Five, before sunrise." },
-      "ready": { "text": "Dawn's near and the streets are clear. Well watched." },
-      "complete": { "text": "Another night the village wakes whole. My thanks, watcher." },
-      "failed": { "text": "Dawn came and the work was unfinished. Tomorrow night, then." }
+      "offer": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.night_watch.offer.dialogue.failed"
+      }
     },
     "objectives": [
-      { "type": "mcaquests:kill_entity", "entity": "minecraft:zombie", "count": 5 }
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "minecraft:zombie",
+        "count": 5
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-      { "type": "mcaquests:xp", "amount": 20 },
-      { "type": "mcaquests:hearts", "amount": 15 }
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 20
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
     ]
   }
 }

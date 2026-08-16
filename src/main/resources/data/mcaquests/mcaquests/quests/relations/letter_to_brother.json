@@ -3,30 +3,61 @@
   "id": "mcaquests:relations_letter_to_brother",
   "weight": 10,
   "category": "errand",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "A Letter for My Brother" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_letter_to_brother.title"
+  },
   "dialogue": {
-    "offer": { "text": "My brother lives here in the village, but we've quarreled and I'm too proud to go myself. Carry this letter to him — hold it in hand and give it to him directly." },
-    "accept": { "text": "Thank you. He'll know my seal the moment he sees it." },
-    "decline": { "text": "Perhaps I'll find another runner, then." },
-    "in_progress": { "text": "Have you found my brother yet? He's never far from home." },
-    "ready": { "text": "He has the letter? Truly? Bless you." },
-    "complete": { "text": "Family is everything, in the end. My thanks — take this for your trouble." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_letter_to_brother.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_letter_to_brother.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_letter_to_brother.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_letter_to_brother.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_letter_to_brother.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_letter_to_brother.dialogue.complete"
+    }
   },
   "objectives": [
     {
       "type": "mcaquests:deliver_to_villager",
-      "recipient": { "mode": "family", "relation": "sibling" },
+      "recipient": {
+        "mode": "family",
+        "relation": "sibling"
+      },
       "item": "minecraft:paper",
       "count": 1,
       "consume": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 15 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 15
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ],
   "conditions": {
     "type": "mcaquests:related_villager_status",

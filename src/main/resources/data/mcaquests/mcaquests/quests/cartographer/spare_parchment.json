@@ -3,23 +3,59 @@
   "id": "mcaquests:cartographer_spare_parchment",
   "weight": 14,
   "category": "delivery",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["minecraft:cartographer"], "adult_only": true },
-  "title": { "text": "Spare Parchment" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.cartographer_spare_parchment.title"
+  },
   "dialogue": {
-    "offer": { "text": "A map eats paper like nothing else. Twelve sheets and I can chart the next valley." },
-    "accept": { "text": "Excellent. The blank spaces won't fill themselves." },
-    "decline": { "text": "The edges of the map stay a mystery, then." },
-    "in_progress": { "text": "Have you found me any paper?" },
-    "ready": { "text": "Twelve sheets — enough for a proper survey. My thanks." },
-    "complete": { "text": "I'll mark something useful for you on the next map." }
+    "offer": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.cartographer_spare_parchment.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:paper", "count": 12, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:paper",
+      "count": 12,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

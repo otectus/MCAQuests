@@ -3,33 +3,106 @@
   "id": "mcaquests:template_mercenary_bounty",
   "weight": 12,
   "category": "combat",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
-  "giver": { "professions": ["mca:mercenary"], "adult_only": true },
-  "title": { "text": "Contract: {foe_name}" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:mercenary"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.template_mercenary_bounty.title",
+    "with": [
+      "{foe_name}"
+    ]
+  },
   "dialogue": {
-    "offer": { "text": "Got a contract with your name on it — {count} {foe_name} need putting in the ground, and there's coin for whoever's got the stomach. You in?" },
-    "accept": { "text": "Good. Bring me proof, or just come back breathing — either works." },
-    "decline": { "text": "Suit yourself. The bounty doesn't spoil." },
-    "in_progress": { "text": "How's the {foe_name} contract coming? {count}, remember." },
-    "ready": { "text": "{count} {foe_name} down. Clean work — here's your due." },
-    "complete": { "text": "Reliable and deadly. I'll keep your name at the top of the list." }
+    "offer": {
+      "translate": "mcaquests.quest.template_mercenary_bounty.dialogue.offer",
+      "with": [
+        "{count}",
+        "{foe_name}"
+      ]
+    },
+    "accept": {
+      "translate": "mcaquests.quest.template_mercenary_bounty.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.template_mercenary_bounty.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.template_mercenary_bounty.dialogue.in_progress",
+      "with": [
+        "{foe_name}",
+        "{count}"
+      ]
+    },
+    "ready": {
+      "translate": "mcaquests.quest.template_mercenary_bounty.dialogue.ready",
+      "with": [
+        "{count}",
+        "{foe_name}"
+      ]
+    },
+    "complete": {
+      "translate": "mcaquests.quest.template_mercenary_bounty.dialogue.complete"
+    }
   },
   "template": {
     "variables": {
       "foe": {
         "kind": "entity",
-        "ids": ["minecraft:zombie", "minecraft:husk", "minecraft:skeleton", "minecraft:stray", "minecraft:spider", "minecraft:creeper", "minecraft:witch", "minecraft:pillager"]
+        "ids": [
+          "minecraft:zombie",
+          "minecraft:husk",
+          "minecraft:skeleton",
+          "minecraft:stray",
+          "minecraft:spider",
+          "minecraft:creeper",
+          "minecraft:witch",
+          "minecraft:pillager"
+        ]
       },
-      "count": { "kind": "int", "min": 4, "max": 9, "per_player_level": 0.3, "limit": 20 },
-      "bounty": { "kind": "int", "min": 3, "max": 5, "per_heart": 0.03, "limit": 12 }
+      "count": {
+        "kind": "int",
+        "min": 4,
+        "max": 9,
+        "per_player_level": 0.3,
+        "limit": 20
+      },
+      "bounty": {
+        "kind": "int",
+        "min": 3,
+        "max": 5,
+        "per_heart": 0.03,
+        "limit": 12
+      }
     },
     "objectives": [
-      { "type": "mcaquests:kill_entity", "entity": "{foe}", "count": "{count}" }
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "{foe}",
+        "count": "{count}"
+      }
     ],
     "rewards": [
-      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": "{bounty}" },
-      { "type": "mcaquests:xp", "amount": "{count}" },
-      { "type": "mcaquests:hearts", "amount": 14 }
+      {
+        "type": "mcaquests:item",
+        "item": "minecraft:emerald",
+        "count": "{bounty}"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": "{count}"
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 4
+      }
     ]
   }
 }

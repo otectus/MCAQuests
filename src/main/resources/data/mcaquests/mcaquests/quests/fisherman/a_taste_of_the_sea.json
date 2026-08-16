@@ -3,23 +3,58 @@
   "id": "mcaquests:fisherman_a_taste_of_the_sea",
   "weight": 10,
   "category": "fishing",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
-  "giver": { "professions": ["minecraft:fisherman"], "adult_only": true },
-  "title": { "text": "A Taste of the Sea" },
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 36000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.fisherman_a_taste_of_the_sea.title"
+  },
   "dialogue": {
-    "offer": { "text": "The chef wants pufferfish for a fancy dish — risky eating, that. Land me 2 without poisoning yourself." },
-    "accept": { "text": "Handle them with care. They puff up for a reason." },
-    "decline": { "text": "Safer choice, honestly. But less coin." },
-    "in_progress": { "text": "Caught any pufferfish? Carefully, now." },
-    "ready": { "text": "Two puffers, and all your fingers intact! Impressive." },
-    "complete": { "text": "The chef will make something extraordinary. Well earned." }
+    "offer": {
+      "translate": "mcaquests.quest.fisherman_a_taste_of_the_sea.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.fisherman_a_taste_of_the_sea.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.fisherman_a_taste_of_the_sea.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.fisherman_a_taste_of_the_sea.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.fisherman_a_taste_of_the_sea.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.fisherman_a_taste_of_the_sea.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:obtain_item", "item": "minecraft:pufferfish", "count": 2 }
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:pufferfish",
+      "count": 2
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 18 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
   ]
 }

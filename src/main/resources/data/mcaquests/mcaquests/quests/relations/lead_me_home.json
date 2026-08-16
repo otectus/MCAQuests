@@ -3,17 +3,39 @@
   "id": "mcaquests:relations_lead_me_home",
   "weight": 12,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "Lead Me Home" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_lead_me_home.title"
+  },
   "dialogue": {
-    "offer": { "text": "I've strayed too far and the light's failing. I know the way back — just keep close and keep the monsters off me, and I'll lead us home." },
-    "accept": { "text": "Stay near me. I'll set the pace." },
-    "decline": { "text": "Then I'll find my own way, and hope for the best." },
-    "in_progress": { "text": "This way — and don't let anything creep up behind us." },
-    "ready": { "text": "Home, and in one piece! I knew I could count on you." },
-    "complete": { "text": "Safe behind the walls at last. I won't forget this kindness." },
-    "failed": { "text": "We never made it... I was lucky to crawl away. Another time, perhaps." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_lead_me_home.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_lead_me_home.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_lead_me_home.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_lead_me_home.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_lead_me_home.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_lead_me_home.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_lead_me_home.dialogue.failed"
+    }
   },
   "failure": {
     "fail_on_giver_death": true,
@@ -23,24 +45,49 @@
   "objectives": [
     {
       "type": "mcaquests:escort_entity",
-      "villager": { "mode": "self" },
-      "destination": { "anchor": "home_village" },
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "home_village"
+      },
       "radius": 8,
       "lead": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 4 },
-    { "type": "mcaquests:xp", "amount": 24 },
-    { "type": "mcaquests:hearts", "amount": 26 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "any_of": [
-      { "type": "mcaquests:giver_distance_from_village", "min_distance": 64, "require_outside_border": true },
-      { "all_of": [
-          { "type": "mcaquests:time", "period": "NIGHT" },
-          { "type": "mcaquests:giver_distance_from_village", "min_distance": 24, "require_outside_border": true }
-      ] }
+      {
+        "type": "mcaquests:giver_distance_from_village",
+        "min_distance": 64,
+        "require_outside_border": true
+      },
+      {
+        "all_of": [
+          {
+            "type": "mcaquests:time",
+            "period": "NIGHT"
+          },
+          {
+            "type": "mcaquests:giver_distance_from_village",
+            "min_distance": 24,
+            "require_outside_border": true
+          }
+        ]
+      }
     ]
   }
 }

@@ -3,17 +3,39 @@
   "id": "mcaquests:relations_stranded_at_dusk",
   "weight": 11,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "Stranded at Dusk" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_stranded_at_dusk.title"
+  },
   "dialogue": {
-    "offer": { "text": "I wandered too far and now the sun's nearly gone. I can find the way myself if you'll keep the monsters off me — walk with me to the nearest village before something finds us." },
-    "accept": { "text": "Bless you. I'll lead — you just keep your blade between me and the dark." },
-    "decline": { "text": "Then I'll have to chance the road alone. Pray for me." },
-    "in_progress": { "text": "Stay close behind me — I daren't run." },
-    "ready": { "text": "Walls and torchlight at last! We made it." },
-    "complete": { "text": "I'd have died out there without you. I won't forget this." },
-    "failed": { "text": "They caught us on the road... I barely escaped. Leave me be a while." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.relations_stranded_at_dusk.dialogue.failed"
+    }
   },
   "failure": {
     "fail_on_giver_death": true,
@@ -23,21 +45,41 @@
   "objectives": [
     {
       "type": "mcaquests:escort_entity",
-      "villager": { "mode": "self" },
-      "destination": { "anchor": "nearest_village", "radius": 160 },
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "nearest_village",
+        "radius": 160
+      },
       "radius": 10,
       "lead": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
-    { "type": "mcaquests:xp", "amount": 32 },
-    { "type": "mcaquests:hearts", "amount": 30 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 32
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ],
   "conditions": {
     "all_of": [
-      { "type": "mcaquests:giver_distance_from_village", "min_distance": 96, "require_outside_border": true },
-      { "type": "mcaquests:time", "period": "NIGHT" }
+      {
+        "type": "mcaquests:giver_distance_from_village",
+        "min_distance": 96,
+        "require_outside_border": true
+      },
+      {
+        "type": "mcaquests:time",
+        "period": "NIGHT"
+      }
     ]
   }
 }

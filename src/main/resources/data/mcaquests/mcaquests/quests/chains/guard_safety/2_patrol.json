@@ -3,34 +3,79 @@
   "id": "mcaquests:guard_safety_2_patrol",
   "weight": 14,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "professions": ["mca:guard"], "adult_only": true },
-  "title": { "text": "Keeping the Peace" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_safety_2_patrol.title"
+  },
   "dialogue": {
-    "offer": { "text": "Spiders have nested past the treeline. Clear out 4 of them before they reach the houses — and be quick about it." },
-    "accept": { "text": "Go now. Daylight won't wait for you." },
-    "decline": { "text": "Then pray they don't come calling tonight." },
-    "in_progress": { "text": "Those spiders won't wait. Move!" },
-    "ready": { "text": "The treeline's quiet again. Good work." },
-    "complete": { "text": "Reliable as the sunrise, you are. Let's see about the recruits." },
-    "failed": { "text": "Too slow — the nest reached the fences while you dawdled. Catch your breath and we'll try again." }
+    "offer": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.complete"
+    },
+    "failed": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.dialogue.failed"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:kill_entity", "entity": "minecraft:spider", "count": 4 }
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:spider",
+      "count": 4
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 28 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 28
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "chain": {
     "chain": "mcaquests:guard_safety",
     "stage": 2,
     "stage_total": 3,
-    "relationship_arc": { "text": "Keeping the Peace" },
-    "chapter": { "text": "Beat the Treeline" },
-    "prerequisites": ["mcaquests:guard_safety_1_clear"],
-    "unlocks": ["mcaquests:guard_safety_3_militia", "mcaquests:guard_safety_2b_amends"]
+    "relationship_arc": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.guard_safety_2_patrol.chain.chapter"
+    },
+    "prerequisites": [
+      "mcaquests:guard_safety_1_clear"
+    ],
+    "unlocks": [
+      "mcaquests:guard_safety_3_militia",
+      "mcaquests:guard_safety_2b_amends"
+    ]
   },
   "failure": {
     "deadline_ticks": 6000,

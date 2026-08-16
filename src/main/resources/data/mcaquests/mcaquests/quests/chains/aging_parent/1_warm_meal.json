@@ -3,41 +3,83 @@
   "id": "mcaquests:aging_parent_1_warm_meal",
   "weight": 12,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "adult_only": true },
-  "title": { "text": "The Twilight Years" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.aging_parent_1_warm_meal.title"
+  },
   "dialogue": {
-    "offer": { "text": "My parent grows older and frailer by the season, and I can't always be there. Would you carry six loaves to them and see they eat a proper warm meal? It would ease my heart." },
-    "accept": { "text": "Thank you. You'll find them near home — they don't wander far these days." },
-    "decline": { "text": "I understand. I'll try to get away myself, somehow." },
-    "in_progress": { "text": "Has my parent had a proper meal yet?" },
-    "ready": { "text": "They ate well? Oh, that's a weight off my shoulders." },
-    "complete": { "text": "Knowing someone looked in on them means more than I can say. Come back — there's more I'd ask of a friend like you." }
+    "offer": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.dialogue.complete"
+    }
   },
   "objectives": [
     {
       "type": "mcaquests:deliver_to_villager",
-      "recipient": { "mode": "family", "relation": "parent" },
+      "recipient": {
+        "mode": "family",
+        "relation": "parent"
+      },
       "item": "minecraft:bread",
       "count": 6,
       "consume": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 2 },
-    { "type": "mcaquests:xp", "amount": 18 },
-    { "type": "mcaquests:hearts", "amount": 20 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "chain": {
     "chain": "mcaquests:aging_parent",
     "stage": 1,
     "stage_total": 3,
-    "relationship_arc": { "text": "The Twilight Years" },
-    "chapter": { "text": "A Warm Meal" },
-    "unlocks": ["mcaquests:aging_parent_2_remedy"]
+    "relationship_arc": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.aging_parent_1_warm_meal.chain.chapter"
+    },
+    "unlocks": [
+      "mcaquests:aging_parent_2_remedy"
+    ]
   },
   "weight_bonus": [
-    { "when": { "type": "mcaquests:hearts", "min": 25 }, "amount": 6 }
+    {
+      "when": {
+        "type": "mcaquests:hearts",
+        "min": 25
+      },
+      "amount": 6
+    }
   ],
   "conditions": {
     "type": "mcaquests:related_villager_status",

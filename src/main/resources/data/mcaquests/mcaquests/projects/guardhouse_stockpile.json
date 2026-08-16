@@ -18,7 +18,7 @@
         { "type": "mcaquests:donate_item", "item": "minecraft:arrow", "count": 64 }
       ],
       "rewards": [
-        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 }, "target": "contributors" }
+        { "reward": { "type": "mcaquests:currency", "difficulty": "medium" }, "target": "contributors" }
       ]
     },
     {
@@ -32,7 +32,7 @@
       ],
       "rewards": [
         { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 12 }, "target": "all_participants" },
-        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 }, "target": "top_contributor" },
+        { "reward": { "type": "mcaquests:currency", "difficulty": "medium" }, "target": "top_contributor" },
         { "reward": { "type": "mcaquests:village_reputation", "amount": 5 }, "target": "sponsor_village" }
       ]
     }

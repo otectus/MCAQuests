@@ -3,8 +3,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
-import dev.otectus.mcaquests.compat.McaCompat;
-import dev.otectus.mcaquests.project.state.ProjectSavedData;
+import dev.otectus.mcaquests.quest.reputation.QuestReputation;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestConditionType;
@@ -34,16 +33,13 @@ public record VillageReputationCondition(Optional<Integer> min, Optional<Integer
 
     @Override
     public boolean test(QuestContext context) {
-        ServerLevel level = context.level();
-        OptionalInt villageId = McaCompat.getHomeVillageId(context.villager());
-        if (villageId.isEmpty()) {
-            int radius = McaQuestsConfig.COMMON.defaultScopeFallbackRadius.get();
-            villageId = McaCompat.findNearestVillageId(level, context.villager().blockPosition(), radius);
+        // Reads THIS player's standing with the giver's village through the bridge, so the value a
+        // condition tests is the value a reward wrote — whether MCA: Reputation owns it or Quests does.
+        Optional<QuestReputation.Community> community = QuestReputation.resolve(context.villager());
+        if (community.isEmpty()) {
+            return false; // no village resolves: fail safe to "not met", exactly as before
         }
-        if (villageId.isEmpty()) {
-            return false;
-        }
-        int rep = ProjectSavedData.get(level.getServer()).reputation("v:" + villageId.getAsInt());
+        int rep = QuestReputation.score(context.player(), community.get());
         return min.map(m -> rep >= m).orElse(true) && max.map(m -> rep <= m).orElse(true);
     }
 }

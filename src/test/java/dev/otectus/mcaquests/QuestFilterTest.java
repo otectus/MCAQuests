@@ -42,7 +42,7 @@ class QuestFilterTest {
         GiverSpec giver = new GiverSpec(professions, true, Integer.MIN_VALUE, Integer.MAX_VALUE);
         return new QuestDefinition(id, true, 1, category, Optional.empty(), RepeatRule.DEFAULT, giver,
                 Map.of(), List.of(), List.of(), TurnInSpec.DEFAULT, Optional.empty(), chain, Optional.empty(),
-                Optional.empty(), OfferShaping.NONE);
+                Optional.empty(), OfferShaping.NONE, dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE);
     }
 
     private static ChainSpec chain(String chainId, int stage, Optional<Integer> stageTotal) {

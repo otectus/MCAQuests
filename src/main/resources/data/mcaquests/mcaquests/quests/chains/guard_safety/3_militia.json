@@ -3,36 +3,83 @@
   "id": "mcaquests:guard_safety_3_militia",
   "weight": 14,
   "category": "chain",
-  "repeat": { "type": "once" },
-  "giver": { "professions": ["mca:guard"], "adult_only": true },
-  "title": { "text": "Keeping the Peace" },
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.guard_safety_3_militia.title"
+  },
   "dialogue": {
-    "offer": { "text": "Folk want to defend themselves but have nothing to drill with. Forge me 2 iron swords for the recruits and we'll make a militia of them." },
-    "accept": { "text": "Good steel makes good soldiers. I'll round them up." },
-    "decline": { "text": "Bare hands it is, then. Foolishness." },
-    "in_progress": { "text": "Are the training blades ready?" },
-    "ready": { "text": "Two fine swords — the recruits will be thrilled." },
-    "complete": { "text": "The village can stand on its own now, and that's your doing. You'll always have a place on this wall." }
+    "offer": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.dialogue.complete"
+    }
   },
   "objectives": [
-    { "type": "mcaquests:item_delivery", "item": "minecraft:iron_sword", "count": 2, "consume": true }
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:iron_sword",
+      "count": 2,
+      "consume": true
+    }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 },
-    { "type": "mcaquests:xp", "amount": 38 },
-    { "type": "mcaquests:hearts", "amount": 38 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 38
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
   ],
   "chain": {
     "chain": "mcaquests:guard_safety",
     "stage": 3,
     "stage_total": 3,
-    "relationship_arc": { "text": "Keeping the Peace" },
-    "chapter": { "text": "Raise the Militia" }
+    "relationship_arc": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.guard_safety_3_militia.chain.chapter"
+    }
   },
   "conditions": {
     "any_of": [
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:guard_safety_2_patrol", "scope": "giver" },
-      { "type": "mcaquests:quest_completed", "quest": "mcaquests:guard_safety_2b_amends", "scope": "giver" }
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:guard_safety_2_patrol",
+        "scope": "giver"
+      },
+      {
+        "type": "mcaquests:quest_completed",
+        "quest": "mcaquests:guard_safety_2b_amends",
+        "scope": "giver"
+      }
     ]
   }
 }

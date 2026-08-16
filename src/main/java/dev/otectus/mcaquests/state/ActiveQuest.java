@@ -14,7 +14,10 @@ import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
@@ -41,6 +44,13 @@ public final class ActiveQuest {
      */
     @Nullable
     private final UUID situationInstance;
+    /**
+     * Reward amounts rolled once at accept time, keyed by index into the quest's reward list — currently
+     * only {@code mcaquests:currency}. Persisted so re-opening the menu, reconnecting, or reloading the
+     * world all show and pay the same number; there is deliberately no code path that rolls a second time.
+     * Absent on pre-1.1.0 saves and on quests with no randomized reward, in which case nothing is written.
+     */
+    private final Map<Integer, Integer> frozenRewards = new HashMap<>();
     private boolean rewardClaimed;
     private boolean readyNotified;
 
@@ -152,6 +162,21 @@ public final class ActiveQuest {
         return progress.get(index);
     }
 
+    /**
+     * Rolls and stores {@code amount} for reward {@code index} if nothing is stored yet, and returns the
+     * stored value either way. Idempotent by construction: the first writer wins, so a duplicated accept
+     * packet or a re-entrant call can never replace an amount the player has already been shown.
+     */
+    public int freezeReward(int index, int amount) {
+        return frozenRewards.computeIfAbsent(index, i -> amount);
+    }
+
+    /** The amount frozen for reward {@code index}, or empty if that reward has no frozen value. */
+    public OptionalInt frozenReward(int index) {
+        Integer value = frozenRewards.get(index);
+        return value == null ? OptionalInt.empty() : OptionalInt.of(value);
+    }
+
     public boolean rewardClaimed() {
         return rewardClaimed;
     }
@@ -192,6 +217,11 @@ public final class ActiveQuest {
         if (situationInstance != null) {
             tag.putUUID("situation", situationInstance);
         }
+        if (!frozenRewards.isEmpty()) {
+            CompoundTag frozen = new CompoundTag();
+            frozenRewards.forEach((index, amount) -> frozen.putInt(String.valueOf(index), amount));
+            tag.put("frozen_rewards", frozen);
+        }
         return tag;
     }
 
@@ -219,6 +249,16 @@ public final class ActiveQuest {
                 situationInstance);
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");
+        if (tag.contains("frozen_rewards", Tag.TAG_COMPOUND)) {
+            CompoundTag frozen = tag.getCompound("frozen_rewards");
+            for (String key : frozen.getAllKeys()) {
+                try {
+                    quest.frozenRewards.put(Integer.parseInt(key), frozen.getInt(key));
+                } catch (NumberFormatException ignored) {
+                    // Drop an unparseable index rather than failing the whole quest load.
+                }
+            }
+        }
         return quest;
     }
 }

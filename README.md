@@ -21,7 +21,9 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 - 🏘️ **Village projects** — shared, multi-stage **community goals** that the whole server works on together. A sponsor villager rallies the town — repair the well, restock the guardhouse, restore the library — and **any player can contribute**: progress is shared and lives in the world save, so donations, kills, and builds all bank into one common pool. Pick a **scope** (player, villager, family, profession, or village), and phases hand out **shared rewards** (to contributors, the top contributor, everyone who helped, or the village) plus mod-side village reputation. Fully datapack-driven and backward compatible; 6 example projects included.
 - 🏅 **Progression: reputation tiers & titles** — village reputation now climbs a named ladder (Stranger → Acquaintance → Friend → Honored → Revered), with a tier-up toast and auto-earned **titles**. Gate quests on a player's standing with the `reputation_tier` condition, award titles with the `grant_title` reward, and track it all in a new **Journal** screen (village reputation, tiers, titles, and a completed-quest archive). Fully datapack-driven (`reputation_tiers/`, `titles/`) and backward compatible.
 - 🎯 **10 objective types** — deliver items, gather, craft, fish, kill mobs, break/place blocks, visit biomes or dimensions, and talk to professions.
-- 🎁 **7 reward types** — items, XP, XP levels, status effects, loot tables, commands (off by default), and **MCA hearts**.
+- 🎁 **8 reward types** — items, **currency**, XP, XP levels, status effects, loot tables, commands (off by default), and **MCA hearts**.
+- 💰 **Semantic currency & difficulty bands** — a quest asks for *money*, not for emeralds. Tag a quest `easy` / `medium` / `hard` and the server decides the payout range and the coin: vanilla emeralds by default, **Create: Numismatics** coins, or any item you like — one config line, no datapack rewritten. Numismatics is resolved by registry id and never linked against, so it stays a genuine optional. Amounts are rolled **once at accept time** and frozen, so the number on the card is the number you're paid and reopening the menu can't reroll it.
+- 🌍 **Fully localizable, fully translated** — every one of the 1,582 built-in strings is a translation key, and **Brazilian Portuguese** ships complete alongside English: interface, objectives, rewards, quest dialogue, relationship arcs, projects, and situations. Automated parity checks keep every locale honest.
 - 🔒 **25 condition types** + `all_of` / `any_of` / `not` composites — gate offers by hearts, profession, biome, dimension, time, weather, held item, advancement, level, random chance, and quest history (completed / not-completed / failed / abandoned).
 - 💞 **MCA-aware conditions** — gate quests on the villager's life-sim state: whether they're your **spouse** or **family**, their **relationship status**, **age**, **personality**, **mood**, **village/home**, **health**, or **infection**, and even whether a **relative is missing or has died**. All optional, datapack-driven, and fail-safe; 6 sample quests included (spouse errand, child's request, sick-villager remedy, guard patrol, missing-child search, memorial).
 - 🧭 **Quest tracking** — a keybind-toggled **Quest Log** (with an **Abandon** button per quest, so you can always drop one even if its giver is gone), a fully repositionable **HUD tracker** that names the giver, and a **toast + sound** when a quest is ready to turn in.
@@ -40,6 +42,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | **[Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api)** | **Required** (Forge) — MCA Reborn depends on it |
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
 | **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2001.4.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
+| **Create: Numismatics** | *Optional* — set `currencyProvider = NUMISMATICS` to pay quest rewards in coins ([CONFIG.md](CONFIG.md#rewardscurrency)) |
 
 MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
@@ -51,7 +54,9 @@ MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
 ## How it works
 
-Right-click a villager → **Quests** → pick an offer → **Accept**. Track it via the HUD or the Quest Log keybind (bind "Open Quest Log" in Controls). When the objective is done you'll get a toast; return to an eligible villager and **Complete** it to claim your rewards and earn hearts. Changed your mind? **Abandon** it from the villager's menu or straight from the Quest Log.
+Right-click a villager → **Quests** → pick an offer → **Accept**.
+
+> **Note for players upgrading from 1.0.0:** sneak-right-clicking a villager no longer opens the quest menu. That was a leftover debug shortcut, and because it cancelled the interaction it also swallowed MCA's own sneak actions (the villager editor book, inventory, trading) and broke other mods that use sneak-right-click. The injected **Quests** button is now the only entry point, and MCA: Quests never cancels an entity interaction. Track it via the HUD or the Quest Log keybind (bind "Open Quest Log" in Controls). When the objective is done you'll get a toast; return to an eligible villager and **Complete** it to claim your rewards and earn hearts. Changed your mind? **Abandon** it from the villager's menu or straight from the Quest Log.
 
 ## Configuration
 

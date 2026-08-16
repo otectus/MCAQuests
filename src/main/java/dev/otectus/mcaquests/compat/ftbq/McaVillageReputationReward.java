@@ -19,13 +19,16 @@ import java.util.Map;
 import java.util.OptionalInt;
 
 /**
- * {@code mcaquests:village_reputation} (spec §16.1) — grants village reputation through the same
- * {@link ReputationService#award} funnel every other reputation-moving path uses, so tier-ups and toasts
- * fire normally. {@code NEAREST} resolves via {@link McaCompat#findNearestVillageId} within 128 blocks
- * (matching {@code ProjectRewardDistributor}'s {@code VILLAGE_RESOLUTION_RADIUS}); {@code
- * HIGHEST_REPUTATION} takes the argmax over {@link ReputationService#allVillageReputations}, breaking
- * ties by nearest village center to the player. Either way, no resolvable village banks the claim
- * (§16.1: "never silently waste a claim") rather than dropping it.
+ * {@code mcaquests:village_reputation} (spec §16.1) — grants village reputation through
+ * {@code QuestReputation}, the same funnel every other reputation-moving path uses, so tier-ups,
+ * toasts, and (with MCA: Reputation installed) the named incident all happen exactly once. The claim
+ * carries a dedupe key derived from the FTB quest id, so a duplicated claim packet cannot pay twice.
+ *
+ * <p>{@code NEAREST} resolves via {@link McaCompat#findNearestVillageId} within 128 blocks (matching
+ * {@code ProjectRewardDistributor}'s {@code VILLAGE_RESOLUTION_RADIUS}); {@code HIGHEST_REPUTATION}
+ * takes the argmax over this player's own recorded village standing, breaking ties by nearest village
+ * centre. Either way, no resolvable village banks the claim (§16.1: "never silently waste a claim")
+ * rather than dropping it.
  */
 public class McaVillageReputationReward extends McaRewardBase {
 
@@ -59,7 +62,15 @@ public class McaVillageReputationReward extends McaRewardBase {
         }
         OptionalInt villageId = resolveVillage(level, server, player);
         if (villageId.isPresent()) {
-            ReputationService.award(server, "v:" + villageId.getAsInt(), amount, player);
+            dev.otectus.mcaquests.quest.reputation.QuestReputation.award(dev.otectus.mcaquests.compat.ReputationAward
+                    .builder(server, player.getUUID(), level.dimension().location(),
+                            villageId.getAsInt(), dev.otectus.mcaquests.quest.reputation.QuestReputation.SOURCE)
+                    .delta(amount)
+                    .incident(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock
+                            .Incidents.QUEST_COMPLETED)
+                    .dedupeKey(dev.otectus.mcaquests.quest.reputation.ReputationDedupe
+                            .ftbReward(id, player.getUUID()))
+                    .build());
             return;
         }
         // Not found - bank it (§16.1: never silently waste a claim). Re-attempted on login/daily tick
@@ -77,7 +88,7 @@ public class McaVillageReputationReward extends McaRewardBase {
 
     /** Argmax over recorded village reputations; ties broken by nearest village center to the player. */
     private OptionalInt highestReputationVillage(ServerLevel level, MinecraftServer server, ServerPlayer player) {
-        Map<Integer, Integer> reputations = ReputationService.allVillageReputations(server);
+        Map<Integer, Integer> reputations = dev.otectus.mcaquests.quest.reputation.QuestReputation.overworldVillageScores(server, player.getUUID());
         if (reputations.isEmpty()) {
             return OptionalInt.empty();
         }

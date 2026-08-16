@@ -3,16 +3,36 @@
   "id": "mcaquests:relations_escort_to_market",
   "weight": 9,
   "category": "social",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
-  "giver": { "adult_only": true },
-  "title": { "text": "To Market, To Market" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 96000
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.relations_escort_to_market.title"
+  },
   "dialogue": {
-    "offer": { "text": "I've goods to sell but the road to the next village runs through rough country. Keep me safe and I'll lead the way to the market town." },
-    "accept": { "text": "Wonderful. Stay close and let me pick the path." },
-    "decline": { "text": "Then my wares stay in the cart another week, I suppose." },
-    "in_progress": { "text": "The market's not far now — mind the road behind us." },
-    "ready": { "text": "Stalls and customers at last! We've arrived." },
-    "complete": { "text": "A safe road and a full market — couldn't ask for more. My thanks, friend." }
+    "offer": {
+      "translate": "mcaquests.quest.relations_escort_to_market.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.relations_escort_to_market.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.relations_escort_to_market.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.relations_escort_to_market.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.relations_escort_to_market.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.relations_escort_to_market.dialogue.complete"
+    }
   },
   "failure": {
     "fail_on_giver_death": true,
@@ -22,16 +42,29 @@
   "objectives": [
     {
       "type": "mcaquests:escort_entity",
-      "villager": { "mode": "self" },
-      "destination": { "anchor": "nearest_village", "radius": 256 },
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "nearest_village",
+        "radius": 256
+      },
       "radius": 12,
       "lead": true
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 5 },
-    { "type": "mcaquests:xp", "amount": 30 },
-    { "type": "mcaquests:hearts", "amount": 26 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "type": "mcaquests:giver_distance_from_village",

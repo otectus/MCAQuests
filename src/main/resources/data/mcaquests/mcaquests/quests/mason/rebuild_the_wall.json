@@ -3,30 +3,63 @@
   "id": "mcaquests:mason_rebuild_the_wall",
   "weight": 11,
   "category": "infrastructure",
-  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
-  "giver": { "professions": ["minecraft:mason"], "adult_only": true },
-  "title": { "text": "Rebuild the Wall" },
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:mason"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.mason_rebuild_the_wall.title"
+  },
   "dialogue": {
-    "offer": { "text": "The wall's breached where the raiders came through, and a gap in the stone is an invitation. Set sixteen stone bricks along the breach and make it whole again." },
-    "accept": { "text": "Good. Lay them true — a crooked wall is half a wall." },
-    "decline": { "text": "Then the gap gapes, and we all sleep lighter for it." },
-    "in_progress": { "text": "How's the breach coming? Stone by stone, that's the way." },
-    "ready": { "text": "Solid masonry, flush and square. The wall holds again." },
-    "complete": { "text": "Honest work, honestly done. The village stands a little safer for your hands." }
+    "offer": {
+      "translate": "mcaquests.quest.mason_rebuild_the_wall.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.mason_rebuild_the_wall.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.mason_rebuild_the_wall.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.mason_rebuild_the_wall.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.mason_rebuild_the_wall.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.mason_rebuild_the_wall.dialogue.complete"
+    }
   },
   "objectives": [
     {
       "type": "mcaquests:build_near_location",
       "block": "minecraft:stone_bricks",
-      "location": { "anchor": "home_village" },
+      "location": {
+        "anchor": "home_village"
+      },
       "radius": 24,
       "count": 16
     }
   ],
   "rewards": [
-    { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "mcaquests:xp", "amount": 24 },
-    { "type": "mcaquests:hearts", "amount": 22 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ],
   "conditions": {
     "type": "mcaquests:village_member"
