@@ -10,7 +10,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  */
 public final class QuestNetwork {
 
-    // Bumped to 8 — v2.0.0 is the 1.21.1/NeoForge payload rewrite: the SimpleChannel is gone and every
+    // Bumped to 8 — the 1.21.1/NeoForge payload rewrite: the SimpleChannel is gone and every
     // packet is a CustomPacketPayload on a versioned PayloadRegistrar. A registrar-version mismatch (or a
     // client without the mod) cannot join — the same hard-mismatch behaviour the SimpleChannel handshake
     // gave us. (7 was v1.1.0: the whole built-in pack moved from literal text to translation keys, so quest

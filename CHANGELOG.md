@@ -4,13 +4,14 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-08-16
+## [1.1.0+1.21.1] - 2026-08-16
 
 ### Changed — platform move to Minecraft 1.21.1 / NeoForge
 
 **MCA: Quests now runs on Minecraft 1.21.1 with NeoForge 21.1.x and MCA Reborn 7.7.x.** Gameplay,
-datapack format, config keys, and save data are unchanged; the version jump signals the platform
-break, not a content change. The 1.20.1 Forge line ends at 1.1.0.
+datapack format, config keys, and save data are unchanged, and so is the mod version — the platform
+is carried by the Minecraft/loader targeting, not the version number. The 1.20.1 Forge line ends at
+the same 1.1.0.
 
 - **Requires:** NeoForge 21.1.0+ and MCA Reborn `[7.7,8)`. **Architectury API is no longer needed** —
   MCA 1.21.1 dropped it, so it is neither a dependency nor bundled.
