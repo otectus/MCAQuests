@@ -4,6 +4,44 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-08-16
+
+### Changed — platform move to Minecraft 1.21.1 / NeoForge
+
+**MCA: Quests now runs on Minecraft 1.21.1 with NeoForge 21.1.x and MCA Reborn 7.7.x.** Gameplay,
+datapack format, config keys, and save data are unchanged; the version jump signals the platform
+break, not a content change. The 1.20.1 Forge line ends at 1.1.0.
+
+- **Requires:** NeoForge 21.1.0+ and MCA Reborn `[7.7,8)`. **Architectury API is no longer needed** —
+  MCA 1.21.1 dropped it, so it is neither a dependency nor bundled.
+- **Network protocol bumped to `"8"`** — the SimpleChannel is gone; every packet is a
+  `CustomPacketPayload` on a versioned NeoForge `PayloadRegistrar`. As before, client and server must
+  match: a vanilla client, a client without the mod, or a mismatched version cannot join.
+- **Save data carries over, including from 1.20.1 Forge worlds.** World stores
+  (`mcaquests_projects.dat`, `mcaquests_situations.dat`) are loader-independent and load as-is.
+  Per-player quest data moved from a Forge capability to a NeoForge data attachment; a one-shot
+  login-time shim imports the old `ForgeCaps → mcaquests:player_quests` tag from the player file the
+  first time a player joins an upgraded world (logged once as `migrated_from_forge`), so quest logs,
+  history, titles, and stats survive the upgrade.
+- **Public API events moved packages with the loader**: the `QuestCompletedEvent` family now extends
+  `net.neoforged.bus.api.Event` and is posted on the NeoForge game bus (`NeoForge.EVENT_BUS`). Addon
+  mods must recompile against the new loader; the event names, fields, and firing points are
+  unchanged.
+- **MCA internals are now `net.conczin.mca`** (MCA dropped its per-loader packages). All access
+  remains isolated behind `McaCompat`. One MCA API casualty: MCA 1.21.1 removed the offline
+  "unspent hearts" queue, so the offline-villager fallback of hearts rewards is a logged no-op —
+  observable behavior is identical to 1.20.1, where villager-keyed queue entries were never applied.
+- **FTB Quests optional integration targets the 2101.x line** (`ftb-quests-neoforge`), still
+  compile-only, still classload-gated, never bundled.
+- **MCA: Reputation optional integration awaits that mod's own 1.21.1 port**; the build excludes
+  `compat/reputation` sources when the ported sibling's classes are absent. The built-in per-player
+  standing store (the default) is fully functional either way.
+- Datapack parsing keeps 1.20.1 semantics: DFU made `optionalFieldOf` strict on 1.21, so the codecs
+  use `lenientOptionalFieldOf` — a present-but-invalid optional field still falls back to its
+  default exactly as before (the mod's own `StrictCodecs` fields stay loud by design).
+- Future work (deliberately not in this release): MCA 1.21.1 added a native per-player village
+  reputation map; Quests' own standing store remains canonical (spec 29.1).
+
 ## [1.1.0] - 2026-08-13
 
 ### Added — MCA: Reputation integration (optional)

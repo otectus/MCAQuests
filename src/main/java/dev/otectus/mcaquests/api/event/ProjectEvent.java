@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.Event;
 
 /**
- * Base class for community-project lifecycle events (spec 0.4.0), posted on the Forge event bus so
+ * Base class for community-project lifecycle events (spec 0.4.0), posted on the NeoForge game bus so
  * other mods/datapacks can observe project progress. All are server-side and not cancellable.
  */
 public abstract class ProjectEvent extends Event {

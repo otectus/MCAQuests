@@ -21,7 +21,7 @@ import net.minecraft.world.entity.Entity;
  * <p>Register your own objective / reward / condition types during your mod's setup
  * (e.g. {@code FMLCommonSetupEvent.enqueueWork}) using your own namespace for {@code id}; the JSON
  * {@code "type"} field then dispatches to your {@link Codec}. To react to quest progress, subscribe
- * to the events in {@code dev.otectus.mcaquests.api.event} on the Forge event bus.
+ * to the events in {@code dev.otectus.mcaquests.api.event} on the NeoForge game bus.
  */
 public final class McaQuestsApi {
 

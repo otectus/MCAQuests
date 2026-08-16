@@ -12,8 +12,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Client-only landing point for server packets. Referenced exclusively through
- * {@code DistExecutor} so it is never classloaded on a dedicated server.
+ * Client-only landing point for server packets. Referenced exclusively from
+ * {@code ClientPayloadHandlers} (the S2C payload-handler class) so it is never classloaded on a
+ * dedicated server.
  */
 public final class QuestClientHandlers {
 

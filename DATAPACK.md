@@ -35,12 +35,12 @@ You don't need to make a mod — quests load from any datapack. To add your own 
 
    Use **your own namespace** for the folder under `data/` (here, `mypack`) and for each quest's `id` (`mypack:wood_run`). Don't reuse `mcaquests` — that's the bundled pack, and a same-id quest would collide. Subfolders under `quests/` (like `errands/`) are organizational only.
 
-2. **Add `pack.mcmeta`** (the `pack_format` for 1.20.1 is `15`):
+2. **Add `pack.mcmeta`** (the data `pack_format` for 1.21.1 is `48`):
 
    ```json
    {
      "pack": {
-       "pack_format": 15,
+       "pack_format": 48,
        "description": "My MCA quests"
      }
    }
@@ -1373,7 +1373,7 @@ Follow this scheme and your keys will read the same way as the shipped ones:
 
 ## Extending with code
 
-Add-on mods can register custom objective / reward / condition types under their own namespace via `dev.otectus.mcaquests.api.McaQuestsApi` (during mod setup), and react to quests through the Forge-bus events in `dev.otectus.mcaquests.api.event` (`QuestAccepted/Ready/Completed/Abandoned/Failed`).
+Add-on mods can register custom objective / reward / condition types under their own namespace via `dev.otectus.mcaquests.api.McaQuestsApi` (during mod setup), and react to quests through the NeoForge game-bus events in `dev.otectus.mcaquests.api.event` (`QuestAccepted/Ready/Completed/Abandoned/Failed`).
 
 ### MCA: Conversations hooks
 

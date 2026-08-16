@@ -1,8 +1,8 @@
 # MCA: Quests
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-brightgreen)](https://www.minecraft.net/)
-[![Loader](https://img.shields.io/badge/Loader-Forge%2047.4.10%2B-1f425f)](https://files.minecraftforge.net/)
-[![Requires](https://img.shields.io/badge/Requires-MCA%20Reborn%207.6.x-orange)](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen)](https://www.minecraft.net/)
+[![Loader](https://img.shields.io/badge/Loader-NeoForge%2021.1.x-1f425f)](https://neoforged.net/)
+[![Requires](https://img.shields.io/badge/Requires-MCA%20Reborn%207.7.x-orange)](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE.md)
 
 An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** villagers. Right-click a villager, open the new **Quests** menu, accept a job, complete it out in the world, and turn it in for items, XP, status effects — and a meaningful boost to your **MCA hearts** with that specific villager.
@@ -36,20 +36,19 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 
 | | |
 |---|---|
-| **Minecraft** | 1.20.1 |
-| **Mod loader** | Forge 47.4.10 or newer |
-| **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.6.x |
-| **[Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api)** | **Required** (Forge) — MCA Reborn depends on it |
+| **Minecraft** | 1.21.1 |
+| **Mod loader** | NeoForge 21.1.0 or newer |
+| **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.7.x (NeoForge build) |
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
-| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2001.4.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
+| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests)** | *Optional* — 2101.1.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
 | **Create: Numismatics** | *Optional* — set `currencyProvider = NUMISMATICS` to pay quest rewards in coins ([CONFIG.md](CONFIG.md#rewardscurrency)) |
 
 MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
 ## Installation
 
-1. Install **Forge** for Minecraft 1.20.1.
-2. Drop **MCA Reborn**, **Architectury API**, and **MCA: Quests** into your `mods/` folder.
+1. Install **NeoForge** for Minecraft 1.21.1.
+2. Drop **MCA Reborn** (the NeoForge build) and **MCA: Quests** into your `mods/` folder.
 3. Launch. Right-click an adult MCA villager and click **Quests**.
 
 ## How it works
@@ -77,17 +76,17 @@ Emergent **situations** load from `data/<namespace>/mcaquests/situations/**.json
 
 ## Building from source
 
-Requires **JDK 17**.
+Requires **JDK 21** (the foojay toolchain resolver provisions it automatically).
 
 ```bash
 ./gradlew build
 ```
 
-The jar lands in `build/libs/`. MCA Reborn and Architectury are pulled automatically (MCA via the Modrinth Maven). Note: `gradle.properties` pins `org.gradle.java.home` to a local JDK 17 path — adjust it to your own JDK 17 install, or remove it and run Gradle with `JAVA_HOME` pointed at JDK 17.
+The jar lands in `build/libs/`. MCA Reborn is pulled automatically via the Modrinth Maven, pinned by Modrinth *version id* so resolution always grabs the NeoForge file (the plain version string is ambiguous between the Fabric and NeoForge uploads).
 
 ## Compatibility note
 
-MCA Reborn exposes no public API, so MCA: Quests links against its internal classes and is therefore pinned to the **7.6.x** line. A future MCA major version may require an update here. All MCA access is isolated behind a single `McaCompat` adapter to make that easy.
+MCA Reborn exposes no public API, so MCA: Quests links against its internal classes and is therefore pinned to the **7.7.x** line. A future MCA major version may require an update here. All MCA access is isolated behind a single `McaCompat` adapter to make that easy.
 
 The **MCA: Conversations** integration is a soft dependency: MCA: Quests exposes the dialogue and objective hooks (`QuestDialogueHooks`, `ExternalSignalObjective`) and the add-on registers itself against them. When it isn't installed the hooks simply no-op — quest dialogue falls back to the static datapack text and objectives progress through their normal detectors.
 

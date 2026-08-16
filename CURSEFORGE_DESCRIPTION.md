@@ -6,7 +6,7 @@ MCA: Quests adds an RPG-style quest system to **Minecraft Comes Alive: Reborn**.
 
 Complete the work, return, and turn it in for loot, XP, and — most importantly — a real boost to your **hearts** with that villager. Quests are the fastest, most natural way to win a village over.
 
-> ⚠️ **Requires [MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn) and [Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api).** This is an add-on — it does nothing without MCA Reborn installed.
+> ⚠️ **Requires [MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn) (NeoForge build).** This is an add-on — it does nothing without MCA Reborn installed.
 
 ## ✨ What you get
 
@@ -28,7 +28,7 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 
 ## 🎮 How to play
 
-1. Install **MCA Reborn**, **Architectury API**, and **MCA: Quests**.
+1. Install **MCA Reborn** and **MCA: Quests**.
 2. Right-click an adult villager and click **Quests**. *(Sneak-right-click is no longer a shortcut — it was interfering with MCA's own villager menus and with other mods.)*
 3. Pick an offer, **Accept**, and head out. Watch the tracker fill up.
 4. Come back and **Complete** it to claim your rewards and win their heart.
@@ -38,12 +38,12 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 - Add your own quests via datapack: `data/<namespace>/mcaquests/quests/**.json`. Run `/mcaquests export-schema` for a ready-to-edit example.
 - Author shared **village projects** the same way, from `data/<namespace>/mcaquests/projects/**.json` — pick a scope, lay out the phases, and reward your contributors.
 - Full schema reference and config docs are on the [GitHub repository](https://github.com/otectus/MCAQuests).
-- A Java API + Forge events let other mods register custom objective/reward/condition types and react to quest progress.
+- A Java API + NeoForge events let other mods register custom objective/reward/condition types and react to quest progress.
 
 ## 📋 Details
 
-- **Minecraft:** 1.20.1 · **Forge** 47.4.10+
-- **Requires:** MCA Reborn 7.6.x + Architectury API
+- **Minecraft:** 1.21.1 · **NeoForge** 21.1.0+
+- **Requires:** MCA Reborn 7.7.x (NeoForge build)
 - **Optional:** MCA: Conversations — voiced quest dialogue & conversation-driven objectives
 - **Optional:** FTB Quests — two-way book integration · **Create: Numismatics** — pay quest rewards in coins
 - **Languages:** English, Português (Brasil)

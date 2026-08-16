@@ -9,7 +9,7 @@ import net.neoforged.bus.api.Event;
 import javax.annotation.Nullable;
 
 /**
- * Base class for MCA: Quests lifecycle events, fired server-side on the Forge event bus
+ * Base class for MCA: Quests lifecycle events, fired server-side on the NeoForge game bus
  * ({@code NeoForge.EVENT_BUS}) so other mods can react (spec section 28). These are
  * notifications — they expose immutable data + live entities, never the mod's internal mutable state.
  */

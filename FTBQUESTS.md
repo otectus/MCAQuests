@@ -143,7 +143,7 @@ The single most important thing to understand before building a book around this
 | **FTB Quests removed after a book was built with `mcaquests:` tasks/rewards** | FTB's own fallback keeps them as inert "Unknown type" placeholders — no crash. **If someone opens the editor and hits Save in that state, FTB strips the unknown fields from those tasks/rewards permanently.** Back up `config/ftbquests/quests/` before removing the mod if you might reinstall it later. |
 | **MCA: Quests present, FTB Quests removed later** | Any datapack `ftbq_*` conditions/objective fall back as documented above; an active `ftbq_complete_quest` quest simply never satisfies (the player can abandon it); nothing FTB-specific is stored in the MCA: Quests world save, so nothing there is at risk. |
 | **`/ftbquests change_progress` used to reset a task** | The task re-completes on its next check unless the underlying MCA state changed too — see [Team-credit semantics](#team-credit-semantics). |
-| **Client/server FTB Quests mismatch** | Unaffected by this integration specifically — Forge's own mod-list handshake catches it, same as any other mod. A client/server MCA: Quests **version** mismatch is caught by the network protocol handshake (bumped to `"6"` for this release; see the [changelog](CHANGELOG.md)). |
+| **Client/server FTB Quests mismatch** | Unaffected by this integration specifically — NeoForge's own mod-list handshake catches it, same as any other mod. A client/server MCA: Quests **version** mismatch is caught by the payload registrar version (bumped to `"8"` for the 1.21.1 port; see the [changelog](CHANGELOG.md)). |
 
 ---
 

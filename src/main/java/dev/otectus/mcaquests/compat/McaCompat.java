@@ -42,12 +42,11 @@ import java.util.UUID;
 /**
  * The single point of contact with Minecraft Comes Alive: Reborn.
  *
- * <p><b>Why {@code net.conczin.mca.*} and not {@code net.mca.*}?</b> MCA Reborn ships a Forgix-merged
- * "Universal" jar (Forge + Fabric + Quilt). Forgix relocates each loader's classes under a
- * loader-named root package, so the Forge classes are physically {@code net.conczin.mca.*} in both
- * the production jar and our dev-remapped (deobf) jar. There is no runtime restoration to
- * {@code net.mca.*}, so referencing the {@code forge.} prefix is correct for dev <em>and</em>
- * production. (MCA's own source is {@code net.mca.*}; the prefix is added at merge time.)
+ * <p><b>Why {@code net.conczin.mca.*}?</b> MCA Reborn 1.21.1 moved to a single common package —
+ * no per-loader wrapper packages and no Forgix relocation (the 1.20.1 line shipped a merged
+ * "Universal" jar whose Forge classes were relocated to {@code forge.net.mca.*}). The NeoForge jar
+ * is mojmap and loads directly in dev, so the same package is correct for dev <em>and</em>
+ * production.
  *
  * <p>"Favor" in the spec maps to MCA "hearts" ({@link Memories#getHearts()}), reached per-player via
  * {@code villager.getVillagerBrain().getMemoriesForPlayer(player)}. Keep <em>all</em> MCA imports in
