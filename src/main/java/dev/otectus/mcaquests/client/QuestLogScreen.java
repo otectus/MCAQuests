@@ -2,7 +2,7 @@ package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.network.QuestAbandonFromLogC2SPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
+import net.neoforged.neoforge.network.PacketDistributor;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import net.minecraft.ChatFormatting;
@@ -89,7 +89,7 @@ public class QuestLogScreen extends Screen {
         // Abandoning destroys progress irreversibly, so make the player name the quest they mean.
         this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
             if (confirmed) {
-                QuestNetwork.CHANNEL.sendToServer(
+                PacketDistributor.sendToServer(
                         new QuestAbandonFromLogC2SPacket(entry.villagerUuid(), entry.questId()));
             }
             this.minecraft.setScreen(this);
@@ -125,7 +125,7 @@ public class QuestLogScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         view.scrollBy(-(int) (delta * 12));
         return true;
     }
@@ -141,7 +141,7 @@ public class QuestLogScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics);
+        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
         graphics.drawCenteredString(this.font, getTitle(), centerX, 16, 0xFFFFFF);
 

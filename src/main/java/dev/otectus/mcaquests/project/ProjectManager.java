@@ -9,7 +9,6 @@ import dev.otectus.mcaquests.network.ProjectMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.ProjectMenuStatus;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.network.ProjectPhaseToastS2CPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
 import dev.otectus.mcaquests.project.objective.ProjectKillObjective;
@@ -28,7 +27,7 @@ import dev.otectus.mcaquests.api.event.ProjectEvent;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.ProgressionStats;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -39,8 +38,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -215,7 +214,7 @@ public final class ProjectManager {
                 cards.add(buildCard(player, villager, def, state, scope));
             });
         }
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        PacketDistributor.sendToPlayer(player,
                 new ProjectMenuDataS2CPacket(villager.getUUID(), cards));
     }
 
@@ -299,7 +298,7 @@ public final class ProjectManager {
         if (def.conditions().isEmpty()) {
             return true;
         }
-        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        PlayerQuestData data = QuestAttachments.get(player).orElse(null);
         if (data == null) {
             return true;
         }
@@ -349,7 +348,7 @@ public final class ProjectManager {
                 ProjectRewardDistributor.distribute(server, level, data, state, def, current);
                 ProjectReputation.apply(server, level, state, def, def.reputation().phaseOutcome(),
                         "phase", current);
-                MinecraftForge.EVENT_BUS.post(new ProjectEvent.PhaseAdvanced(def, state, current));
+                NeoForge.EVENT_BUS.post(new ProjectEvent.PhaseAdvanced(def, state, current));
                 broadcastToast(server, state, def, current);
             }
             int next = current + 1;
@@ -391,7 +390,7 @@ public final class ProjectManager {
         if (context == null) {
             return true;
         }
-        PlayerQuestData pdata = QuestCapabilities.get(player).orElse(null);
+        PlayerQuestData pdata = QuestAttachments.get(player).orElse(null);
         if (pdata == null) {
             return true;
         }
@@ -404,8 +403,8 @@ public final class ProjectManager {
         for (UUID uuid : state.participants()) {
             ServerPlayer p = server.getPlayerList().getPlayer(uuid);
             if (p != null) {
-                QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> p),
-                        new ProjectPhaseToastS2CPacket(title, phaseLabel));
+                PacketDistributor.sendToPlayer(p,
+                new ProjectPhaseToastS2CPacket(title, phaseLabel));
                 syncProjects(p);
             }
         }
@@ -585,9 +584,9 @@ public final class ProjectManager {
         }
         state.addParticipant(player.getUUID());
         // ProgressionStats (spec section 11.2): +amount for the contributing player, keyed by project id.
-        QuestCapabilities.get(player).ifPresent(pdata ->
+        QuestAttachments.get(player).ifPresent(pdata ->
                 ProgressionStats.increment(pdata.stats().projectContributions(), state.projectId(), amount));
-        MinecraftForge.EVENT_BUS.post(new ProjectEvent.Contributed(def, state, player, objectiveIndex, amount));
+        NeoForge.EVENT_BUS.post(new ProjectEvent.Contributed(def, state, player, objectiveIndex, amount));
     }
 
     /**
@@ -647,7 +646,7 @@ public final class ProjectManager {
             case FAIL -> {
                 state.setStatus(ProjectStatus.FAILED);
                 addReputation(server, state, def, def.reputation().failOutcome(), "fail", -1);
-                MinecraftForge.EVENT_BUS.post(new ProjectEvent.Failed(def, state));
+                NeoForge.EVENT_BUS.post(new ProjectEvent.Failed(def, state));
             }
             case PAUSE -> state.setStatus(ProjectStatus.PAUSED);
             case TRANSFER -> {
@@ -673,11 +672,11 @@ public final class ProjectManager {
         for (UUID uuid : state.participants()) {
             ServerPlayer participant = server.getPlayerList().getPlayer(uuid);
             if (participant != null) {
-                QuestCapabilities.get(participant).ifPresent(pdata ->
+                QuestAttachments.get(participant).ifPresent(pdata ->
                         ProgressionStats.increment(pdata.stats().projectCompletions(), state.projectId(), 1));
             }
         }
-        MinecraftForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
+        NeoForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
     }
 
     private static boolean tryTransfer(MinecraftServer server, ProjectState state, ProjectDefinition def) {
@@ -717,7 +716,8 @@ public final class ProjectManager {
                     scopeLabel(def), phaseLabel(def, state.currentPhase()),
                     objectiveLines(player, def, state, state.currentPhase()))));
         }
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProjectLogSyncS2CPacket(entries));
+        PacketDistributor.sendToPlayer(player,
+                new ProjectLogSyncS2CPacket(entries));
     }
 
     private static Component sponsorLogLabel(ServerPlayer player, ProjectState state) {

@@ -8,7 +8,7 @@ import dev.otectus.mcaquests.quest.ChainSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.state.PlayerQuestData;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -52,7 +52,7 @@ public class McaChainCompletedTask extends McaBooleanTaskBase {
         if (chainId.isEmpty()) {
             return false;
         }
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> data = QuestAttachments.get(player);
         if (data.isEmpty()) {
             return false;
         }

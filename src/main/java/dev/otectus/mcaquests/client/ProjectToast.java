@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 /** Toast shown when a community-project phase advances (spec 0.4.0). */
 public class ProjectToast implements Toast {
 
-    private static final ResourceLocation TEXTURE = new ResourceLocation("textures/gui/toasts.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/toasts.png");
 
     private final Component projectTitle;
     private final Component phaseLabel;

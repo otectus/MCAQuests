@@ -16,20 +16,20 @@ public record QuestCard(ResourceLocation questId, Component title, Component cha
 
     public static void encode(FriendlyByteBuf buf, QuestCard card) {
         buf.writeResourceLocation(card.questId);
-        buf.writeComponent(card.title);
-        buf.writeComponent(card.chainLabel);
-        buf.writeComponent(card.dialogue);
-        buf.writeCollection(card.objectives, FriendlyByteBuf::writeComponent);
-        buf.writeCollection(card.rewards, FriendlyByteBuf::writeComponent);
+        NetComponents.write(buf, card.title);
+        NetComponents.write(buf, card.chainLabel);
+        NetComponents.write(buf, card.dialogue);
+        buf.writeCollection(card.objectives, NetComponents::write);
+        buf.writeCollection(card.rewards, NetComponents::write);
     }
 
     public static QuestCard decode(FriendlyByteBuf buf) {
         return new QuestCard(
                 buf.readResourceLocation(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent));
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                buf.readCollection(ArrayList::new, NetComponents::read),
+                buf.readCollection(ArrayList::new, NetComponents::read));
     }
 }

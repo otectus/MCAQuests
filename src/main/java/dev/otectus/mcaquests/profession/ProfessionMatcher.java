@@ -24,10 +24,10 @@ public final class ProfessionMatcher {
 
     /** Small built-in alias table for LOOSE mode (datapack-driven aliases are a later addition). */
     private static final Map<ResourceLocation, Set<ResourceLocation>> ALIASES = Map.of(
-            new ResourceLocation("mca", "guard"),
-            Set.of(new ResourceLocation("minecraft", "none")),
-            new ResourceLocation("mca", "outlaw"),
-            Set.of(new ResourceLocation("minecraft", "none")));
+            ResourceLocation.fromNamespaceAndPath("mca", "guard"),
+            Set.of(ResourceLocation.fromNamespaceAndPath("minecraft", "none")),
+            ResourceLocation.fromNamespaceAndPath("mca", "outlaw"),
+            Set.of(ResourceLocation.fromNamespaceAndPath("minecraft", "none")));
 
     private ProfessionMatcher() {
     }

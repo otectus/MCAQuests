@@ -10,13 +10,13 @@ import net.minecraft.network.chat.Component;
 public record ProjectObjectiveLine(Component label, int sharedCurrent, int required, int yourContribution) {
 
     public static void encode(FriendlyByteBuf buf, ProjectObjectiveLine line) {
-        buf.writeComponent(line.label);
+        NetComponents.write(buf, line.label);
         buf.writeVarInt(line.sharedCurrent);
         buf.writeVarInt(line.required);
         buf.writeVarInt(line.yourContribution);
     }
 
     public static ProjectObjectiveLine decode(FriendlyByteBuf buf) {
-        return new ProjectObjectiveLine(buf.readComponent(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+        return new ProjectObjectiveLine(NetComponents.read(buf), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
     }
 }

@@ -51,8 +51,8 @@ class ProjectStateTest {
     void projectStateRoundTripsAndAdvances() {
         UUID sponsor = UUID.randomUUID();
         UUID player = UUID.randomUUID();
-        ProjectState state = new ProjectState(new ResourceLocation("mcaquests:well_repair"),
-                ProjectScope.VILLAGE, "v:12", new ResourceLocation("minecraft:overworld"),
+        ProjectState state = new ProjectState(ResourceLocation.parse("mcaquests:well_repair"),
+                ProjectScope.VILLAGE, "v:12", ResourceLocation.parse("minecraft:overworld"),
                 new BlockPos(10, 64, -20), OptionalInt.of(12), 1000L, 2);
         state.addSponsor(sponsor);
         state.addParticipant(player);
@@ -84,7 +84,7 @@ class ProjectStateTest {
 
     @Test
     void instanceKeyRoundTrips() {
-        ProjectInstanceKey key = new ProjectInstanceKey(new ResourceLocation("mcaquests:guardhouse_stockpile"),
+        ProjectInstanceKey key = new ProjectInstanceKey(ResourceLocation.parse("mcaquests:guardhouse_stockpile"),
                 ProjectScope.PROFESSION, "p:12:minecraft:librarian");
         Optional<ProjectInstanceKey> parsed = ProjectInstanceKey.parse(key.asString());
         assertTrue(parsed.isPresent());
@@ -94,9 +94,9 @@ class ProjectStateTest {
 
     @Test
     void graphCyclesDetectsFollowUpLoops() {
-        ResourceLocation a = new ResourceLocation("mcaquests:a");
-        ResourceLocation b = new ResourceLocation("mcaquests:b");
-        ResourceLocation c = new ResourceLocation("mcaquests:c");
+        ResourceLocation a = ResourceLocation.parse("mcaquests:a");
+        ResourceLocation b = ResourceLocation.parse("mcaquests:b");
+        ResourceLocation c = ResourceLocation.parse("mcaquests:c");
         assertTrue(GraphCycles.findCycle(Map.of(a, List.of(b), b, List.of(c), c, List.of())).isEmpty());
         assertTrue(GraphCycles.findCycle(Map.of(a, List.of(b), b, List.of(a))).isPresent());
     }
@@ -105,7 +105,7 @@ class ProjectStateTest {
 
     @Test
     void legacyPendingRewardTagWritesNoKindKeyAndRoundTrips() {
-        PendingReward legacy = PendingReward.ofPhase(new ResourceLocation("mcaquests:well_repair"), 1, 2);
+        PendingReward legacy = PendingReward.ofPhase(ResourceLocation.parse("mcaquests:well_repair"), 1, 2);
         CompoundTag tag = legacy.save();
 
         // Byte-identical to the pre-1.0.0 shape: no "kind" key, exactly the three legacy fields.
@@ -133,7 +133,7 @@ class ProjectStateTest {
         Optional<PendingReward> loaded = PendingReward.load(tag);
         assertTrue(loaded.isPresent());
         assertEquals(PendingReward.Kind.PROJECT_PHASE, loaded.get().kind());
-        assertEquals(new ResourceLocation("mcaquests:guardhouse_stockpile"), loaded.get().projectId());
+        assertEquals(ResourceLocation.parse("mcaquests:guardhouse_stockpile"), loaded.get().projectId());
         assertEquals(3, loaded.get().phase());
         assertEquals(0, loaded.get().rewardIndex());
     }
@@ -166,7 +166,7 @@ class ProjectStateTest {
 
     @Test
     void bankedTitleRoundTrips() {
-        ResourceLocation titleId = new ResourceLocation("mcaquests:hero_of_the_village");
+        ResourceLocation titleId = ResourceLocation.parse("mcaquests:hero_of_the_village");
         PendingReward pending = PendingReward.ofBanked(BankedReward.title(titleId, "VILLAGE"));
         Optional<PendingReward> loaded = PendingReward.load(pending.save());
         assertTrue(loaded.isPresent());
@@ -180,7 +180,7 @@ class ProjectStateTest {
     void mixedPendingListRoundTripsThroughProjectSavedData() {
         ProjectSavedData data = new ProjectSavedData();
         UUID player = UUID.randomUUID();
-        data.addPending(player, PendingReward.ofPhase(new ResourceLocation("mcaquests:well_repair"), 0, 1));
+        data.addPending(player, PendingReward.ofPhase(ResourceLocation.parse("mcaquests:well_repair"), 0, 1));
         data.addBankedReward(player, BankedReward.reputation(15));
         data.addBankedReward(player, BankedReward.hearts(5, "VILLAGE_RESIDENTS"));
 
@@ -204,7 +204,7 @@ class ProjectStateTest {
         CompoundTag root = new CompoundTag();
         CompoundTag pend = new CompoundTag();
         ListTag rewards = new ListTag();
-        rewards.add(PendingReward.ofPhase(new ResourceLocation("mcaquests:well_repair"), 0, 0).save());
+        rewards.add(PendingReward.ofPhase(ResourceLocation.parse("mcaquests:well_repair"), 0, 0).save());
 
         CompoundTag fromTheFuture = new CompoundTag();
         fromTheFuture.putString("kind", "some_future_kind_this_build_predates");

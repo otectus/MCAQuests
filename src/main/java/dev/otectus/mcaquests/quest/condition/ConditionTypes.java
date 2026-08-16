@@ -62,7 +62,7 @@ public final class ConditionTypes {
      * Reputation the condition is simply never met (see the class docs).
      */
     public static final QuestConditionType<dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition>
-            HAS_INCIDENT = register(new net.minecraft.resources.ResourceLocation("mcareputation",
+            HAS_INCIDENT = register(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mcareputation",
                     "has_incident"),
             dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition.CODEC);
 
@@ -142,7 +142,7 @@ public final class ConditionTypes {
 
     private static Codec<QuestCondition> buildConditionCodec() {
         Codec<QuestCondition> self = CODEC;
-        Codec<QuestCondition> leaf = TYPE_CODEC.dispatch("type", QuestCondition::type, QuestConditionType::codec);
+        Codec<QuestCondition> leaf = TYPE_CODEC.dispatch("type", QuestCondition::type, type -> dev.otectus.mcaquests.data.StrictCodecs.dispatchMap(type.codec()));
         Codec<QuestCondition> allOf = self.listOf().fieldOf("all_of").codec()
                 .xmap(list -> (QuestCondition) new AllOfCondition(list), c -> ((AllOfCondition) c).conditions());
         Codec<QuestCondition> anyOf = self.listOf().fieldOf("any_of").codec()
@@ -197,7 +197,7 @@ public final class ConditionTypes {
     }
 
     public static <T extends QuestCondition> QuestConditionType<T> register(String path, Codec<T> codec) {
-        return register(new ResourceLocation(McaQuests.MOD_ID, path), codec);
+        return register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, path), codec);
     }
 
     public static boolean exists(ResourceLocation id) {

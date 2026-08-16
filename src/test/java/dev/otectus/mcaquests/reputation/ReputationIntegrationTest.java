@@ -35,9 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ReputationIntegrationTest {
 
-    private static final ResourceLocation OVERWORLD = new ResourceLocation("minecraft", "overworld");
-    private static final ResourceLocation NETHER = new ResourceLocation("minecraft", "the_nether");
-    private static final ResourceLocation LADDER = new ResourceLocation("mcaquests", "default");
+    private static final ResourceLocation OVERWORLD = ResourceLocation.fromNamespaceAndPath("minecraft", "overworld");
+    private static final ResourceLocation NETHER = ResourceLocation.fromNamespaceAndPath("minecraft", "the_nether");
+    private static final ResourceLocation LADDER = ResourceLocation.fromNamespaceAndPath("mcaquests", "default");
     private static final UUID ALICE = UUID.fromString("00000000-0000-0000-0000-0000000000a1");
     private static final UUID BOB = UUID.fromString("00000000-0000-0000-0000-0000000000b2");
 
@@ -68,7 +68,7 @@ class ReputationIntegrationTest {
         VillageStanding standing = new VillageStanding();
         standing.addScore(ALICE, OVERWORLD, 3, 40);
         standing.setTierHighWater(ALICE, LADDER, OVERWORLD, 3, "acquaintance");
-        standing.grantVillageTitle(ALICE, OVERWORLD, 3, new ResourceLocation("mcaquests:honored_of_village"));
+        standing.grantVillageTitle(ALICE, OVERWORLD, 3, ResourceLocation.parse("mcaquests:honored_of_village"));
         standing.markMigrated(ALICE, "mcaquests:legacy_reputation_v1", "1");
 
         CompoundTag tag = standing.save();
@@ -77,7 +77,7 @@ class ReputationIntegrationTest {
         assertEquals(40, loaded.score(ALICE, OVERWORLD, 3));
         assertEquals("acquaintance", loaded.tierHighWater(ALICE, LADDER, OVERWORLD, 3).orElseThrow());
         assertTrue(loaded.hasVillageTitle(ALICE, OVERWORLD, 3,
-                new ResourceLocation("mcaquests:honored_of_village")));
+                ResourceLocation.parse("mcaquests:honored_of_village")));
         assertTrue(loaded.hasMigrated(ALICE, "mcaquests:legacy_reputation_v1"));
     }
 
@@ -171,7 +171,7 @@ class ReputationIntegrationTest {
         assertEquals(QuestReputationBlock.Incidents.PROJECT_COMPLETED, defaulted.incident().orElseThrow());
 
         ReputationOutcome explicit = new ReputationOutcome(5,
-                java.util.Optional.of(new ResourceLocation("example:custom")), java.util.Optional.empty(),
+                java.util.Optional.of(ResourceLocation.parse("example:custom")), java.util.Optional.empty(),
                 List.of(), ReputationOutcome.Recipients.RESOLVING_PLAYER);
         assertEquals(ReputationOutcome.Recipients.RESOLVING_PLAYER,
                 explicit.withDefaultRecipients(ReputationOutcome.Recipients.ALL_PARTICIPANTS).recipients(),
@@ -215,7 +215,7 @@ class ReputationIntegrationTest {
     @Test
     void theSameOutcomeProducesTheSameKey() {
         UUID giver = UUID.randomUUID();
-        ResourceLocation quest = new ResourceLocation("example:make_amends");
+        ResourceLocation quest = ResourceLocation.parse("example:make_amends");
         assertEquals(ReputationDedupe.quest(quest, giver, 100L, "complete"),
                 ReputationDedupe.quest(quest, giver, 100L, "complete"));
     }
@@ -224,20 +224,20 @@ class ReputationIntegrationTest {
     void differentOutcomesNeverCollide() {
         UUID giverA = UUID.randomUUID();
         UUID giverB = UUID.randomUUID();
-        ResourceLocation quest = new ResourceLocation("example:make_amends");
+        ResourceLocation quest = ResourceLocation.parse("example:make_amends");
 
         List<String> keys = List.of(
                 ReputationDedupe.quest(quest, giverA, 100L, "complete"),
                 ReputationDedupe.quest(quest, giverA, 100L, "fail"),
                 ReputationDedupe.quest(quest, giverA, 200L, "complete"),
                 ReputationDedupe.quest(quest, giverB, 100L, "complete"),
-                ReputationDedupe.quest(new ResourceLocation("example:other"), giverA, 100L, "complete"));
+                ReputationDedupe.quest(ResourceLocation.parse("example:other"), giverA, 100L, "complete"));
         assertEquals(keys.size(), Set.copyOf(keys).size(), "every one of these is a different outcome");
     }
 
     @Test
     void perRecipientKeysAreDistinct() {
-        ResourceLocation project = new ResourceLocation("example:barn");
+        ResourceLocation project = ResourceLocation.parse("example:barn");
         assertNotEquals(ReputationDedupe.projectPhase(project, "v:3", 0, ALICE),
                 ReputationDedupe.projectPhase(project, "v:3", 0, BOB));
         assertNotEquals(ReputationDedupe.projectPhase(project, "v:3", 0, ALICE),

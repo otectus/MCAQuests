@@ -41,7 +41,13 @@ public final class SituationSavedData extends SavedData {
 
     public static SituationSavedData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(SituationSavedData::load, SituationSavedData::new, DATA_NAME);
+        // DATA_NAME is unchanged from 1.20.1 — the .dat file is loader-independent, so existing
+        // worlds keep their situations through the upgrade. DataFixTypes null: no vanilla DFU applies.
+        return overworld.getDataStorage().computeIfAbsent(
+                new SavedData.Factory<>(SituationSavedData::new,
+                        (tag, provider) -> SituationSavedData.load(tag),
+                        null),
+                DATA_NAME);
     }
 
     // --- instances ---
@@ -126,7 +132,7 @@ public final class SituationSavedData extends SavedData {
     // --- persistence ---
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
         ListTag instanceList = new ListTag();
         for (SituationInstance instance : instances.values()) {
             instanceList.add(instance.save());

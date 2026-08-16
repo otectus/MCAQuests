@@ -41,7 +41,7 @@ public final class SituationTriggerTypes {
             type -> DataResult.success(type.id()));
 
     public static final Codec<SituationTrigger> CODEC =
-            TYPE_CODEC.dispatch("type", SituationTrigger::type, SituationTriggerType::codec);
+            TYPE_CODEC.dispatch("type", SituationTrigger::type, type -> dev.otectus.mcaquests.data.StrictCodecs.dispatchMap(type.codec()));
 
     private SituationTriggerTypes() {
     }
@@ -55,7 +55,7 @@ public final class SituationTriggerTypes {
     }
 
     public static <T extends SituationTrigger> SituationTriggerType<T> register(String path, Codec<T> codec) {
-        return register(new ResourceLocation(McaQuests.MOD_ID, path), codec);
+        return register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, path), codec);
     }
 
     public static boolean exists(ResourceLocation id) {

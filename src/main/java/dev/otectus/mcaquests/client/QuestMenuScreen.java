@@ -4,7 +4,7 @@ import dev.otectus.mcaquests.network.QuestAbandonC2SPacket;
 import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestDecisionC2SPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
+import net.neoforged.neoforge.network.PacketDistributor;
 import dev.otectus.mcaquests.network.QuestTurnInC2SPacket;
 import dev.otectus.mcaquests.quest.QuestMenuStatus;
 import net.minecraft.client.gui.GuiGraphics;
@@ -84,7 +84,7 @@ public class QuestMenuScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         view.scrollBy(-(int) (delta * 12));
         return true;
     }
@@ -114,17 +114,17 @@ public class QuestMenuScreen extends Screen {
         switch (data.status()) {
             case OFFER -> addRow(centerX, buttonY,
                     button("mcaquests.button.accept",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, true))),
+                            () -> PacketDistributor.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, true))),
                     button("mcaquests.button.decline",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, false))));
+                            () -> PacketDistributor.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, false))));
             case READY -> addRow(centerX, buttonY,
                     button("mcaquests.button.complete",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestTurnInC2SPacket(data.villagerUuid(), questId))),
+                            () -> PacketDistributor.sendToServer(new QuestTurnInC2SPacket(data.villagerUuid(), questId))),
                     button("mcaquests.button.abandon",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
+                            () -> PacketDistributor.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
             case IN_PROGRESS -> addRow(centerX, buttonY,
                     button("mcaquests.button.abandon",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
+                            () -> PacketDistributor.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
             default -> {
             }
         }
@@ -150,7 +150,7 @@ public class QuestMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics);
+        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
         int left = centerX - wrapWidth() / 2;
 

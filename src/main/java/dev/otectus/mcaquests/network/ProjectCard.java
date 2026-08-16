@@ -24,26 +24,26 @@ public record ProjectCard(ResourceLocation projectId,
 
     public static void encode(FriendlyByteBuf buf, ProjectCard card) {
         buf.writeResourceLocation(card.projectId);
-        buf.writeComponent(card.title);
-        buf.writeComponent(card.scopeLabel);
-        buf.writeComponent(card.sponsorLabel);
-        buf.writeComponent(card.phaseLabel);
-        buf.writeComponent(card.dialogue);
+        NetComponents.write(buf, card.title);
+        NetComponents.write(buf, card.scopeLabel);
+        NetComponents.write(buf, card.sponsorLabel);
+        NetComponents.write(buf, card.phaseLabel);
+        NetComponents.write(buf, card.dialogue);
         buf.writeCollection(card.objectives, ProjectObjectiveLine::encode);
-        buf.writeCollection(card.rewards, FriendlyByteBuf::writeComponent);
+        buf.writeCollection(card.rewards, NetComponents::write);
         buf.writeEnum(card.status);
     }
 
     public static ProjectCard decode(FriendlyByteBuf buf) {
         return new ProjectCard(
                 buf.readResourceLocation(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
                 buf.readCollection(ArrayList::new, ProjectObjectiveLine::decode),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
+                buf.readCollection(ArrayList::new, NetComponents::read),
                 buf.readEnum(ProjectMenuStatus.class));
     }
 }

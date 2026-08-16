@@ -6,13 +6,13 @@ import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.client.gui.overlay.ForgeGui;
-import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.List;
  * HUD tracker for active MCA quests — each shows its title, giver, and first objective. Position is
  * fully configurable via {@code questTrackerAnchor} (corner) + {@code questTrackerX/Y} offsets (spec section 21).
  */
-public class QuestHudOverlay implements IGuiOverlay {
+public class QuestHudOverlay implements LayeredDraw.Layer {
 
     private static final int LINE_HEIGHT = 10;
     private static final int PADDING = 2;
@@ -29,7 +29,10 @@ public class QuestHudOverlay implements IGuiOverlay {
     private static final long URGENT_TICKS = 1200L; // ~1 minute
 
     @Override
-    public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
+    public void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
+        // PORT: IGuiOverlay became LayeredDraw.Layer; the screen size now comes from GuiGraphics.
+        int screenWidth = graphics.guiWidth();
+        int screenHeight = graphics.guiHeight();
         Minecraft minecraft = Minecraft.getInstance();
         if (!ClientQuestData.isHudVisible() || minecraft.options.hideGui) {
             return;

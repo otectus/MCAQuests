@@ -1,20 +1,35 @@
 package dev.otectus.mcaquests.network;
 
+import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.project.ProjectManager;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * Client to server: contribute to a project at a sponsoring villager (spec 0.4.0). Fully validated and
  * re-resolved server-side; the server consumes the player's items for every contribution objective of
  * the current phase.
  */
-public record ProjectContributeC2SPacket(UUID villagerUuid, ResourceLocation projectId) {
+public record ProjectContributeC2SPacket(UUID villagerUuid, ResourceLocation projectId)
+        implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ProjectContributeC2SPacket> TYPE = new CustomPacketPayload.Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "project_contribute"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, ProjectContributeC2SPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(ProjectContributeC2SPacket::encode, ProjectContributeC2SPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     public static void encode(ProjectContributeC2SPacket msg, FriendlyByteBuf buf) {
         buf.writeUUID(msg.villagerUuid);
@@ -25,14 +40,9 @@ public record ProjectContributeC2SPacket(UUID villagerUuid, ResourceLocation pro
         return new ProjectContributeC2SPacket(buf.readUUID(), buf.readResourceLocation());
     }
 
-    public static void handle(ProjectContributeC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
-            if (player != null) {
-                ProjectManager.contributeFromPacket(player, msg.villagerUuid, msg.projectId);
-            }
-        });
-        context.setPacketHandled(true);
+    public static void handle(ProjectContributeC2SPacket msg, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) {
+            ProjectManager.contributeFromPacket(player, msg.villagerUuid, msg.projectId);
+        }
     }
 }

@@ -12,9 +12,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -27,7 +28,7 @@ import java.util.Map;
  * malformed project is logged and skipped, never crashing the server unless {@code strictJsonValidation}
  * is enabled. Disabled entirely when {@code enableVillageProjects} is off.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
 
     private static final Gson GSON = new GsonBuilder().create();

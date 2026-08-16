@@ -5,7 +5,6 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.api.event.SituationResolvedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.SituationToastS2CPacket;
 import dev.otectus.mcaquests.quest.QuestManager;
 import dev.otectus.mcaquests.quest.WeightedPicker;
@@ -20,15 +19,15 @@ import dev.otectus.mcaquests.quest.situation.trigger.RaidTrigger;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.ProgressionStats;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -101,8 +100,8 @@ public final class SituationManager {
             if (player.blockPosition().closerThan(center.get(), NOTIFY_RADIUS)) {
                 // Resolve per recipient so a {player} token in the situation title renders that player's MCA name.
                 Component title = def.offer().titleOr(fallback, PlaceholderResolver.forPlayer(player));
-                QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new SituationToastS2CPacket(title));
+                PacketDistributor.sendToPlayer(player,
+                new SituationToastS2CPacket(title));
             }
         }
     }
@@ -189,7 +188,7 @@ public final class SituationManager {
         for (UUID uuid : instance.participants()) {
             ServerPlayer participant = server.getPlayerList().getPlayer(uuid);
             if (participant != null) {
-                QuestCapabilities.get(participant).ifPresent(pdata ->
+                QuestAttachments.get(participant).ifPresent(pdata ->
                         ProgressionStats.increment(pdata.stats().situationSuccesses(), instance.defId(), 1));
             }
         }
@@ -237,7 +236,7 @@ public final class SituationManager {
      */
     private static void postResolved(SituationInstance instance, SituationResolvedEvent.Resolution resolution,
                                      @Nullable ServerPlayer resolvingPlayer) {
-        MinecraftForge.EVENT_BUS.post(new SituationResolvedEvent(instance.defId(), instance.villageId(), resolution,
+        NeoForge.EVENT_BUS.post(new SituationResolvedEvent(instance.defId(), instance.villageId(), resolution,
                 Set.copyOf(instance.participants()), resolvingPlayer));
     }
 
@@ -322,7 +321,7 @@ public final class SituationManager {
 
     private static void failOutstandingCopies(MinecraftServer server, UUID instanceId) {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            QuestCapabilities.get(player).ifPresent(data -> {
+            QuestAttachments.get(player).ifPresent(data -> {
                 List<ActiveQuest> toFail = new ArrayList<>();
                 for (ActiveQuest active : data.active()) {
                     if (active.situationInstance().map(instanceId::equals).orElse(false)) {

@@ -16,26 +16,26 @@ public final class RewardTypes {
     private static final Map<ResourceLocation, QuestRewardType<?>> BY_ID = new LinkedHashMap<>();
 
     public static final QuestRewardType<ItemReward> ITEM =
-            register(new ResourceLocation(McaQuests.MOD_ID, "item"), ItemReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "item"), ItemReward.CODEC);
     public static final QuestRewardType<XpReward> XP =
-            register(new ResourceLocation(McaQuests.MOD_ID, "xp"), XpReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "xp"), XpReward.CODEC);
     public static final QuestRewardType<HeartsReward> HEARTS =
-            register(new ResourceLocation(McaQuests.MOD_ID, "hearts"), HeartsReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "hearts"), HeartsReward.CODEC);
     public static final QuestRewardType<XpLevelsReward> XP_LEVELS =
-            register(new ResourceLocation(McaQuests.MOD_ID, "xp_levels"), XpLevelsReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "xp_levels"), XpLevelsReward.CODEC);
     public static final QuestRewardType<EffectReward> EFFECT =
-            register(new ResourceLocation(McaQuests.MOD_ID, "effect"), EffectReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "effect"), EffectReward.CODEC);
     public static final QuestRewardType<LootTableReward> LOOT_TABLE =
-            register(new ResourceLocation(McaQuests.MOD_ID, "loot_table"), LootTableReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "loot_table"), LootTableReward.CODEC);
     public static final QuestRewardType<CommandReward> COMMAND =
-            register(new ResourceLocation(McaQuests.MOD_ID, "command"), CommandReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "command"), CommandReward.CODEC);
 
     // v0.4.0 — community project rewards. The distributor supplies the project/scope context the
     // last three need; hearts_with_sponsor also works through the normal grant path.
     public static final QuestRewardType<HeartsWithSponsorReward> HEARTS_WITH_SPONSOR =
-            register(new ResourceLocation(McaQuests.MOD_ID, "hearts_with_sponsor"), HeartsWithSponsorReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "hearts_with_sponsor"), HeartsWithSponsorReward.CODEC);
     public static final QuestRewardType<HeartsWithParticipantsReward> HEARTS_WITH_PARTICIPANTS =
-            register(new ResourceLocation(McaQuests.MOD_ID, "hearts_with_participants"), HeartsWithParticipantsReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "hearts_with_participants"), HeartsWithParticipantsReward.CODEC);
     /**
      * {@code mcareputation:resolve_incident} and {@code mcareputation:record_incident}.
      *
@@ -44,29 +44,29 @@ public final class RewardTypes {
      * silent no-ops without that mod (spec §29.6).
      */
     public static final QuestRewardType<ResolveIncidentReward> RESOLVE_INCIDENT =
-            register(new ResourceLocation("mcareputation", "resolve_incident"),
+            register(ResourceLocation.fromNamespaceAndPath("mcareputation", "resolve_incident"),
                     ResolveIncidentReward.CODEC);
     public static final QuestRewardType<RecordIncidentReward> RECORD_INCIDENT =
-            register(new ResourceLocation("mcareputation", "record_incident"),
+            register(ResourceLocation.fromNamespaceAndPath("mcareputation", "record_incident"),
                     RecordIncidentReward.CODEC);
 
     public static final QuestRewardType<VillageReputationReward> VILLAGE_REPUTATION =
-            register(new ResourceLocation(McaQuests.MOD_ID, "village_reputation"), VillageReputationReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "village_reputation"), VillageReputationReward.CODEC);
     public static final QuestRewardType<UnlockReward> UNLOCK =
-            register(new ResourceLocation(McaQuests.MOD_ID, "unlock"), UnlockReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "unlock"), UnlockReward.CODEC);
 
     // v0.7.0 — grants a player title (village-scoped or global).
     public static final QuestRewardType<GrantTitleReward> GRANT_TITLE =
-            register(new ResourceLocation(McaQuests.MOD_ID, "grant_title"), GrantTitleReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "grant_title"), GrantTitleReward.CODEC);
 
     // v1.1.0 — semantic money. The item paid out is a server config choice (emeralds, Numismatics, custom),
     // so a datapack asks for "some currency" and never hard-codes another mod's item.
     public static final QuestRewardType<CurrencyReward> CURRENCY =
-            register(new ResourceLocation(McaQuests.MOD_ID, "currency"), CurrencyReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "currency"), CurrencyReward.CODEC);
 
     // M4 — grants FTB Quests progress for the player's team (complete task, complete quest, or reset task).
     public static final QuestRewardType<FtbqProgressReward> FTBQ_PROGRESS =
-            register(new ResourceLocation(McaQuests.MOD_ID, "ftbq_progress"), FtbqProgressReward.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "ftbq_progress"), FtbqProgressReward.CODEC);
 
     public static final Codec<QuestRewardType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {
@@ -78,7 +78,7 @@ public final class RewardTypes {
             type -> DataResult.success(type.id()));
 
     public static final Codec<QuestReward> CODEC =
-            TYPE_CODEC.dispatch("type", QuestReward::type, QuestRewardType::codec);
+            TYPE_CODEC.dispatch("type", QuestReward::type, type -> dev.otectus.mcaquests.data.StrictCodecs.dispatchMap(type.codec()));
 
     private RewardTypes() {
     }

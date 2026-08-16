@@ -39,7 +39,13 @@ public final class ProjectSavedData extends SavedData {
 
     public static ProjectSavedData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(ProjectSavedData::load, ProjectSavedData::new, DATA_NAME);
+        // DATA_NAME is unchanged from 1.20.1 — the .dat file is loader-independent, so existing
+        // worlds keep their projects/standing through the upgrade. DataFixTypes null: no vanilla DFU applies.
+        return overworld.getDataStorage().computeIfAbsent(
+                new SavedData.Factory<>(ProjectSavedData::new,
+                        (tag, provider) -> ProjectSavedData.load(tag),
+                        null),
+                DATA_NAME);
     }
 
     // --- instances ---
@@ -163,7 +169,7 @@ public final class ProjectSavedData extends SavedData {
     // --- persistence ---
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
         ListTag instanceList = new ListTag();
         for (ProjectState state : instances.values()) {
             instanceList.add(state.save());

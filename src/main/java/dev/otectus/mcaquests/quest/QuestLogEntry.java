@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest;
 
+import dev.otectus.mcaquests.network.NetComponents;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -28,10 +29,10 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
     public static void encode(FriendlyByteBuf buf, QuestLogEntry entry) {
         buf.writeResourceLocation(entry.questId);
         buf.writeUUID(entry.villagerUuid);
-        buf.writeComponent(entry.title);
-        buf.writeComponent(entry.giverName);
-        buf.writeComponent(entry.chainLabel);
-        buf.writeCollection(entry.objectives, FriendlyByteBuf::writeComponent);
+        NetComponents.write(buf, entry.title);
+        NetComponents.write(buf, entry.giverName);
+        NetComponents.write(buf, entry.chainLabel);
+        buf.writeCollection(entry.objectives, NetComponents::write);
         buf.writeBoolean(entry.ready);
         buf.writeBoolean(entry.deadlineGameTime.isPresent());
         if (entry.deadlineGameTime.isPresent()) {
@@ -43,10 +44,10 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
         return new QuestLogEntry(
                 buf.readResourceLocation(),
                 buf.readUUID(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                buf.readCollection(ArrayList::new, NetComponents::read),
                 buf.readBoolean(),
                 buf.readBoolean() ? OptionalLong.of(buf.readVarLong()) : OptionalLong.empty());
     }

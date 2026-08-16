@@ -31,9 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TalkObjectiveTest {
 
-    private static final ResourceLocation VANILLA_CARTOGRAPHER = new ResourceLocation("minecraft", "cartographer");
-    private static final ResourceLocation MCA_CARTOGRAPHER = new ResourceLocation("mca", "cartographer");
-    private static final ResourceLocation FARMER = new ResourceLocation("minecraft", "farmer");
+    private static final ResourceLocation VANILLA_CARTOGRAPHER = ResourceLocation.fromNamespaceAndPath("minecraft", "cartographer");
+    private static final ResourceLocation MCA_CARTOGRAPHER = ResourceLocation.fromNamespaceAndPath("mca", "cartographer");
+    private static final ResourceLocation FARMER = ResourceLocation.fromNamespaceAndPath("minecraft", "farmer");
 
     static {
         TestBootstrap.ensureBootstrapped();

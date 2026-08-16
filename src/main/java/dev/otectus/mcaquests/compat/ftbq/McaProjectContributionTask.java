@@ -6,7 +6,7 @@ import dev.ftb.mods.ftbquests.quest.task.TaskType;
 import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.ProgressionStats;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -45,7 +45,7 @@ public class McaProjectContributionTask extends McaCounterTaskBase {
 
     @Override
     protected long currentValue(ServerPlayer player) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> data = QuestAttachments.get(player);
         if (data.isEmpty()) {
             return 0L;
         }

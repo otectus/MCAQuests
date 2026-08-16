@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 /** Toast shown when the player reaches a new reputation tier with a village (spec 0.7.0). */
 public class ReputationTierToast implements Toast {
 
-    private static final ResourceLocation TEXTURE = new ResourceLocation("textures/gui/toasts.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/toasts.png");
 
     private final Component tierName;
 

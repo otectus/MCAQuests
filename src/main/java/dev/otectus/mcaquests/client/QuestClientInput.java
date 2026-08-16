@@ -2,23 +2,21 @@ package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /** Opens the Quest Log when the keybind is pressed (spec section 21). */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class QuestClientInput {
 
     private QuestClientInput() {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public static void onClientTick(ClientTickEvent.Post event) {
+        // PORT: Post replaces the old TickEvent.ClientTickEvent + phase == END guard.
         Minecraft minecraft = Minecraft.getInstance();
         while (QuestClientSetup.OPEN_LOG.consumeClick()) {
             if (minecraft.player != null && minecraft.screen == null) {

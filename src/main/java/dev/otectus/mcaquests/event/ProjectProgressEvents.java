@@ -3,17 +3,18 @@ package dev.otectus.mcaquests.event;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.project.ProjectManager;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Server-side credit for event-driven <em>project</em> objectives — kills, block placement, and
  * profession talks happening inside an active project's village/scope (spec 0.4.0). Kept separate from
  * {@code QuestProgressEvents} so the per-player quest path is untouched; Forge dispatches to both.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class ProjectProgressEvents {
 
     private ProjectProgressEvents() {

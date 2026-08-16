@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project;
 
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
+import dev.otectus.mcaquests.network.NetComponents;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -21,20 +22,20 @@ public record ProjectLogEntry(ResourceLocation projectId,
 
     public static void encode(FriendlyByteBuf buf, ProjectLogEntry entry) {
         buf.writeResourceLocation(entry.projectId);
-        buf.writeComponent(entry.title);
-        buf.writeComponent(entry.sponsorLabel);
-        buf.writeComponent(entry.scopeLabel);
-        buf.writeComponent(entry.phaseLabel);
+        NetComponents.write(buf, entry.title);
+        NetComponents.write(buf, entry.sponsorLabel);
+        NetComponents.write(buf, entry.scopeLabel);
+        NetComponents.write(buf, entry.phaseLabel);
         buf.writeCollection(entry.objectives, ProjectObjectiveLine::encode);
     }
 
     public static ProjectLogEntry decode(FriendlyByteBuf buf) {
         return new ProjectLogEntry(
                 buf.readResourceLocation(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
                 buf.readCollection(ArrayList::new, ProjectObjectiveLine::decode));
     }
 }

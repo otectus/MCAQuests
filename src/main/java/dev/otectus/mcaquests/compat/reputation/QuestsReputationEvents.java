@@ -9,10 +9,10 @@ import dev.otectus.mcareputation.api.event.ReputationTierChangedEvent;
 import dev.otectus.mcareputation.api.event.ReputationTitleGrantedEvent;
 import dev.otectus.mcareputation.event.LegacyImportProviders;
 import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /**
  * Registers Quests' side of the MCA: Reputation integration and translates Reputation's events back
@@ -46,7 +46,7 @@ public final class QuestsReputationEvents {
 
     /** Called by the bridge once the backend has been chosen. */
     public static void register() {
-        MinecraftForge.EVENT_BUS.register(QuestsReputationEvents.class);
+        NeoForge.EVENT_BUS.register(QuestsReputationEvents.class);
     }
 
     @SubscribeEvent
@@ -90,7 +90,7 @@ public final class QuestsReputationEvents {
             return;
         }
         try {
-            MinecraftForge.EVENT_BUS.post(new ReputationTierReachedEvent(
+            NeoForge.EVENT_BUS.post(new ReputationTierReachedEvent(
                     event.player().orElse(null),
                     event.community().villageId(),
                     // Quests' event carries its own ladder id; the canonical ladder is the same
@@ -108,7 +108,7 @@ public final class QuestsReputationEvents {
     @SubscribeEvent
     public static void onTitleGranted(ReputationTitleGrantedEvent event) {
         try {
-            event.player().ifPresent(player -> MinecraftForge.EVENT_BUS.post(new TitleGrantedEvent(
+            event.player().ifPresent(player -> NeoForge.EVENT_BUS.post(new TitleGrantedEvent(
                     player,
                     event.title(),
                     event.scope() == dev.otectus.mcareputation.reputation.TitleScope.GLOBAL

@@ -3,8 +3,8 @@ package dev.otectus.mcaquests.mixin;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.network.OpenQuestMenuC2SPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
-import forge.net.mca.client.gui.InteractScreen;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.conczin.mca.client.gui.InteractScreen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
@@ -28,7 +28,7 @@ import java.util.UUID;
  * so Mixin must match it by literal name. The widget is registered through {@link ScreenAccessor}
  * (vanilla {@code Screen} field accessors) so the obfuscated fields map correctly.
  */
-@Mixin(forge.net.mca.client.gui.AbstractDynamicScreen.class)
+@Mixin(net.conczin.mca.client.gui.AbstractDynamicScreen.class)
 public abstract class AbstractDynamicScreenMixin {
 
     @Inject(method = "setLayout(Ljava/lang/String;)V", at = @At("TAIL"), require = 1, remap = false)
@@ -84,7 +84,7 @@ public abstract class AbstractDynamicScreenMixin {
 
             Button quests = Button.builder(
                             Component.translatable("gui.button.mcaquests.quests"),
-                            b -> QuestNetwork.CHANNEL.sendToServer(new OpenQuestMenuC2SPacket(villagerUuid)))
+                            b -> PacketDistributor.sendToServer(new OpenQuestMenuC2SPacket(villagerUuid)))
                     .bounds(x, y, width, height)
                     .build();
             ScreenAccessor lists = (ScreenAccessor) self;

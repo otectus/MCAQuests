@@ -1,16 +1,15 @@
 package dev.otectus.mcaquests.network;
 
 import dev.otectus.mcaquests.McaQuests;
-import dev.otectus.mcaquests.client.ClientKnownIds;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * Server to client: a snapshot of every id the FTB Quests editor's {@code mcaquests} condition/
@@ -57,7 +56,19 @@ import java.util.function.Supplier;
  */
 public record FtbqEditorIdsS2CPacket(List<String> questIds, List<String> chainEntries, List<String> ladderIds,
                                      List<String> ladderTierEntries, List<String> titleIds,
-                                     List<String> projectIds, List<String> situationIds) {
+                                     List<String> projectIds, List<String> situationIds)
+        implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<FtbqEditorIdsS2CPacket> TYPE = new CustomPacketPayload.Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "ftbq_editor_ids"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, FtbqEditorIdsS2CPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(FtbqEditorIdsS2CPacket::encode, FtbqEditorIdsS2CPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     /** Soft byte budget for the combined payload (spec §20: "~64 KB truncation guard with WARN"). */
     public static final int BYTE_BUDGET = 64 * 1024;
@@ -142,12 +153,5 @@ public record FtbqEditorIdsS2CPacket(List<String> questIds, List<String> chainEn
 
     private static List<String> readList(FriendlyByteBuf buf) {
         return buf.readCollection(ArrayList::new, b -> b.readUtf(Short.MAX_VALUE));
-    }
-
-    public static void handle(FtbqEditorIdsS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientKnownIds.update(msg)));
-        context.setPacketHandled(true);
     }
 }

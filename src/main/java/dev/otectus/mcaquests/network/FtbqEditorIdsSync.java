@@ -13,8 +13,8 @@ import dev.otectus.mcaquests.quest.situation.SituationRegistry;
 import dev.otectus.mcaquests.quest.title.Titles;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -41,7 +41,8 @@ public final class FtbqEditorIdsSync {
         if (!shouldSync()) {
             return;
         }
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), buildPacket());
+        PacketDistributor.sendToPlayer(player,
+                buildPacket());
     }
 
     /**

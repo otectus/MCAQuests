@@ -7,11 +7,11 @@ import net.minecraft.network.chat.Component;
 public record JournalArchiveEntry(Component questTitle, int count) {
 
     public static void encode(FriendlyByteBuf buf, JournalArchiveEntry entry) {
-        buf.writeComponent(entry.questTitle);
+        NetComponents.write(buf, entry.questTitle);
         buf.writeVarInt(entry.count);
     }
 
     public static JournalArchiveEntry decode(FriendlyByteBuf buf) {
-        return new JournalArchiveEntry(buf.readComponent(), buf.readVarInt());
+        return new JournalArchiveEntry(NetComponents.read(buf), buf.readVarInt());
     }
 }

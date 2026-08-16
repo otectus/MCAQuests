@@ -3,7 +3,7 @@ package dev.otectus.mcaquests.api.event;
 import dev.otectus.mcaquests.project.ProjectDefinition;
 import dev.otectus.mcaquests.project.state.ProjectState;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.Event;
 
 /**
  * Base class for community-project lifecycle events (spec 0.4.0), posted on the Forge event bus so

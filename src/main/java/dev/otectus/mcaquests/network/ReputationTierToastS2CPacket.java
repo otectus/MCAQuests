@@ -1,29 +1,32 @@
 package dev.otectus.mcaquests.network;
 
-import dev.otectus.mcaquests.client.QuestClientHandlers;
+import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /** Server to client: the player reached a new reputation tier with a village — show a toast (spec 0.7.0). */
-public record ReputationTierToastS2CPacket(Component tierName) {
+public record ReputationTierToastS2CPacket(Component tierName) implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<ReputationTierToastS2CPacket> TYPE = new CustomPacketPayload.Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "reputation_tier_toast"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, ReputationTierToastS2CPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(ReputationTierToastS2CPacket::encode, ReputationTierToastS2CPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     public static void encode(ReputationTierToastS2CPacket msg, FriendlyByteBuf buf) {
-        buf.writeComponent(msg.tierName);
+        NetComponents.write(buf, msg.tierName);
     }
 
     public static ReputationTierToastS2CPacket decode(FriendlyByteBuf buf) {
-        return new ReputationTierToastS2CPacket(buf.readComponent());
-    }
-
-    public static void handle(ReputationTierToastS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> QuestClientHandlers.showReputationTierToast(msg.tierName)));
-        context.setPacketHandled(true);
+        return new ReputationTierToastS2CPacket(NetComponents.read(buf));
     }
 }

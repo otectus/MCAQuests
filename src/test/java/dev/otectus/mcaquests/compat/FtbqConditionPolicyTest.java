@@ -36,7 +36,7 @@ class FtbqConditionPolicyTest {
 
     private static final String HEX = "1A2B3C4D5E6F7081";
     private static final QuestContext CONTEXT =
-            new QuestContext(null, null, null, new ResourceLocation("mcaquests", "dummy"), null);
+            new QuestContext(null, null, null, ResourceLocation.fromNamespaceAndPath("mcaquests", "dummy"), null);
 
     /** One condition constructor per type, so the truth table below runs against all three. */
     private interface Factory {

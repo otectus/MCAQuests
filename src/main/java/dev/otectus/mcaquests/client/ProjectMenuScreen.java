@@ -4,7 +4,7 @@ import dev.otectus.mcaquests.network.ProjectCard;
 import dev.otectus.mcaquests.network.ProjectContributeC2SPacket;
 import dev.otectus.mcaquests.network.ProjectMenuStatus;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
-import dev.otectus.mcaquests.network.QuestNetwork;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -89,13 +89,13 @@ public class ProjectMenuScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         view.scrollBy(-(int) (delta * 12));
         return true;
     }
 
     private void contribute(ResourceLocation projectId) {
-        QuestNetwork.CHANNEL.sendToServer(new ProjectContributeC2SPacket(villagerUuid, projectId));
+        PacketDistributor.sendToServer(new ProjectContributeC2SPacket(villagerUuid, projectId));
     }
 
     private int cardHeight(ProjectCard card) {
@@ -116,7 +116,7 @@ public class ProjectMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics);
+        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
         int left = centerX - wrapWidth() / 2;
         graphics.drawCenteredString(this.font, this.title, centerX, 12, 0xFFFFFF);

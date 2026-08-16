@@ -15,21 +15,21 @@ public record JournalVillageEntry(Component villageName, int reputation, Compone
                                   Component nextTier, int nextThreshold, List<Component> titles) {
 
     public static void encode(FriendlyByteBuf buf, JournalVillageEntry entry) {
-        buf.writeComponent(entry.villageName);
+        NetComponents.write(buf, entry.villageName);
         buf.writeVarInt(entry.reputation);
-        buf.writeComponent(entry.currentTier);
-        buf.writeComponent(entry.nextTier);
+        NetComponents.write(buf, entry.currentTier);
+        NetComponents.write(buf, entry.nextTier);
         buf.writeVarInt(entry.nextThreshold);
-        buf.writeCollection(entry.titles, FriendlyByteBuf::writeComponent);
+        buf.writeCollection(entry.titles, NetComponents::write);
     }
 
     public static JournalVillageEntry decode(FriendlyByteBuf buf) {
-        Component name = buf.readComponent();
+        Component name = NetComponents.read(buf);
         int reputation = buf.readVarInt();
-        Component current = buf.readComponent();
-        Component next = buf.readComponent();
+        Component current = NetComponents.read(buf);
+        Component next = NetComponents.read(buf);
         int nextThreshold = buf.readVarInt();
-        List<Component> titles = buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent);
+        List<Component> titles = buf.readCollection(ArrayList::new, NetComponents::read);
         return new JournalVillageEntry(name, reputation, current, next, nextThreshold, titles);
     }
 }

@@ -41,7 +41,7 @@ import dev.otectus.mcaquests.quest.situation.SituationDetectors;
 import dev.otectus.mcaquests.quest.situation.SituationManager;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.PlayerQuestData;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -58,18 +58,19 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.AnimalTameEvent;
-import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.ItemFishedEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.entity.player.TradeWithVillagerEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.SleepFinishedTimeEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.entity.living.AnimalTameEvent;
+import net.neoforged.neoforge.event.entity.living.BabyEntitySpawnEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.entity.player.TradeWithVillagerEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ import java.util.function.BiConsumer;
  * Server-side progress tracking for event-driven objectives (spec section 19). Only credits the
  * player who earned it; runs only for players who actually have an active quest of the matching type.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class QuestProgressEvents {
 
     private QuestProgressEvents() {
@@ -139,7 +140,7 @@ public final class QuestProgressEvents {
         }
         ServerLevel level = (ServerLevel) dead.level();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            QuestCapabilities.get(player).ifPresent(data -> failProtectQuestsFor(player, data, dead, level));
+            QuestAttachments.get(player).ifPresent(data -> failProtectQuestsFor(player, data, dead, level));
         }
     }
 
@@ -191,7 +192,7 @@ public final class QuestProgressEvents {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            QuestCapabilities.get(player).ifPresent(data -> failEscortQuestsFor(player, data, dead));
+            QuestAttachments.get(player).ifPresent(data -> failEscortQuestsFor(player, data, dead));
         }
     }
 
@@ -233,7 +234,7 @@ public final class QuestProgressEvents {
         if (!McaQuestsConfig.COMMON.highlightQuestTargets.get()) {
             return;
         }
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     List<QuestObjective> objectives = active.resolve(base).objectives();
@@ -279,8 +280,10 @@ public final class QuestProgressEvents {
     }
 
     @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) {
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        // PORT: Post replaces the old phase == END guard. The event still fires on both sides, so
+        // the ServerPlayer filter stays (parity with 1.20.1).
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
@@ -325,7 +328,7 @@ public final class QuestProgressEvents {
         maybeRetryBankedRewards(player, level);
         QuestManager.checkReadyTransitions(player);
         // Refresh the client quest log + HUD (~once per second) for players with active quests.
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             if (!data.active().isEmpty()) {
                 QuestManager.syncLog(player);
             }
@@ -388,7 +391,7 @@ public final class QuestProgressEvents {
      * uniformly with every other failure path.
      */
     private static void checkFailureTriggers(ServerPlayer player) {
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             long now = player.level().getGameTime();
             List<FailedTrigger> toFail = new ArrayList<>();
             for (ActiveQuest active : data.active()) {
@@ -431,7 +434,7 @@ public final class QuestProgressEvents {
 
     /** Turns in SELF_COMPLETE quests as soon as their objectives are satisfied (spec section 17). */
     private static void autoCompleteSelfQuests(ServerPlayer player) {
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             List<ActiveQuest> ready = new ArrayList<>();
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
@@ -465,7 +468,7 @@ public final class QuestProgressEvents {
         Entity giverEntity = event.getEntity();
         UUID giver = giverEntity.getUUID();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            QuestCapabilities.get(player).ifPresent(data -> {
+            QuestAttachments.get(player).ifPresent(data -> {
                 List<ActiveQuest> failed = new ArrayList<>();
                 for (ActiveQuest active : data.byVillager(giver)) {
                     QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
@@ -666,7 +669,7 @@ public final class QuestProgressEvents {
      */
     static <T extends QuestObjective> void forActiveObjectives(
             ServerPlayer player, Class<T> type, ObjectiveAction<T> action) {
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     // Resolve template values so progress is tracked against this copy's concrete objectives.

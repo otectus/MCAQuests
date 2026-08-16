@@ -18,61 +18,61 @@ public final class ObjectiveTypes {
     private static final Map<ResourceLocation, QuestObjectiveType<?>> BY_ID = new LinkedHashMap<>();
 
     public static final QuestObjectiveType<ItemDeliveryObjective> ITEM_DELIVERY =
-            register(new ResourceLocation(McaQuests.MOD_ID, "item_delivery"), ItemDeliveryObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "item_delivery"), ItemDeliveryObjective.CODEC);
     public static final QuestObjectiveType<ObtainItemObjective> OBTAIN_ITEM =
-            register(new ResourceLocation(McaQuests.MOD_ID, "obtain_item"), ObtainItemObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "obtain_item"), ObtainItemObjective.CODEC);
     public static final QuestObjectiveType<KillEntityObjective> KILL_ENTITY =
-            register(new ResourceLocation(McaQuests.MOD_ID, "kill_entity"), KillEntityObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "kill_entity"), KillEntityObjective.CODEC);
     public static final QuestObjectiveType<BreakBlockObjective> BREAK_BLOCK =
-            register(new ResourceLocation(McaQuests.MOD_ID, "break_block"), BreakBlockObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "break_block"), BreakBlockObjective.CODEC);
     public static final QuestObjectiveType<VisitBiomeObjective> VISIT_BIOME =
-            register(new ResourceLocation(McaQuests.MOD_ID, "visit_biome"), VisitBiomeObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "visit_biome"), VisitBiomeObjective.CODEC);
     public static final QuestObjectiveType<VisitDimensionObjective> VISIT_DIMENSION =
-            register(new ResourceLocation(McaQuests.MOD_ID, "visit_dimension"), VisitDimensionObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "visit_dimension"), VisitDimensionObjective.CODEC);
     public static final QuestObjectiveType<CraftItemObjective> CRAFT_ITEM =
-            register(new ResourceLocation(McaQuests.MOD_ID, "craft_item"), CraftItemObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "craft_item"), CraftItemObjective.CODEC);
     public static final QuestObjectiveType<PlaceBlockObjective> PLACE_BLOCK =
-            register(new ResourceLocation(McaQuests.MOD_ID, "place_block"), PlaceBlockObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "place_block"), PlaceBlockObjective.CODEC);
     public static final QuestObjectiveType<FishItemObjective> FISH_ITEM =
-            register(new ResourceLocation(McaQuests.MOD_ID, "fish_item"), FishItemObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "fish_item"), FishItemObjective.CODEC);
     public static final QuestObjectiveType<TalkToProfessionObjective> TALK_TO_PROFESSION =
-            register(new ResourceLocation(McaQuests.MOD_ID, "talk_to_profession"), TalkToProfessionObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "talk_to_profession"), TalkToProfessionObjective.CODEC);
 
     // NPC/village-centered objective types (escort, protect, trade, heal, …).
     public static final QuestObjectiveType<EscortEntityObjective> ESCORT_ENTITY =
-            register(new ResourceLocation(McaQuests.MOD_ID, "escort_entity"), EscortEntityObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "escort_entity"), EscortEntityObjective.CODEC);
     public static final QuestObjectiveType<ProtectEntityObjective> PROTECT_ENTITY =
-            register(new ResourceLocation(McaQuests.MOD_ID, "protect_entity"), ProtectEntityObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "protect_entity"), ProtectEntityObjective.CODEC);
     public static final QuestObjectiveType<DefendVillagerObjective> DEFEND_VILLAGER =
-            register(new ResourceLocation(McaQuests.MOD_ID, "defend_villager"), DefendVillagerObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "defend_villager"), DefendVillagerObjective.CODEC);
     public static final QuestObjectiveType<TradeWithVillagerObjective> TRADE_WITH_VILLAGER =
-            register(new ResourceLocation(McaQuests.MOD_ID, "trade_with_villager"), TradeWithVillagerObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "trade_with_villager"), TradeWithVillagerObjective.CODEC);
     public static final QuestObjectiveType<HealEntityObjective> HEAL_ENTITY =
-            register(new ResourceLocation(McaQuests.MOD_ID, "heal_entity"), HealEntityObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "heal_entity"), HealEntityObjective.CODEC);
     public static final QuestObjectiveType<CureVillagerObjective> CURE_VILLAGER =
-            register(new ResourceLocation(McaQuests.MOD_ID, "cure_villager"), CureVillagerObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "cure_villager"), CureVillagerObjective.CODEC);
     public static final QuestObjectiveType<BreedAnimalsObjective> BREED_ANIMALS =
-            register(new ResourceLocation(McaQuests.MOD_ID, "breed_animals"), BreedAnimalsObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "breed_animals"), BreedAnimalsObjective.CODEC);
     public static final QuestObjectiveType<TameAnimalObjective> TAME_ANIMAL =
-            register(new ResourceLocation(McaQuests.MOD_ID, "tame_animal"), TameAnimalObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "tame_animal"), TameAnimalObjective.CODEC);
     public static final QuestObjectiveType<SleepOrRestObjective> SLEEP_OR_REST =
-            register(new ResourceLocation(McaQuests.MOD_ID, "sleep_or_rest"), SleepOrRestObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "sleep_or_rest"), SleepOrRestObjective.CODEC);
     public static final QuestObjectiveType<BuildNearLocationObjective> BUILD_NEAR_LOCATION =
-            register(new ResourceLocation(McaQuests.MOD_ID, "build_near_location"), BuildNearLocationObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "build_near_location"), BuildNearLocationObjective.CODEC);
     public static final QuestObjectiveType<EnterStructureObjective> ENTER_STRUCTURE =
-            register(new ResourceLocation(McaQuests.MOD_ID, "enter_structure"), EnterStructureObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "enter_structure"), EnterStructureObjective.CODEC);
     public static final QuestObjectiveType<DeliverToVillagerObjective> DELIVER_TO_VILLAGER =
-            register(new ResourceLocation(McaQuests.MOD_ID, "deliver_to_villager"), DeliverToVillagerObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "deliver_to_villager"), DeliverToVillagerObjective.CODEC);
 
     // Travel + place-anchored combat objectives.
     public static final QuestObjectiveType<ReachLocationObjective> REACH_LOCATION =
-            register(new ResourceLocation(McaQuests.MOD_ID, "reach_location"), ReachLocationObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "reach_location"), ReachLocationObjective.CODEC);
     public static final QuestObjectiveType<DefendLocationObjective> DEFEND_LOCATION =
-            register(new ResourceLocation(McaQuests.MOD_ID, "defend_location"), DefendLocationObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "defend_location"), DefendLocationObjective.CODEC);
 
     // FTB Quests bridge objective (spec section 18) — registered unconditionally, zero FTB imports.
     public static final QuestObjectiveType<FtbqCompleteQuestObjective> FTBQ_COMPLETE_QUEST =
-            register(new ResourceLocation(McaQuests.MOD_ID, "ftbq_complete_quest"), FtbqCompleteQuestObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "ftbq_complete_quest"), FtbqCompleteQuestObjective.CODEC);
 
     /** Maps a type id to/from its registry entry, failing parsing on an unknown id. */
     public static final Codec<QuestObjectiveType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
@@ -85,7 +85,7 @@ public final class ObjectiveTypes {
             type -> DataResult.success(type.id()));
 
     public static final Codec<QuestObjective> CODEC =
-            TYPE_CODEC.dispatch("type", QuestObjective::type, QuestObjectiveType::codec);
+            TYPE_CODEC.dispatch("type", QuestObjective::type, type -> dev.otectus.mcaquests.data.StrictCodecs.dispatchMap(type.codec()));
 
     private ObjectiveTypes() {
     }

@@ -28,7 +28,7 @@ import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.title.TitleService;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.PlayerTitles;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -39,11 +39,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -57,7 +58,7 @@ import java.util.Locale;
  * Admin/debug commands under {@code /mcaquests} (spec section 24). Phase 0 ships only
  * {@code debug villager}, which exercises the entire {@link McaCompat} adapter end-to-end.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class McaQuestsCommand {
 
     private McaQuestsCommand() {
@@ -210,7 +211,7 @@ public final class McaQuestsCommand {
     private static int titleList(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String name = adminName(target);
-        PlayerTitles titles = QuestCapabilities.get(target).map(PlayerQuestData::titles).orElse(null);
+        PlayerTitles titles = QuestAttachments.get(target).map(PlayerQuestData::titles).orElse(null);
         if (titles == null || titles.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.literal(
                     name + " has no titles."), false);
@@ -228,7 +229,7 @@ public final class McaQuestsCommand {
     private static int titleClear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String name = adminName(target);
-        QuestCapabilities.get(target).ifPresent(d -> d.titles().clear());
+        QuestAttachments.get(target).ifPresent(d -> d.titles().clear());
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "Cleared all titles for " + name + "."), true);
         return 1;

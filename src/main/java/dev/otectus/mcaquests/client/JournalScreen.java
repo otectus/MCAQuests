@@ -2,7 +2,7 @@ package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.network.JournalArchiveEntry;
 import dev.otectus.mcaquests.network.JournalVillageEntry;
-import dev.otectus.mcaquests.network.QuestNetwork;
+import net.neoforged.neoforge.network.PacketDistributor;
 import dev.otectus.mcaquests.network.RequestJournalC2SPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -28,7 +28,7 @@ public class JournalScreen extends Screen {
     @Override
     protected void init() {
         // Request a fresh server-authoritative snapshot each time the journal opens.
-        QuestNetwork.CHANNEL.sendToServer(new RequestJournalC2SPacket());
+        PacketDistributor.sendToServer(new RequestJournalC2SPacket());
         int centerX = this.width / 2;
         addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose())
                 .bounds(centerX - 50, this.height - 36, 100, 20)
@@ -37,7 +37,7 @@ public class JournalScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics);
+        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
         graphics.drawCenteredString(this.font, getTitle(), centerX, 14, 0xFFFFFF);
 
@@ -112,7 +112,7 @@ public class JournalScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         int viewport = this.height - 80;
         int max = Math.max(0, contentHeight - viewport);
         scroll = Math.max(0, Math.min(max, scroll - (int) (delta * 12)));

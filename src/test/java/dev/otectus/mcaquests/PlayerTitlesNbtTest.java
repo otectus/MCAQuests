@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Registry-free NBT round-trips for player titles (0.7.0), including the legacy/empty case. */
 class PlayerTitlesNbtTest {
 
-    private static final ResourceLocation GLOBAL = new ResourceLocation("mcaquests", "wandering_helper");
-    private static final ResourceLocation VILLAGE_TITLE = new ResourceLocation("mcaquests", "honored_of_village");
+    private static final ResourceLocation GLOBAL = ResourceLocation.fromNamespaceAndPath("mcaquests", "wandering_helper");
+    private static final ResourceLocation VILLAGE_TITLE = ResourceLocation.fromNamespaceAndPath("mcaquests", "honored_of_village");
 
     @Test
     void titlesRoundTrip() {
@@ -68,7 +68,7 @@ class PlayerTitlesNbtTest {
         assertTrue(dest.titles().hasVillage(5, VILLAGE_TITLE));
 
         // Mutating the copy must not affect the source (deep copy of village sets).
-        dest.titles().grantVillage(5, new ResourceLocation("mcaquests", "other"));
+        dest.titles().grantVillage(5, ResourceLocation.fromNamespaceAndPath("mcaquests", "other"));
         assertEquals(1, source.titles().forVillage(5).size());
     }
 }

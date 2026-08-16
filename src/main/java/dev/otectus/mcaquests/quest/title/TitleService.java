@@ -4,12 +4,12 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.event.TitleGrantedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.state.PlayerQuestData;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -33,7 +33,7 @@ public final class TitleService {
     }
 
     public static boolean grantGlobal(ServerPlayer player, ResourceLocation title) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> data = QuestAttachments.get(player);
         boolean granted = data.map(d -> d.titles().grantGlobal(title)).orElse(false);
         if (granted) {
             postGranted(player, title, TitleScope.GLOBAL, OptionalInt.empty());
@@ -42,7 +42,7 @@ public final class TitleService {
     }
 
     public static boolean grantVillage(ServerPlayer player, int villageId, ResourceLocation title) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> data = QuestAttachments.get(player);
         boolean granted = data.map(d -> d.titles().grantVillage(villageId, title)).orElse(false);
         if (granted) {
             postGranted(player, title, TitleScope.VILLAGE, OptionalInt.of(villageId));
@@ -59,7 +59,7 @@ public final class TitleService {
      * itself does not post; it only delegates, so delegation cannot double-post.
      */
     private static void postGranted(ServerPlayer player, ResourceLocation title, TitleScope scope, OptionalInt villageId) {
-        MinecraftForge.EVENT_BUS.post(new TitleGrantedEvent(player, title, scope, villageId));
+        NeoForge.EVENT_BUS.post(new TitleGrantedEvent(player, title, scope, villageId));
     }
 
     private static OptionalInt resolveVillage(ServerPlayer player, @Nullable Entity giver) {

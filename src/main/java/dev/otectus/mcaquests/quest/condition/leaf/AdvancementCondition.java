@@ -6,7 +6,7 @@ import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestConditionType;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
-import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 
@@ -28,7 +28,7 @@ public record AdvancementCondition(ResourceLocation advancement) implements Ques
         if (server == null) {
             return false;
         }
-        Advancement adv = server.getAdvancements().getAdvancement(advancement);
+        AdvancementHolder adv = server.getAdvancements().get(advancement);
         return adv != null && context.player().getAdvancements().getOrStartProgress(adv).isDone();
     }
 }

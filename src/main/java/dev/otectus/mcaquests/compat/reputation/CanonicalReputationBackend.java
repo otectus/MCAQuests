@@ -129,7 +129,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
                 ? award.incidentType()
                 // A reward with no authored incident type still deserves a named story rather than an
                 // anonymous number, so it lands as the generic quest completion (§16).
-                : new ResourceLocation("mcareputation", "quest_completed");
+                : ResourceLocation.fromNamespaceAndPath("mcareputation", "quest_completed");
 
         ReputationRequest.Builder request = ReputationRequest
                 .builder(award.server(), award.player(), community.get(), incidentType, award.source())
@@ -219,7 +219,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
         return key(dimension, villageId).map(community -> {
             ResolutionResult result = McaReputationApi.resolveBySelector(server, player, community,
                     toQuery(selector, true), status.get(),
-                    new ResourceLocation("mcaquests", "quests"));
+                    ResourceLocation.fromNamespaceAndPath("mcaquests", "quests"));
             return result.applied();
         }).orElse(false);
     }
@@ -268,7 +268,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
         public static final ResourceLocation SITUATION_RESOLVED = rep("situation_resolved");
 
         private static ResourceLocation rep(String path) {
-            return new ResourceLocation("mcareputation", path);
+            return ResourceLocation.fromNamespaceAndPath("mcareputation", path);
         }
 
         public static List<ResourceLocation> all() {

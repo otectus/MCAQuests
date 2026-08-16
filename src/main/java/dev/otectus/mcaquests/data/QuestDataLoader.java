@@ -12,9 +12,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,7 +27,7 @@ import java.util.Map;
  * (spec section 10). Reloads with {@code /reload}. A malformed quest is logged and skipped; it never
  * crashes the server unless {@code strictJsonValidation} is enabled (spec sections 10, 26).
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
 
     private static final Gson GSON = new GsonBuilder().create();

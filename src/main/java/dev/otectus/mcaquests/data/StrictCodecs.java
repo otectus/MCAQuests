@@ -31,6 +31,21 @@ public final class StrictCodecs {
     private StrictCodecs() {
     }
 
+    /**
+     * Adapts a plain {@link Codec} for {@code Codec.dispatch}, whose per-type function must return
+     * a {@link MapCodec} since DFU 7 (1.20.5+).
+     *
+     * <p>PORT: this reproduces the pre-1.20.5 plain-Codec dispatch semantics exactly — old DFU
+     * applied the same split internally: a record codec ({@code MapCodec.MapCodecCodec}) decodes
+     * its fields inline next to {@code "type"}, any other codec decodes from the {@code "value"}
+     * field. Datapack format is unchanged.
+     */
+    public static <A> MapCodec<A> dispatchMap(Codec<A> codec) {
+        return codec instanceof MapCodec.MapCodecCodec<A> mapCodecCodec
+                ? mapCodecCodec.codec()
+                : codec.fieldOf("value");
+    }
+
     /** Absent → empty; present and valid → value; present and invalid → error naming the field. */
     public static <A> MapCodec<Optional<A>> strictOptional(Codec<A> codec, String name) {
         return new MapCodec<>() {

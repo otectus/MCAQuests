@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 /** Toast shown when a nearby village opens a situation that needs help (0.8.0). */
 public class SituationToast implements Toast {
 
-    private static final ResourceLocation TEXTURE = new ResourceLocation("textures/gui/toasts.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/toasts.png");
 
     private final Component title;
 

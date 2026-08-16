@@ -18,13 +18,13 @@ public final class ProjectObjectiveTypes {
     private static final Map<ResourceLocation, ProjectObjectiveType<?>> BY_ID = new LinkedHashMap<>();
 
     public static final ProjectObjectiveType<DonateItemObjective> DONATE_ITEM =
-            register(new ResourceLocation(McaQuests.MOD_ID, "donate_item"), DonateItemObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "donate_item"), DonateItemObjective.CODEC);
     public static final ProjectObjectiveType<ProjectKillObjective> PROJECT_KILL_ENTITY =
-            register(new ResourceLocation(McaQuests.MOD_ID, "project_kill_entity"), ProjectKillObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "project_kill_entity"), ProjectKillObjective.CODEC);
     public static final ProjectObjectiveType<ProjectPlaceBlockObjective> PROJECT_PLACE_BLOCK =
-            register(new ResourceLocation(McaQuests.MOD_ID, "project_place_block"), ProjectPlaceBlockObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "project_place_block"), ProjectPlaceBlockObjective.CODEC);
     public static final ProjectObjectiveType<ProjectTalkObjective> PROJECT_TALK_TO_PROFESSION =
-            register(new ResourceLocation(McaQuests.MOD_ID, "project_talk_to_profession"), ProjectTalkObjective.CODEC);
+            register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "project_talk_to_profession"), ProjectTalkObjective.CODEC);
 
     public static final Codec<ProjectObjectiveType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {
@@ -36,7 +36,7 @@ public final class ProjectObjectiveTypes {
             type -> DataResult.success(type.id()));
 
     public static final Codec<ProjectObjective> CODEC =
-            TYPE_CODEC.dispatch("type", ProjectObjective::type, ProjectObjectiveType::codec);
+            TYPE_CODEC.dispatch("type", ProjectObjective::type, type -> dev.otectus.mcaquests.data.StrictCodecs.dispatchMap(type.codec()));
 
     private ProjectObjectiveTypes() {
     }

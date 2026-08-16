@@ -13,7 +13,7 @@ import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
 
@@ -43,7 +43,10 @@ public record LootTableReward(ResourceLocation lootTable) implements QuestReward
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
-        LootTable table = level.getServer().getLootData().getLootTable(lootTable);
+        // PORT: LootDataManager is gone in 1.21 — loot tables live in the reloadable registries.
+        LootTable table = level.getServer().reloadableRegistries()
+                .getLootTable(net.minecraft.resources.ResourceKey.create(
+                        net.minecraft.core.registries.Registries.LOOT_TABLE, lootTable));
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, player.position())
                 .withParameter(LootContextParams.THIS_ENTITY, player)

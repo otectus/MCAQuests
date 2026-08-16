@@ -1,17 +1,17 @@
 package dev.otectus.mcaquests.compat;
 
 import dev.otectus.mcaquests.McaQuests;
-import forge.net.mca.entity.VillagerEntityMCA;
-import forge.net.mca.entity.VillagerLike;
-import forge.net.mca.entity.ai.Memories;
-import forge.net.mca.entity.ai.MoveState;
-import forge.net.mca.entity.ai.relationship.AgeState;
-import forge.net.mca.entity.ai.relationship.EntityRelationship;
-import forge.net.mca.server.world.data.FamilyTree;
-import forge.net.mca.server.world.data.FamilyTreeNode;
-import forge.net.mca.server.world.data.PlayerSaveData;
-import forge.net.mca.server.world.data.Village;
-import forge.net.mca.server.world.data.VillageManager;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.Memories;
+import net.conczin.mca.entity.ai.MoveState;
+import net.conczin.mca.entity.ai.relationship.AgeState;
+import net.conczin.mca.entity.ai.relationship.EntityRelationship;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.server.world.data.PlayerSaveData;
+import net.conczin.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -42,9 +42,9 @@ import java.util.UUID;
 /**
  * The single point of contact with Minecraft Comes Alive: Reborn.
  *
- * <p><b>Why {@code forge.net.mca.*} and not {@code net.mca.*}?</b> MCA Reborn ships a Forgix-merged
+ * <p><b>Why {@code net.conczin.mca.*} and not {@code net.mca.*}?</b> MCA Reborn ships a Forgix-merged
  * "Universal" jar (Forge + Fabric + Quilt). Forgix relocates each loader's classes under a
- * loader-named root package, so the Forge classes are physically {@code forge.net.mca.*} in both
+ * loader-named root package, so the Forge classes are physically {@code net.conczin.mca.*} in both
  * the production jar and our dev-remapped (deobf) jar. There is no runtime restoration to
  * {@code net.mca.*}, so referencing the {@code forge.} prefix is correct for dev <em>and</em>
  * production. (MCA's own source is {@code net.mca.*}; the prefix is added at merge time.)
@@ -501,7 +501,7 @@ public final class McaCompat {
     //
     // MCA exposes a stable village id (Village#getId), a center anchor, a border test, the resident
     // set, and a queued-hearts path (Village#pushHearts(UUID,int)) for unloaded villagers. We surface
-    // only primitives (OptionalInt / BlockPos / UUID / Set) so no forge.net.mca.* type escapes this
+    // only primitives (OptionalInt / BlockPos / UUID / Set) so no net.conczin.mca.* type escapes this
     // class. Every method fails safe to a documented default and never throws.
     // ---------------------------------------------------------------------------------------------
 
@@ -602,7 +602,9 @@ public final class McaCompat {
     /** True when {@code uuid} is a resident of the village with {@code villageId}. Safe default: {@code false}. */
     public static boolean villageContains(ServerLevel level, int villageId, UUID uuid) {
         try {
-            return VillageManager.get(level).getOrEmpty(villageId).map(v -> v.hasResident(uuid)).orElse(false);
+            // PORT: Village.hasResident(UUID) was removed in MCA 1.21.1; stream the resident UUIDs instead.
+            return VillageManager.get(level).getOrEmpty(villageId)
+                    .map(v -> v.getResidentsUUIDs().anyMatch(uuid::equals)).orElse(false);
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA villageContains failed; defaulting false", t);
             return false;
@@ -620,7 +622,8 @@ public final class McaCompat {
                     .map(v -> {
                         int food = 0;
                         for (ItemStack stack : v.storageBuffer) {
-                            if (stack != null && stack.isEdible()) {
+                            // PORT: ItemStack.isEdible() is gone in 1.21 — food is a data component.
+                            if (stack != null && stack.has(net.minecraft.core.component.DataComponents.FOOD)) {
                                 food += stack.getCount();
                             }
                         }
@@ -676,19 +679,24 @@ public final class McaCompat {
     }
 
     /**
-     * Queues relationship hearts onto a village resident by UUID via MCA's own
-     * {@code Village#pushHearts(UUID,int)} — applied to that villager the next time it loads. Use this
-     * when a participating villager is offline/unloaded. <b>Server side only.</b>
+     * Formerly queued relationship hearts onto a village resident by UUID via MCA's
+     * {@code Village#pushHearts(UUID,int)}. <b>Server side only.</b>
+     *
+     * <p>PORT: MCA 1.21.1 removed the unspent-hearts queue (the surviving
+     * {@code pushHearts(Player,int)} needs a live player and applies immediately). The 1.20.1 queue
+     * was keyed by <em>player</em> UUID and only ever popped for online players, so entries pushed
+     * under a <em>villager</em> UUID — which is what every caller here passes — were never applied.
+     * Observable 1.20.1 behavior for this path was therefore "nothing happens"; a logged no-op is
+     * exact parity. Callers already grant live hearts via {@code addHearts} when the villager is
+     * loaded; this remains their offline fallback.
      */
     public static void pushVillageHearts(ServerLevel level, int villageId, UUID villagerUuid, int amount) {
         if (amount == 0) {
             return;
         }
-        try {
-            VillageManager.get(level).getOrEmpty(villageId).ifPresent(v -> v.pushHearts(villagerUuid, amount));
-        } catch (Throwable t) {
-            McaQuests.LOGGER.debug("MCA pushVillageHearts failed; ignoring", t);
-        }
+        McaQuests.LOGGER.debug(
+                "MCA 1.21.1 has no offline hearts queue; dropping {} queued heart(s) for villager {} in village {} "
+                        + "(matches 1.20.1 observable behavior)", amount, villagerUuid, villageId);
     }
 
     /**
@@ -740,7 +748,7 @@ public final class McaCompat {
     //
     // MCA's Residency exposes the villager's assigned home (Optional<GlobalPos>) and workplace
     // (BlockPos), and the FamilyTree lets us pick a concrete relative of the giver. We surface only
-    // primitives (BlockPos / UUID) so no forge.net.mca.* type escapes this class. Every method fails
+    // primitives (BlockPos / UUID) so no net.conczin.mca.* type escapes this class. Every method fails
     // safe to a documented default and never throws.
     // ---------------------------------------------------------------------------------------------
 
@@ -924,7 +932,7 @@ public final class McaCompat {
      * hearts (ties keep the first one scanned) — the entity-returning sibling of {@link #maxHeartsWithin},
      * added for the FTBQ {@code mcaquests:hearts} task's {@code spouse_only} mode (spec §15.9), which needs
      * to test {@link #isPlayerSpouse} against the same "best hearts" villager rather than duplicating the
-     * MCA scan. Kept here (and not in {@code compat.ftbq}) so no {@code forge.net.mca} type ever needs to
+     * MCA scan. Kept here (and not in {@code compat.ftbq}) so no {@code net.conczin.mca} type ever needs to
      * appear in a {@code compat.ftbq} signature — this returns a bare {@link Entity}, exactly like every
      * other MCA-touching method in this class. One bounded {@code getEntitiesOfClass} call — callers must
      * throttle. Safe default: {@code empty} (none loaded / MCA absent / any failure).

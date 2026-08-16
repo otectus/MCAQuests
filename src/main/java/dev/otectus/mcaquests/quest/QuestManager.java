@@ -20,7 +20,6 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
@@ -40,7 +39,7 @@ import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
 import dev.otectus.mcaquests.quest.template.TemplateSpec;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.PlayerQuestData;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import dev.otectus.mcaquests.state.QuestHistory;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -51,8 +50,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -130,7 +129,7 @@ public final class QuestManager {
      * best-effort purely so listeners see it when it happens to be around.
      */
     public static void abandonFromLog(ServerPlayer player, UUID villagerUuid, ResourceLocation questId) {
-        QuestCapabilities.get(player).ifPresent(data -> data.find(questId, villagerUuid).ifPresent(active -> {
+        QuestAttachments.get(player).ifPresent(data -> data.find(questId, villagerUuid).ifPresent(active -> {
             abandon(player, active, resolveGiver(player, active), data);
             syncLog(player);
         }));
@@ -157,7 +156,7 @@ public final class QuestManager {
         Component profession = McaCompat.getProfessionName(villager);
         int hearts = McaCompat.getHearts(player, villager);
 
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         if (dataOpt.isEmpty()) {
             send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
@@ -256,7 +255,7 @@ public final class QuestManager {
 
     public static boolean accept(ServerPlayer player, Entity villager, ResourceLocation questId) {
         Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(questId);
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         if (defOpt.isEmpty() || dataOpt.isEmpty()) {
             return false;
         }
@@ -320,7 +319,7 @@ public final class QuestManager {
         if (situationLink != null && player.getServer() != null) {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
         }
-        MinecraftForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, accepted));
+        NeoForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, accepted));
         McaCompat.setQuestGiverFollow(player, villager, McaQuestsConfig.COMMON.followGiverAfterAccept.get());
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             Component acceptLine = accepted.dialogueOr(QuestDefinition.ACCEPT,
@@ -332,7 +331,7 @@ public final class QuestManager {
     }
 
     public static boolean turnIn(ServerPlayer player, Entity villager, ResourceLocation questId) {
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(questId);
         if (dataOpt.isEmpty() || defOpt.isEmpty()) {
             return false;
@@ -351,7 +350,7 @@ public final class QuestManager {
 
     /** Auto-completion for {@link TurnInMode#SELF_COMPLETE} quests; called from the progress tick. */
     public static void selfComplete(ServerPlayer player, ActiveQuest active) {
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(active.questId());
         if (dataOpt.isEmpty() || defOpt.isEmpty() || active.rewardClaimed()) {
             return;
@@ -437,7 +436,7 @@ public final class QuestManager {
         }
         releaseEscortMovement(player, def, active);
         data.remove(active);
-        MinecraftForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
+        NeoForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             PlaceholderResolver resolver = active.textResolver(player);
             Component completeLine = def.dialogueOr(QuestDefinition.COMPLETE,
@@ -536,7 +535,7 @@ public final class QuestManager {
 
 
     public static boolean abandon(ServerPlayer player, Entity villager, ResourceLocation questId) {
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         if (dataOpt.isEmpty()) {
             return false;
         }
@@ -565,7 +564,7 @@ public final class QuestManager {
         QuestDefinitions.resolve(active.questId()).ifPresent(def -> {
             releaseEscortMovement(player, active.resolve(def), active);
             data.history().recordOutcome(def.id(), active.villagerUuid(), QuestHistory.Outcome.ABANDONED);
-            MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
+            NeoForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
         });
         return true;
     }
@@ -603,7 +602,7 @@ public final class QuestManager {
         releaseEscortMovement(player, def, active);
         data.remove(active);
 
-        MinecraftForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
+        NeoForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             PlaceholderResolver failResolver = active.textResolver(player);
             Component failLine = def.dialogueOr(QuestDefinition.FAILED,
@@ -743,7 +742,7 @@ public final class QuestManager {
      * dialogue mod ask "does this villager have work for me?" without touching {@link PlayerQuestData}.
      */
     public static List<QuestDefinition> eligibleOffers(ServerPlayer player, Entity villager) {
-        return QuestCapabilities.get(player)
+        return QuestAttachments.get(player)
                 .map(data -> eligibleOffers(player, villager, data))
                 .orElseGet(List::of);
     }
@@ -758,7 +757,7 @@ public final class QuestManager {
      * objectives are all satisfied (ready to hand in now). Read-only.
      */
     public static boolean hasReadyTurnIn(ServerPlayer player, Entity villager) {
-        return QuestCapabilities.get(player).map(data -> data.active().stream().anyMatch(active -> {
+        return QuestAttachments.get(player).map(data -> data.active().stream().anyMatch(active -> {
             QuestDefinition base = QuestDefinitions.resolve(active.questId()).orElse(null);
             if (base == null) {
                 return false;
@@ -778,7 +777,7 @@ public final class QuestManager {
      */
     public static void notifyExternalObjective(ServerPlayer player, ResourceLocation signalId,
                                                @Nullable UUID villagerUuid) {
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         if (dataOpt.isEmpty()) {
             return;
         }
@@ -815,7 +814,7 @@ public final class QuestManager {
      * signal, or a villager conversation — lands on the client immediately instead of up to a second later.
      */
     public static void settleProgress(ServerPlayer player) {
-        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        PlayerQuestData data = QuestAttachments.get(player).orElse(null);
         if (data == null) {
             return;
         }
@@ -981,7 +980,8 @@ public final class QuestManager {
     }
 
     private static void send(ServerPlayer player, QuestMenuDataS2CPacket packet) {
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+        PacketDistributor.sendToPlayer(player,
+                packet);
     }
 
     /**
@@ -989,17 +989,17 @@ public final class QuestManager {
      * {@link QuestReadyEvent}); resets the flag if a possession objective later drops below target.
      */
     public static void checkReadyTransitions(ServerPlayer player) {
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     QuestDefinition def = active.resolve(base);
                     boolean complete = isComplete(player, def, active);
                     if (complete && !active.readyNotified()) {
                         active.setReadyNotified(true);
-                        MinecraftForge.EVENT_BUS.post(new QuestReadyEvent(player, def));
+                        NeoForge.EVENT_BUS.post(new QuestReadyEvent(player, def));
                         // Resolve the MCA name only here (rare ready transition), not once per tick per player.
-                        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                                new QuestReadyToastS2CPacket(def.title(active.textResolver(player))));
+                        PacketDistributor.sendToPlayer(player,
+                new QuestReadyToastS2CPacket(def.title(active.textResolver(player))));
                     } else if (!complete && active.readyNotified()) {
                         active.setReadyNotified(false);
                     }
@@ -1010,7 +1010,7 @@ public final class QuestManager {
 
     /** Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker. */
     public static void syncLog(ServerPlayer player) {
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             List<QuestLogEntry> entries = new ArrayList<>();
             // Resolve the MCA name once, and only when there is at least one quest to render.
             String mcaName = data.active().isEmpty() ? null : McaCompat.getPlayerName(player);
@@ -1033,7 +1033,8 @@ public final class QuestManager {
                             active.villagerName(), Component.empty(), List.of(), false,
                             java.util.OptionalLong.empty())));
             }
-            QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
+            PacketDistributor.sendToPlayer(player,
+                new QuestLogSyncS2CPacket(entries));
         });
     }
 
@@ -1051,7 +1052,7 @@ public final class QuestManager {
             out.add(Component.literal("Unknown quest '" + questId + "'."));
             return out;
         }
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         if (dataOpt.isEmpty() || !(player.level() instanceof ServerLevel level)) {
             out.add(Component.literal("No quest data, or not on a server level."));
             return out;
@@ -1101,7 +1102,7 @@ public final class QuestManager {
      */
     public static List<Component> explainChainAvailability(ServerPlayer player, Entity villager) {
         List<Component> out = new ArrayList<>();
-        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> dataOpt = QuestAttachments.get(player);
         if (dataOpt.isEmpty()) {
             out.add(Component.literal("No quest data for this player."));
             return out;

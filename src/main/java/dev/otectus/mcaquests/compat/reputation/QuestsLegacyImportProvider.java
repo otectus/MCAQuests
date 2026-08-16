@@ -4,7 +4,7 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.quest.reputation.ReputationTiers;
 import dev.otectus.mcaquests.state.PlayerQuestData;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import dev.otectus.mcaquests.state.VillageStanding;
 import dev.otectus.mcareputation.api.LegacyImportProvider;
 import dev.otectus.mcareputation.api.LegacyImportRequest;
@@ -43,7 +43,7 @@ public final class QuestsLegacyImportProvider implements LegacyImportProvider {
     /** The marker written on success; the same string forever, since it means "v1 has been read". */
     public static final String SOURCE_ID = "mcaquests:legacy_reputation_v1";
 
-    private static final ResourceLocation LEGACY_DIMENSION = new ResourceLocation("minecraft", "overworld");
+    private static final ResourceLocation LEGACY_DIMENSION = ResourceLocation.fromNamespaceAndPath("minecraft", "overworld");
 
     @Override
     public String providerName() {
@@ -103,7 +103,7 @@ public final class QuestsLegacyImportProvider implements LegacyImportProvider {
     /** Village and global titles the player already holds, so migration does not cost them a badge. */
     private static void copyTitles(ServerPlayer player, CommunityKey community,
                                    LegacyImportRequest.Builder request) {
-        QuestCapabilities.get(player).ifPresent(data -> {
+        QuestAttachments.get(player).ifPresent(data -> {
             data.titles().forVillage(community.villageId()).forEach(title ->
                     request.villageTitle(community, title));
             data.titles().global().forEach(request::globalTitle);
@@ -115,7 +115,7 @@ public final class QuestsLegacyImportProvider implements LegacyImportProvider {
      * Every branch is a fact Quests itself recorded, so no guesswork is involved.
      */
     private static boolean isEligible(ServerPlayer player) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> data = QuestAttachments.get(player);
         if (data.isEmpty()) {
             return false;
         }

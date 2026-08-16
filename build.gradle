@@ -84,6 +84,14 @@ repositories {
         url = 'https://maven.ftb.dev/releases'
         content { includeGroup 'dev.ftb.mods' }
     }
+
+    // Architectury API — transitive compile-time dependency of the FTB 2101.x stack (NOT of this
+    // mod; MCA 1.21.1 itself dropped Architectury). Never shipped.
+    maven {
+        name = 'Architectury'
+        url = 'https://maven.architectury.dev/'
+        content { includeGroup 'dev.architectury' }
+    }
 }
 
 dependencies {

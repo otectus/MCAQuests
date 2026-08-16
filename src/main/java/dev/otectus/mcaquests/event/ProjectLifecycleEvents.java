@@ -5,16 +5,17 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.project.ProjectManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Project lifecycle hooks (spec 0.4.0): sponsor death handling and offline reward delivery on login.
  * Separate from {@code QuestProgressEvents.onGiverDeath} so quest behavior is unchanged.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class ProjectLifecycleEvents {
 
     private ProjectLifecycleEvents() {

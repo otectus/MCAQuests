@@ -42,7 +42,7 @@ import java.util.UUID;
 public final class QuestReputation {
 
     /** The source id recorded against every incident Quests creates. */
-    public static final ResourceLocation SOURCE = new ResourceLocation(McaQuests.MOD_ID, "quests");
+    public static final ResourceLocation SOURCE = ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "quests");
 
     private QuestReputation() {
     }

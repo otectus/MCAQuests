@@ -7,12 +7,12 @@ import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.quest.reputation.ReputationTier;
 import dev.otectus.mcaquests.quest.reputation.ReputationTierSet;
 import dev.otectus.mcaquests.quest.reputation.ReputationTiers;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import dev.otectus.mcaquests.state.VillageStanding;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
@@ -162,15 +162,14 @@ public final class LegacyReputationBackend implements ReputationBackend {
             reached.grantsTitle().ifPresent(title ->
                     grantTitle(server, award.player(), award.dimension(), award.villageId(), title, false));
             try {
-                dev.otectus.mcaquests.network.QuestNetwork.CHANNEL.send(
-                        net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                         new dev.otectus.mcaquests.network.ReputationTierToastS2CPacket(
                                 net.minecraft.network.chat.Component.literal(reached.name())));
             } catch (Throwable t) {
                 McaQuests.LOGGER.debug("[MCA: Quests] tier toast delivery failed; standing is unaffected", t);
             }
         }
-        MinecraftForge.EVENT_BUS.post(new ReputationTierReachedEvent(player, award.villageId(),
+        NeoForge.EVENT_BUS.post(new ReputationTierReachedEvent(player, award.villageId(),
                 ReputationTiers.DEFAULT_ID, reached.id(), newIndex));
     }
 
@@ -205,21 +204,21 @@ public final class LegacyReputationBackend implements ReputationBackend {
                             int villageId, ResourceLocation title, boolean global) {
         ServerPlayer online = server.getPlayerList().getPlayer(player);
         if (global) {
-            return online != null && QuestCapabilities.get(online)
+            return online != null && QuestAttachments.get(online)
                     .map(data -> data.titles().hasGlobal(title)).orElse(false);
         }
         if (dimension != null
                 && ProjectSavedData.get(server).standing().hasVillageTitle(player, dimension, villageId, title)) {
             return true;
         }
-        return online != null && QuestCapabilities.get(online)
+        return online != null && QuestAttachments.get(online)
                 .map(data -> data.titles().hasVillage(villageId, title)).orElse(false);
     }
 
     @Override
     public Set<ResourceLocation> globalTitles(MinecraftServer server, UUID player) {
         ServerPlayer online = server.getPlayerList().getPlayer(player);
-        return online == null ? Set.of() : QuestCapabilities.get(online)
+        return online == null ? Set.of() : QuestAttachments.get(online)
                 .<Set<ResourceLocation>>map(data -> new LinkedHashSet<>(data.titles().global()))
                 .orElseGet(Set::of);
     }
@@ -232,7 +231,7 @@ public final class LegacyReputationBackend implements ReputationBackend {
                         .villageTitles(player, dimension, villageId));
         ServerPlayer online = server.getPlayerList().getPlayer(player);
         if (online != null) {
-            QuestCapabilities.get(online).ifPresent(data -> held.addAll(data.titles().forVillage(villageId)));
+            QuestAttachments.get(online).ifPresent(data -> held.addAll(data.titles().forVillage(villageId)));
         }
         return held;
     }

@@ -72,7 +72,7 @@ class TemplateResolutionTest {
     @Test
     void substitutionReplacesWholeTokens() {
         Map<String, ResolvedValue> values = new LinkedHashMap<>();
-        values.put("crop", new ResolvedValue.IdValue(RegistryKind.ITEM, new ResourceLocation("minecraft:wheat")));
+        values.put("crop", new ResolvedValue.IdValue(RegistryKind.ITEM, ResourceLocation.parse("minecraft:wheat")));
         values.put("count", new ResolvedValue.IntValue(12));
         PlaceholderResolver resolver = new PlaceholderResolver(new ResolvedTemplate(values));
 
@@ -136,7 +136,7 @@ class TemplateResolutionTest {
     @Test
     void resolvedValuesSurviveNbtRoundTrip() {
         Map<String, ResolvedValue> values = new LinkedHashMap<>();
-        values.put("crop", new ResolvedValue.IdValue(RegistryKind.ITEM, new ResourceLocation("minecraft:carrot")));
+        values.put("crop", new ResolvedValue.IdValue(RegistryKind.ITEM, ResourceLocation.parse("minecraft:carrot")));
         values.put("count", new ResolvedValue.IntValue(7));
         values.put("phrase", new ResolvedValue.TextValue(QuestText.literal("a quiet harvest")));
 

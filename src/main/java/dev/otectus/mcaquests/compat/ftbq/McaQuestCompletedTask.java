@@ -9,7 +9,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.state.PlayerQuestData;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import dev.otectus.mcaquests.state.QuestHistory;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -55,7 +55,7 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
 
     @Override
     protected long currentValue(ServerPlayer player) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        Optional<PlayerQuestData> data = QuestAttachments.get(player);
         if (data.isEmpty()) {
             return 0L;
         }

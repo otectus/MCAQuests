@@ -33,9 +33,9 @@ class QuestFilterTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static final ResourceLocation FARMER_WHEAT = new ResourceLocation("mcaquests", "farmer_wheat_request");
-    private static final ResourceLocation LIBRARIAN_BOOK = new ResourceLocation("mcaquests", "librarian_book_request");
-    private static final ResourceLocation OTHER_NS_QUEST = new ResourceLocation("somepack", "custom_quest");
+    private static final ResourceLocation FARMER_WHEAT = ResourceLocation.fromNamespaceAndPath("mcaquests", "farmer_wheat_request");
+    private static final ResourceLocation LIBRARIAN_BOOK = ResourceLocation.fromNamespaceAndPath("mcaquests", "librarian_book_request");
+    private static final ResourceLocation OTHER_NS_QUEST = ResourceLocation.fromNamespaceAndPath("somepack", "custom_quest");
 
     private static QuestDefinition definition(ResourceLocation id, List<ResourceLocation> professions,
                                                Optional<String> category, Optional<ChainSpec> chain) {
@@ -111,7 +111,7 @@ class QuestFilterTest {
 
     @Test
     void professionStrictRequiresExactMatch() {
-        QuestDefinition def = definition(FARMER_WHEAT, List.of(new ResourceLocation("minecraft", "farmer")),
+        QuestDefinition def = definition(FARMER_WHEAT, List.of(ResourceLocation.fromNamespaceAndPath("minecraft", "farmer")),
                 Optional.empty(), Optional.empty());
         QuestFilter sameNamespace = new QuestFilter("", "minecraft:farmer", "", "");
         QuestFilter differentNamespace = new QuestFilter("", "mca:farmer", "", "");
@@ -121,7 +121,7 @@ class QuestFilterTest {
 
     @Test
     void professionNormalizedMatchesSamePathDifferentNamespace() {
-        QuestDefinition def = definition(FARMER_WHEAT, List.of(new ResourceLocation("minecraft", "farmer")),
+        QuestDefinition def = definition(FARMER_WHEAT, List.of(ResourceLocation.fromNamespaceAndPath("minecraft", "farmer")),
                 Optional.empty(), Optional.empty());
         QuestFilter filter = new QuestFilter("", "mca:farmer", "", "");
         assertTrue(filter.matches(FARMER_WHEAT, resolverOf(def), ProfessionMatchingMode.NORMALIZED));
@@ -129,7 +129,7 @@ class QuestFilterTest {
 
     @Test
     void professionEmptyMeansAny() {
-        QuestDefinition def = definition(FARMER_WHEAT, List.of(new ResourceLocation("minecraft", "farmer")),
+        QuestDefinition def = definition(FARMER_WHEAT, List.of(ResourceLocation.fromNamespaceAndPath("minecraft", "farmer")),
                 Optional.empty(), Optional.empty());
         QuestFilter filter = new QuestFilter("", "", "", "");
         assertTrue(filter.matches(FARMER_WHEAT, resolverOf(def), ProfessionMatchingMode.STRICT));
@@ -174,7 +174,7 @@ class QuestFilterTest {
 
     @Test
     void filtersComposeWithAnd() {
-        QuestDefinition def = definition(FARMER_WHEAT, List.of(new ResourceLocation("minecraft", "farmer")),
+        QuestDefinition def = definition(FARMER_WHEAT, List.of(ResourceLocation.fromNamespaceAndPath("minecraft", "farmer")),
                 Optional.of("farming"), Optional.of(chain("family_arc", 1, Optional.of(3))));
         QuestFilter allMatch = new QuestFilter("mcaquests:farmer_wheat_request", "minecraft:farmer", "family_arc", "farming");
         assertTrue(allMatch.matches(FARMER_WHEAT, resolverOf(def), ProfessionMatchingMode.STRICT));
@@ -192,9 +192,9 @@ class QuestFilterTest {
         // construction. The interesting behavior is that profession/chain/category are read from the
         // RESOLVED OFFER DEFINITION — a situation completion is filterable by its offer's attributes
         // even though the raw history entry carries none of them.
-        ResourceLocation syntheticId = new ResourceLocation("mcaquests", "situation/mcaquests/barn_raising");
+        ResourceLocation syntheticId = ResourceLocation.fromNamespaceAndPath("mcaquests", "situation/mcaquests/barn_raising");
         QuestDefinition offerDefinition = definition(syntheticId,
-                List.of(new ResourceLocation("minecraft", "farmer")), Optional.of("village_life"),
+                List.of(ResourceLocation.fromNamespaceAndPath("minecraft", "farmer")), Optional.of("village_life"),
                 Optional.of(chain("barn_arc", 1, Optional.empty())));
         Function<ResourceLocation, Optional<QuestDefinition>> stubResolver =
                 id -> id.equals(syntheticId) ? Optional.of(offerDefinition) : Optional.empty();
@@ -215,7 +215,7 @@ class QuestFilterTest {
 
     @Test
     void unresolvableEntryMatchesOnlyTheAnyPattern() {
-        ResourceLocation goneId = new ResourceLocation("mcaquests", "removed_quest");
+        ResourceLocation goneId = ResourceLocation.fromNamespaceAndPath("mcaquests", "removed_quest");
         Function<ResourceLocation, Optional<QuestDefinition>> emptyResolver = id -> Optional.empty();
 
         QuestFilter any = new QuestFilter("", "", "", "");
@@ -224,7 +224,7 @@ class QuestFilterTest {
 
     @Test
     void unresolvableEntryDoesNotMatchNonAnyFilters() {
-        ResourceLocation goneId = new ResourceLocation("mcaquests", "removed_quest");
+        ResourceLocation goneId = ResourceLocation.fromNamespaceAndPath("mcaquests", "removed_quest");
         Function<ResourceLocation, Optional<QuestDefinition>> emptyResolver = id -> Optional.empty();
 
         assertFalse(new QuestFilter("mcaquests:removed_quest", "", "", "")

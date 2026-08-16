@@ -1,29 +1,32 @@
 package dev.otectus.mcaquests.network;
 
-import dev.otectus.mcaquests.client.QuestClientHandlers;
+import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /** Server to client: a quest became ready to turn in — show a toast + sound (spec sections 20, 21). */
-public record QuestReadyToastS2CPacket(Component title) {
+public record QuestReadyToastS2CPacket(Component title) implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<QuestReadyToastS2CPacket> TYPE = new CustomPacketPayload.Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "quest_ready_toast"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, QuestReadyToastS2CPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(QuestReadyToastS2CPacket::encode, QuestReadyToastS2CPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     public static void encode(QuestReadyToastS2CPacket msg, FriendlyByteBuf buf) {
-        buf.writeComponent(msg.title);
+        NetComponents.write(buf, msg.title);
     }
 
     public static QuestReadyToastS2CPacket decode(FriendlyByteBuf buf) {
-        return new QuestReadyToastS2CPacket(buf.readComponent());
-    }
-
-    public static void handle(QuestReadyToastS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> QuestClientHandlers.showReadyToast(msg.title)));
-        context.setPacketHandled(true);
+        return new QuestReadyToastS2CPacket(NetComponents.read(buf));
     }
 }

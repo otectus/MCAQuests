@@ -23,7 +23,7 @@ public final class SituationIds {
     }
 
     public static ResourceLocation syntheticId(ResourceLocation defId) {
-        return new ResourceLocation(McaQuests.MOD_ID, SYNTHETIC_PREFIX + defId.getNamespace() + "/" + defId.getPath());
+        return ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, SYNTHETIC_PREFIX + defId.getNamespace() + "/" + defId.getPath());
     }
 
     public static boolean isSyntheticId(ResourceLocation candidate) {
@@ -40,6 +40,6 @@ public final class SituationIds {
         if (slash <= 0 || slash >= rest.length() - 1) {
             return Optional.empty();
         }
-        return Optional.of(new ResourceLocation(rest.substring(0, slash), rest.substring(slash + 1)));
+        return Optional.of(ResourceLocation.fromNamespaceAndPath(rest.substring(0, slash), rest.substring(slash + 1)));
     }
 }

@@ -167,7 +167,7 @@ class QuestLogicTest {
     @Test
     void questHistoryNbtRoundTrip() {
         QuestHistory history = new QuestHistory();
-        ResourceLocation quest = new ResourceLocation("mcaquests", "farmer_wheat_request");
+        ResourceLocation quest = ResourceLocation.fromNamespaceAndPath("mcaquests", "farmer_wheat_request");
         UUID villager = UUID.randomUUID();
         history.recordCompletion(quest);
         history.recordCompletion(quest);
@@ -182,10 +182,10 @@ class QuestLogicTest {
 
     @Test
     void giverProfessionMatching() {
-        ResourceLocation farmer = new ResourceLocation("minecraft", "farmer");
+        ResourceLocation farmer = ResourceLocation.fromNamespaceAndPath("minecraft", "farmer");
         GiverSpec spec = new GiverSpec(List.of(farmer), true, -100, 1000);
         assertTrue(spec.acceptsProfession(farmer));
-        assertFalse(spec.acceptsProfession(new ResourceLocation("minecraft", "librarian")));
+        assertFalse(spec.acceptsProfession(ResourceLocation.fromNamespaceAndPath("minecraft", "librarian")));
         assertTrue(GiverSpec.ANY.isGeneric());
         assertTrue(GiverSpec.ANY.acceptsProfession(farmer), "generic quests accept any profession");
     }
@@ -202,7 +202,7 @@ class QuestLogicTest {
     @Test
     void cooldownAndCompletionHistory() {
         QuestHistory history = new QuestHistory();
-        ResourceLocation quest = new ResourceLocation("mcaquests", "farmer_wheat_request");
+        ResourceLocation quest = ResourceLocation.fromNamespaceAndPath("mcaquests", "farmer_wheat_request");
         UUID villager = UUID.randomUUID();
 
         assertFalse(history.onCooldown(quest, villager, 0L));
@@ -220,9 +220,9 @@ class QuestLogicTest {
 
     @Test
     void professionMatchingModes() {
-        ResourceLocation farmerMc = new ResourceLocation("minecraft", "farmer");
-        ResourceLocation farmerMca = new ResourceLocation("mca", "farmer");
-        ResourceLocation librarian = new ResourceLocation("minecraft", "librarian");
+        ResourceLocation farmerMc = ResourceLocation.fromNamespaceAndPath("minecraft", "farmer");
+        ResourceLocation farmerMca = ResourceLocation.fromNamespaceAndPath("mca", "farmer");
+        ResourceLocation librarian = ResourceLocation.fromNamespaceAndPath("minecraft", "librarian");
 
         assertTrue(ProfessionMatcher.matches(farmerMc, farmerMc, ProfessionMatchingMode.STRICT));
         assertFalse(ProfessionMatcher.matches(farmerMc, farmerMca, ProfessionMatchingMode.STRICT));
@@ -251,7 +251,7 @@ class QuestLogicTest {
     @Test
     void questHistoryOutcomesRoundTrip() {
         QuestHistory history = new QuestHistory();
-        ResourceLocation quest = new ResourceLocation("mcaquests", "farmer_help_apprentice");
+        ResourceLocation quest = ResourceLocation.fromNamespaceAndPath("mcaquests", "farmer_help_apprentice");
         history.recordOutcome(quest, QuestHistory.Outcome.FAILED);
         history.recordOutcome(quest, QuestHistory.Outcome.FAILED);
         history.recordOutcome(quest, QuestHistory.Outcome.ABANDONED);
@@ -266,9 +266,9 @@ class QuestLogicTest {
 
     @Test
     void unlockCycleDetection() {
-        ResourceLocation a = new ResourceLocation("mcaquests", "a");
-        ResourceLocation b = new ResourceLocation("mcaquests", "b");
-        ResourceLocation c = new ResourceLocation("mcaquests", "c");
+        ResourceLocation a = ResourceLocation.fromNamespaceAndPath("mcaquests", "a");
+        ResourceLocation b = ResourceLocation.fromNamespaceAndPath("mcaquests", "b");
+        ResourceLocation c = ResourceLocation.fromNamespaceAndPath("mcaquests", "c");
 
         // a -> b -> c is a clean linear chain: no cycle.
         assertTrue(QuestChainValidator.findUnlockCycle(
@@ -305,7 +305,7 @@ class QuestLogicTest {
         ChainSpec chain = new ChainSpec(chainId, 1, Optional.empty(), Optional.empty(), Optional.empty(),
                 List.of(), List.of());
         GiverSpec giver = new GiverSpec(List.of(), true, Integer.MIN_VALUE, Integer.MAX_VALUE);
-        return new QuestDefinition(new ResourceLocation("mcaquests", path), true, 1, Optional.empty(),
+        return new QuestDefinition(ResourceLocation.fromNamespaceAndPath("mcaquests", path), true, 1, Optional.empty(),
                 Optional.empty(), RepeatRule.DEFAULT, giver, Map.of(), List.of(), List.of(),
                 TurnInSpec.DEFAULT, Optional.empty(), Optional.of(chain), Optional.empty(),
                 Optional.empty(), OfferShaping.NONE, dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE);
@@ -314,7 +314,7 @@ class QuestLogicTest {
     @Test
     void perVillagerHistoryRoundTripAndIsolation() {
         QuestHistory history = new QuestHistory();
-        ResourceLocation quest = new ResourceLocation("mcaquests", "mapmaker_expedition_1_survey");
+        ResourceLocation quest = ResourceLocation.fromNamespaceAndPath("mcaquests", "mapmaker_expedition_1_survey");
         UUID villagerA = UUID.randomUUID();
         UUID villagerB = UUID.randomUUID();
         history.recordCompletion(quest, villagerA);
@@ -333,7 +333,7 @@ class QuestLogicTest {
 
     @Test
     void conditionRefsCollectsRequiredWithPolarity() {
-        ResourceLocation x = new ResourceLocation("mcaquests", "x");
+        ResourceLocation x = ResourceLocation.fromNamespaceAndPath("mcaquests", "x");
         QuestCondition gate = new AllOfCondition(List.of(
                 new QuestCompletedCondition(x, HistoryScope.GIVER),
                 new QuestNotCompletedCondition(x, HistoryScope.GIVER)));
@@ -346,7 +346,7 @@ class QuestLogicTest {
 
     @Test
     void conditionRefsDetectsOutcomeBranchAndReferences() {
-        ResourceLocation y = new ResourceLocation("mcaquests", "y");
+        ResourceLocation y = ResourceLocation.fromNamespaceAndPath("mcaquests", "y");
         assertTrue(ConditionRefs.hasOutcomeBranch(Optional.of(new QuestFailedCondition(y, HistoryScope.GIVER))),
                 "quest_failed marks an outcome branch");
         assertTrue(ConditionRefs.hasOutcomeBranch(Optional.of(new QuestAbandonedCondition(y, HistoryScope.GLOBAL))),

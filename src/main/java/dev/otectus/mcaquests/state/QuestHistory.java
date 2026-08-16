@@ -138,6 +138,12 @@ public final class QuestHistory {
         return outcomesByGiver.getOrDefault(giverOutcomeKey(quest, villager, outcome), 0);
     }
 
+    /** True when no completion, outcome, or cooldown has ever been recorded. */
+    public boolean isEmpty() {
+        return cooldownUntil.isEmpty() && completions.isEmpty() && outcomes.isEmpty()
+                && completionsByGiver.isEmpty() && outcomesByGiver.isEmpty();
+    }
+
     public void copyFrom(QuestHistory other) {
         cooldownUntil.clear();
         cooldownUntil.putAll(other.cooldownUntil);

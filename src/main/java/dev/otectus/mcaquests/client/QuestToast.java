@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 /** Toast shown when a quest becomes ready to turn in (spec section 21). */
 public class QuestToast implements Toast {
 
-    private static final ResourceLocation TEXTURE = new ResourceLocation("textures/gui/toasts.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/toasts.png");
 
     private final Component questTitle;
 

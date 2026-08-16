@@ -5,7 +5,6 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.network.JournalArchiveEntry;
 import dev.otectus.mcaquests.network.JournalSyncS2CPacket;
 import dev.otectus.mcaquests.network.JournalVillageEntry;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.quest.reputation.ReputationService;
 import dev.otectus.mcaquests.quest.reputation.ReputationTier;
@@ -14,12 +13,12 @@ import dev.otectus.mcaquests.quest.reputation.ReputationTiers;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.quest.title.Titles;
 import dev.otectus.mcaquests.state.PlayerQuestData;
-import dev.otectus.mcaquests.state.QuestCapabilities;
+import dev.otectus.mcaquests.state.QuestAttachments;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -47,7 +46,7 @@ public final class JournalService {
         if (!(player.level() instanceof ServerLevel level)) {
             return;
         }
-        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        PlayerQuestData data = QuestAttachments.get(player).orElse(null);
         if (data == null) {
             return;
         }
@@ -68,7 +67,7 @@ public final class JournalService {
                 QuestRegistry.get(id).map(def -> def.title(resolver)).orElseGet(() -> Component.literal(id.toString()));
         List<JournalArchiveEntry> archive = buildArchive(data.history().completionsView(), titleResolver, ARCHIVE_CAP);
 
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        PacketDistributor.sendToPlayer(player,
                 new JournalSyncS2CPacket(globalTitles, villages, archive));
     }
 

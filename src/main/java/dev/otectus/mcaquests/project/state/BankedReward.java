@@ -70,7 +70,7 @@ public record BankedReward(Type type, int amount, @Nullable ResourceLocation tit
         int amount = tag.getInt("amount");
         ResourceLocation titleId;
         try {
-            titleId = tag.contains("titleId") ? new ResourceLocation(tag.getString("titleId")) : null;
+            titleId = tag.contains("titleId") ? ResourceLocation.parse(tag.getString("titleId")) : null;
         } catch (RuntimeException e) {
             titleId = null;
         }

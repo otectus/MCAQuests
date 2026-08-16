@@ -41,7 +41,7 @@ public sealed interface ResolvedValue permits ResolvedValue.IdValue, ResolvedVal
         return switch (tag.getString("t")) {
             case "id" -> new IdValue(
                     RegistryKind.fromKey(tag.getString("kind")).orElse(RegistryKind.ITEM),
-                    new ResourceLocation(tag.getString("id")));
+                    ResourceLocation.parse(tag.getString("id")));
             case "int" -> new IntValue(tag.getInt("v"));
             case "text" -> new TextValue(loadText(tag));
             default -> new IntValue(0);

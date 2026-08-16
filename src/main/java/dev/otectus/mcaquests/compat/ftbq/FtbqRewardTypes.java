@@ -47,6 +47,6 @@ public final class FtbqRewardTypes {
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation(McaQuests.MOD_ID, path);
+        return ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, path);
     }
 }

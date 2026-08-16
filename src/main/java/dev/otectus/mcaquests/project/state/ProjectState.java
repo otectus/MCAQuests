@@ -256,10 +256,10 @@ public final class ProjectState {
             scope = ProjectScope.VILLAGE;
         }
         ProjectState state = new ProjectState(
-                new ResourceLocation(tag.getString("project")),
+                ResourceLocation.parse(tag.getString("project")),
                 scope,
                 tag.getString("identity"),
-                new ResourceLocation(tag.getString("anchor_dim")),
+                ResourceLocation.parse(tag.getString("anchor_dim")),
                 BlockPos.of(tag.getLong("anchor")),
                 villageId,
                 tag.getLong("start"),

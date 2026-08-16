@@ -9,18 +9,19 @@ import java.lang.reflect.Field;
  * Test-only stand-in for vanilla's {@link Bootstrap#bootStrap()}. Some unit tests construct real
  * {@code QuestDefinition}s, whose {@code <clinit>} builds DFU codecs reaching
  * {@code BuiltInRegistries} / {@code EntityType} / {@code DataFixers} — all of which assert the game
- * is "bootstrapped" and that {@code SharedConstants} has a detected version. The real
- * {@code Bootstrap.bootStrap()} cannot run here: in this Forge dev environment it reaches
- * {@code net.minecraftforge.network.NetworkHooks.init()}, which needs an actual running Forge
- * instance and NPEs. Since codec <em>construction</em> (no en/decoding) only needs the flag itself,
- * this helper detects the version and flips {@code Bootstrap.isBootstrapped} via reflection, skipping
- * the heavy method body.
+ * is "bootstrapped" and that {@code SharedConstants} has a detected version.
  *
- * <p><b>Warning:</b> the flip is JVM-global and one-way for the whole test worker — after any test
- * calls {@link #ensureBootstrapped()}, vanilla code in the same worker will believe the game is
- * bootstrapped even though registries were never actually populated. Any future test that needs the
- * REAL {@code Bootstrap.bootStrap()} (fully frozen/populated registries) must not share a test worker
- * with tests using this helper.
+ * <p>PORT: under 1.20.1 Forge the real {@code Bootstrap.bootStrap()} could not run here (it reached
+ * {@code NetworkHooks.init()}, which NPEs outside a running Forge instance), so this helper flipped
+ * {@code Bootstrap.isBootstrapped} reflectively. That Forge failure mode is gone on NeoForge, and
+ * ModDevGradle's {@code unitTest} support puts a properly configured game on the test classpath — so
+ * we now try the real bootstrap first and keep the reflective flip only as a fallback (codec
+ * <em>construction</em>, with no en/decoding, only needs the flag itself).
+ *
+ * <p><b>Warning:</b> either path is JVM-global and one-way for the whole test worker. If the
+ * fallback path was taken, vanilla code in the same worker will believe the game is bootstrapped
+ * even though registries were never actually populated; any future test that needs fully
+ * frozen/populated registries must not share a test worker with tests using the fallback.
  */
 public final class TestBootstrap {
 
@@ -36,11 +37,17 @@ public final class TestBootstrap {
         }
         SharedConstants.tryDetectVersion(); // needed by DataFixers.<clinit>, reached via EntityType/Items
         try {
-            Field isBootstrapped = Bootstrap.class.getDeclaredField("isBootstrapped");
-            isBootstrapped.setAccessible(true);
-            isBootstrapped.set(null, true);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Could not flip Bootstrap.isBootstrapped for tests", e);
+            Bootstrap.bootStrap();
+        } catch (Throwable t) {
+            // Real bootstrap unavailable in this environment — flip the flag only (see javadoc).
+            try {
+                Field isBootstrapped = Bootstrap.class.getDeclaredField("isBootstrapped");
+                isBootstrapped.setAccessible(true);
+                isBootstrapped.set(null, true);
+            } catch (ReflectiveOperationException e) {
+                e.addSuppressed(t);
+                throw new IllegalStateException("Could not bootstrap Minecraft for tests", e);
+            }
         }
         done = true;
     }

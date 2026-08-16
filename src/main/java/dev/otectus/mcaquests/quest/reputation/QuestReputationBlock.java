@@ -96,7 +96,7 @@ public record QuestReputationBlock(
         public static final ResourceLocation RESTITUTION_COMPLETED = rep("restitution_completed");
 
         private static ResourceLocation rep(String path) {
-            return new ResourceLocation("mcareputation", path);
+            return ResourceLocation.fromNamespaceAndPath("mcareputation", path);
         }
     }
 }

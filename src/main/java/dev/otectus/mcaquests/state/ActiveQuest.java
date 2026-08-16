@@ -198,7 +198,10 @@ public final class ActiveQuest {
         CompoundTag tag = new CompoundTag();
         tag.putString("quest", questId.toString());
         tag.putUUID("villager", villagerUuid);
-        tag.putString("villager_name", Component.Serializer.toJson(villagerName));
+        // PORT: Component.Serializer now needs a HolderLookup.Provider; villager names are plain
+        // text/translatable components, so the empty registry set suffices (format unchanged).
+        tag.putString("villager_name",
+                Component.Serializer.toJson(villagerName, net.minecraft.core.RegistryAccess.EMPTY));
         if (villagerProfession != null) {
             tag.putString("profession", villagerProfession.toString());
         }
@@ -226,9 +229,10 @@ public final class ActiveQuest {
     }
 
     public static ActiveQuest load(CompoundTag tag) {
-        Component name = Component.Serializer.fromJson(tag.getString("villager_name"));
+        Component name = Component.Serializer.fromJson(tag.getString("villager_name"),
+                net.minecraft.core.RegistryAccess.EMPTY);
         ResourceLocation profession = tag.contains("profession")
-                ? new ResourceLocation(tag.getString("profession")) : null;
+                ? ResourceLocation.parse(tag.getString("profession")) : null;
         List<ObjectiveProgress> progress = new ArrayList<>();
         ListTag list = tag.getList("progress", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
@@ -238,11 +242,11 @@ public final class ActiveQuest {
                 ? ResolvedTemplate.load(tag.getCompound("template")) : null;
         UUID situationInstance = tag.contains("situation") ? tag.getUUID("situation") : null;
         ActiveQuest quest = new ActiveQuest(
-                new ResourceLocation(tag.getString("quest")),
+                ResourceLocation.parse(tag.getString("quest")),
                 tag.getUUID("villager"),
                 name != null ? name : Component.empty(),
                 profession,
-                new ResourceLocation(tag.getString("dimension")),
+                ResourceLocation.parse(tag.getString("dimension")),
                 tag.getLong("start"),
                 progress,
                 template,
