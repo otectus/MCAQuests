@@ -1,20 +1,9 @@
-buildscript {
-    repositories {
-        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'org.spongepowered:mixingradle:0.7.+'
-    }
-}
-
 plugins {
-    id 'eclipse'
     id 'idea'
-    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'eclipse'
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.141'
 }
-
-apply plugin: 'org.spongepowered.mixin'
 
 version = mod_version
 group = mod_group_id
@@ -23,52 +12,53 @@ base {
     archivesName = mod_id
 }
 
-// Minecraft 1.18+ ships Java 17; target it explicitly (system default JDK is 21).
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+// Minecraft 1.20.5+ requires Java 21; the foojay resolver provisions it if absent.
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 
-minecraft {
-    mappings channel: mapping_channel, version: mapping_version
+neoForge {
+    version = project.neoforge_version
 
-    // Required for this template's processResources/run setup.
-    copyIdeResources = true
+    parchment {
+        minecraftVersion = project.parchment_minecraft
+        mappingsVersion = project.parchment_version
+    }
 
     runs {
-        configureEach {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            // Remap dependency/our-own mixin refmaps SRG->official in dev. NOTE: this does NOT make
-            // MCA load in dev — MCA's forge mixins ship with no refmap and hard-coded SRG names, so
-            // they only resolve in a production (SRG) runtime. Real MCA behaviour is therefore
-            // verified in a production-style instance, not under dev runClient/runServer.
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-            mods {
-                "${mod_id}" {
-                    source sourceSets.main
-                }
-            }
-        }
-
         client {
-            property 'forge.enabledGameTestNamespaces', mod_id
+            client()
+            gameDirectory = project.file('run')
         }
-
         server {
-            property 'forge.enabledGameTestNamespaces', mod_id
-            args '--nogui'
+            server()
+            gameDirectory = project.file('run-server')
+            programArgument '--nogui'
         }
-
-        gameTestServer {
-            property 'forge.enabledGameTestNamespaces', mod_id
-        }
-
         data {
-            workingDirectory project.file('run-data')
-            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            data()
+            gameDirectory = project.file('run-data')
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
         }
+        configureEach {
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+
+    // JUnit tests that need Minecraft classes on the classpath (the whole test suite does —
+    // TestBootstrap touches SharedConstants/Bootstrap).
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
     }
 }
 
@@ -76,14 +66,8 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
-    // Architectury API (hard runtime dependency of MCA Reborn's Forge build).
-    maven { url = 'https://maven.architectury.dev/' }
-
-    // SpongePowered (Mixin annotation processor for our client menu-injection mixin).
-    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-
-    // MCA Reborn via Modrinth Maven. exclusiveContent keeps this repo scoped to the
-    // maven.modrinth group and routes resolution through ForgeGradle's deobf pipeline.
+    // MCA Reborn via Modrinth Maven, scoped to the maven.modrinth group. The 1.21.1 NeoForge
+    // jar is mojmap — no deobf pipeline exists or is needed.
     exclusiveContent {
         forRepository {
             maven {
@@ -91,7 +75,6 @@ repositories {
                 url = 'https://api.modrinth.com/maven'
             }
         }
-        forRepositories(fg.repository)
         filter { includeGroup 'maven.modrinth' }
     }
 
@@ -104,34 +87,29 @@ repositories {
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-
-    // MCA Reborn — obfuscated production (Universal) jar, remapped to our dev mappings
-    // by fg.deobf. All MCA access is isolated behind dev.otectus.mcaquests.compat.McaCompat.
-    implementation fg.deobf("maven.modrinth:minecraft-comes-alive-reborn:${mca_version}")
-
-    // Architectury API (Forge) — required at runtime by MCA. deobf for dev remapping.
-    implementation fg.deobf("dev.architectury:architectury-forge:${architectury_version}")
+    // MCA Reborn — plain implementation. The NeoForge jar is mojmap; it also loads as a mod in
+    // dev runs (its 1.21.1 mixins are mojmap too), so real MCA behaviour is testable under
+    // runClient/runServer. All MCA access is isolated behind dev.otectus.mcaquests.compat.McaCompat.
+    implementation "maven.modrinth:minecraft-comes-alive-reborn:${mca_version}"
 
     // MCA: Reputation — OPTIONAL integration, compile-only. The sibling mod is not published to a
-    // Maven, so we compile against its dev-mapped class output; both mods use `official` 1.20.1
-    // mappings, so the Minecraft type names line up and reobfJar remaps our own references for
-    // production. Never bundled: the real mod supplies these classes at runtime, and everything that
-    // touches them is gated behind ReputationBridge's ModList check.
+    // Maven, so we compile against its class output (must be the 1.21.1 NeoForge port). Never
+    // bundled: the real mod supplies these classes at runtime, and everything that touches them is
+    // gated behind ReputationBridge's ModList check.
     //
-    // Build MCA: Reputation first (`../MCAReputation: ./gradlew classes`). When it is absent the
-    // compat.reputation package cannot compile, which is why the build fails loudly here rather than
-    // silently producing an integration-less jar (spec 9.2).
-    def mcaReputationClasses = file("${projectDir}/../MCAReputation/build/classes/java/main")
+    // When the ported sibling is absent, the compat.reputation package is excluded from compilation
+    // so the rest of the mod stays shippable; the built-in LegacyReputationBackend remains the
+    // default and fully functional. Parity for the optional integration lands with the sibling's
+    // 1.21.1 port (PORTING_1.21.1_NEOFORGE.md Phase 11).
+    def mcaReputationClasses = file("${projectDir}/../MCAReputation_1.21.1/build/classes/java/main")
     if (mcaReputationClasses.exists()) {
         compileOnly files(mcaReputationClasses)
     } else {
-        logger.warn("MCA: Reputation classes not found at ${mcaReputationClasses}; build it first " +
-                "(../MCAReputation: ./gradlew classes) or the optional Reputation integration will not compile.")
+        logger.warn("MCA: Reputation (1.21.1) classes not found at ${mcaReputationClasses}; " +
+                "excluding the optional compat.reputation sources from compilation. " +
+                "Port and build MCAReputation_1.21.1 first to compile the integration.")
+        sourceSets.main.java.exclude 'dev/otectus/mcaquests/compat/reputation/**'
     }
-
-    // Mixin annotation processor — generates the refmap for our client menu-injection mixin.
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     // Unit tests for the non-MCA quest engine (spec section 33).
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
@@ -139,15 +117,15 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // FTB Quests optional integration — compile-time only. NEVER shipped, NEVER 'implementation'.
-    compileOnly fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
-    compileOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
-    compileOnly fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
+    compileOnly "dev.ftb.mods:ftb-quests-neoforge:${ftb_quests_version}"
+    compileOnly "dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}"
+    compileOnly "dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}"
 
     // Optional: put the FTB stack on the dev runtime for hands-on testing.
     if (project.hasProperty('enableFtbqInDev') && project.enableFtbqInDev.toBoolean()) {
-        runtimeOnly fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
-        runtimeOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
-        runtimeOnly fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
+        runtimeOnly "dev.ftb.mods:ftb-quests-neoforge:${ftb_quests_version}"
+        runtimeOnly "dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}"
+        runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}"
     }
 }
 
@@ -155,25 +133,25 @@ test {
     useJUnitPlatform()
 }
 
-// MixinGradle: generate the refmap for our mixin and register the config for reobfuscation.
-mixin {
-    add sourceSets.main, 'mcaquests.refmap.json'
-    config 'mcaquests.mixins.json'
-}
-
-// Expand metadata placeholders into mods.toml / pack.mcmeta at build time.
+// Expand metadata placeholders into neoforge.mods.toml at build time.
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
-            minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
-            forge_version: forge_version, forge_version_range: forge_version_range,
-            loader_version_range: loader_version_range,
-            mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
-            mod_authors: mod_authors, mod_description: mod_description,
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neoforge_version       : neoforge_version,
+            neoforge_version_range : neoforge_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
     ]
     inputs.properties replaceProperties
 
-    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
-        expand replaceProperties + [project: project]
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties
     }
 }
 
@@ -188,7 +166,6 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Vendor'   : mod_authors
         ])
     }
-    finalizedBy 'reobfJar'
 }
 
 tasks.withType(JavaCompile).configureEach {
