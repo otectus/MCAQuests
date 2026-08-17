@@ -150,9 +150,22 @@ public class QuestMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
         int left = centerX - wrapWidth() / 2;
+
+        // super.render draws widgets outside our scissor and cannot clip them, so a button that is
+        // not wholly inside the viewport is hidden instead — which also makes it unclickable
+        // (AbstractWidget.clicked tests visible), so it can no longer swallow a footer click. This
+        // has to run before super.render, which is what actually draws the buttons.
+        for (ScrolledButton scrolled : scrolledButtons) {
+            scrolled.button().setY(view.screenY(scrolled.contentY()));
+            scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 20);
+        }
+
+        // Screen.render draws the menu background (blur pass + tint) itself since 1.20.2 and then
+        // the widgets, so it goes first and our content after it. Drawing content before it — the
+        // 1.20.1 order — leaves the text to be blurred and dimmed by the background pass.
+        super.render(graphics, mouseX, mouseY, partialTick);
 
         graphics.drawCenteredString(this.font, data.villagerName(), centerX, 12, 0xFFFFFF);
         graphics.drawCenteredString(this.font,
@@ -164,13 +177,6 @@ public class QuestMenuScreen extends Screen {
             graphics.drawCenteredString(this.font,
                     Component.translatable("mcaquests.status.no_quests"), centerX, this.height / 2, 0xFFFFFF);
         } else {
-            // super.render draws widgets outside our scissor and cannot clip them, so a button that is
-            // not wholly inside the viewport is hidden instead — which also makes it unclickable
-            // (AbstractWidget.clicked tests visible), so it can no longer swallow a footer click.
-            for (ScrolledButton scrolled : scrolledButtons) {
-                scrolled.button().setY(view.screenY(scrolled.contentY()));
-                scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 20);
-            }
             boolean ready = data.status() == QuestMenuStatus.READY;
             int right = left + wrapWidth();
             graphics.enableScissor(left, view.top(), right, view.bottom());
@@ -180,7 +186,6 @@ public class QuestMenuScreen extends Screen {
             graphics.disableScissor();
             renderScrollbar(graphics, right + 4);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     /** Thin track + thumb, drawn just right of the cards, only when there is something to scroll. */

@@ -13,8 +13,9 @@ import net.minecraft.resources.ResourceLocation;
  * already be registered on both sides or {@code readNetDataFull} NPEs on an unrecognised type id
  * (P1 report item 11).
  *
- * <p>Verified against {@code TaskTypes} (FTB-Quests {@code v2001.4.22},
- * {@code quest/task/TaskTypes.java:20-22,24-25}): {@code register(ResourceLocation, TaskType.Provider,
+ * <p>Verified against {@code TaskTypes} (line evidence from FTB-Quests {@code v2001.4.22},
+ * {@code quest/task/TaskTypes.java:20-22,24-25}; re-verified against the {@code v2101.1.31} bytecode
+ * this build compiles against, where only the line numbers differ): {@code register(ResourceLocation, TaskType.Provider,
  * Supplier<Icon>)} is backed by {@code Map.computeIfAbsent}, so a duplicate id is a silent no-op
  * (first registrant wins) rather than an overwrite or exception — each id below must stay unique.
  * The icon-supplier idiom ({@code () -> Icon.getIcon("minecraft:item/...")}) mirrors every built-in

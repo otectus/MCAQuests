@@ -25,14 +25,18 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Forge-bus + Architectury listener table that pushes MCA: Quests domain events into the FTB
+ * NeoForge-bus + Architectury listener table that pushes MCA: Quests domain events into the FTB
  * Quests book (spec §15.0, §12.3, §12.4). Registered <b>manually</b> from {@link FtbqBootstrap#init()}
- * via {@link MinecraftForge#EVENT_BUS}{@code .addListener(...)} / {@link ClearFileCacheEvent#EVENT}
+ * via {@link NeoForge#EVENT_BUS}{@code .addListener(...)} / {@link ClearFileCacheEvent#EVENT}
  * {@code .register(...)} calls — deliberately <em>not</em> {@code @EventBusSubscriber}, so that
  * when FTB Quests is absent (and {@link FtbqBootstrap#init()} never runs) not a single listener is
  * ever attached to the bus (spec §10.4 / {@code NoFtbqClassloadTest}: this whole package only
  * classloads when {@code init()} runs, and {@code @EventBusSubscriber} would instead attach at
  * class-scan time regardless of whether FTB Quests is installed).
+ *
+ * <p><b>On the citations below:</b> the {@code file:line} evidence quoted throughout this javadoc
+ * was taken from FTB-Quests {@code v2001.4.22}. Every claim it supports was re-verified against the
+ * {@code v2101.1.31} bytecode this build compiles against; only the line numbers have moved.
  *
  * <h2>Task-list caching (§12.3)</h2>
  * One lazily-built {@code List<Task>} per Mca task class, cached in {@link #TASK_CACHE}, mirroring

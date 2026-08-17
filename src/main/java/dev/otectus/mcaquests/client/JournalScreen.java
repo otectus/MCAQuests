@@ -37,7 +37,10 @@ public class JournalScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+        // Screen.render draws the menu background (blur pass + tint) itself since 1.20.2 and then
+        // the widgets, so it goes first and our content after it. Drawing content before it — the
+        // 1.20.1 order — leaves the text to be blurred and dimmed by the background pass.
+        super.render(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
         graphics.drawCenteredString(this.font, getTitle(), centerX, 14, 0xFFFFFF);
 
@@ -52,7 +55,6 @@ public class JournalScreen extends Screen {
         if (villages.isEmpty() && globalTitles.isEmpty() && archive.isEmpty()) {
             graphics.drawCenteredString(this.font,
                     Component.translatable("mcaquests.screen.journal.empty"), centerX, this.height / 2, 0xA0A0A0);
-            super.render(graphics, mouseX, mouseY, partialTick);
             return;
         }
 
@@ -108,7 +110,6 @@ public class JournalScreen extends Screen {
         }
 
         contentHeight = y - top;
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

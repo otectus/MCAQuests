@@ -7,6 +7,14 @@ files) and against the actual upstream dependencies as they exist for 1.21.1 Neo
 marked **[verified]** were confirmed directly from source or Maven metadata in August 2026. Treat
 everything else as strong guidance that you must still confirm as you compile.
 
+> **Erratum — the mod version is NOT bumped.** Where this document prescribes `2.0.0` (§0.3, Phase 2's
+> `gradle.properties`, the protocol-`"8"` note in Phase 5, and the Phase 15 changelog step), the
+> adopted policy is that **`mod_version` stays `1.1.0`**: the platform break is carried by the
+> artifact's Minecraft/loader targeting and metadata, not by the mod's own version number. The
+> shipped build is correct; only these four passages in this document are stale. Sibling ports
+> (e.g. MCA: Reputation, which stays `0.1.0`) follow the same rule. The network protocol bump to
+> `"8"` is unaffected and still applies — it is a wire-format version, unrelated to the mod version.
+
 ---
 
 ## 0. Mission, ground rules, and definition of done

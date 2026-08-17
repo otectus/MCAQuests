@@ -4,7 +4,7 @@ An **optional** bridge between MCA: Quests and **[FTB Quests](https://www.cursef
 
 ## Install
 
-Drop **FTB Quests** (and its own dependencies, FTB Library and FTB Teams) into `mods/` alongside MCA: Quests and MCA Reborn. Tested against **FTB Quests 2001.4.x** (`ftb-quests-forge`), FTB Library 2001.2.9, FTB Teams 2001.3.0. MCA: Quests declares FTB Quests as an **optional** dependency (`mandatory=false`, version range `[2001.4,)`) — it is never required, and nothing else about MCA: Quests changes if you don't install it.
+Drop **FTB Quests** (and its own dependencies, FTB Library and FTB Teams) into `mods/` alongside MCA: Quests and MCA Reborn. Tested against **FTB Quests 2101.1.31** (`ftb-quests-neoforge`), FTB Library 2101.1.35, FTB Teams 2101.1.10. MCA: Quests declares FTB Quests as an **optional** dependency (`type="optional"`, version range `[2101.1,)`) — it is never required, and nothing else about MCA: Quests changes if you don't install it.
 
 MCA: Quests **compiles against FTB's publicly published maven artifacts and ships none of them** — the jar contains zero FTB bytes; see the licensing note in the [README](README.md#license--credits).
 

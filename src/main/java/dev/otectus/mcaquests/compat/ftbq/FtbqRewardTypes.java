@@ -13,8 +13,9 @@ import net.minecraft.resources.ResourceLocation;
  * registered on both sides or {@code readNetDataFull} NPEs on an unrecognised type id (mirrors
  * {@link FtbqTaskTypes}'s reasoning, P1 report item 11).
  *
- * <p>Verified against {@code RewardTypes} (FTB-Quests {@code v2001.4.22},
- * {@code quest/reward/RewardTypes.java:15-16}): {@code register(ResourceLocation, RewardType.Provider,
+ * <p>Verified against {@code RewardTypes} (line evidence from FTB-Quests {@code v2001.4.22},
+ * {@code quest/reward/RewardTypes.java:15-16}; re-verified against the {@code v2101.1.31} bytecode
+ * this build compiles against, where only the line numbers differ): {@code register(ResourceLocation, RewardType.Provider,
  * Supplier<Icon>)} is backed by {@code Map.computeIfAbsent}, so a duplicate id is a silent no-op (first
  * registrant wins) rather than an overwrite or exception — each id below must stay unique. Icon choices
  * mirror the §15 task-type table precedent: {@code village_reputation} reuses the reputation task's

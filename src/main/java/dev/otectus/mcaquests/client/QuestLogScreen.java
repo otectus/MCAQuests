@@ -141,23 +141,29 @@ public class QuestLogScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
-        graphics.drawCenteredString(this.font, getTitle(), centerX, 16, 0xFFFFFF);
-
         List<QuestLogEntry> entries = rendered;
         List<ProjectLogEntry> projects = renderedProjects;
+
+        // Hidden rather than clipped: super.render draws widgets outside our scissor, and an
+        // invisible widget is also unclickable (AbstractWidget.clicked tests visible), so a
+        // scrolled-away Abandon can't be hit or sit over the footer. This has to run before
+        // super.render, which is what actually draws the buttons.
+        for (ScrolledButton scrolled : scrolledButtons) {
+            scrolled.button().setY(view.screenY(scrolled.contentY()));
+            scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 12);
+        }
+
+        // Screen.render draws the menu background (blur pass + tint) itself since 1.20.2 and then
+        // the widgets, so it goes first and our content after it. Drawing content before it — the
+        // 1.20.1 order — leaves the text to be blurred and dimmed by the background pass.
+        super.render(graphics, mouseX, mouseY, partialTick);
+
+        graphics.drawCenteredString(this.font, getTitle(), centerX, 16, 0xFFFFFF);
         if (entries.isEmpty() && projects.isEmpty()) {
             graphics.drawCenteredString(this.font,
                     Component.translatable("mcaquests.status.no_active_quests"), centerX, this.height / 2, 0xA0A0A0);
         } else {
-            // Hidden rather than clipped: super.render draws widgets outside our scissor, and an
-            // invisible widget is also unclickable (AbstractWidget.clicked tests visible), so a
-            // scrolled-away Abandon can't be hit or sit over the footer.
-            for (ScrolledButton scrolled : scrolledButtons) {
-                scrolled.button().setY(view.screenY(scrolled.contentY()));
-                scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 12);
-            }
             int left = centerX - 150;
             graphics.enableScissor(left, view.top(), centerX + 160, view.bottom());
             int y = view.screenY(0);
@@ -214,7 +220,6 @@ public class QuestLogScreen extends Screen {
             graphics.disableScissor();
             renderScrollbar(graphics, centerX + 162);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

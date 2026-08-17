@@ -28,7 +28,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 - 💞 **MCA-aware conditions** — gate quests on the villager's life-sim state: whether they're your **spouse** or **family**, their **relationship status**, **age**, **personality**, **mood**, **village/home**, **health**, or **infection**, and even whether a **relative is missing or has died**. All optional, datapack-driven, and fail-safe; 6 sample quests included (spouse errand, child's request, sick-villager remedy, guard patrol, missing-child search, memorial).
 - 🧭 **Quest tracking** — a keybind-toggled **Quest Log** (with an **Abandon** button per quest, so you can always drop one even if its giver is gone), a fully repositionable **HUD tracker** that names the giver, and a **toast + sound** when a quest is ready to turn in.
 - 🛡️ **Server-authoritative & exploit-resistant** — all selection, validation, and reward granting happen on the server; turn-in is atomic and idempotent, so packet-spam can't duplicate rewards.
-- 🧩 **Extensible** — a public Java API lets add-ons register their own objective/reward/condition types, and five Forge events (`QuestAccepted/Ready/Completed/Abandoned/Failed`) let other mods react.
+- 🧩 **Extensible** — a public Java API lets add-ons register their own objective/reward/condition types, and five NeoForge events (`QuestAccepted/Ready/Completed/Abandoned/Failed`) let other mods react.
 - 💬 **MCA: Conversations integration** (optional) — with the **MCA: Conversations** add-on installed, villagers **speak** a quest's offer / progress / completion / failure line in their own personality instead of the static text, and "talk to this villager" objectives progress from an **actual conversation**. MCA: Quests ships only the hooks and safe fallbacks — without the add-on, dialogue stays as written and nothing else changes.
 - 📖 **FTB Quests integration** (optional) — ten task types and three reward types let an FTB Quests book read and grant real MCA: Quests progress (villager quests, relationship arcs, reputation, titles, projects, situations, hearts, marriage), and three conditions plus an objective and a reward let MCA: Quests datapacks read and write FTB book progress right back. Fully optional in both directions — see **[FTBQUESTS.md](FTBQUESTS.md)**.
 
@@ -40,7 +40,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | **Mod loader** | NeoForge 21.1.0 or newer |
 | **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.7.x (NeoForge build) |
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
-| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests)** | *Optional* — 2101.1.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
+| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2101.1.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
 | **Create: Numismatics** | *Optional* — set `currencyProvider = NUMISMATICS` to pay quest rewards in coins ([CONFIG.md](CONFIG.md#rewardscurrency)) |
 
 MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.

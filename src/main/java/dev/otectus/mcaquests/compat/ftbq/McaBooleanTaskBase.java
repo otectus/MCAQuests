@@ -13,8 +13,9 @@ import net.minecraft.server.level.ServerPlayer;
  * {@link #check(ServerPlayer)} with their real, possibly-throwing logic; this base wraps every
  * call in the mod-wide fail-safe contract (§10.2) and wires the poll cadence from config.
  *
- * <p>Verified against {@code AbstractBooleanTask} (FTB-Quests {@code v2001.4.22},
- * {@code quest/task/AbstractBooleanTask.java:23-30}): the extension point is
+ * <p>Verified against {@code AbstractBooleanTask} (line evidence from FTB-Quests {@code v2001.4.22},
+ * {@code quest/task/AbstractBooleanTask.java:23-30}; re-verified against the {@code v2101.1.31}
+ * bytecode this build compiles against, where only the line numbers differ): the extension point is
  * {@code canSubmit(TeamData, ServerPlayer)}, called from a {@code final}-shaped
  * {@code submitTask(TeamData, ServerPlayer, ItemStack)} override that already gates on
  * {@code !teamData.isCompleted(this) && checkTaskSequence(teamData)} before invoking

@@ -10,9 +10,12 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 /**
  * Client-side payload handlers, referenced <em>only</em> from the S2C registration method-refs in
  * {@link QuestNetwork}. This replaces the old per-packet
- * {@code DistExecutor.unsafeRunWhenOn(Dist.CLIENT, ...)} wrappers: S2C payload handlers only ever
- * execute on the client, and registration method references are not eagerly classloaded on the
- * dedicated server, so no client class leaks server-side (verified by the dedicated-server smoke
+ * {@code DistExecutor.unsafeRunWhenOn(Dist.CLIENT, ...)} wrappers.
+ *
+ * <p>This class does load on a dedicated server — resolving the registration method references is
+ * enough to bring it in. What keeps the server safe is that every mention of a client-only class
+ * sits inside a {@code playToClient} handler body, and those bodies never execute server-side, so
+ * the client classes they name are never resolved there (verified by the dedicated-server smoke
  * test). Handlers run on the client main thread — NeoForge's payload default — which reproduces the
  * old {@code ctx.enqueueWork(...)} semantics.
  */

@@ -19,8 +19,9 @@ import net.minecraft.world.item.ItemStack;
  * monotone high-water rule (never {@code addProgress}), and owns the shared {@code count} config
  * field + its serialization.
  *
- * <p>Verified against {@code StatTask} (FTB-Quests {@code v2001.4.22},
- * {@code quest/task/StatTask.java:104-123}): the extension point is the 3-arg
+ * <p>Verified against {@code StatTask} (line evidence from FTB-Quests {@code v2001.4.22},
+ * {@code quest/task/StatTask.java:104-123}; re-verified against the {@code v2101.1.31} bytecode
+ * this build compiles against, where only the line numbers differ): the extension point is the 3-arg
  * {@code submitTask(TeamData, ServerPlayer, ItemStack)} override — the 2-arg
  * {@code submitTask(TeamData, ServerPlayer)} overload is {@code final} on {@code Task}
  * ({@code quest/task/Task.java:288-290}, delegates to the 3-arg form with

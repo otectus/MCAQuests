@@ -43,7 +43,8 @@ neoForge {
                     '--existing', file('src/main/resources/').getAbsolutePath()
         }
         configureEach {
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // No 'neoforge.enabledGameTestNamespaces' here: the 1.20.1 gameTestServer run config was
+            // not ported and the mod has no GameTest sources, so the property had nothing to enable.
             logLevel = org.slf4j.event.Level.DEBUG
         }
     }

@@ -116,20 +116,27 @@ public class ProjectMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
         int left = centerX - wrapWidth() / 2;
+
+        // Hidden rather than clipped: super.render draws widgets outside our scissor, and an
+        // invisible widget is also unclickable (AbstractWidget.clicked tests visible). This has to
+        // run before super.render, which is what actually draws the buttons.
+        for (ScrolledButton scrolled : scrolledButtons) {
+            scrolled.button().setY(view.screenY(scrolled.contentY()));
+            scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 20);
+        }
+
+        // Screen.render draws the menu background (blur pass + tint) itself since 1.20.2 and then
+        // the widgets, so it goes first and our content after it. Drawing content before it — the
+        // 1.20.1 order — leaves the text to be blurred and dimmed by the background pass.
+        super.render(graphics, mouseX, mouseY, partialTick);
+
         graphics.drawCenteredString(this.font, this.title, centerX, 12, 0xFFFFFF);
         if (cards.isEmpty()) {
             graphics.drawCenteredString(this.font, Component.translatable("mcaquests.status.no_quests"),
                     centerX, this.height / 2, 0xFFFFFF);
         } else {
-            // Hidden rather than clipped: super.render draws widgets outside our scissor, and an
-            // invisible widget is also unclickable (AbstractWidget.clicked tests visible).
-            for (ScrolledButton scrolled : scrolledButtons) {
-                scrolled.button().setY(view.screenY(scrolled.contentY()));
-                scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 20);
-            }
             int right = left + wrapWidth();
             graphics.enableScissor(left, view.top(), right, view.bottom());
             for (int i = 0; i < cards.size(); i++) {
@@ -138,7 +145,6 @@ public class ProjectMenuScreen extends Screen {
             graphics.disableScissor();
             renderScrollbar(graphics, right + 4);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     /** Thin track + thumb, drawn just right of the cards, only when there is something to scroll. */

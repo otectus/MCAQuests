@@ -40,6 +40,12 @@ public final class TestBootstrap {
             Bootstrap.bootStrap();
         } catch (Throwable t) {
             // Real bootstrap unavailable in this environment — flip the flag only (see javadoc).
+            // Announced loudly: the fallback is a strictly weaker environment than the real
+            // bootstrap, so a suite that silently starts taking this path is a regression worth
+            // seeing rather than a quiet degradation.
+            System.err.println("[TestBootstrap] Bootstrap.bootStrap() failed (" + t + "); "
+                    + "falling back to flipping Bootstrap.isBootstrapped reflectively. "
+                    + "Registries are NOT populated in this worker.");
             try {
                 Field isBootstrapped = Bootstrap.class.getDeclaredField("isBootstrapped");
                 isBootstrapped.setAccessible(true);

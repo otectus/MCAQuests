@@ -43,6 +43,27 @@ the same 1.1.0.
 - Future work (deliberately not in this release): MCA 1.21.1 added a native per-player village
   reputation map; Quests' own standing store remains canonical (spec 29.1).
 
+### Fixed — port audit follow-ups
+
+- **Toasts no longer draw the missing-texture checkerboard.** All four toasts (quest ready, project
+  phase, reputation tier, situation) blitted `minecraft:textures/gui/toasts.png`, which the 1.20.2
+  GUI-sprite split removed; they now draw the `toast/advancement` sprite carved from the same sheet
+  region.
+- **Screen text is crisp again.** The quest log, quest menu, project menu, and journal drew the menu
+  background twice per frame — once explicitly and once inside `Screen.render`, which took over that
+  job in 1.20.2 — so their own text was re-blurred and dimmed by the second pass. Each screen now
+  lets `super.render` draw the background and widgets first and paints its content on top.
+- **A transient read failure can no longer destroy a 1.20.1 player's quest data.** The `ForgeCaps`
+  login import gave up after one unreadable `playerdata/<uuid>.dat`, and NeoForge's next save
+  rewrites that file without the legacy tag, so the retry on the following login found nothing. It
+  now falls back to vanilla's `<uuid>.dat_old` backup — which still holds the blob for one more save
+  cycle — and logs the failure at ERROR. Players with no legacy data are remembered for the session
+  instead of having their whole player file re-read on every login.
+- Metadata corrections: `pack.mcmeta` declared the data-pack format (48) where the resource-pack
+  format (34) belongs; the Minecraft and NeoForge dependency ranges no longer claim 1.21.2+/21.2+
+  compatibility this build does not have; the FTB Library pin now names 2101.1.35, the version the
+  FTB Quests 2101.1.31 POM actually resolves.
+
 ## [1.1.0] - 2026-08-13
 
 ### Added — MCA: Reputation integration (optional)
