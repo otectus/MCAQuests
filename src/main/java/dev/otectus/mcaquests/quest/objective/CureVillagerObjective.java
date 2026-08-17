@@ -54,9 +54,23 @@ public record CureVillagerObjective(VillagerTarget villager, ItemTarget cureItem
     }
 
     @Override
+    public Component describe(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                              ServerLevel level) {
+        return Component.translatable("mcaquests.objective.cure_villager",
+                ObjectiveSupport.describeLocked(villager, player, active, progress, level));
+    }
+
+    @Override
+    public VillagerTarget targetSelector() {
+        return villager;
+    }
+
+    @Override
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        return progress.count() >= 1 ? Optional.empty() : villager.resolve(player, active, level);
+        return progress.count() >= 1
+                ? Optional.empty()
+                : ObjectiveSupport.resolveLocked(villager, player, active, progress, level);
     }
 
     @Override
@@ -84,7 +98,7 @@ public record CureVillagerObjective(VillagerTarget villager, ItemTarget cureItem
         if (progress.count() >= 1) {
             return;
         }
-        Optional<LivingEntity> target = villager.resolve(player, active, level);
+        Optional<LivingEntity> target = ObjectiveSupport.resolveLocked(villager, player, active, progress, level);
         if (target.isEmpty() || !target.get().isAlive()) {
             return;
         }
@@ -102,7 +116,8 @@ public record CureVillagerObjective(VillagerTarget villager, ItemTarget cureItem
         if (progress.count() >= 1 || !cureItem.matches(held)) {
             return;
         }
-        if (villager.matches(target, player, active, level) && McaCompat.isInfected(target)) {
+        if (ObjectiveSupport.matchesLocked(villager, target, player, active, progress, level)
+                && McaCompat.isInfected(target)) {
             progress.extra().putBoolean(SEEN_INFECTED, true);
         }
     }

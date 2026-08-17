@@ -7,6 +7,7 @@
   "client": [
     "AbstractDynamicScreenMixin",
     "InteractScreenAccessor",
+    "MinecraftGlowMixin",
     "ScreenAccessor"
   ],
   "injectors": {

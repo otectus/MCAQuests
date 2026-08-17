@@ -43,7 +43,10 @@ public final class TitleService {
 
     public static boolean grantVillage(ServerPlayer player, int villageId, ResourceLocation title) {
         Optional<PlayerQuestData> data = QuestCapabilities.get(player);
-        boolean granted = data.map(d -> d.titles().grantVillage(villageId, title)).orElse(false);
+        // The village is keyed with the dimension the player is standing in — the only level a
+        // Quests-resolved village id can refer to (ids are per-level in MCA).
+        boolean granted = data.map(d -> d.titles()
+                .grantVillage(player.level().dimension().location(), villageId, title)).orElse(false);
         if (granted) {
             postGranted(player, title, TitleScope.VILLAGE, OptionalInt.of(villageId));
         }

@@ -50,9 +50,23 @@ public record ProtectEntityObjective(VillagerTarget villager, int durationTicks,
     }
 
     @Override
+    public Component describe(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                              ServerLevel level) {
+        return Component.translatable("mcaquests.objective.protect_entity",
+                ObjectiveSupport.describeLocked(villager, player, active, progress, level), durationTicks / 20);
+    }
+
+    @Override
+    public VillagerTarget targetSelector() {
+        return villager;
+    }
+
+    @Override
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        return progress.elapsedTicks() >= durationTicks ? Optional.empty() : villager.resolve(player, active, level);
+        return progress.elapsedTicks() >= durationTicks
+                ? Optional.empty()
+                : ObjectiveSupport.resolveLocked(villager, player, active, progress, level);
     }
 
     @Override
@@ -80,7 +94,7 @@ public record ProtectEntityObjective(VillagerTarget villager, int durationTicks,
         if (progress.elapsedTicks() >= durationTicks) {
             return;
         }
-        Optional<LivingEntity> target = villager.resolve(player, active, level);
+        Optional<LivingEntity> target = ObjectiveSupport.resolveLocked(villager, player, active, progress, level);
         if (target.isEmpty() || !target.get().isAlive()) {
             return; // unloaded/absent — pause, do not fail (death is handled on LivingDeathEvent)
         }
@@ -90,9 +104,13 @@ public record ProtectEntityObjective(VillagerTarget villager, int durationTicks,
         progress.addElapsed(20);
     }
 
-    /** True when {@code dead} is the protected target (used by the death handler). */
-    public boolean matchesTarget(LivingEntity dead, ServerPlayer player, ActiveQuest active, ServerLevel level) {
-        return villager.matches(dead, player, active, level);
+    /**
+     * True when {@code dead} is the protected target (used by the death handler). Honours the bound
+     * villager, so a different relative dying nearby can no longer fail a quest that was never about them.
+     */
+    public boolean matchesTarget(LivingEntity dead, ServerPlayer player, ActiveQuest active,
+                                 ObjectiveProgress progress, ServerLevel level) {
+        return ObjectiveSupport.matchesLocked(villager, dead, player, active, progress, level);
     }
 
     @Override

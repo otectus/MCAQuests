@@ -104,7 +104,7 @@ public final class QuestsLegacyImportProvider implements LegacyImportProvider {
     private static void copyTitles(ServerPlayer player, CommunityKey community,
                                    LegacyImportRequest.Builder request) {
         QuestCapabilities.get(player).ifPresent(data -> {
-            data.titles().forVillage(community.villageId()).forEach(title ->
+            data.titles().forVillage(community.dimension(), community.villageId()).forEach(title ->
                     request.villageTitle(community, title));
             data.titles().global().forEach(request::globalTitle);
         });

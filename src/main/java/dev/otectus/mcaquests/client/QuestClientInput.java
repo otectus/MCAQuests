@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.client;
 import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -12,6 +13,12 @@ import net.minecraftforge.fml.common.Mod;
 public final class QuestClientInput {
 
     private QuestClientInput() {
+    }
+
+    /** Drops the quest-target outlines so none can survive into the next world we join. */
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        ClientHighlightData.clear();
     }
 
     @SubscribeEvent

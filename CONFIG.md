@@ -87,7 +87,8 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 |---|---|---|
 | `followGiverAfterAccept` | `false` | If `true`, the giver follows the player after a quest is accepted (escort-style). **Default `false`: accepting never makes a villager follow you, and an existing auto-follow is cleared.** |
 | `leadVillagerSpeed` | `0.6` | Walk-speed multiplier for a villager **leading** the player in a lead-style escort (`escort_entity` with `lead:true`). Lower keeps it near walking pace so the player can stay close and guard it. Range `0.1`–`2.0`. |
-| `highlightQuestTargets` | `true` | A villager that is the target of one of your active quests (the delivery recipient, or the villager to heal/cure/escort/protect/defend) **glows** through walls while it is loaded, so you can find it. Applied server-side; syncs to all clients. |
+| `highlightQuestTargets` | `true` | A villager that is the target of one of your active quests (the delivery recipient, a missing relative you have found, or the villager to heal/cure/escort/protect/defend) is **outlined** through walls while it is loaded, so you can find it. Sent to the quest owner only — other players never see your quest markers. A quest whose objectives target nobody in particular outlines the **giver** instead. |
+| `highlightUsesGlowingEffect` | `false` | Legacy highlighting mode. Applies the vanilla **Glowing status effect** to the villager itself instead of drawing a per-player outline. That effect is world state, so **every player on the server sees it** and it can appear in minimaps and shader outlines — which is why it is no longer the default. Only enable it if you want that behaviour back. |
 | `questChatMessages` | `true` | Send a short chat confirmation when a quest is accepted or completed. |
 
 ### `[debug]`
@@ -134,6 +135,7 @@ See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
 | `showSituationToast` | `true` | Toast popup when a nearby village opens a situation that needs help (0.8.0). |
 | `playQuestSounds` | `true` | Play a sound with the ready toast. |
 | `showQuestTrackerHud` | `true` | Show the on-screen active-quest tracker. |
+| `showQuestTargetDirection` | `true` | Add a line to the tracker naming the villager the quest wants you to find, with the distance to them and which way to turn ("Hans — 84 blocks to your right"). Falls back to their last known home while they are outside render distance. Hidden once the quest is ready to hand in. Needs `showQuestTrackerHud`. |
 | `questTrackerMaxEntries` | `3` | Max quests listed in the HUD tracker. |
 | `questTrackerAnchor` | `TOP_LEFT` | Screen corner the tracker anchors to: `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`. |
 | `questTrackerX` | `4` | Horizontal pixel offset from the anchored corner. |

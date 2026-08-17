@@ -48,9 +48,23 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     }
 
     @Override
+    public Component describe(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                              ServerLevel level) {
+        return Component.translatable("mcaquests.objective.deliver_to_villager", itemCount, item.describe(),
+                ObjectiveSupport.describeLocked(recipient, player, active, progress, level));
+    }
+
+    @Override
+    public VillagerTarget targetSelector() {
+        return recipient;
+    }
+
+    @Override
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        return progress.count() >= 1 ? Optional.empty() : recipient.resolve(player, active, level);
+        return progress.count() >= 1
+                ? Optional.empty()
+                : ObjectiveSupport.resolveLocked(recipient, player, active, progress, level);
     }
 
     @Override
@@ -76,7 +90,8 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     /** Credit the delivery if the interacted villager is the recipient and the player has the payload. */
     public void onInteract(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
                            LivingEntity target, ServerLevel level) {
-        if (progress.count() >= 1 || !recipient.matches(target, player, active, level)) {
+        if (progress.count() >= 1
+                || !ObjectiveSupport.matchesLocked(recipient, target, player, active, progress, level)) {
             return;
         }
         if (ObjectiveSupport.countMatching(player, item) < itemCount) {

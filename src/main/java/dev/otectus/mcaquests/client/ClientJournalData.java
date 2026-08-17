@@ -13,6 +13,7 @@ public final class ClientJournalData {
     private static volatile List<Component> globalTitles = List.of();
     private static volatile List<JournalVillageEntry> villages = List.of();
     private static volatile List<JournalArchiveEntry> archive = List.of();
+    private static volatile boolean reputationPresent;
 
     private ClientJournalData() {
     }
@@ -21,6 +22,12 @@ public final class ClientJournalData {
         globalTitles = List.copyOf(packet.globalTitles());
         villages = List.copyOf(packet.villages());
         archive = List.copyOf(packet.archive());
+        reputationPresent = packet.reputationPresent();
+    }
+
+    /** True when the server said MCA: Reputation is canonical — the View Deeds link's gate (§29.7). */
+    public static boolean reputationPresent() {
+        return reputationPresent;
     }
 
     public static List<Component> globalTitles() {

@@ -7,7 +7,6 @@ import dev.otectus.mcaquests.quest.title.TitleScope;
 import dev.otectus.mcareputation.api.McaReputationApi;
 import dev.otectus.mcareputation.api.event.ReputationTierChangedEvent;
 import dev.otectus.mcareputation.api.event.ReputationTitleGrantedEvent;
-import dev.otectus.mcareputation.event.LegacyImportProviders;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.server.ServerStartedEvent;
@@ -57,7 +56,7 @@ public final class QuestsReputationEvents {
             McaReputationApi.registerMirror(mirror);
 
             importProvider = new QuestsLegacyImportProvider();
-            LegacyImportProviders.register(importProvider);
+            McaReputationApi.registerImportProvider(importProvider);
 
             McaQuests.LOGGER.info("[MCA: Quests] registered the fallback mirror and the legacy "
                     + "reputation import provider with MCA: Reputation.");
@@ -76,7 +75,7 @@ public final class QuestsReputationEvents {
                 mirror = null;
             }
             if (importProvider != null) {
-                LegacyImportProviders.unregister(importProvider);
+                McaReputationApi.unregisterImportProvider(importProvider);
                 importProvider = null;
             }
         } catch (Throwable t) {

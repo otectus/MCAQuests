@@ -50,6 +50,11 @@
       "fail_on_death": true
     }
   ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "child",
+    "status": "nearby"
+  },
   "rewards": [
     {
       "type": "mcaquests:currency"

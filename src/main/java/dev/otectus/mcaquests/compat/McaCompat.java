@@ -1,12 +1,14 @@
 package dev.otectus.mcaquests.compat;
 
 import dev.otectus.mcaquests.McaQuests;
+import forge.net.mca.entity.EntitiesMCA;
 import forge.net.mca.entity.VillagerEntityMCA;
 import forge.net.mca.entity.VillagerLike;
 import forge.net.mca.entity.ai.Memories;
 import forge.net.mca.entity.ai.MoveState;
 import forge.net.mca.entity.ai.relationship.AgeState;
 import forge.net.mca.entity.ai.relationship.EntityRelationship;
+import forge.net.mca.entity.ai.relationship.Gender;
 import forge.net.mca.server.world.data.FamilyTree;
 import forge.net.mca.server.world.data.FamilyTreeNode;
 import forge.net.mca.server.world.data.PlayerSaveData;
@@ -23,6 +25,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.item.ItemStack;
@@ -425,11 +428,15 @@ public final class McaCompat {
     }
 
     /**
-     * True when the giver has at least one relative of {@code relation}
-     * ({@code spouse}/{@code parent}/{@code child}/{@code sibling}) whose {@code status}
+     * True when the giver has at least one relative of {@code relation} ({@code any}/{@code spouse}/
+     * {@code parent}/{@code child}/{@code sibling}/{@code grandparent}) whose {@code status}
      * ({@code alive}/{@code nearby}/{@code missing}/{@code dead}/{@code same_village}) matches.
      * Touches the persistent {@link FamilyTree}, so it resolves relatives even when they are not
      * currently loaded. Safe default: {@code false}.
+     *
+     * <p>The relation sets are shared with {@link #giverRelativeUuids} so a quest gated on
+     * "{@code relation} exists with {@code status}" and a target selecting that same {@code relation}
+     * can never disagree about who is in scope.
      */
     public static boolean relativesWithStatus(ServerLevel level, Entity giver, String relation, String status) {
         try {
@@ -442,7 +449,9 @@ public final class McaCompat {
                 return false;
             }
             FamilyTree tree = opt.get().getFamilyTree();
-            List<UUID> relatives = switch (relation) {
+            List<UUID> relatives = relation.equals("any") || relation.equals("grandparent")
+                    ? giverRelativeUuids(level, giver, relation)
+                    : switch (relation) {
                 case "spouse" -> {
                     UUID partner = node.partner();
                     yield (partner == null || partner.equals(Util.NIL_UUID)) ? List.of() : List.of(partner);
@@ -450,7 +459,7 @@ public final class McaCompat {
                 case "parent" -> node.streamParents().toList();
                 case "child" -> node.streamChildren().toList();
                 case "sibling" -> List.copyOf(node.siblings());
-                default -> List.of();
+                default -> List.<UUID>of();
             };
             for (UUID uuid : relatives) {
                 if (matchesRelativeStatus(level, giver, tree, uuid, status)) {
@@ -487,7 +496,15 @@ public final class McaCompat {
             case "dead" -> deceased;
             case "alive" -> !deceased && (loaded || entry.isPresent());
             case "nearby" -> loaded && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR;
-            case "missing" -> !deceased && entry.isPresent() && entity == null;
+            // "Missing" has to mean genuinely vanished, not merely out of render distance: getEntity only
+            // sees LOADED entities, so without the residency check a villager standing in an unloaded
+            // village reads as missing — and a quest that materialises missing kin would then spawn a
+            // second copy of someone who is alive and well. A probablyGenerated() node is a filler
+            // ancestor MCA invented to pad a family tree, never a person who can be found.
+            case "missing" -> !deceased && entry.isPresent()
+                    && !entry.get().probablyGenerated()
+                    && entity == null
+                    && !isVillageResidentAnywhere(level, uuid);
             case "same_village" -> giver instanceof VillagerEntityMCA mca
                     && mca.getResidency().getHomeVillage()
                     .map(village -> village.getResidentsUUIDs().anyMatch(uuid::equals))
@@ -773,10 +790,14 @@ public final class McaCompat {
     }
 
     /**
-     * Every relative of {@code giver} of the given {@code relation}
-     * ({@code any}/{@code spouse}/{@code parent}/{@code child}/{@code sibling}), by UUID. Walks the
-     * persistent {@link FamilyTree}, so it lists relatives even when they are unloaded. Self and the
-     * MCA nil UUID are filtered out. Safe default: empty list.
+     * Every relative of {@code giver} of the given {@code relation} ({@code any}/{@code spouse}/
+     * {@code parent}/{@code child}/{@code sibling}/{@code grandparent}), by UUID. Walks the persistent
+     * {@link FamilyTree}, so it lists relatives even when they are unloaded. Self and the MCA nil UUID
+     * are filtered out. Safe default: empty list.
+     *
+     * <p>{@code grandparent} is a two-hop walk (each parent's parents). {@code any} deliberately does
+     * <em>not</em> include grandparents: it means "immediate family", and widening it would change which
+     * villager every existing {@code "relation": "any"} quest resolves to.
      */
     public static List<UUID> giverRelativeUuids(ServerLevel level, Entity giver, String relation) {
         try {
@@ -803,6 +824,9 @@ public final class McaCompat {
             }
             if (relation.equals("sibling") || relation.equals("any")) {
                 relatives.addAll(node.siblings());
+            }
+            if (relation.equals("grandparent")) {
+                node.getParents().flatMap(FamilyTreeNode::streamParents).forEach(relatives::add);
             }
             UUID self = giver.getUUID();
             List<UUID> cleaned = new ArrayList<>();
@@ -834,6 +858,120 @@ public final class McaCompat {
             }
         }
         return Optional.ofNullable(firstKnown);
+    }
+
+    /**
+     * Brings a relative who exists only in MCA's persistent {@link FamilyTree} into the world at
+     * {@code pos}, and returns them. This is what makes a "missing kin" quest referable: MCA defines
+     * <em>missing</em> as "has a family-tree entry, is not deceased, and has no entity anywhere", so until
+     * the villager is materialised there is literally nobody for a quest to target, name, or highlight.
+     *
+     * <p>Two ordering rules make the villager <em>the same person</em> rather than a look-alike, both
+     * verified against MCA 7.6.20's bytecode:
+     * <ul>
+     *   <li><b>{@code setUUID} first</b>, before anything touches the family tree and before
+     *   {@code addFreshEntity}. {@code VillagerLike#setName} writes through
+     *   {@code EntityRelationship.of(entity).getFamilyEntry()} — that is
+     *   {@code FamilyTree.getOrCreate(entity)}, keyed on the entity's <em>current</em> UUID — so naming it
+     *   first would create a junk node under the throwaway id, and the entity index keys on the UUID it
+     *   had when it was added.</li>
+     *   <li><b>{@code initialize(MobSpawnType)}, never {@code finalizeSpawn}.</b> MCA's
+     *   {@code finalizeSpawn} invents two {@code UUID.randomUUID()} deceased parents (via
+     *   {@code Names.pickCitizenName}) and grafts them onto the node whenever its {@code father()} /
+     *   {@code mother()} are not valid. For a relative we are restoring, that would rewrite real
+     *   genealogy. {@code initialize} gives the genetics, traits, skin and brain setup without it.</li>
+     * </ul>
+     * {@code moveTo} precedes {@code initialize} because MCA's genetics randomiser reads the biome at the
+     * entity's position.
+     *
+     * <p>Refuses to act when the node is unknown, deceased, a player, a filler ancestor MCA generated, or
+     * already embodied somewhere in the world, so calling it repeatedly can never produce two of the same
+     * villager. Safe default: {@code empty} — a caller that gets nothing back should simply pause and
+     * retry, never fail the quest.
+     */
+    public static Optional<Entity> materializeRelative(ServerLevel level, UUID relativeUuid, BlockPos pos) {
+        try {
+            if (level.getEntity(relativeUuid) != null) {
+                return Optional.empty(); // already in the world — never spawn a second copy
+            }
+            FamilyTree tree = FamilyTree.get(level);
+            Optional<FamilyTreeNode> entry = tree.getOrEmpty(relativeUuid);
+            if (entry.isEmpty()) {
+                return Optional.empty();
+            }
+            FamilyTreeNode node = entry.get();
+            if (node.isDeceased() || node.isPlayer() || node.probablyGenerated()) {
+                return Optional.empty();
+            }
+            Gender gender = node.gender() == null ? Gender.getRandom() : node.gender().binary();
+            VillagerEntityMCA villager = gender.getVillagerType().create(level);
+            if (villager == null) {
+                return Optional.empty();
+            }
+            UUID scratch = villager.getUUID();
+            villager.setUUID(relativeUuid); // must precede initialize/setName/addFreshEntity — see above
+            villager.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, level.random.nextFloat() * 360f, 0f);
+            villager.initialize(MobSpawnType.EVENT);
+            String name = node.getName();
+            if (name != null && !name.isBlank()) {
+                villager.setName(name);
+            }
+            if (node.getProfession() != null) {
+                villager.setProfession(node.getProfession());
+            }
+            if (!level.addFreshEntity(villager)) {
+                return Optional.empty();
+            }
+            if (!scratch.equals(relativeUuid)) {
+                tree.remove(scratch); // drop any node MCA created under the throwaway id
+            }
+            return Optional.of(villager);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA materializeRelative failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * The last place a villager is known to live, as a dimension-qualified position: the centre of
+     * whichever MCA village has them on its resident roll. Works for a villager who is <em>not loaded</em>,
+     * which is exactly when a "which way do I walk?" hint is worth having — a loaded villager can just be
+     * asked where it is. Safe default: {@code empty}.
+     */
+    public static Optional<GlobalPos> getRelativeHome(ServerLevel level, UUID uuid) {
+        try {
+            for (Village village : VillageManager.get(level)) {
+                if (village.getResidentsUUIDs().anyMatch(uuid::equals)) {
+                    Vec3i center = village.getCenter();
+                    return Optional.of(GlobalPos.of(level.dimension(),
+                            new BlockPos(center.getX(), center.getY(), center.getZ())));
+                }
+            }
+            return Optional.empty();
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA getRelativeHome failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * True when {@code uuid} is on the resident roll of any MCA village. Distinguishes a relative who is
+     * alive but merely <em>unloaded</em> from one who has genuinely vanished — {@code ServerLevel#getEntity}
+     * only sees loaded entities, so without this a villager standing in an unloaded village reads as
+     * "missing" and could be duplicated. Safe default: {@code false}.
+     */
+    public static boolean isVillageResidentAnywhere(ServerLevel level, UUID uuid) {
+        try {
+            for (Village village : VillageManager.get(level)) {
+                if (village.getResidentsUUIDs().anyMatch(uuid::equals)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA isVillageResidentAnywhere failed; defaulting false", t);
+            return false;
+        }
     }
 
     /**

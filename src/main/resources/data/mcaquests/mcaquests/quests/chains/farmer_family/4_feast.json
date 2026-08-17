@@ -38,12 +38,21 @@
   },
   "objectives": [
     {
-      "type": "mcaquests:item_delivery",
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "family",
+        "relation": "any"
+      },
       "item": "minecraft:cake",
       "count": 1,
       "consume": true
     }
   ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "any",
+    "status": "same_village"
+  },
   "rewards": [
     {
       "type": "mcaquests:currency"

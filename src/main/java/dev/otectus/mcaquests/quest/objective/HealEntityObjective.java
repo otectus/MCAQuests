@@ -50,9 +50,23 @@ public record HealEntityObjective(VillagerTarget villager, ItemTarget item,
     }
 
     @Override
+    public Component describe(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                              ServerLevel level) {
+        return Component.translatable("mcaquests.objective.heal_entity",
+                ObjectiveSupport.describeLocked(villager, player, active, progress, level));
+    }
+
+    @Override
+    public VillagerTarget targetSelector() {
+        return villager;
+    }
+
+    @Override
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        return progress.count() >= count ? Optional.empty() : villager.resolve(player, active, level);
+        return progress.count() >= count
+                ? Optional.empty()
+                : ObjectiveSupport.resolveLocked(villager, player, active, progress, level);
     }
 
     @Override
@@ -81,7 +95,7 @@ public record HealEntityObjective(VillagerTarget villager, ItemTarget item,
         if (progress.count() >= count || !item.matches(held)) {
             return;
         }
-        if (!villager.matches(target, player, active, level)) {
+        if (!ObjectiveSupport.matchesLocked(villager, target, player, active, progress, level)) {
             return;
         }
         double health = McaCompat.getHealthFraction(target).orElse(1.0D);

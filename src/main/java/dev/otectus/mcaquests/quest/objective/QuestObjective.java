@@ -32,6 +32,17 @@ public interface QuestObjective {
         return describe();
     }
 
+    /**
+     * As {@link #describe(ServerPlayer, ActiveQuest, ServerLevel)}, with the objective's own
+     * {@link ObjectiveProgress} in hand so a villager-targeted objective can name the villager it has
+     * actually <em>bound</em> rather than re-resolving one. Defaults to the progress-free variant, so
+     * objective types that do not target a villager need not implement it.
+     */
+    default Component describe(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                               ServerLevel level) {
+        return describe(player, active, level);
+    }
+
     /** Target amount (for progress display). */
     int required();
 

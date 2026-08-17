@@ -25,6 +25,8 @@ import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
+import dev.otectus.mcaquests.quest.objective.VillagerTargeted;
+import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.quest.situation.DynamicOfferSource;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.quest.situation.SituationIds;
@@ -316,6 +318,7 @@ public final class QuestManager {
                 startTime,
                 accepted.objectives().size(), frozen, situationLink);
         freezeRandomizedRewards(player, accepted, active);
+        bindVillagerTargets(player, villager, accepted, active);
         data.add(active);
         if (situationLink != null && player.getServer() != null) {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
@@ -379,6 +382,41 @@ public final class QuestManager {
             if (rewards.get(i) instanceof CurrencyReward currency) {
                 active.freezeReward(i, inheritDifficulty(currency, def).roll(player.getRandom()));
             }
+        }
+    }
+
+    /**
+     * Binds every villager-targeted objective to one concrete villager, once, at accept time — the same
+     * freeze-and-never-reroll contract {@link #freezeRandomizedRewards} gives payouts.
+     *
+     * <p>This is what makes a family quest name a real person. {@code "mode": "family"} resolves through
+     * MCA's family tree, which <em>prefers whichever relative is currently loaded</em>; without a binding a
+     * giver with two children could have the quest log naming one, the highlight glowing another, and the
+     * hand-off crediting either. Binding reads the persistent family tree, so it works even when the
+     * relative is nowhere near a loaded chunk.
+     *
+     * <p>Only {@code family} mode is bound here: {@code self} and {@code uuid} already name one villager,
+     * and {@code profession} deliberately stays live so a quest does not dead-end when the smith it happened
+     * to pick wanders off. Anything that cannot resolve now is left unbound and binds lazily on its first
+     * resolution (see {@code ObjectiveSupport.resolveLocked}), which is also how quests accepted before
+     * this existed pick up a binding.
+     */
+    private static void bindVillagerTargets(ServerPlayer player, Entity villager, QuestDefinition def,
+                                            ActiveQuest active) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        List<QuestObjective> objectives = def.objectives();
+        for (int i = 0; i < objectives.size(); i++) {
+            if (!(objectives.get(i) instanceof VillagerTargeted targeted)) {
+                continue;
+            }
+            VillagerTarget selector = targeted.targetSelector();
+            if (selector.mode() != VillagerTarget.Mode.FAMILY) {
+                continue;
+            }
+            McaCompat.findGiverRelative(level, villager, selector.relation().orElse("any"))
+                    .ifPresent(active.progress(i)::setTargetUuid);
         }
     }
 
@@ -940,8 +978,10 @@ public final class QuestManager {
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
             QuestObjective objective = objectives.get(i);
+            // Pass the objective's own progress so a villager-targeted line names the villager the quest
+            // actually bound, not whichever relative happens to be loaded when the log is rebuilt.
             Component line = active != null
-                    ? objective.describe(player, active, (ServerLevel) player.level())
+                    ? objective.describe(player, active, active.progress(i), (ServerLevel) player.level())
                     : objective.describe();
             if (active != null) {
                 int current = objective.current(player, active.progress(i));
@@ -1023,7 +1063,7 @@ public final class QuestManager {
                     PlaceholderResolver resolver = active.textResolver(mcaName);
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), def.title(resolver),
                             active.villagerName(), chainLabel(def, resolver), objectiveLines(player, def, active),
-                            isComplete(player, def, active), deadline));
+                            isComplete(player, def, active), deadline, targetHint(player, def, active)));
                 }, () ->
                     // The definition disappeared on a datapack reload (spec section 36). Still list it, under
                     // its raw id — otherwise the quest is invisible in the log yet keeps occupying an active
@@ -1031,10 +1071,69 @@ public final class QuestManager {
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
                             Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
                             active.villagerName(), Component.empty(), List.of(), false,
-                            java.util.OptionalLong.empty())));
+                            java.util.OptionalLong.empty(), Optional.empty())));
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
         });
+    }
+
+    /**
+     * The villager this quest wants the player to find, for the HUD's distance and compass line.
+     *
+     * <p>Tries three sources in order, so the player is told something useful as often as possible:
+     * a loaded target villager; that same villager's <em>last known home</em> when they are bound but
+     * unloaded (the case where a direction cue matters most, since there is no entity to walk toward);
+     * and finally the quest giver, which is the right answer for the many family quests told in the first
+     * person, where the relative in the fiction is the giver.
+     *
+     * <p>Empty when the target is in another dimension — an arrow across dimensions would be a lie.
+     */
+    private static Optional<QuestLogEntry.TargetHint> targetHint(ServerPlayer player, QuestDefinition def,
+                                                                 ActiveQuest active) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return Optional.empty();
+        }
+        List<QuestObjective> objectives = def.objectives();
+        for (int i = 0; i < objectives.size(); i++) {
+            QuestObjective objective = objectives.get(i);
+            ObjectiveProgress progress = active.progress(i);
+            // Point at the next thing still to do. A satisfied objective may still name a villager (a found
+            // relative keeps their highlight so the player can lead them home), but the hint should have
+            // moved on to whatever the quest wants next.
+            if (!(objective instanceof VillagerTargeted targeted) || objective.isSatisfied(player, progress)) {
+                continue;
+            }
+            Optional<LivingEntity> loaded = targeted.highlightTarget(player, active, progress, level);
+            if (loaded.isPresent()) {
+                return Optional.of(new QuestLogEntry.TargetHint(
+                        McaCompat.getVillagerDisplayName(loaded.get()), loaded.get().blockPosition(), false));
+            }
+            UUID bound = progress.targetUuid();
+            if (bound != null) {
+                Optional<QuestLogEntry.TargetHint> lastKnown = lastKnownHint(level, active, bound);
+                if (lastKnown.isPresent()) {
+                    return lastKnown;
+                }
+            }
+        }
+        return level.getEntity(active.villagerUuid()) instanceof LivingEntity giver && McaCompat.isMcaVillager(giver)
+                ? Optional.of(new QuestLogEntry.TargetHint(active.villagerName(), giver.blockPosition(), false))
+                : Optional.empty();
+    }
+
+    /** A bound-but-unloaded villager's name and home, read from MCA's persistent data. Same dimension only. */
+    private static Optional<QuestLogEntry.TargetHint> lastKnownHint(ServerLevel level, ActiveQuest active, UUID bound) {
+        Entity giver = level.getEntity(active.villagerUuid());
+        if (giver == null) {
+            return Optional.empty();
+        }
+        Optional<String> name = McaCompat.getRelativeDisplayName(giver, bound);
+        if (name.isEmpty()) {
+            return Optional.empty();
+        }
+        return McaCompat.getRelativeHome(level, bound)
+                .filter(home -> home.dimension().equals(level.dimension()))
+                .map(home -> new QuestLogEntry.TargetHint(Component.literal(name.get()), home.pos(), true));
     }
 
     // ---------------------------------------------------------------- diagnostics (/mcaquests debug)

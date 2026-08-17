@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.network.JournalArchiveEntry;
 import dev.otectus.mcaquests.network.JournalVillageEntry;
+import dev.otectus.mcaquests.network.OpenStandingC2SPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.RequestJournalC2SPacket;
 import net.minecraft.ChatFormatting;
@@ -10,16 +11,29 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Keybind/button-accessible progression journal (spec 0.7.0): village reputations and tiers, earned
  * titles, and a completed-quest archive. Read-only; data is requested from the server on open.
+ *
+ * <p>With MCA: Reputation canonical, each village row carries a View Deeds link (§29.7) that asks the
+ * server to open Reputation's standing screen for that village — the journal links to the same screen
+ * everyone else uses rather than drawing its own version, so the two can never disagree.
  */
 public class JournalScreen extends Screen {
 
+    /** A clickable View Deeds region, rebuilt every frame because the list scrolls. */
+    private record DeedsLink(int x0, int y0, int x1, int y1, JournalVillageEntry entry) {
+        boolean contains(double x, double y) {
+            return x >= x0 && x <= x1 && y >= y0 && y <= y1;
+        }
+    }
+
     private int scroll;
     private int contentHeight;
+    private final List<DeedsLink> deedsLinks = new ArrayList<>();
 
     public JournalScreen() {
         super(Component.translatable("mcaquests.screen.journal.title"));
@@ -62,9 +76,18 @@ public class JournalScreen extends Screen {
             graphics.drawString(this.font, dim("mcaquests.screen.journal.no_villages"), left + 4, y, 0x9A9A9A);
             y += 11;
         }
+        deedsLinks.clear();
         for (JournalVillageEntry v : villages) {
-            graphics.drawString(this.font, v.villageName().copy()
-                    .append(Component.literal("  ").append(v.currentTier()).withStyle(ChatFormatting.GOLD)), left, y, 0xFFE08A);
+            Component nameLine = v.villageName().copy()
+                    .append(Component.literal("  ").append(v.currentTier()).withStyle(ChatFormatting.GOLD));
+            graphics.drawString(this.font, nameLine, left, y, 0xFFE08A);
+            if (ClientJournalData.reputationPresent()) {
+                Component link = Component.translatable("mcaquests.screen.journal.view_deeds")
+                        .withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE);
+                int linkX = left + this.font.width(nameLine) + 8;
+                graphics.drawString(this.font, link, linkX, y, 0x5CC8FF);
+                deedsLinks.add(new DeedsLink(linkX, y, linkX + this.font.width(link), y + 9, v));
+            }
             y += 11;
             Component repLine = v.nextThreshold() >= 0
                     ? Component.translatable("mcaquests.screen.journal.rep_next",
@@ -117,6 +140,22 @@ public class JournalScreen extends Screen {
         int max = Math.max(0, contentHeight - viewport);
         scroll = Math.max(0, Math.min(max, scroll - (int) (delta * 12)));
         return true;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            for (DeedsLink link : deedsLinks) {
+                if (link.contains(mouseX, mouseY)) {
+                    // The server validates the address before opening anything (§29.7); Reputation's
+                    // screen arrives with this journal as its parent, so Back returns here.
+                    QuestNetwork.CHANNEL.sendToServer(new OpenStandingC2SPacket(
+                            link.entry().dimension(), link.entry().villageId()));
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private Component section(String key) {

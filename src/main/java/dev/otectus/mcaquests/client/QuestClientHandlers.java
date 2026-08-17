@@ -83,4 +83,9 @@ public final class QuestClientHandlers {
             }
         }
     }
+
+    /** The full set of villagers this player's active quests want outlined; replaces whatever was set. */
+    public static void setHighlights(int[] entityIds) {
+        ClientHighlightData.update(entityIds);
+    }
 }

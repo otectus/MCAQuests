@@ -35,8 +35,15 @@
   },
   "objectives": [
     {
-      "type": "mcaquests:enter_structure",
-      "structure_tag": "minecraft:mineshaft"
+      "type": "mcaquests:find_missing_relative",
+      "relative": {
+        "mode": "family",
+        "relation": "sibling"
+      },
+      "structure": {
+        "structure_tag": "minecraft:mineshaft"
+      },
+      "min_distance": 64
     }
   ],
   "rewards": [

@@ -76,6 +76,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -153,7 +154,7 @@ public final class QuestProgressEvents {
                     if (objectives.get(i) instanceof ProtectEntityObjective protect) {
                         ObjectiveProgress progress = active.progress(i);
                         if (progress.elapsedTicks() < protect.durationTicks()
-                                && protect.matchesTarget(dead, player, active, level)) {
+                                && protect.matchesTarget(dead, player, active, progress, level)) {
                             if (protect.failOnDeath()) {
                                 toFail.add(active);
                             } else {
@@ -224,33 +225,79 @@ public final class QuestProgressEvents {
     }
 
     /**
-     * Glows the villager each active, incomplete quest objective wants the player to find (a delivery
-     * recipient, or a villager to heal/cure/escort/protect/defend), so they can be located. Re-applied each
-     * ~second, so it persists while the quest is active and lapses shortly after it ends. Gated by the
+     * Highlights the villager each active, incomplete quest objective wants the player to find (a delivery
+     * recipient, a relative to find, or a villager to heal/cure/escort/protect/defend), so they can be
+     * located. Recomputed each ~second, so it follows the quest and lapses when it ends. Gated by the
      * {@code highlightQuestTargets} config.
+     *
+     * <p>By default the outline is drawn <b>on the quest owner's client only</b> — see
+     * {@link HighlightService}. The older server-side vanilla Glowing effect is still available behind
+     * {@code highlightUsesGlowingEffect} for packs whose shaders or minimaps key off the real effect; it is
+     * visible to everyone on the server, which is why it is no longer the default.
      */
     private static void highlightTargets(ServerPlayer player, ServerLevel level) {
         if (!McaQuestsConfig.COMMON.highlightQuestTargets.get()) {
+            HighlightService.clear(player);
             return;
         }
+        List<LivingEntity> targets = new ArrayList<>();
         QuestCapabilities.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     List<QuestObjective> objectives = active.resolve(base).objectives();
+                    int before = targets.size();
                     for (int i = 0; i < objectives.size(); i++) {
                         if (objectives.get(i) instanceof VillagerTargeted targeted) {
                             targeted.highlightTarget(player, active, active.progress(i), level)
-                                    .ifPresent(QuestProgressEvents::glow);
+                                    .ifPresent(targets::add);
                         }
+                    }
+                    if (targets.size() == before) {
+                        // No objective names a villager — so the person to find is the giver themselves.
+                        // This is the common case for family quests told in the first person ("bring ME
+                        // eight cuts of beef"), where the relative in the fiction IS the quest giver.
+                        giverToHighlight(active, level).ifPresent(targets::add);
                     }
                 });
             }
         });
+        if (McaQuestsConfig.COMMON.highlightUsesGlowingEffect.get()) {
+            targets.forEach(QuestProgressEvents::glow);
+            HighlightService.clear(player); // don't double-outline when the effect already does it
+            return;
+        }
+        int[] ids = new int[targets.size()];
+        for (int i = 0; i < targets.size(); i++) {
+            ids[i] = targets.get(i).getId();
+        }
+        HighlightService.send(player, ids);
+    }
+
+    /** The quest giver as a highlight target, when they are loaded and are an MCA villager. */
+    private static Optional<LivingEntity> giverToHighlight(ActiveQuest active, ServerLevel level) {
+        return level.getEntity(active.villagerUuid()) instanceof LivingEntity giver
+                && McaCompat.isMcaVillager(giver) ? Optional.of(giver) : Optional.empty();
     }
 
     /** Applies a brief, particle-free Glowing so the target shows through walls; refreshed by the poll. */
     private static void glow(LivingEntity entity) {
         entity.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false));
+    }
+
+    /**
+     * Drops the player's tracked highlight set so the next poll resends from scratch. Needed on logout
+     * (otherwise the map grows one entry per player forever) and on a dimension change, because entity
+     * network ids are per-dimension and get reused — a remembered id from the overworld could otherwise
+     * suppress a legitimate send in the Nether.
+     */
+    @SubscribeEvent
+    public static void onLoggedOutClearHighlights(PlayerEvent.PlayerLoggedOutEvent event) {
+        HighlightService.forget(event.getEntity().getUUID());
+    }
+
+    @SubscribeEvent
+    public static void onChangedDimensionClearHighlights(PlayerEvent.PlayerChangedDimensionEvent event) {
+        HighlightService.forget(event.getEntity().getUUID());
     }
 
     /** Opens a {@code villager_death} situation when an MCA villager with a home village dies (0.8.0). */

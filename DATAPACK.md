@@ -208,6 +208,7 @@ dimension change, villager/chunk unload, and dedicated-server restart. They neve
 | `mcaquests:build_near_location` | block target (req.), `location` (anchor, req.), `radius` (1–64, def 8), `count` (def 8) | Place blocks near a place (each position counts once). |
 | `mcaquests:enter_structure` | `structure` (id) **or** `structure_tag` (tag) | Enter a generated structure. |
 | `mcaquests:deliver_to_villager` | `recipient` (villager, req.), item target (req.), `count` (def 1), `consume` (bool, def true) | Hand an item to a specific villager (consumed at hand-off). |
+| `mcaquests:find_missing_relative` | `relative` (villager, req. — `family` mode), `biome` (biome target, optional), `structure` (structure target, optional), `min_distance` (0–4096, def 96), `discover_radius` (1–64, def 24), `spawn_distance` (1–64, def 12) | Search the wilds for a relative of the giver who has gone **missing**, and find them. MCA's `missing` means *in the family tree, not deceased, and no entity anywhere in the world* — so there is nobody to walk up to. This objective **materialises** them: once the player is inside the named `biome`/`structure` and at least `min_distance` from the giver, the relative appears `spawn_distance` blocks away with their real identity (same UUID, name, gender, profession — MCA's family tree keeps every link), is highlighted, and completes the objective within `discover_radius`. Never spawns twice, and never spawns a relative who is merely unloaded: an alive villager on any village's resident roll is skipped. Gate the quest on `related_villager_status <relation> missing`. Once found they are an ordinary villager, so later chain stages can `escort_entity` or `deliver_to_villager` them through the usual `"mode": "family"` path — and `missing` flips to false, so a `once` search quest stops being re-offered. **Finding someone is permanent:** abandoning or failing the quest drops the quest, never the villager. |
 | `mcaquests:reach_location` | `location` (anchor, req.), `radius` (1–64, def 6) | The **player** travels to a location anchor; arrival sticks complete. Border-aware like `escort_entity`: a `home_village`/`nearest_village` anchor completes anywhere **inside the village border**; other anchors use a horizontal (Y-ignored) distance within `radius`. (Distinct from `enter_structure`, which keys off a named structure.) |
 
 ### Villager targets
@@ -218,19 +219,36 @@ object always carries a `mode`:
 ```json
 { "mode": "self" }                                       // the giver
 { "mode": "profession", "profession": "minecraft:weaponsmith" }
-{ "mode": "family", "relation": "sibling" }              // any | spouse | parent | child | sibling
+{ "mode": "family", "relation": "sibling" }              // any | spouse | parent | child | sibling | grandparent
 { "mode": "uuid", "uuid": "<uuid>" }
 ```
 
 Where `villager` is optional it defaults to `self`. Resolution is by UUID, so an **unloaded** target
 just pauses the objective (no false completion or failure).
 
+`any` means immediate family — spouse, parents, children, siblings. `grandparent` is a two-hop walk and must
+be asked for explicitly; it is deliberately *not* part of `any`.
+
+**One villager, for the whole quest.** A `family` target is **bound to one concrete villager when the quest is
+accepted** and never re-resolves. Without that, MCA's family lookup prefers whichever relative happens to be
+loaded, so a giver with two children could have the quest log naming one, the highlight glowing another, and
+the hand-off crediting either. A quest accepted before this existed binds on its next tick.
+
+Because of that binding, delivering to *a* relative of the right relation is no longer enough — it must be **the
+villager the quest named**. If the bound villager dies or is gone for good the objective simply pauses (it never
+fails on its own); abandon the quest to drop it.
+
 **Finding the target.** For an *active* quest the objective line resolves the target's **real name** and home
-village — e.g. "Deliver 1× Paper to **Hans (your brother) — Oakvale**" (the name comes from MCA and works even
-when the relative is unloaded) — and the target villager **glows** through walls while it is loaded (toggle
-`highlightQuestTargets`). When a target is a *relative* of the giver, gate the quest on
-`related_villager_status <relation> same_village` so it is only offered when a findable relative actually
-exists (otherwise it can be offered as an impossible quest).
+village — e.g. "Deliver 1× Paper to **Hans (the quest giver's sibling) — Oakvale**" (the name comes from MCA and
+works even when the relative is unloaded); the target villager is **outlined** through walls while it is loaded,
+and the HUD tracker names them with a live distance and compass bearing. The outline is sent to the quest owner
+alone — other players never see your markers. Toggle with `highlightQuestTargets` (and
+`showQuestTargetDirection` client-side); a quest whose objectives target nobody falls back to highlighting the
+**giver**, which is the right answer for the many quests written in the first person ("bring *me* six loaves").
+
+When a target is a *relative* of the giver, gate the quest on `related_villager_status <relation> same_village`
+so it is only offered when a findable relative actually exists (otherwise it can be offered as an impossible
+quest).
 
 ### Location anchors
 
@@ -260,6 +278,10 @@ Fields named `destination` / `location` / `near` resolve to a position via an `a
   objective never completes (it never crashes). Targets that are never infected can't be completed.
 - **`sleep_or_rest`** implements player sleep only; "make a villager use their bed" is not implemented
   (MCA does not expose villager sleep reliably).
+- **`find_missing_relative`** will not act on a relative who is deceased, is a player, is a filler ancestor
+  MCA generated to pad a family tree, is already in the world, or is on any village's resident roll. Any of
+  those simply pauses the objective — it never errors. In multiplayer two players searching for the same
+  relative produce exactly one villager: the second spawn is refused and both complete on proximity.
 - **Workstation/bed anchors** depend on the giver having an assigned job site / home in MCA; otherwise
   they resolve empty and the objective pauses.
 
@@ -342,7 +364,7 @@ These gate a quest on the giver's **MCA Reborn** state (relationship to the play
 |---|---|---|
 | `mcaquests:is_player_spouse` | *(none)* | The giver is married to the interacting player. |
 | `mcaquests:relationship_state` | `states` (list, required) | The giver's relationship state is in the list. Values: `single`, `promised`, `engaged`, `married_to_villager`, `married_to_player`, `widow`. |
-| `mcaquests:is_family_member` | `relation` (default `any`) | The giver is that relation **to the player** in the family tree. Values: `any`, `parent`, `child`, `sibling`, `grandparent`. |
+| `mcaquests:is_family_member` | `relation` (default `any`) | The giver is that relation **to the player** in the family tree. Values: `any`, `parent`, `child`, `sibling`, `grandparent`. Note this list is deliberately *not* the same as `related_villager_status`'s: it is player-relative and blood-only, so it has no `spouse` — use `is_player_spouse` for that. |
 | `mcaquests:age_group` | `groups` (list, required) | The giver's age is in the list. Values: `baby`, `toddler`, `child`, `teen`, `adult`. *(MCA has no "elder" age — see Limitations.)* |
 | `mcaquests:personality` | `personalities` (list, required) | The giver's personality is in the list. Values: `athletic`, `confident`, `friendly`, `flirty`, `witty`, `shy`, `gloomy`, `sensitive`, `greedy`, `odd`, `lazy`, `grumpy`, `peppy`. |
 | `mcaquests:mood` | `min`/`max` (ints) and/or `moods` (list); at least one required | The giver's mood value is within `min`/`max` **and** (if given) its mood name is in `moods`. Mood names are data-driven in MCA, so they are not checked against a fixed list. |
@@ -350,7 +372,7 @@ These gate a quest on the giver's **MCA Reborn** state (relationship to the play
 | `mcaquests:has_home` | `value` (bool, default `true`) | Whether the giver has an assigned home equals `value`. |
 | `mcaquests:health_below` | `threshold` (required, `(0,1]`) | The giver's health fraction (current ÷ max) is below `threshold`. |
 | `mcaquests:infected` | `min_progress` (default `0`) | The giver's zombie-infection progress is `> 0` and at least `min_progress` (range `[0,1]`). |
-| `mcaquests:related_villager_status` | `relation` + `status` (both required) | The giver has at least one relative of `relation` (`spouse`/`parent`/`child`/`sibling`) whose `status` matches: `alive`, `nearby`, `missing` (in the family tree, not deceased, not currently loaded), `dead`, or `same_village`. |
+| `mcaquests:related_villager_status` | `relation` + `status` (both required) | The giver has at least one relative of `relation` (`any`/`spouse`/`parent`/`child`/`sibling`/`grandparent` — the same set `"mode": "family"` targets accept) whose `status` matches: `alive`, `nearby`, `missing`, `dead`, or `same_village`. **`missing`** means *in the family tree, not deceased, not a filler ancestor MCA generated, has no entity anywhere in the world, and is not on any village's resident roll* — that last part is what separates "genuinely vanished" from "merely outside render distance", and it is what stops `find_missing_relative` from spawning a duplicate of someone who is alive and well. |
 | `mcaquests:giver_distance_from_village` | `min_distance` (default `0`), `require_outside_border` (bool, default `false`) | The giver is at least `min_distance` blocks from its **home-village center** (and, when `require_outside_border`, also outside the village border). Fails safe to *not met* when the giver has no home village — so a villager standing in its own square is never offered an "escort me home" quest. The gate for lead-style escorts and "out after dark" content; pair with `time:NIGHT` via `any_of`. |
 
 Examples:

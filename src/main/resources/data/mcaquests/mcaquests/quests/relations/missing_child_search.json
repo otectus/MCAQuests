@@ -35,8 +35,15 @@
   },
   "objectives": [
     {
-      "type": "mcaquests:visit_biome",
-      "tag": "minecraft:is_forest"
+      "type": "mcaquests:find_missing_relative",
+      "relative": {
+        "mode": "family",
+        "relation": "child"
+      },
+      "biome": {
+        "tag": "minecraft:is_forest"
+      },
+      "min_distance": 96
     }
   ],
   "rewards": [

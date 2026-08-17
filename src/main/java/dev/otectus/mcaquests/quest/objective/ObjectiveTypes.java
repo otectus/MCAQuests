@@ -63,6 +63,8 @@ public final class ObjectiveTypes {
             register(new ResourceLocation(McaQuests.MOD_ID, "enter_structure"), EnterStructureObjective.CODEC);
     public static final QuestObjectiveType<DeliverToVillagerObjective> DELIVER_TO_VILLAGER =
             register(new ResourceLocation(McaQuests.MOD_ID, "deliver_to_villager"), DeliverToVillagerObjective.CODEC);
+    public static final QuestObjectiveType<FindMissingRelativeObjective> FIND_MISSING_RELATIVE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "find_missing_relative"), FindMissingRelativeObjective.CODEC);
 
     // Travel + place-anchored combat objectives.
     public static final QuestObjectiveType<ReachLocationObjective> REACH_LOCATION =

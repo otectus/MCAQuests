@@ -24,8 +24,13 @@ public final class McaConditionCodecs {
     public static final Set<String> PERSONALITIES =
             Set.of("athletic", "confident", "friendly", "flirty", "witty", "shy", "gloomy",
                     "sensitive", "greedy", "odd", "lazy", "grumpy", "peppy");
+    /**
+     * Relations {@code related_villager_status} may gate on. Mirrors {@code VillagerTarget.RELATIONS} so a
+     * quest can gate on exactly the relation its objective then selects — {@code any} lets a quest ask only
+     * "is there <em>some</em> findable relative?" before offering a family errand.
+     */
     public static final Set<String> RELATED_RELATIONS =
-            Set.of("spouse", "parent", "child", "sibling");
+            Set.of("any", "spouse", "parent", "child", "sibling", "grandparent");
     public static final Set<String> RELATED_STATUSES =
             Set.of("alive", "nearby", "missing", "dead", "same_village");
 

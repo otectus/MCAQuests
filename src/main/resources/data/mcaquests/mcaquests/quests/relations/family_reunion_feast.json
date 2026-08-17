@@ -36,7 +36,11 @@
   },
   "objectives": [
     {
-      "type": "mcaquests:item_delivery",
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "family",
+        "relation": "any"
+      },
       "item": "minecraft:cooked_beef",
       "count": 8,
       "consume": true
@@ -56,7 +60,16 @@
     }
   ],
   "conditions": {
-    "type": "mcaquests:is_family_member",
-    "relation": "any"
+    "all_of": [
+      {
+        "type": "mcaquests:is_family_member",
+        "relation": "any"
+      },
+      {
+        "type": "mcaquests:related_villager_status",
+        "relation": "any",
+        "status": "same_village"
+      }
+    ]
   }
 }

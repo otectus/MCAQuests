@@ -248,9 +248,11 @@ public final class CanonicalReputationBackend implements ReputationBackend {
 
     @Override
     public boolean openStandingScreen(ServerPlayer player, ResourceLocation dimension, int villageId) {
-        // Reputation opens its own screen from its own network channel; Quests only needs to know the
-        // button is worth showing, which is what the return value here means.
-        return key(dimension, villageId).isPresent();
+        // Reputation sends a fresh snapshot ahead of the open on its own channel, so the screen never
+        // shows a stale cache; the journal's server-side validation happened before we were called.
+        return key(dimension, villageId)
+                .map(community -> McaReputationApi.openReputationScreen(player, community))
+                .orElse(false);
     }
 
     /** The incident types Quests creates, resolved once so call sites read clearly. */

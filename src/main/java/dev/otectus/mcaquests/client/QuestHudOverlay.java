@@ -9,6 +9,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
@@ -56,6 +57,11 @@ public class QuestHudOverlay implements IGuiOverlay {
                 lines.add(new Line(title, entry.ready() ? 0x5CFF5C : 0xFFFFFF, 2));
                 if (!entry.objectives().isEmpty()) {
                     lines.add(new Line(entry.objectives().get(0), 0xBFBFBF, 6));
+                }
+                // Who to find and which way to turn. Dropped once the quest is ready to hand in, when the
+                // player's next stop is the giver rather than the target.
+                if (!entry.ready() && McaQuestsConfig.CLIENT.showQuestTargetDirection.get()) {
+                    entry.target().ifPresent(hint -> lines.add(new Line(targetLine(hint, minecraft), 0x8AD8FF, 6)));
                 }
                 // A live deadline countdown for quests with a time-based failure (none when ready to turn in).
                 if (entry.deadlineGameTime().isPresent() && !entry.ready()) {
@@ -109,6 +115,23 @@ public class QuestHudOverlay implements IGuiOverlay {
             graphics.drawString(font, line.text, x, y, line.color);
             y += LINE_HEIGHT;
         }
+    }
+
+    /**
+     * "Hans — 84 blocks to your right", or the {@code _last_known} variant when the position is the
+     * target's home rather than where they actually are (which is all we have while they are unloaded).
+     * Distance is horizontal so a target up a hill does not read as further away than it is to walk.
+     */
+    private static Component targetLine(QuestLogEntry.TargetHint hint, Minecraft minecraft) {
+        LocalPlayer player = minecraft.player;
+        if (player == null) {
+            return hint.name();
+        }
+        double dx = (hint.pos().getX() + 0.5D) - player.getX();
+        double dz = (hint.pos().getZ() + 0.5D) - player.getZ();
+        long blocks = Math.round(Math.sqrt(dx * dx + dz * dz));
+        return Component.translatable(hint.lastKnown() ? "mcaquests.hud.target_last_known" : "mcaquests.hud.target",
+                hint.name(), blocks, Component.translatable(HudDirection.key(dx, dz, player.getYRot())));
     }
 
     /** The first not-yet-complete objective of a project (or the first objective if all are done). */

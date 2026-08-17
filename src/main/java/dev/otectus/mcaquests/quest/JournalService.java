@@ -69,7 +69,8 @@ public final class JournalService {
         List<JournalArchiveEntry> archive = buildArchive(data.history().completionsView(), titleResolver, ARCHIVE_CAP);
 
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new JournalSyncS2CPacket(globalTitles, villages, archive));
+                new JournalSyncS2CPacket(globalTitles, villages, archive,
+                        dev.otectus.mcaquests.compat.ReputationBridge.isCanonical()));
     }
 
     /**
@@ -83,7 +84,7 @@ public final class JournalService {
         Set<Integer> ids = new LinkedHashSet<>(
                 dev.otectus.mcaquests.quest.reputation.QuestReputation.villageScores(level.getServer(), player.getUUID(),
                         level.dimension().location()).keySet());
-        ids.addAll(data.titles().byVillage().keySet());
+        ids.addAll(data.titles().villageIdsIn(level.dimension().location()));
         return ids;
     }
 
@@ -102,9 +103,11 @@ public final class JournalService {
         int nextThreshold = next != null ? next.threshold() : -1;
 
         List<Component> titles = new ArrayList<>();
-        data.titles().forVillage(villageId).forEach(id -> titles.add(Titles.displayName(id)));
+        data.titles().forVillage(level.dimension().location(), villageId)
+                .forEach(id -> titles.add(Titles.displayName(id)));
 
-        return new JournalVillageEntry(name, rep, currentTier, nextTier, nextThreshold, titles);
+        return new JournalVillageEntry(level.dimension().location(), villageId, name, rep, currentTier,
+                nextTier, nextThreshold, titles);
     }
 
     /**

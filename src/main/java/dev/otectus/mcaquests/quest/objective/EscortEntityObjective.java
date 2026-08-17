@@ -13,7 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -75,17 +74,23 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
     }
 
     @Override
+    public Component describe(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                              ServerLevel level) {
+        String key = lead ? "mcaquests.objective.lead_entity" : "mcaquests.objective.escort_entity";
+        return Component.translatable(key,
+                ObjectiveSupport.describeLocked(villager, player, active, progress, level),
+                destination.describe());
+    }
+
+    @Override
+    public VillagerTarget targetSelector() {
+        return villager;
+    }
+
+    @Override
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        if (progress.count() >= 1) {
-            return Optional.empty();
-        }
-        UUID locked = progress.targetUuid();
-        if (locked != null) {
-            return level.getEntity(locked) instanceof LivingEntity le && McaCompat.isMcaVillager(le)
-                    ? Optional.of(le) : Optional.empty();
-        }
-        return villager.resolve(player, active, level);
+        return progress.count() >= 1 ? Optional.empty() : resolveLocked(player, active, progress, level);
     }
 
     @Override
@@ -290,18 +295,15 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         return Optional.of(new FrozenDest(pos, resolved.get().villageId()));
     }
 
-    /** Resolves the escortee, locking its UUID on first resolution so the same villager is held/led/guarded. */
+    /**
+     * Resolves the escortee, locking its UUID on first resolution so the same villager is held/led/guarded.
+     * Locks for <em>every</em> selector mode, not just {@code family}: you are walking one specific person to
+     * a destination, so the escortee must not change identity part-way through even when it was picked by
+     * profession.
+     */
     private Optional<LivingEntity> resolveLocked(ServerPlayer player, ActiveQuest active,
                                                  ObjectiveProgress progress, ServerLevel level) {
-        UUID locked = progress.targetUuid();
-        if (locked != null) {
-            Entity entity = level.getEntity(locked);
-            return entity instanceof LivingEntity le && McaCompat.isMcaVillager(le)
-                    ? Optional.of(le) : Optional.empty();
-        }
-        Optional<LivingEntity> resolved = villager.resolve(player, active, level);
-        resolved.ifPresent(e -> progress.setTargetUuid(e.getUUID()));
-        return resolved;
+        return ObjectiveSupport.resolveLocked(villager, player, active, progress, level, true);
     }
 
     @Override

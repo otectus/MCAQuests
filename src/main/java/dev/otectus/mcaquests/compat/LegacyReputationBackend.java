@@ -213,7 +213,7 @@ public final class LegacyReputationBackend implements ReputationBackend {
             return true;
         }
         return online != null && QuestCapabilities.get(online)
-                .map(data -> data.titles().hasVillage(villageId, title)).orElse(false);
+                .map(data -> data.titles().hasVillage(dimension, villageId, title)).orElse(false);
     }
 
     @Override
@@ -232,7 +232,8 @@ public final class LegacyReputationBackend implements ReputationBackend {
                         .villageTitles(player, dimension, villageId));
         ServerPlayer online = server.getPlayerList().getPlayer(player);
         if (online != null) {
-            QuestCapabilities.get(online).ifPresent(data -> held.addAll(data.titles().forVillage(villageId)));
+            QuestCapabilities.get(online)
+                    .ifPresent(data -> held.addAll(data.titles().forVillage(dimension, villageId)));
         }
         return held;
     }

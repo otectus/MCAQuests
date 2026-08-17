@@ -4,6 +4,126 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - unreleased
+
+### Added — Journal link into MCA: Reputation
+
+- **The Journal links to MCA: Reputation's standing screen (§29.7).** With Reputation installed, each
+  village row in the Journal carries a **[View Deeds]** link that opens Reputation's screen for that
+  exact village — the same screen everyone else uses, so the two can never disagree. The server
+  validates that the player actually knows the named village before opening anything, and Reputation
+  sends a fresh snapshot ahead of the push. Without Reputation the link simply is not offered.
+- Journal village entries now carry the village's **dimension and id** on the wire, so the client can
+  name a community without guessing. Network protocol bumped to `8`.
+
+### Added — family quests bind a real villager, and you can find them
+
+**Quests whose text is about the giver's family used to reference nobody**: the relative existed only in
+the dialogue, so there was no one to look for and nothing to highlight. Every one of them now names an
+actual MCA villager, and the mod shows you where that villager is.
+
+- **Per-player quest-target highlighting.** The villager a quest wants you to find is **outlined through
+  walls** while it is loaded — for you and nobody else. A quest whose objectives target no one in particular
+  (the many errands written in the first person: "bring *me* six loaves") outlines the **giver** instead, so
+  every active quest points at a real person. Toggle with `highlightQuestTargets`.
+- **A direction cue on the quest tracker.** A new HUD line names the target with a live distance and an
+  eight-point compass bearing — "Hans — 84 blocks to your right" — updating as you turn. When the target is
+  too far away to be loaded it falls back to their last known home ("last seen 310 blocks ahead-left"), and
+  it hides once the quest is ready to hand in. Toggle with the new client option
+  `showQuestTargetDirection`.
+- **New objective `mcaquests:find_missing_relative`, and missing kin you can actually find.** MCA defines a
+  *missing* relative as one who exists in the family tree with **no entity anywhere in the world** — so "my
+  child wandered off" quests could never involve the child. Searching the named biome or structure, far
+  enough from the giver, now **materialises them**: same UUID, name, gender, profession and every family
+  link intact, held safe until you reach them, and highlighted the moment they appear. Never spawns twice,
+  and never spawns a relative who is merely unloaded. *A Parent's Plea*, *Search the Old Tunnels* and stage
+  two of the *Bring Them Home* arc are rebuilt around it. **Finding someone is permanent** — abandoning or
+  failing the quest drops the quest, never the villager.
+- Five family quests now hand their goods to the relative they talk about instead of to thin air:
+  *A Family Feast*, *In Loving Memory*, *Mind the Apprentice*, *Guest of Honour* and *Meeting the Family*.
+  Their offer and in-progress dialogue is reworded to match ("hand it to them yourself"), as are the
+  completion lines of the two search quests, which now describe finding the relative rather than merely
+  looking.
+- *The Sickness Among Us* and *While They Gather Flowers* carried **no conditions at all** and could be
+  offered by a villager with no such relative to cure or protect. Both are now gated on
+  `related_villager_status`.
+- `"mode": "family"` targets and `related_villager_status` both accept **`grandparent`** (a two-hop walk
+  through the family tree, deliberately not part of `any`), and `related_villager_status` also accepts
+  **`any`** — so a quest can gate on exactly the relation it then targets.
+- New config: `highlightUsesGlowingEffect` (common, default `false`) and `showQuestTargetDirection`
+  (client, default `true`). See [CONFIG.md](CONFIG.md).
+- Brazilian Portuguese ships complete as always: 12 new keys (the HUD target line, the eight compass
+  bearings, the new objective's two forms, and the `grandparent` relation label) plus every reworded line,
+  in both locales.
+- Network protocol bumped to `9` for the highlight packet and the tracker's target hint.
+
+### Changed
+
+- **A family delivery must now go to the villager the quest named.** Family targets are bound to one
+  specific relative when the quest is accepted and never re-resolve. MCA's family lookup prefers whichever
+  relative happens to be *loaded*, so without that binding a giver with two children could have the quest
+  log naming one, the highlight following another, and the hand-off crediting either. The trade-off is that
+  handing the parcel to a *different* sibling no longer counts. Only `family` targets bind — `profession`
+  stays live so a quest cannot dead-end when the smith it picked wanders off, and `escort_entity` continues
+  to pin its escortee in every mode. A quest already in flight from an older save binds on its next tick;
+  no save migration is needed.
+- Quest-target highlighting is now drawn per-player instead of applying a real Glowing **status effect** to
+  the villager. That effect was world state, so one player's quest markers were visible to everyone on the
+  server and could surface in minimaps and shader outlines. Set `highlightUsesGlowingEffect = true` to
+  restore the old behaviour.
+- Datapacks gating on `related_villager_status <relation> missing` will see those quests offered **less
+  often**, because `missing` no longer counts a villager who is merely unloaded (see Fixed).
+
+### Fixed
+
+- `related_villager_status` with `"relation": "any"` was **silently discarded**, because `any` was missing
+  from the accepted value set and a malformed condition parses as an absent one. The built-in
+  *A Kindness for Kin* template was therefore offered ungated.
+- A relative who was alive but simply **outside render distance counted as missing**, since the check only
+  looked at loaded entities. They are now recognised by their village's resident roll, and filler ancestors
+  MCA generates to pad a family tree are excluded — without which the new search quests would have spawned
+  a duplicate of a living villager.
+- `protect_entity` failed if **any** relative of the target relation died anywhere in the world, rather than
+  the one the quest was actually about.
+- The quest log and HUD could name a different relative than the one being highlighted, because the
+  objective line and the highlight resolved the target independently.
+- **Player titles are now keyed by dimension.** Quests' own per-player title store (the fallback used
+  by the Journal, the FTB title task, and the legacy import) keyed villages by bare integer id, so a
+  Nether village sharing a numeric id with an overworld one shared its titles too. Titles are now
+  keyed `<dimension>|<id>`; a bare-integer key from an older save is read as the overworld — the same
+  assumption the §32.2 score migration has always made.
+- Legacy-import registration now goes through `McaReputationApi.registerImportProvider` instead of an
+  internal Reputation package.
+
+### Compatibility
+
+- The optional MCA: Reputation dependency floor is now `0.2` — this version calls API surface that
+  first exists there. With an older (never-published) build the integration disables itself with one
+  log line, exactly as with the mod absent.
+- **Add-on API — `VillagerTargeted` gained a required method.** Any add-on objective implementing
+  `dev.otectus.mcaquests.quest.objective.VillagerTargeted` must now also implement
+  `VillagerTarget targetSelector()`, returning whatever the objective exposes as its `villager` /
+  `recipient` field. This is what lets the accept-time binder and the HUD reach a selector without an
+  `instanceof` chain over every objective type. Source-breaking, one line per implementation; no other
+  add-on surface changed.
+- `QuestObjective` gained a **defaulted** `describe(player, active, progress, level)` overload alongside the
+  existing three-argument form, so a villager-targeted objective can name the villager it actually bound.
+  Purely additive — existing objective types need no change.
+- **New client mixin into a vanilla class.** `MinecraftGlowMixin` HEAD-injects
+  `Minecraft#shouldEntityAppearGlowing` and only ever forces `true`, so it never suppresses vanilla's own
+  glow (spectator creeper outlines, the Glowing effect) and should coexist with other outline mods. It is
+  needed because `Entity#setGlowingTag` cannot drive the outline from the client in 1.20.1: it ends with
+  `setSharedFlag(6, isCurrentlyGlowing())`, and on the client `isCurrentlyGlowing()` *reads* flag 6, so the
+  call writes the flag back to its own value and does nothing. Client-only — dedicated servers never load
+  it.
+- **Protocol `8` → `9`.** `HighlightTargetsS2CPacket` is new and `QuestLogEntry` carries an optional target
+  hint, so client and server must both be on 1.2.0; the channel handshake enforces it. World saves are
+  unaffected.
+- Materialising a missing relative goes through MCA's `initialize(MobSpawnType)` rather than
+  `finalizeSpawn`, because MCA's `finalizeSpawn` invents two random deceased parents whenever a family node
+  has no valid father/mother — which would rewrite real genealogy for a relative being restored. This is
+  the first thing to re-check on an MCA version bump.
+
 ## [1.1.0] - 2026-08-13
 
 ### Added — MCA: Reputation integration (optional)

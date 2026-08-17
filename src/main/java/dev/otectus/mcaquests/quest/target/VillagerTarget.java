@@ -46,7 +46,8 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
     }
 
     /** Relations understood by {@code family} mode (mirrors {@link McaCompat#giverRelativeUuids}). */
-    public static final Set<String> RELATIONS = Set.of("any", "spouse", "parent", "child", "sibling");
+    public static final Set<String> RELATIONS =
+            Set.of("any", "spouse", "parent", "child", "sibling", "grandparent");
 
     private static final double FALLBACK_SCAN_RADIUS = 48.0D;
 
@@ -75,6 +76,21 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
 
     /** The concrete, currently-loaded villager this target selects, or {@code empty} if unavailable. */
     public Optional<LivingEntity> resolve(ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        return resolve(player, active, level, null);
+    }
+
+    /**
+     * As {@link #resolve(ServerPlayer, ActiveQuest, ServerLevel)}, but honours a {@code bound} villager
+     * already locked into the objective's {@code ObjectiveProgress}. Once a quest has bound a target this
+     * is the only villager it will ever mean — {@code family} mode must not drift to whichever relative
+     * happens to be loaded, or the objective line, the glow, and the villager that credits the objective
+     * can all name different people.
+     */
+    public Optional<LivingEntity> resolve(ServerPlayer player, ActiveQuest active, ServerLevel level,
+                                          @Nullable UUID bound) {
+        if (bound != null) {
+            return living(level.getEntity(bound));
+        }
         return switch (mode) {
             case SELF -> living(level.getEntity(active.villagerUuid()));
             case UUID -> uuid.flatMap(u -> living(level.getEntity(u)));
@@ -87,8 +103,22 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
 
     /** True when {@code candidate} is the villager this target refers to (for interaction/event credit). */
     public boolean matches(LivingEntity candidate, ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        return matches(candidate, player, active, level, null);
+    }
+
+    /**
+     * As {@link #matches(LivingEntity, ServerPlayer, ActiveQuest, ServerLevel)}, but exact once a
+     * {@code bound} villager has been locked in. Without a binding, {@code family} mode credits <em>any</em>
+     * relative of that relation, so a parcel meant for one sibling could be handed to another; with one, only
+     * the villager the quest actually named counts.
+     */
+    public boolean matches(LivingEntity candidate, ServerPlayer player, ActiveQuest active, ServerLevel level,
+                           @Nullable UUID bound) {
         if (!McaCompat.isMcaVillager(candidate)) {
             return false;
+        }
+        if (bound != null) {
+            return candidate.getUUID().equals(bound);
         }
         return switch (mode) {
             case SELF -> candidate.getUUID().equals(active.villagerUuid());
@@ -130,13 +160,26 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
      * {@link #describe()} when no name resolves (non-MCA giver, no such relative, missing family data).
      */
     public Component describeResolved(ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        return describeResolved(player, active, level, null);
+    }
+
+    /**
+     * As {@link #describeResolved(ServerPlayer, ActiveQuest, ServerLevel)}, naming the {@code bound}
+     * villager once the objective has locked one in — so the quest log keeps naming the same person even
+     * while they are unloaded (the name comes from MCA's persistent family tree).
+     */
+    public Component describeResolved(ServerPlayer player, ActiveQuest active, ServerLevel level,
+                                      @Nullable UUID bound) {
         Entity giver = level.getEntity(active.villagerUuid());
-        Optional<LivingEntity> loaded = resolve(player, active, level);
+        Optional<LivingEntity> loaded = resolve(player, active, level, bound);
         Optional<String> name;
         Optional<String> village;
         if (loaded.isPresent()) {
             name = Optional.of(McaCompat.getVillagerDisplayName(loaded.get()).getString());
             village = McaCompat.getHomeVillageName(loaded.get());
+        } else if (bound != null && giver != null) {
+            name = McaCompat.getRelativeDisplayName(giver, bound);
+            village = McaCompat.getHomeVillageName(giver);
         } else if (mode == Mode.FAMILY && giver != null) {
             name = McaCompat.findGiverRelative(level, giver, relation.orElse("any"))
                     .flatMap(u -> McaCompat.getRelativeDisplayName(giver, u));

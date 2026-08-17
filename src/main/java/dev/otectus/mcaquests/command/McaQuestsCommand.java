@@ -221,7 +221,7 @@ public final class McaQuestsCommand {
             ctx.getSource().sendSuccess(() -> Component.literal(" global: " + titles.global()), false);
         }
         titles.byVillage().forEach((village, set) -> ctx.getSource().sendSuccess(
-                () -> Component.literal(" village #" + village + ": " + set), false));
+                () -> Component.literal(" village " + village + ": " + set), false));
         return titles.global().size() + titles.byVillage().size();
     }
 

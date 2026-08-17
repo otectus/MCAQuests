@@ -11,16 +11,17 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 7 — v1.1.0 moved the whole built-in pack from literal text to translation keys, so quest
-    // titles and dialogue now travel as translatable Components. The packet *shapes* are unchanged, but a
-    // pre-1.1.0 client has none of those keys in its lang file and would render raw ids
-    // ("mcaquests.quest.farmer_wheat_request.dialogue.offer") for every quest. Rejecting the mismatch is
-    // far better than a UI full of translation keys. (6 was the abandon-from-log packet and a giver UUID
-    // on QuestLogEntry; 5 was task M5.1: the FTB editor known-ids sync packet; 4 was v0.8.0: the "village
-    // needs help" situation toast packet; 3 was v0.7.0: the reputation tier-up toast and journal
-    // request/sync packets; 2 was v0.4.0: the community-project menu/log/contribute packets.)
+    // Bumped to 9 — per-player quest-target highlighting: HighlightTargetsS2CPacket is new and
+    // QuestLogEntry now carries the bound target's name and position for the HUD's direction cue.
+    // (8 was the journal's View Deeds link (§29.7): JournalVillageEntry gained the village's dimension
+    // and id, JournalSyncS2CPacket gained whether MCA: Reputation is canonical, and
+    // OpenStandingC2SPacket was new; 7 was v1.1.0: the built-in pack moved to translation keys;
+    // 6 was the abandon-from-log packet and a giver UUID on QuestLogEntry; 5 was task M5.1: the FTB
+    // editor known-ids sync packet; 4 was v0.8.0: the "village needs help" situation toast packet;
+    // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
+    // community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "7";
+    private static final String PROTOCOL_VERSION = "9";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -81,5 +82,17 @@ public final class QuestNetwork {
         CHANNEL.registerMessage(nextId++, QuestAbandonFromLogC2SPacket.class,
                 QuestAbandonFromLogC2SPacket::encode, QuestAbandonFromLogC2SPacket::decode,
                 QuestAbandonFromLogC2SPacket::handle);
+
+        // §29.7 — the journal's View Deeds link into MCA: Reputation's standing screen. Registered
+        // unconditionally like every packet; the handler no-ops unless Reputation is canonical.
+        CHANNEL.registerMessage(nextId++, OpenStandingC2SPacket.class,
+                OpenStandingC2SPacket::encode, OpenStandingC2SPacket::decode,
+                OpenStandingC2SPacket::handle);
+
+        // Per-player quest-target highlighting — the glow is drawn client-side for the quest owner only,
+        // so one player's markers are never visible to everyone else on the server.
+        CHANNEL.registerMessage(nextId++, HighlightTargetsS2CPacket.class,
+                HighlightTargetsS2CPacket::encode, HighlightTargetsS2CPacket::decode,
+                HighlightTargetsS2CPacket::handle);
     }
 }

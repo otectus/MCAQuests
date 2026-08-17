@@ -61,6 +61,7 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue followGiverAfterAccept;
         public final ForgeConfigSpec.DoubleValue leadVillagerSpeed;
         public final ForgeConfigSpec.BooleanValue highlightQuestTargets;
+        public final ForgeConfigSpec.BooleanValue highlightUsesGlowingEffect;
         public final ForgeConfigSpec.BooleanValue questChatMessages;
         public final ForgeConfigSpec.BooleanValue strictJsonValidation;
         public final ForgeConfigSpec.BooleanValue debugLogging;
@@ -187,9 +188,16 @@ public final class McaQuestsConfig {
                     .defineInRange("leadVillagerSpeed", 0.6, 0.1, 2.0);
             highlightQuestTargets = b.comment(
                     "If true (default), a villager that is the target of one of your active quests (the",
-                    "recipient of a delivery, or the villager to heal/cure/escort/protect/defend) glows through",
-                    "walls while it is loaded, so you can find it. Applied server-side; syncs to all clients.")
+                    "recipient of a delivery, a missing relative to find, or the villager to",
+                    "heal/cure/escort/protect/defend) is outlined through walls while it is loaded, so you can",
+                    "find it. Sent to the quest owner only — other players do not see your quest markers.")
                     .define("highlightQuestTargets", true);
+            highlightUsesGlowingEffect = b.comment(
+                    "Legacy highlighting mode. If true, quest targets are highlighted with the vanilla Glowing",
+                    "status effect applied to the villager itself instead of a per-player outline. That effect",
+                    "is part of world state, so EVERY player on the server sees it and it can show up in",
+                    "minimaps and shader outlines. Only enable it if you want that behaviour back.")
+                    .define("highlightUsesGlowingEffect", false);
             questChatMessages = b.comment("Send a short chat confirmation when a quest is accepted or completed.")
                     .define("questChatMessages", true);
             b.pop();
@@ -293,6 +301,7 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue showQuestButtonInMcaMenu;
         public final ForgeConfigSpec.BooleanValue showQuestToasts;
         public final ForgeConfigSpec.BooleanValue showQuestTrackerHud;
+        public final ForgeConfigSpec.BooleanValue showQuestTargetDirection;
         public final ForgeConfigSpec.BooleanValue playQuestSounds;
         public final ForgeConfigSpec.IntValue questTrackerMaxEntries;
         public final ForgeConfigSpec.BooleanValue questTrackerBackground;
@@ -309,6 +318,11 @@ public final class McaQuestsConfig {
                     .define("showQuestButtonInMcaMenu", true);
             showQuestToasts = b.define("showQuestToasts", true);
             showQuestTrackerHud = b.define("showQuestTrackerHud", true);
+            showQuestTargetDirection = b.comment(
+                    "Add a line to the quest tracker naming the villager the quest wants you to find, with",
+                    "the distance to them and which way to turn. Shown only while the quest is not yet ready",
+                    "to hand in. Needs showQuestTrackerHud.")
+                    .define("showQuestTargetDirection", true);
             playQuestSounds = b.define("playQuestSounds", true);
             questTrackerMaxEntries = b.comment("How many quests the tracker HUD shows at once.")
                     .defineInRange("questTrackerMaxEntries", 5, 1, 15);

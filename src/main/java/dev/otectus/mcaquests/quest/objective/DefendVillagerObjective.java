@@ -48,9 +48,23 @@ public record DefendVillagerObjective(VillagerTarget villager, EntityTarget thre
     }
 
     @Override
+    public Component describe(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                              ServerLevel level) {
+        return Component.translatable("mcaquests.objective.defend_villager", count, threat.describe(),
+                ObjectiveSupport.describeLocked(villager, player, active, progress, level));
+    }
+
+    @Override
+    public VillagerTarget targetSelector() {
+        return villager;
+    }
+
+    @Override
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        return progress.count() >= count ? Optional.empty() : villager.resolve(player, active, level);
+        return progress.count() >= count
+                ? Optional.empty()
+                : ObjectiveSupport.resolveLocked(villager, player, active, progress, level);
     }
 
     @Override
@@ -79,7 +93,7 @@ public record DefendVillagerObjective(VillagerTarget villager, EntityTarget thre
         if (progress.count() >= count || !ObjectiveSupport.isHostile(dead) || !threat.matches(dead)) {
             return;
         }
-        Optional<LivingEntity> defended = villager.resolve(player, active, level);
+        Optional<LivingEntity> defended = ObjectiveSupport.resolveLocked(villager, player, active, progress, level);
         if (defended.isPresent() && ObjectiveSupport.withinRadius(dead, defended.get(), radius)) {
             progress.add(1);
         }

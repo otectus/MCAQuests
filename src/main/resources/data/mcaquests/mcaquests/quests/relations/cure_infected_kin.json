@@ -46,6 +46,11 @@
       }
     }
   ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "any",
+    "status": "same_village"
+  },
   "rewards": [
     {
       "type": "mcaquests:currency"
