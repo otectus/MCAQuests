@@ -175,7 +175,8 @@ public final class McaQuestsCommand {
                                 .requires(src -> src.hasPermission(2))
                                 .executes(McaQuestsCommand::ftbqRecheckSelf)
                                 .then(Commands.argument("player", EntityArgument.player())
-                                        .executes(McaQuestsCommand::ftbqRecheckPlayer)))));
+                                        .executes(McaQuestsCommand::ftbqRecheckPlayer))))
+                .then(TownsteadCompatCommands.node()));
     }
 
     /**
@@ -775,7 +776,7 @@ public final class McaQuestsCommand {
         return 1;
     }
 
-    private static Entity nearestMcaVillager(ServerPlayer player, double radius) {
+    static Entity nearestMcaVillager(ServerPlayer player, double radius) {
         AABB box = player.getBoundingBox().inflate(radius);
         List<Entity> candidates = player.level().getEntities(player, box, McaCompat::isMcaVillager);
         return candidates.stream()

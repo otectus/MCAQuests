@@ -1,0 +1,158 @@
+package dev.otectus.mcaquests.compat;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.UUID;
+
+/**
+ * One pass's worth of Townstead reads, memoised (Townstead spec §4.1).
+ *
+ * <p>An eligibility pass can ask the same question many times: a villager offering eight quests, five
+ * of which gate on hunger, would otherwise build five identical snapshots. This is the same shape as
+ * {@link McaVillagerSnapshot} — cheap things eagerly, everything else through a
+ * {@code computeIfAbsent} — and it is deliberately <b>short-lived</b>. It lives for one pass and is
+ * discarded, because a longer-lived cache would serve stale needs to a polling objective and quietly
+ * complete quests on values that were true a minute ago.
+ *
+ * <p>Nothing Townstead-owned is stored here; every cached value is one of MCA: Quests' own view
+ * records, so this object is safe to hold from {@code QuestContext} whether Townstead is installed
+ * or not.
+ */
+public final class TownsteadEvaluation {
+
+    private final Map<UUID, Optional<TownsteadVillagerView>> villagers = new HashMap<>();
+    private final Map<Integer, Optional<TownsteadSpiritView>> spirits = new HashMap<>();
+    private final Map<Long, Optional<TownsteadBuildingView>> buildings = new HashMap<>();
+    private final Map<ResourceLocation, Optional<TownsteadRootView>> roots = new HashMap<>();
+    private final Map<ResourceLocation, Optional<TownsteadGeneView>> genes = new HashMap<>();
+
+    @Nullable
+    private Optional<TownsteadCalendarView> calendar;
+
+    private static TownsteadBridge bridge() {
+        return TownsteadBridge.Holder.get();
+    }
+
+    /** True when Townstead is installed and bound well enough to answer anything at all. */
+    public static boolean available() {
+        return bridge().isAvailable();
+    }
+
+    public static boolean has(TownsteadCapability capability) {
+        return bridge().has(capability);
+    }
+
+    public Optional<TownsteadVillagerView> villager(@Nullable Entity entity) {
+        if (entity == null) {
+            return Optional.empty();
+        }
+        return villagers.computeIfAbsent(entity.getUUID(), uuid -> bridge().villager(entity));
+    }
+
+    public Optional<TownsteadCalendarView> calendar(@Nullable MinecraftServer server) {
+        if (server == null) {
+            return Optional.empty();
+        }
+        if (calendar == null) {
+            calendar = bridge().calendar(server);
+        }
+        return calendar;
+    }
+
+    public Optional<TownsteadSpiritView> spirit(@Nullable ServerLevel level, int villageId) {
+        if (level == null || villageId < 0) {
+            return Optional.empty();
+        }
+        return spirits.computeIfAbsent(villageId, id -> bridge().spiritForVillage(level, id));
+    }
+
+    public Optional<TownsteadBuildingView> buildingAt(@Nullable ServerLevel level, @Nullable BlockPos pos) {
+        if (level == null || pos == null) {
+            return Optional.empty();
+        }
+        return buildings.computeIfAbsent(pos.asLong(), key -> bridge().buildingAt(level, pos));
+    }
+
+    public Optional<TownsteadRootView> root(@Nullable ResourceLocation id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return roots.computeIfAbsent(id, bridge()::root);
+    }
+
+    public Optional<TownsteadGeneView> gene(@Nullable ResourceLocation id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return genes.computeIfAbsent(id, bridge()::gene);
+    }
+
+    /**
+     * The snapshot a query's {@link TownsteadQuery.Source} names, for an already-resolved target, or
+     * {@code null} when it cannot be produced — which the query turns into its {@code missing} answer
+     * rather than into a comparison against a default.
+     *
+     * <p>The subject of each source:
+     * <ul>
+     *   <li>{@code villager} — the target itself.</li>
+     *   <li>{@code calendar} — the server; the target is ignored.</li>
+     *   <li>{@code spirit} — the target's home village.</li>
+     *   <li>{@code root} — the root the target descends from.</li>
+     *   <li>{@code building} — the registered building at the target's workstation, or failing that at
+     *       their home. A villager standing in a field is still "at" the farm they work.</li>
+     *   <li>{@code gene} — the first path segment is the gene id, so one condition can address any
+     *       gene without a second field to carry it. The remaining segments walk that gene.</li>
+     * </ul>
+     */
+    @Nullable
+    public Object subject(TownsteadQuery query, @Nullable Entity target) {
+        ServerLevel level = target != null && target.level() instanceof ServerLevel server ? server : null;
+        return switch (query.source()) {
+            case VILLAGER -> villager(target).orElse(null);
+            case CALENDAR -> calendar(target == null ? null : target.getServer()).orElse(null);
+            case SPIRIT -> {
+                OptionalInt villageId = homeVillage(target);
+                yield villageId.isPresent() ? spirit(level, villageId.getAsInt()).orElse(null) : null;
+            }
+            case ROOT -> villager(target)
+                    .map(TownsteadVillagerView::rootId)
+                    .map(ResourceLocation::tryParse)
+                    .flatMap(this::root)
+                    .orElse(null);
+            case BUILDING -> buildingFor(level, target).orElse(null);
+            case GENE -> gene(ResourceLocation.tryParse(query.path().get(0))).orElse(null);
+        };
+    }
+
+    /**
+     * The path a query walks once its source has resolved. Identical to {@link TownsteadQuery#path()}
+     * except for {@code gene}, whose first segment named the gene itself and has been consumed.
+     */
+    public static List<String> effectivePath(TownsteadQuery query) {
+        List<String> path = query.path();
+        return query.source() == TownsteadQuery.Source.GENE ? path.subList(1, path.size()) : path;
+    }
+
+    private Optional<TownsteadBuildingView> buildingFor(@Nullable ServerLevel level, @Nullable Entity target) {
+        if (level == null || target == null) {
+            return Optional.empty();
+        }
+        Optional<TownsteadBuildingView> atWork = McaCompat.getWorkstationPos(target)
+                .flatMap(pos -> buildingAt(level, pos));
+        return atWork.isPresent() ? atWork : McaCompat.getHomePos(target).flatMap(pos -> buildingAt(level, pos));
+    }
+
+    private static OptionalInt homeVillage(@Nullable Entity target) {
+        return target == null ? OptionalInt.empty() : McaCompat.getHomeVillageId(target);
+    }
+}

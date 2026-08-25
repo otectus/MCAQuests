@@ -104,6 +104,14 @@ public interface TownsteadBridge {
         return status() == TownsteadStatus.FULL || status() == TownsteadStatus.PARTIAL;
     }
 
+    /**
+     * Members that were expected but did not bind, named for a bug report. Empty when everything
+     * bound and when Townstead is absent -- an absent mod is not a partial binding.
+     */
+    default java.util.List<String> unresolvedMembers() {
+        return java.util.List.of();
+    }
+
     final class Holder {
         private static volatile TownsteadBridge instance = NoopTownsteadBridge.INSTANCE;
 

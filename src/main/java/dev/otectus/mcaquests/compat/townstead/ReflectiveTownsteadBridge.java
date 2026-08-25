@@ -70,8 +70,8 @@ public final class ReflectiveTownsteadBridge implements TownsteadBridge {
         return variant;
     }
 
-    /** Members that did not bind, for {@code /mcaquests compat townstead status}. */
-    public java.util.List<String> unresolved() {
+    @Override
+    public java.util.List<String> unresolvedMembers() {
         return TownsteadHandles.resolution().unresolved();
     }
 
