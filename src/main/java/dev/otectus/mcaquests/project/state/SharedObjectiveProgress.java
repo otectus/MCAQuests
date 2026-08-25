@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project.state;
 
 import net.minecraft.nbt.CompoundTag;
+
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
@@ -18,11 +19,20 @@ import java.util.UUID;
  * {@code CONTRIBUTORS}/{@code TOP_CONTRIBUTOR} reward targets) and a dedupe set used by the talk
  * objective.
  */
+import javax.annotation.Nullable;
+
 public final class SharedObjectiveProgress {
 
     private int count;
     private final Map<UUID, Integer> contributions = new HashMap<>();
     private final Set<UUID> talkedTo = new HashSet<>();
+    /**
+     * Lazily-created scratch, the community analogue of {@code ObjectiveProgress.extra()}. A polled
+     * project objective needs somewhere to freeze a starting reading -- "the village had 40 spirit
+     * points when this phase opened" -- and a shared counter alone cannot hold one.
+     */
+    @Nullable
+    private CompoundTag extra;
 
     public SharedObjectiveProgress() {
     }
@@ -54,6 +64,14 @@ public final class SharedObjectiveProgress {
         return contributions;
     }
 
+    /** A lazily-created scratch tag for per-objective state the shared counter does not cover. */
+    public CompoundTag extra() {
+        if (extra == null) {
+            extra = new CompoundTag();
+        }
+        return extra;
+    }
+
     /** Records that {@code villager} was interacted with; returns true if this is the first time. */
     public boolean markTalkedTo(UUID villager) {
         return talkedTo.add(villager);
@@ -75,6 +93,10 @@ public final class SharedObjectiveProgress {
             ListTag list = new ListTag();
             talkedTo.forEach(uuid -> list.add(StringTag.valueOf(uuid.toString())));
             tag.put("talked_to", list);
+        }
+        // Written only when non-empty, so a project that never polled serialises byte-for-byte as before.
+        if (extra != null && !extra.isEmpty()) {
+            tag.put("extra", extra);
         }
         return tag;
     }
@@ -101,6 +123,9 @@ public final class SharedObjectiveProgress {
                     // skip
                 }
             }
+        }
+        if (tag.contains("extra", Tag.TAG_COMPOUND)) {
+            progress.extra = tag.getCompound("extra");
         }
         return progress;
     }

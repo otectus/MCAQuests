@@ -19,6 +19,18 @@ public final class ProjectObjectiveTypes {
 
     public static final ProjectObjectiveType<DonateItemObjective> DONATE_ITEM =
             register(new ResourceLocation(McaQuests.MOD_ID, "donate_item"), DonateItemObjective.CODEC);
+
+    // Townstead (Townstead spec 5.4). Registered unconditionally, like every other optional-mod type;
+    // each one checks its own capability when polled.
+    public static final ProjectObjectiveType<TownsteadBuildingProjectObjective> TOWNSTEAD_BUILDING =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_building_project"), TownsteadBuildingProjectObjective.CODEC);
+    public static final ProjectObjectiveType<TownsteadSpiritProjectObjective> TOWNSTEAD_SPIRIT =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_spirit_project"), TownsteadSpiritProjectObjective.CODEC);
+    public static final ProjectObjectiveType<TownsteadWorkforceProjectObjective> TOWNSTEAD_WORKFORCE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_workforce_project"), TownsteadWorkforceProjectObjective.CODEC);
+    public static final ProjectObjectiveType<TownsteadResidentWellbeingProjectObjective>
+            TOWNSTEAD_RESIDENT_WELLBEING = register(new ResourceLocation(McaQuests.MOD_ID, "townstead_resident_wellbeing_project"),
+                    TownsteadResidentWellbeingProjectObjective.CODEC);
     public static final ProjectObjectiveType<ProjectKillObjective> PROJECT_KILL_ENTITY =
             register(new ResourceLocation(McaQuests.MOD_ID, "project_kill_entity"), ProjectKillObjective.CODEC);
     public static final ProjectObjectiveType<ProjectPlaceBlockObjective> PROJECT_PLACE_BLOCK =

@@ -370,6 +370,7 @@ public final class QuestProgressEvents {
         checkFailureTriggers(player);
         autoCompleteSelfQuests(player);
         maybeScanSituations(player);
+        maybePollProjects(player);
         maybeRetryBankedRewards(player, level);
         QuestManager.checkReadyTransitions(player);
         // Refresh the client quest log + HUD (~once per second) for players with active quests.
@@ -382,6 +383,8 @@ public final class QuestProgressEvents {
 
     /** Game time of the last server-wide situation scan, so the per-player tick runs it only once per interval. */
     private static long lastSituationScan = Long.MIN_VALUE;
+    /** Sibling of {@link #lastSituationScan} for the project sweep; see {@link #due}. */
+    private static long lastProjectPoll;
 
     /**
      * Runs the periodic situation detector sweep at most once per {@code situationDetectionIntervalTicks},
@@ -397,12 +400,46 @@ public final class QuestProgressEvents {
             return;
         }
         long now = server.overworld().getGameTime();
-        if (now - lastSituationScan < McaQuestsConfig.COMMON.situationDetectionIntervalTicks.get()) {
+        if (!due(now, lastSituationScan, McaQuestsConfig.COMMON.situationDetectionIntervalTicks.get())) {
             return;
         }
         lastSituationScan = now;
         SituationDetectors.scan(server);
         SituationManager.tick(server);
+    }
+
+    /**
+     * Whether a server-wide pass is due, tolerating world time that has gone <em>backwards</em>.
+     *
+     * <p>These guards are static and survive a world change, so in single-player, loading a younger
+     * world leaves {@code last} in that world's future: a plain {@code now - last >= interval} then
+     * reads negative and the pass silently never runs again until the new world catches up, which for a
+     * fresh world means effectively never. Treating any backwards jump as "due" resets it on the first
+     * tick instead.
+     */
+    private static boolean due(long now, long last, long interval) {
+        return now < last || now - last >= interval;
+    }
+
+    /**
+     * Advances project objectives that watch the world rather than waiting to be told about it.
+     *
+     * <p>Hung off the player tick because that is the only server tick this mod subscribes to, and
+     * adding a second subscriber for one bounded sweep would be worse. The pass itself is server-wide
+     * and player-independent -- it runs once per interval no matter how many players are online -- so
+     * hosting it here is a scheduling detail, not a scoping one.
+     */
+    private static void maybePollProjects(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        long now = server.overworld().getGameTime();
+        if (!due(now, lastProjectPoll, McaQuestsConfig.COMMON.townsteadProjectPollIntervalTicks.get())) {
+            return;
+        }
+        lastProjectPoll = now;
+        ProjectManager.pollProjects(server);
     }
 
     /** In-game day (per player) the banked-reward retry last ran, so it fires at most once per day (task M3.1). */

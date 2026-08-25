@@ -13,6 +13,7 @@ import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
 import dev.otectus.mcaquests.project.objective.ProjectKillObjective;
+import dev.otectus.mcaquests.project.objective.PollingProjectObjective;
 import dev.otectus.mcaquests.project.objective.ProjectObjective;
 import dev.otectus.mcaquests.project.objective.ProjectPlaceBlockObjective;
 import dev.otectus.mcaquests.project.objective.ProjectTalkObjective;
@@ -832,6 +833,56 @@ public final class ProjectManager {
             data.setDirty();
         }
         return advanced;
+    }
+
+    /**
+     * One bounded sweep of every live project, advancing the objectives that have to watch the world
+     * rather than wait to be told about it (Townstead spec 5.4).
+     *
+     * <p>Deliberately server-wide and player-independent. A project is village state, not player state:
+     * a dock finished while its sponsor was logged out is still finished, and tying the check to a
+     * nearby player would make completion depend on who happened to be standing where.
+     *
+     * <p>Guarded by the same eligibility ladder {@code creditEvent} uses -- status, stale scope, missing
+     * definition, phase bounds -- so a quarantined or finished project costs one comparison.
+     */
+    public static void pollProjects(MinecraftServer server) {
+        if (!enabled()) {
+            return;
+        }
+        ProjectSavedData data = ProjectSavedData.get(server);
+        boolean dirty = false;
+        for (ProjectState state : data.allInstances()) {
+            if (state.status() != ProjectStatus.ACTIVE || isScopeStale(state)) {
+                continue;
+            }
+            ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
+            if (def == null || state.currentPhase() >= def.phaseCount()) {
+                continue;
+            }
+            ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
+            if (level == null) {
+                continue; // the dimension is gone or not loaded; nothing to read
+            }
+            ProjectPhase phase = def.phase(state.currentPhase());
+            boolean changed = false;
+            for (int i = 0; i < phase.objectives().size() && i < state.progressCount(); i++) {
+                if (phase.objectives().get(i) instanceof PollingProjectObjective polling
+                        && polling.poll(server, level, def, state, state.progress(i))) {
+                    changed = true;
+                }
+            }
+            if (changed) {
+                checkPhaseAdvance(server, level, data, state, def, null, null);
+                dirty = true;
+            }
+        }
+        if (dirty) {
+            data.setDirty();
+            for (ServerPlayer online : server.getPlayerList().getPlayers()) {
+                syncProjects(online);
+            }
+        }
     }
 
     public static List<ProjectState> activeInstances(MinecraftServer server) {
