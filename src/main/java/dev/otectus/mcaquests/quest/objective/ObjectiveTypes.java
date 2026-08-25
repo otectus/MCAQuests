@@ -19,6 +19,25 @@ public final class ObjectiveTypes {
 
     public static final QuestObjectiveType<ItemDeliveryObjective> ITEM_DELIVERY =
             register(new ResourceLocation(McaQuests.MOD_ID, "item_delivery"), ItemDeliveryObjective.CODEC);
+
+    // Townstead (Townstead spec 5.2). Registered unconditionally so a datapack parses identically with
+    // or without Townstead; what is gated is evaluation, via TownsteadObjective's capability check.
+    public static final QuestObjectiveType<TownsteadStateObjective> TOWNSTEAD_STATE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_state"), TownsteadStateObjective.CODEC);
+    public static final QuestObjectiveType<TownsteadChangeObjective> TOWNSTEAD_CHANGE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_change"), TownsteadChangeObjective.CODEC);
+    public static final QuestObjectiveType<TownsteadProfessionProgressObjective> TOWNSTEAD_PROFESSION_PROGRESS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_profession_progress"),
+                    TownsteadProfessionProgressObjective.CODEC);
+    public static final QuestObjectiveType<TownsteadBuildingRegisteredObjective> TOWNSTEAD_BUILDING_REGISTERED =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_building_registered"),
+                    TownsteadBuildingRegisteredObjective.CODEC);
+    public static final QuestObjectiveType<TownsteadSpiritProgressObjective> TOWNSTEAD_SPIRIT_PROGRESS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_spirit_progress"),
+                    TownsteadSpiritProgressObjective.CODEC);
+    public static final QuestObjectiveType<TownsteadHealthyResidentsObjective> TOWNSTEAD_HEALTHY_RESIDENTS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_healthy_residents"),
+                    TownsteadHealthyResidentsObjective.CODEC);
     public static final QuestObjectiveType<ObtainItemObjective> OBTAIN_ITEM =
             register(new ResourceLocation(McaQuests.MOD_ID, "obtain_item"), ObtainItemObjective.CODEC);
     public static final QuestObjectiveType<KillEntityObjective> KILL_ENTITY =

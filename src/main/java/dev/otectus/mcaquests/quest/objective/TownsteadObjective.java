@@ -52,6 +52,18 @@ public interface TownsteadObjective extends QuestObjective {
         return Optional.empty();
     }
 
+    /**
+     * Take the starting reading, once, at the moment the quest is accepted.
+     *
+     * <p>Called from {@code QuestManager.accept} rather than left to the first poll, because a second
+     * of gameplay is long enough to eat: a player who accepts "feed them back up" and immediately hands
+     * over bread would otherwise have that bread counted as the starting state and lose the credit for
+     * it. Objectives with nothing to freeze ignore this.
+     */
+    default void freezeBaseline(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
+                                ServerLevel level) {
+    }
+
     /** Convenience for the objective's own guards: true when every declared capability is available. */
     default boolean townsteadReady() {
         TownsteadBridge bridge = TownsteadBridge.Holder.get();

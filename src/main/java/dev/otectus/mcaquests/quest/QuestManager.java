@@ -24,6 +24,7 @@ import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
+import dev.otectus.mcaquests.quest.objective.TownsteadObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.objective.VillagerTargeted;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
@@ -417,6 +418,22 @@ public final class QuestManager {
             }
             McaCompat.findGiverRelative(level, villager, selector.relation().orElse("any"))
                     .ifPresent(active.progress(i)::setTargetUuid);
+        }
+        freezeTownsteadBaselines(player, def, active, level);
+    }
+
+    /**
+     * Takes the starting reading for every objective that measures a change, at the moment of accepting
+     * rather than on the first poll a second later -- long enough for a player to hand over the bread
+     * that the quest is about to ask them for (Townstead spec 5.2).
+     */
+    private static void freezeTownsteadBaselines(ServerPlayer player, QuestDefinition def,
+                                                 ActiveQuest active, ServerLevel level) {
+        List<QuestObjective> objectives = def.objectives();
+        for (int i = 0; i < objectives.size(); i++) {
+            if (objectives.get(i) instanceof TownsteadObjective townstead) {
+                townstead.freezeBaseline(player, active, active.progress(i), level);
+            }
         }
     }
 
