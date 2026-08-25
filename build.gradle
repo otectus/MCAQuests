@@ -197,6 +197,37 @@ test {
     }
 }
 
+// Resolves TownsteadBinding's manifest against a real Townstead jar, in its own JVM and its own
+// classloader. Separate from `test` because it needs a jar nobody can resolve from a maven: Townstead
+// is published on CurseForge only, so the path is supplied by the person running it.
+//
+//     ./gradlew townsteadProbeTest -PtownsteadLegacyJar=/path/townstead-0.7.6+1.20.1.jar
+//
+// Both -PtownsteadModernJar and -PtownsteadLegacyJar are accepted and either may be given alone.
+// MCA rides along on `mcaquests.probe.jars` for a load-bearing reason: Townstead is compiled against
+// MCA, so enumerating TownsteadAPI's methods resolves an MCA parameter type, and without MCA present
+// the whole class reads as unbound and the probe would pass vacuously.
+tasks.register('townsteadProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the Townstead binding manifest against a supplied Townstead jar.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.TownsteadBindingProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    doFirst {
+        systemProperty 'mcaquests.townstead.probe.jars',
+                ['townsteadModernJar', 'townsteadLegacyJar']
+                        .findAll { project.hasProperty(it) }
+                        .collect { project.property(it).toString() }
+                        .join(File.pathSeparator)
+        systemProperty 'mcaquests.probe.jars', configurations.runtimeClasspath
+                .findAll { it.name.contains('minecraft-comes-alive') }
+                .join(File.pathSeparator)
+    }
+}
+
 // MixinGradle: generate the refmap for our mixin and register the config for reobfuscation.
 mixin {
     add sourceSets.main, 'mcaquests.refmap.json'

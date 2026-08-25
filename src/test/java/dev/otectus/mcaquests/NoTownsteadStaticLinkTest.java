@@ -10,22 +10,26 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Standing tripwire (Townstead spec §3.6): <b>no always-loaded class may reference a Townstead
- * type</b>. Only classes under {@code dev/otectus/mcaquests/compat/townstead/} may, and even those
- * must never classload unless Townstead is actually present — which
- * {@code TownsteadCompat.init()} guarantees with a {@code ModList.isLoaded} check.
+ * Standing tripwire (Townstead spec §3.6): <b>no compiled class may reference a Townstead type, and
+ * nothing outside {@code dev/otectus/mcaquests/compat/townstead/} may reference that package.</b>
  *
- * <p>This matters more here than the mod count suggests. Townstead is compiled against MCA, so its
- * classes carry MCA descriptors in their own constant pools; a stray import would drag a
+ * <p>The first half has <b>no exemption list at all</b> — not even for the guarded package itself.
+ * Unlike the FTB Quests seam, where one package is permitted to link against the foreign mod, the
+ * Townstead integration is reflection-only end to end: {@code TownsteadBinding} matches methods by
+ * name and arity and adapts every handle to an all-{@code Object} shape, so not one Townstead class
+ * is named anywhere in our bytecode. This test is what keeps it that way.
+ *
+ * <p>That strictness matters more here than the mod count suggests. Townstead is compiled against
+ * MCA, so its classes carry MCA descriptors in their own constant pools; a single import would drag a
  * <em>relocated MCA</em> type into ours and reintroduce exactly the crash
- * {@link NoMcaStaticLinkTest} exists to prevent — a {@code NoClassDefFoundError} thrown from
- * whatever handler happened to touch it first.
+ * {@link NoMcaStaticLinkTest} exists to prevent — a {@code NoClassDefFoundError} thrown from whatever
+ * handler happened to touch it first. Naming a Townstead type would also make the class unloadable
+ * without Townstead, which is the ordinary case for most installs.
  *
  * <p>Both scans byte-search the raw constant pool of every {@code .class} under
  * {@code build/classes/java/main} for the modified-UTF8 encoding of an <em>internal (slash)</em>
@@ -59,19 +63,19 @@ class NoTownsteadStaticLinkTest {
             "dev/otectus/mcaquests/compat/townstead/".getBytes(StandardCharsets.UTF_8);
 
     @Test
-    void noAlwaysLoadedClassReferencesATownsteadType() throws IOException {
-        List<String> violations = scan(TOWNSTEAD_NEEDLE, relative -> false);
+    void noCompiledClassReferencesATownsteadType() throws IOException {
+        List<String> violations = scan(TOWNSTEAD_NEEDLE, false);
 
         assertTrue(violations.isEmpty(),
-                "Class(es) outside " + EXEMPT_PACKAGE_PREFIX + " reference com.aetherianartificer."
-                        + "townstead. Every Townstead access must go through TownsteadBridge so the mod "
-                        + "keeps loading when Townstead is absent, and so Townstead's own MCA "
+                "Class(es) statically reference com.aetherianartificer.townstead. Every Townstead "
+                        + "access must resolve by name through TownsteadBinding, so the mod keeps "
+                        + "loading when Townstead is absent and Townstead's own relocated-MCA "
                         + "descriptors never reach our constant pool. Offenders: " + violations);
     }
 
     @Test
     void noAlwaysLoadedClassReferencesTheGuardedPackage() throws IOException {
-        List<String> violations = scan(GUARDED_PACKAGE_NEEDLE, relative -> false);
+        List<String> violations = scan(GUARDED_PACKAGE_NEEDLE, true);
 
         assertTrue(violations.isEmpty(),
                 "Class(es) outside " + EXEMPT_PACKAGE_PREFIX + " reference it directly. The only "
@@ -79,7 +83,7 @@ class NoTownsteadStaticLinkTest {
                         + "name, which is invisible to this scan by design. Offenders: " + violations);
     }
 
-    private static List<String> scan(byte[] needle, Predicate<String> whitelisted) throws IOException {
+    private static List<String> scan(byte[] needle, boolean exemptGuardedPackage) throws IOException {
         Path classesDir = Paths.get("build", "classes", "java", "main");
         assertTrue(Files.isDirectory(classesDir),
                 "build/classes/java/main does not exist; run `./gradlew compileJava` (or `test`, "
@@ -89,7 +93,7 @@ class NoTownsteadStaticLinkTest {
         try (Stream<Path> paths = Files.walk(classesDir)) {
             paths.filter(p -> p.toString().endsWith(".class")).forEach(p -> {
                 String relative = classesDir.relativize(p).toString().replace('\\', '/');
-                if (relative.startsWith(EXEMPT_PACKAGE_PREFIX) || whitelisted.test(relative)) {
+                if (exemptGuardedPackage && relative.startsWith(EXEMPT_PACKAGE_PREFIX)) {
                     return;
                 }
                 try {
