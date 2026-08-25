@@ -107,6 +107,7 @@ public class QuestLogScreen extends Screen {
                 + entry.objectives().size() * 10
                 + (entry.ready() ? 10 : 0)
                 + (entry.suspended() ? 10 : 0)
+                + entry.townsteadContext().size() * 10
                 + 6;
     }
 
@@ -180,6 +181,11 @@ public class QuestLogScreen extends Screen {
                 if (entry.ready()) {
                     graphics.drawString(this.font,
                             Component.translatable("mcaquests.status.ready"), left + 6, lineY, 0x5CFF5C);
+                }
+                for (Component context : entry.townsteadContext()) {
+                    // Dimmer than the objectives: this is background about the villager, not a task.
+                    graphics.drawString(this.font, context, left + 6, lineY, 0x7F9AA8);
+                    lineY += 10;
                 }
                 if (entry.suspended()) {
                     // Amber, not red: the quest is on hold, not lost. Progress and frozen baselines are

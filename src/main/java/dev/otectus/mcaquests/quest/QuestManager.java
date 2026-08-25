@@ -1197,7 +1197,8 @@ public final class QuestManager {
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), def.title(resolver),
                             active.villagerName(), chainLabel(def, resolver), objectiveLines(player, def, active),
                             isComplete(player, def, active), isSuspended(player, def, active), deadline,
-                            targetHint(player, def, active)));
+                            targetHint(player, def, active),
+                            TownsteadContextLines.forQuest(player, def, active)));
                 }, () ->
                     // The definition disappeared on a datapack reload (spec section 36). Still list it, under
                     // its raw id — otherwise the quest is invisible in the log yet keeps occupying an active
@@ -1205,7 +1206,7 @@ public final class QuestManager {
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
                             Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
                             active.villagerName(), Component.empty(), List.of(), false, false,
-                            java.util.OptionalLong.empty(), Optional.empty())));
+                            java.util.OptionalLong.empty(), Optional.empty(), List.of())));
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
         });

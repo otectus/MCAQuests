@@ -83,7 +83,7 @@ class HighlightAndLogEntryCodecTest {
             return new QuestLogEntry(new ResourceLocation("mcaquests", "test_quest"),
                     UUID.randomUUID(), Component.literal("A Title"), Component.literal("Anna"),
                     Component.empty(), List.of(Component.literal("Deliver 1x Paper")), false, false,
-                    OptionalLong.empty(), target);
+                    OptionalLong.empty(), target, List.of());
         }
 
         private QuestLogEntry roundTrip(QuestLogEntry entry) {
