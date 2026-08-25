@@ -81,6 +81,29 @@ public interface QuestObjective {
     }
 
     /**
+     * Why this objective cannot be evaluated <em>right now</em>, if it cannot — the reason shown to the
+     * player in place of its progress line.
+     *
+     * <p>This is not failure and not completion: it is "the thing this objective reads about is not
+     * here". The canonical case is an optional companion mod that was installed when the quest was
+     * accepted and has since been removed. A quest in that state keeps its progress and its frozen
+     * baselines, stops polling, never auto-fails, never reads as complete, stays abandonable, and picks
+     * up exactly where it left off if the mod comes back — see {@code TownsteadObjective}.
+     *
+     * <p>Deliberately <b>derived rather than stored</b>: implementations answer from live state every
+     * pass, so recovery needs no migration and no bookkeeping can go stale. The one thing that is
+     * persisted is elapsed suspended time, because deadlines must not run down while a quest is
+     * unplayable ({@code ActiveQuest#suspendedTicks}).
+     *
+     * <p>Defaults to empty, so existing objective types — including those registered by add-ons — are
+     * unaffected and keep compiling.
+     */
+    default java.util.Optional<Component> unavailableReason(ServerPlayer player, ActiveQuest active,
+                                                            ObjectiveProgress progress, ServerLevel level) {
+        return java.util.Optional.empty();
+    }
+
+    /**
      * Datapack-load validation hook (spec section 26). Appends semantic problems a codec cannot catch
      * (e.g. a target referencing a field its mode requires, an out-of-range radius). Messages should
      * be prefixed with {@code "Quest '<questId>': objective[<index>] "}. No-op by default, so existing

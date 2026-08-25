@@ -11,7 +11,10 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 9 — per-player quest-target highlighting: HighlightTargetsS2CPacket is new and
+    // Bumped to 10 — QuestLogEntry now carries whether a quest is suspended, so the log can say a
+    // quest is waiting on a mod that is no longer installed instead of showing a counter that
+    // nothing can advance. (9 was per-player quest-target highlighting: HighlightTargetsS2CPacket
+    // is new and
     // QuestLogEntry now carries the bound target's name and position for the HUD's direction cue.
     // (8 was the journal's View Deeds link (§29.7): JournalVillageEntry gained the village's dimension
     // and id, JournalSyncS2CPacket gained whether MCA: Reputation is canonical, and
@@ -21,7 +24,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "9";
+    private static final String PROTOCOL_VERSION = "10";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),

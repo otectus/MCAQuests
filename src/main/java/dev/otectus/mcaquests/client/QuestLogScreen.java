@@ -106,6 +106,7 @@ public class QuestLogScreen extends Screen {
                 + (entry.chainLabel().getString().isEmpty() ? 0 : 10)
                 + entry.objectives().size() * 10
                 + (entry.ready() ? 10 : 0)
+                + (entry.suspended() ? 10 : 0)
                 + 6;
     }
 
@@ -179,6 +180,13 @@ public class QuestLogScreen extends Screen {
                 if (entry.ready()) {
                     graphics.drawString(this.font,
                             Component.translatable("mcaquests.status.ready"), left + 6, lineY, 0x5CFF5C);
+                }
+                if (entry.suspended()) {
+                    // Amber, not red: the quest is on hold, not lost. Progress and frozen baselines are
+                    // intact and it resumes untouched once whatever it reads is back. Must stay in
+                    // lockstep with entryHeight, or the Abandon buttons drift off their rows.
+                    graphics.drawString(this.font,
+                            Component.translatable("mcaquests.status.suspended"), left + 6, lineY, 0xFFD24D);
                 }
                 y += entryHeight(entry);
             }

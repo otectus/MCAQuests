@@ -623,6 +623,12 @@ public final class QuestManager {
         if (!data.active().contains(active)) {
             return; // already reached a terminal state this tick — never fail (or double-fail) twice
         }
+        if (isSuspended(player, def, active)) {
+            // The quest cannot be played right now, so it cannot be lost right now either. Guarding the
+            // funnel every failure path routes through covers deadlines, weather, and the protect /
+            // escort / giver death handlers in one place.
+            return;
+        }
         Entity resolvedGiver = giver != null ? giver : resolveGiver(player, active);
         long now = ((ServerLevel) player.level()).getGameTime();
 
@@ -690,13 +696,44 @@ public final class QuestManager {
     // ---------------------------------------------------------------- helpers
 
     public static boolean isComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        ServerLevel level = (ServerLevel) player.level();
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
-            if (!objectives.get(i).isSatisfied(player, active.progress(i))) {
+            QuestObjective objective = objectives.get(i);
+            ObjectiveProgress progress = active.progress(i);
+            // An objective that cannot be evaluated is not a satisfied one. Guarding here rather than at
+            // each caller covers ready toasts, self-complete, settleProgress, turn-in and the log's
+            // ready flag in one place -- every one of them asks this question and nothing else.
+            if (objective.unavailableReason(player, active, progress, level).isPresent()
+                    || !objective.isSatisfied(player, progress)) {
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * The reason this quest cannot currently progress, if any -- the first objective that reports one
+     * (Townstead spec 10.1). A suspended quest keeps its progress and frozen baselines, does not poll,
+     * cannot complete, cannot be auto-failed, and resumes untouched when whatever it reads comes back.
+     */
+    public static Optional<Component> suspensionReason(ServerPlayer player, QuestDefinition def,
+                                                       ActiveQuest active) {
+        ServerLevel level = (ServerLevel) player.level();
+        List<QuestObjective> objectives = def.objectives();
+        for (int i = 0; i < objectives.size(); i++) {
+            Optional<Component> reason = objectives.get(i)
+                    .unavailableReason(player, active, active.progress(i), level);
+            if (reason.isPresent()) {
+                return reason;
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** True when any objective of this quest currently reports itself unavailable. */
+    public static boolean isSuspended(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        return suspensionReason(player, def, active).isPresent();
     }
 
     /** Whether {@code active} may be turned in at {@code villager}, honouring its turn-in mode (spec section 17). */
@@ -991,6 +1028,15 @@ public final class QuestManager {
                     ? objective.describe(player, active, active.progress(i), (ServerLevel) player.level())
                     : objective.describe();
             if (active != null) {
+                Optional<Component> unavailable = objective.unavailableReason(
+                        player, active, active.progress(i), (ServerLevel) player.level());
+                if (unavailable.isPresent()) {
+                    // No counter: "0/45" beside an objective nothing can advance reads as failure rather
+                    // than as "this is on hold", and the number would be a frozen baseline anyway.
+                    lines.add(Component.empty().append(line).append(Component.literal("  "))
+                            .append(unavailable.get()));
+                    continue;
+                }
                 int current = objective.current(player, active.progress(i));
                 line = Component.empty().append(line)
                         .append(Component.literal("  (" + current + "/" + objective.required() + ")"));
@@ -1070,14 +1116,15 @@ public final class QuestManager {
                     PlaceholderResolver resolver = active.textResolver(mcaName);
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), def.title(resolver),
                             active.villagerName(), chainLabel(def, resolver), objectiveLines(player, def, active),
-                            isComplete(player, def, active), deadline, targetHint(player, def, active)));
+                            isComplete(player, def, active), isSuspended(player, def, active), deadline,
+                            targetHint(player, def, active)));
                 }, () ->
                     // The definition disappeared on a datapack reload (spec section 36). Still list it, under
                     // its raw id — otherwise the quest is invisible in the log yet keeps occupying an active
                     // slot, leaving the player no way to abandon it.
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
                             Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
-                            active.villagerName(), Component.empty(), List.of(), false,
+                            active.villagerName(), Component.empty(), List.of(), false, false,
                             java.util.OptionalLong.empty(), Optional.empty())));
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));

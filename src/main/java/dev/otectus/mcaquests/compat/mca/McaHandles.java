@@ -18,6 +18,7 @@ import net.minecraft.world.phys.AABB;
 import java.lang.invoke.MethodHandle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -136,6 +137,13 @@ public final class McaHandles {
     private static final MethodHandle H_VILLAGE_RESIDENTS = R.handle(McaBinding.VILLAGE_GET_RESIDENTS);
     private static final MethodHandle H_VILLAGE_HAS_RESIDENT = R.handle(McaBinding.VILLAGE_HAS_RESIDENT);
     private static final MethodHandle H_VILLAGE_STORAGE = R.handle(McaBinding.VILLAGE_STORAGE_BUFFER);
+    private static final MethodHandle H_VILLAGE_BUILDINGS = R.handle(McaBinding.VILLAGE_GET_BUILDINGS);
+    private static final MethodHandle H_VILLAGE_BUILDINGS_OF_TYPE =
+            R.handle(McaBinding.VILLAGE_BUILDINGS_OF_TYPE);
+    private static final MethodHandle H_BUILDING_ID = R.handle(McaBinding.BUILDING_GET_ID);
+    private static final MethodHandle H_BUILDING_TYPE = R.handle(McaBinding.BUILDING_GET_TYPE);
+    private static final MethodHandle H_BUILDING_SIZE = R.handle(McaBinding.BUILDING_GET_SIZE);
+    private static final MethodHandle H_BUILDING_CENTER = R.handle(McaBinding.BUILDING_GET_CENTER);
     private static final boolean HAS_HAS_RESIDENT = R.has(McaBinding.VILLAGE_HAS_RESIDENT);
 
     private static final MethodHandle H_MANAGER_GET = R.handle(McaBinding.VILLAGE_MANAGER_GET);
@@ -605,6 +613,66 @@ public final class McaHandles {
     /** An MCA {@code Village} by id, or null. */
     public static Object village(ServerLevel level, int villageId) {
         return unwrap(ref(H_MANAGER_BY_ID, villageManager(level), villageId));
+    }
+
+    /**
+     * Every building MCA has registered for a village, as opaque handles. MCA owns the building
+     * registry and Townstead only contributes type ids to it, so "how many docks does this village
+     * have" is an MCA question whose answer is cross-referenced against Townstead's ids -- not a
+     * Townstead call. Empty when the village is unknown or the members did not bind.
+     */
+    public static List<Object> villageBuildings(Object village) {
+        Object map = ref(H_VILLAGE_BUILDINGS, village);
+        if (!(map instanceof Map<?, ?> buildings)) {
+            return List.of();
+        }
+        List<Object> out = new ArrayList<>(buildings.size());
+        for (Object building : buildings.values()) {
+            if (building != null) {
+                out.add(building);
+            }
+        }
+        return out;
+    }
+
+    /** Buildings of one type. The type crosses as a plain String, so no MCA type is named. */
+    public static List<Object> villageBuildingsOfType(Object village, String type) {
+        Object stream = ref(H_VILLAGE_BUILDINGS_OF_TYPE, village, type);
+        if (stream instanceof Stream<?> s) {
+            try {
+                return new ArrayList<>(s.toList());
+            } catch (Throwable t) {
+                return List.of();
+            }
+        }
+        return List.of();
+    }
+
+    /** A building's registered type id, e.g. {@code dock_l2}. Empty string when unavailable. */
+    public static String buildingType(Object building) {
+        Object type = ref(H_BUILDING_TYPE, building);
+        return type instanceof String s ? s : "";
+    }
+
+    public static int buildingSize(Object building) {
+        return building == null ? 0 : intOf(H_BUILDING_SIZE, building);
+    }
+
+    public static int buildingId(Object building) {
+        return building == null ? -1 : intOf(H_BUILDING_ID, building);
+    }
+
+    public static Optional<BlockPos> buildingCenter(Object building) {
+        Object pos = ref(H_BUILDING_CENTER, building);
+        return pos instanceof BlockPos p ? Optional.of(p) : Optional.empty();
+    }
+
+    private static int intOf(MethodHandle handle, Object receiver) {
+        try {
+            return (int) handle.invoke(receiver);
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     /** The nearest {@code Village} to {@code pos} within {@code radius}, or null. */

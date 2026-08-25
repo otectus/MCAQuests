@@ -29,7 +29,8 @@ import java.util.UUID;
  */
 public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Component title, Component giverName,
                             Component chainLabel, List<Component> objectives, boolean ready,
-                            OptionalLong deadlineGameTime, Optional<TargetHint> target) {
+                            boolean suspended, OptionalLong deadlineGameTime,
+                            Optional<TargetHint> target) {
 
     /**
      * Where the quest wants the player to go: a villager's name and their position. The position is a live
@@ -57,6 +58,7 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
         buf.writeComponent(entry.chainLabel);
         buf.writeCollection(entry.objectives, FriendlyByteBuf::writeComponent);
         buf.writeBoolean(entry.ready);
+        buf.writeBoolean(entry.suspended);
         buf.writeBoolean(entry.deadlineGameTime.isPresent());
         if (entry.deadlineGameTime.isPresent()) {
             buf.writeVarLong(entry.deadlineGameTime.getAsLong());
@@ -72,6 +74,7 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
                 buf.readComponent(),
                 buf.readComponent(),
                 buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
+                buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean() ? OptionalLong.of(buf.readVarLong()) : OptionalLong.empty(),
                 buf.readOptional(TargetHint::decode));

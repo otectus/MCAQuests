@@ -178,6 +178,7 @@ public final class McaBinding {
     private static final String C_FAMILY_NODE = "server.world.data.FamilyTreeNode";
     private static final String C_PLAYER_SAVE = "server.world.data.PlayerSaveData";
     private static final String C_VILLAGE = "server.world.data.Village";
+    private static final String C_BUILDING = "server.world.data.Building";
     private static final String C_VILLAGE_MANAGER = "server.world.data.VillageManager";
 
     // Classes ------------------------------------------------------------------------------------
@@ -268,6 +269,17 @@ public final class McaBinding {
     public static final Member VILLAGE_HAS_RESIDENT = optionalVirtual(C_VILLAGE, "hasResident", boolean.class, 1);
     public static final Member VILLAGE_STORAGE_BUFFER = getter(C_VILLAGE, "storageBuffer");
 
+    // Buildings. MCA owns the registry; Townstead only adds types to it, so counting docks in a village
+    // is an MCA read cross-referenced against Townstead's type ids, not a Townstead call. Both members
+    // take/return only vanilla and MCA types, and getBuildingsOfType's one parameter is a String.
+    public static final Member VILLAGE_GET_BUILDINGS = virtual(C_VILLAGE, "getBuildings", Object.class, 0);
+    public static final Member VILLAGE_BUILDINGS_OF_TYPE =
+            virtual(C_VILLAGE, "getBuildingsOfType", Object.class, 1);
+    public static final Member BUILDING_GET_ID = virtual(C_BUILDING, "getId", int.class, 0);
+    public static final Member BUILDING_GET_TYPE = virtual(C_BUILDING, "getType", Object.class, 0);
+    public static final Member BUILDING_GET_SIZE = virtual(C_BUILDING, "getSize", int.class, 0);
+    public static final Member BUILDING_GET_CENTER = virtual(C_BUILDING, "getCenter", Object.class, 0);
+
     // VillageManager — arity 2 picks findNearestVillage(BlockPos,int) over (Entity) ----------------
     public static final Member VILLAGE_MANAGER_GET = statik(C_VILLAGE_MANAGER, "get", Object.class, 1);
     public static final Member VILLAGE_MANAGER_GET_OR_EMPTY = virtual(C_VILLAGE_MANAGER, "getOrEmpty", Object.class, 1);
@@ -290,6 +302,8 @@ public final class McaBinding {
             PLAYER_SAVE_GET,
             VILLAGE_GET_ID, VILLAGE_GET_NAME, VILLAGE_GET_CENTER, VILLAGE_IS_WITHIN_BORDER,
             VILLAGE_RESIDENT_UUIDS, VILLAGE_GET_RESIDENTS, VILLAGE_HAS_RESIDENT, VILLAGE_STORAGE_BUFFER,
+            VILLAGE_GET_BUILDINGS, VILLAGE_BUILDINGS_OF_TYPE,
+            BUILDING_GET_ID, BUILDING_GET_TYPE, BUILDING_GET_SIZE, BUILDING_GET_CENTER,
             VILLAGE_MANAGER_GET, VILLAGE_MANAGER_GET_OR_EMPTY, FIND_NEAREST_VILLAGE);
 
     // ---------------------------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +41,15 @@ public final class McaVillagerSnapshot {
     private final boolean home;
     private final OptionalDouble healthFraction;
     private final float infectionProgress;
+
+    /**
+     * Townstead reads for this same pass, created only if something actually asks (Townstead spec 4.1).
+     * It lives here rather than on {@code QuestContext} because this snapshot is already the per-pass
+     * object every condition shares, so hanging it here gives the caching for free and leaves every
+     * existing {@code QuestContext} construction site untouched.
+     */
+    @Nullable
+    private TownsteadEvaluation townstead;
 
     private final Map<String, Boolean> familyMemo = new HashMap<>();
     private final Map<String, Boolean> relativeStatusMemo = new HashMap<>();
@@ -111,6 +121,14 @@ public final class McaVillagerSnapshot {
     }
 
     /** Lazily resolves + memoizes whether the villager is {@code relation} to the player. */
+    /** The pass's Townstead reads. Empty of everything until the first Townstead condition asks. */
+    public TownsteadEvaluation townstead() {
+        if (townstead == null) {
+            townstead = new TownsteadEvaluation();
+        }
+        return townstead;
+    }
+
     public boolean isFamilyOfPlayer(String relation) {
         return familyMemo.computeIfAbsent(relation, r -> McaCompat.isFamilyOfPlayer(player, villager, r));
     }

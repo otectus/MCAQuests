@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.compat;
 
+import dev.otectus.mcaquests.compat.mca.McaHandles;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -7,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,7 @@ public final class TownsteadEvaluation {
     private final Map<UUID, Optional<TownsteadVillagerView>> villagers = new HashMap<>();
     private final Map<Integer, Optional<TownsteadSpiritView>> spirits = new HashMap<>();
     private final Map<Long, Optional<TownsteadBuildingView>> buildings = new HashMap<>();
+    private final Map<Integer, List<TownsteadVillageBuilding>> villageBuildings = new HashMap<>();
     private final Map<ResourceLocation, Optional<TownsteadRootView>> roots = new HashMap<>();
     private final Map<ResourceLocation, Optional<TownsteadGeneView>> genes = new HashMap<>();
 
@@ -81,6 +84,47 @@ public final class TownsteadEvaluation {
             return Optional.empty();
         }
         return buildings.computeIfAbsent(pos.asLong(), key -> bridge().buildingAt(level, pos));
+    }
+
+    /**
+     * Every building registered to a village, memoised for the pass. Reads MCA's registry through
+     * {@code McaHandles} rather than Townstead, because MCA owns buildings and Townstead only adds type
+     * ids to them — so this works identically for a vanilla-MCA library and a Townstead dock.
+     */
+    public List<TownsteadVillageBuilding> buildingsIn(@Nullable ServerLevel level, int villageId) {
+        if (level == null || villageId < 0) {
+            return List.of();
+        }
+        return villageBuildings.computeIfAbsent(villageId, id -> {
+            Object village = McaHandles.village(level, id);
+            if (village == null) {
+                return List.of();
+            }
+            List<TownsteadVillageBuilding> out = new ArrayList<>();
+            for (Object building : McaHandles.villageBuildings(village)) {
+                String type = McaHandles.buildingType(building);
+                if (type.isEmpty()) {
+                    continue;
+                }
+                out.add(new TownsteadVillageBuilding(
+                        McaHandles.buildingId(building),
+                        type,
+                        McaHandles.buildingSize(building),
+                        McaHandles.buildingCenter(building).orElse(BlockPos.ZERO)));
+            }
+            return List.copyOf(out);
+        });
+    }
+
+    /** How many buildings of a type (or of any tier of it) the village has. */
+    public int countBuildings(@Nullable ServerLevel level, int villageId, String type, int minimumLevel) {
+        int count = 0;
+        for (TownsteadVillageBuilding building : buildingsIn(level, villageId)) {
+            if (building.matches(type) && building.level() >= minimumLevel) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public Optional<TownsteadRootView> root(@Nullable ResourceLocation id) {

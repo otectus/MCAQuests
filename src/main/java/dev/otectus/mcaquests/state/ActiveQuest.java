@@ -53,6 +53,20 @@ public final class ActiveQuest {
     private final Map<Integer, Integer> frozenRewards = new HashMap<>();
     private boolean rewardClaimed;
     private boolean readyNotified;
+    /**
+     * Game ticks this quest has spent unplayable because an optional mod one of its objectives reads
+     * was absent (Townstead spec 10.1). Subtracted from "now" when a deadline is checked, so a quest
+     * suspended for three in-game days is not instantly failed the moment the mod comes back.
+     *
+     * <p>Deliberately <em>not</em> folded into {@code startGameTime}: a failure spec may set
+     * {@code deadline_time_of_day}, which anchors on the time of day the quest was accepted, and moving
+     * the start would retarget that deadline to a different hour of the day instead of merely
+     * postponing it. Offsetting the comparison freezes the clock, which is what suspension means, and
+     * is correct for both deadline kinds.
+     *
+     * <p>Absent on saves written before 1.4.0, and on every quest that was never suspended.
+     */
+    private long suspendedTicks;
 
     /** Lazily-built concretized definition, derived from {@link #template}; not persisted. */
     @Nullable
@@ -186,6 +200,26 @@ public final class ActiveQuest {
     }
 
     /** Whether the player has already been notified (toast) that this quest is ready to turn in. */
+    /** Ticks spent suspended so far. See the field javadoc for why this is not folded into the start. */
+    public long suspendedTicks() {
+        return suspendedTicks;
+    }
+
+    /** Accrues suspended time. Called once per polling pass while an objective reports unavailable. */
+    public void addSuspendedTicks(long delta) {
+        if (delta > 0L) {
+            this.suspendedTicks += delta;
+        }
+    }
+
+    /**
+     * "Now", with suspended time removed — the value every deadline comparison must use so a quest is
+     * never failed for time that passed while it could not be played.
+     */
+    public long effectiveNow(long gameTime) {
+        return gameTime - suspendedTicks;
+    }
+
     public boolean readyNotified() {
         return readyNotified;
     }
@@ -206,6 +240,9 @@ public final class ActiveQuest {
         tag.putLong("start", startGameTime);
         tag.putBoolean("claimed", rewardClaimed);
         tag.putBoolean("ready_notified", readyNotified);
+        if (suspendedTicks != 0L) {
+            tag.putLong("suspended_ticks", suspendedTicks);
+        }
         ListTag list = new ListTag();
         for (ObjectiveProgress p : progress) {
             list.add(p.save());
@@ -249,6 +286,7 @@ public final class ActiveQuest {
                 situationInstance);
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");
+        quest.suspendedTicks = tag.getLong("suspended_ticks"); // 0 when absent
         if (tag.contains("frozen_rewards", Tag.TAG_COMPOUND)) {
             CompoundTag frozen = tag.getCompound("frozen_rewards");
             for (String key : frozen.getAllKeys()) {

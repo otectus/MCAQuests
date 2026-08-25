@@ -82,7 +82,7 @@ class HighlightAndLogEntryCodecTest {
         private QuestLogEntry entryWith(Optional<QuestLogEntry.TargetHint> target) {
             return new QuestLogEntry(new ResourceLocation("mcaquests", "test_quest"),
                     UUID.randomUUID(), Component.literal("A Title"), Component.literal("Anna"),
-                    Component.empty(), List.of(Component.literal("Deliver 1x Paper")), false,
+                    Component.empty(), List.of(Component.literal("Deliver 1x Paper")), false, false,
                     OptionalLong.empty(), target);
         }
 

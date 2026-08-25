@@ -19,6 +19,11 @@ import dev.otectus.mcaquests.quest.condition.leaf.GiverDistanceFromVillageCondit
 import dev.otectus.mcaquests.quest.condition.leaf.HasHomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HealthBelowCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HeartsCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.TownsteadAvailableCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.TownsteadBuildingCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.TownsteadSkillCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.TownsteadSpiritCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.TownsteadValueCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.InfectedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.IsFamilyMemberCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.IsPlayerSpouseCondition;
@@ -65,6 +70,22 @@ public final class ConditionTypes {
             HAS_INCIDENT = register(new net.minecraft.resources.ResourceLocation("mcareputation",
                     "has_incident"),
             dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition.CODEC);
+
+    // Townstead (Townstead spec 5.1). Registered unconditionally, exactly like the FTB Quests and
+    // MCA: Reputation conditions above: a datapack must parse identically whether or not the mod is
+    // installed, so the types always exist and it is evaluation that is gated. Every bundled Townstead
+    // definition opens with townstead_available, so an absent Townstead makes content ineligible rather
+    // than broken.
+    public static final QuestConditionType<TownsteadAvailableCondition> TOWNSTEAD_AVAILABLE =
+            register("townstead_available", TownsteadAvailableCondition.CODEC);
+    public static final QuestConditionType<TownsteadValueCondition> TOWNSTEAD_VALUE =
+            register("townstead_value", TownsteadValueCondition.CODEC);
+    public static final QuestConditionType<TownsteadBuildingCondition> TOWNSTEAD_BUILDING =
+            register("townstead_building", TownsteadBuildingCondition.CODEC);
+    public static final QuestConditionType<TownsteadSpiritCondition> TOWNSTEAD_SPIRIT =
+            register("townstead_spirit", TownsteadSpiritCondition.CODEC);
+    public static final QuestConditionType<TownsteadSkillCondition> TOWNSTEAD_SKILL =
+            register("townstead_skill", TownsteadSkillCondition.CODEC);
 
     public static final QuestConditionType<HeartsCondition> HEARTS = register("hearts", HeartsCondition.CODEC);
     public static final QuestConditionType<ProfessionCondition> PROFESSION = register("profession", ProfessionCondition.CODEC);

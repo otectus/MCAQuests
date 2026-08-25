@@ -221,10 +221,19 @@ public record TownsteadQuery(Source source, TownsteadTarget target, List<String>
      * unavailable, in which case the answer is {@link #missing()}.
      */
     public boolean test(@Nullable Object subject) {
+        return testResolved(subject, path);
+    }
+
+    /**
+     * As {@link #test(Object)}, against an explicitly supplied path. Needed because the {@code gene}
+     * source spends the first path segment naming <em>which</em> gene, so what remains to walk is
+     * shorter than {@link #path()} — see {@code TownsteadEvaluation.effectivePath}.
+     */
+    public boolean testResolved(@Nullable Object subject, List<String> effectivePath) {
         if (subject == null) {
             return missing;
         }
-        Optional<Object> resolved = TownsteadPaths.resolve(subject, path);
+        Optional<Object> resolved = TownsteadPaths.resolve(subject, effectivePath);
         if (operator == Operator.EXISTS) {
             return resolved.isPresent();
         }

@@ -47,14 +47,28 @@ public record TownsteadBuildingView(
      * {@code dock_l3} is level 3; {@code pen} is level 1.
      */
     public int level() {
-        String digits = levelSuffix();
+        return levelOf(type);
+    }
+
+    /**
+     * The tier encoded in a building type id's {@code _lN} suffix, or {@code 1} when it has none.
+     * Static so {@link TownsteadVillageBuilding} reads tiers by exactly the same rule -- two spellings
+     * of "which dock is this" would eventually disagree.
+     */
+    public static int levelOf(String type) {
+        String digits = levelSuffix(type);
         return digits == null ? 1 : Integer.parseInt(digits);
+    }
+
+    /** The type id with any {@code _lN} suffix removed. See {@link #levelOf(String)}. */
+    public static String familyOf(String type) {
+        String digits = levelSuffix(type);
+        return digits == null ? type : type.substring(0, type.length() - digits.length() - 2);
     }
 
     /** The type id with any {@code _lN} suffix removed, so all three dock levels share a family. */
     public String family() {
-        String digits = levelSuffix();
-        return digits == null ? type : type.substring(0, type.length() - digits.length() - 2);
+        return familyOf(type);
     }
 
     /**
@@ -64,7 +78,7 @@ public record TownsteadBuildingView(
      * on a pathological id.
      */
     @Nullable
-    private String levelSuffix() {
+    private static String levelSuffix(String type) {
         int marker = type.lastIndexOf("_l");
         if (marker <= 0) {
             return null;

@@ -366,6 +366,7 @@ public final class QuestProgressEvents {
         forActiveObjectives(player, PollingObjective.class,
                 (objective, active, progress) -> objective.poll(player, active, progress));
         highlightTargets(player, level);
+        accrueSuspendedTime(player);
         checkFailureTriggers(player);
         autoCompleteSelfQuests(player);
         maybeScanSituations(player);
@@ -434,6 +435,29 @@ public final class QuestProgressEvents {
      * configured outcome (hearts / retry cooldown / dialogue) and the FAILED history record apply
      * uniformly with every other failure path.
      */
+    /** One polling pass, in ticks: the cadence {@code onPlayerTick} throttles its ~1 Hz block to. */
+    private static final long POLL_INTERVAL_TICKS = 20L;
+
+    /**
+     * Adds this pass's worth of ticks to every quest that is currently unplayable, so a deadline does not
+     * run down while the mod one of its objectives reads is uninstalled (Townstead spec 10.1).
+     *
+     * <p>Called once per pass, before the failure check, and deliberately not from
+     * {@link #forActiveObjectives} — that runs once per objective type, so accruing there would count the
+     * same second several times over.
+     */
+    private static void accrueSuspendedTime(ServerPlayer player) {
+        QuestCapabilities.get(player).ifPresent(data -> {
+            for (ActiveQuest active : data.active()) {
+                QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
+                    if (QuestManager.isSuspended(player, active.resolve(base), active)) {
+                        active.addSuspendedTicks(POLL_INTERVAL_TICKS);
+                    }
+                });
+            }
+        });
+    }
+
     private static void checkFailureTriggers(ServerPlayer player) {
         QuestCapabilities.get(player).ifPresent(data -> {
             long now = player.level().getGameTime();
@@ -444,6 +468,9 @@ public final class QuestProgressEvents {
                     def.failure().ifPresent(failure -> {
                         if (QuestManager.isComplete(player, def, active)) {
                             return; // ready to turn in — never failed by a time/weather trigger
+                        }
+                        if (QuestManager.isSuspended(player, def, active)) {
+                            return; // unplayable right now — its clock is frozen, so nothing can expire
                         }
                         QuestFailedEvent.Reason reason = firedReason(player, active, failure, now);
                         if (reason != null) {
@@ -463,7 +490,11 @@ public final class QuestProgressEvents {
     private static QuestFailedEvent.Reason firedReason(ServerPlayer player, ActiveQuest active,
                                                        FailureSpec failure, long now) {
         OptionalLong deadline = failure.deadlineGameTime(active.startGameTime());
-        if (deadline.isPresent() && now >= deadline.getAsLong()) {
+        // Time spent suspended does not count against the deadline (Townstead spec 10.1). The offset is
+        // applied to "now" rather than to the start, because a deadline_time_of_day is anchored on the
+        // time of day the quest was accepted -- moving the start would retarget it to a different hour
+        // instead of merely postponing it.
+        if (deadline.isPresent() && active.effectiveNow(now) >= deadline.getAsLong()) {
             return failure.timeDeadlineReason();
         }
         if (failure.requireWeather().isPresent()
@@ -717,12 +748,21 @@ public final class QuestProgressEvents {
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     // Resolve template values so progress is tracked against this copy's concrete objectives.
+                    ServerLevel level = (ServerLevel) player.level();
                     List<QuestObjective> objectives = active.resolve(base).objectives();
                     for (int i = 0; i < objectives.size(); i++) {
                         QuestObjective objective = objectives.get(i);
-                        if (type.isInstance(objective)) {
-                            action.accept(type.cast(objective), active, active.progress(i));
+                        if (!type.isInstance(objective)) {
+                            continue;
                         }
+                        ObjectiveProgress progress = active.progress(i);
+                        // Skip per objective, not per quest: a Townstead objective sitting beside an
+                        // ordinary "bring me six loaves" must not freeze the loaves too. This is also the
+                        // one guard covering event credit as well as polling, since both route through here.
+                        if (objective.unavailableReason(player, active, progress, level).isPresent()) {
+                            continue;
+                        }
+                        action.accept(type.cast(objective), active, progress);
                     }
                 });
             }

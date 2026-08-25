@@ -1,5 +1,14 @@
 package dev.otectus.mcaquests.compat;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 /**
  * One independently-bindable Townstead feature (Townstead spec §3.2).
  *
@@ -40,5 +49,21 @@ public enum TownsteadCapability {
     /** Learning and forgetting profession skills. */
     MUTATE_SKILLS,
     /** Playing a Townstead reaction on a quest, project or situation transition. */
-    DISPATCH_REACTION
+    DISPATCH_REACTION;
+
+    private static final Map<String, TownsteadCapability> BY_NAME = Arrays.stream(values())
+            .collect(Collectors.toUnmodifiableMap(c -> c.name().toLowerCase(Locale.ROOT), Function.identity()));
+
+    /**
+     * Accepts the constant name in either case, so a pack may write {@code READ_NEEDS} or
+     * {@code read_needs}. An unknown id is a parse error naming the valid set rather than a silently
+     * ungated definition -- a capability gate that quietly matched nothing would be worse than absent.
+     */
+    public static final Codec<TownsteadCapability> CODEC = Codec.STRING.flatXmap(
+            raw -> {
+                TownsteadCapability capability = BY_NAME.get(raw.toLowerCase(Locale.ROOT));
+                return capability != null ? DataResult.success(capability) : DataResult.error(
+                        () -> "Unknown Townstead capability '" + raw + "'; expected one of " + BY_NAME.keySet());
+            },
+            capability -> DataResult.success(capability.name()));
 }
