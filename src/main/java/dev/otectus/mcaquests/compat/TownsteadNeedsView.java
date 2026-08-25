@@ -20,10 +20,19 @@ public record TownsteadNeedsView(
         boolean gated) {
 
     /**
-     * Townstead's fatigue ceiling, and so the zero point for {@link #energy()}. Asserted by the
-     * binding probe against the real jar rather than trusted: if Townstead ever widens the range,
-     * the probe fails loudly instead of every energy objective silently drifting.
+     * The ranges Townstead keeps these needs in. Every one is asserted by the binding probe against the
+     * real jar rather than trusted, because a widened range would not fail anything loudly -- it would
+     * quietly clamp every reward short and drift every threshold in the bundled content.
+     *
+     * <p>They are not all the same, which is exactly why they are written down: hunger runs to 100 while
+     * thirst and fatigue run to 20, so "restore 50" means something very different depending on which
+     * need is being asked about.
      */
+    public static final int HUNGER_MAX = 100;
+    public static final int THIRST_MAX = 20;
+    public static final int QUENCHED_MAX = 20;
+
+    /** The fatigue ceiling, and so the zero point for {@link #energy()}: lower fatigue is more rested. */
     public static final int FATIGUE_MAX = 20;
 
     /** Rested-ness on a rising scale: {@code FATIGUE_MAX} when fully rested, {@code 0} when spent. */

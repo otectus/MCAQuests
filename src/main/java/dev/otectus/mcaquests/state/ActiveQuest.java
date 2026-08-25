@@ -68,6 +68,14 @@ public final class ActiveQuest {
      */
     private long suspendedTicks;
 
+    /**
+     * Lifecycle phases already announced to Townstead, one bit per
+     * {@code TownsteadLifecycle.Phase} (Townstead spec 7.1). Persisted so a reconnect or a restart
+     * cannot make a villager react a second time to something that happened days ago. Absent on saves
+     * written before 1.4.0 and on every quest that never reached a phase.
+     */
+    private final java.util.BitSet dispatchedPhases = new java.util.BitSet();
+
     /** Lazily-built concretized definition, derived from {@link #template}; not persisted. */
     @Nullable
     private transient QuestDefinition resolvedCache;
@@ -200,6 +208,18 @@ public final class ActiveQuest {
     }
 
     /** Whether the player has already been notified (toast) that this quest is ready to turn in. */
+    /**
+     * Records that a lifecycle phase has been announced, and reports whether this call is the one that
+     * did it. The single guard behind "every phase fires at most once".
+     */
+    public boolean markPhaseDispatched(int phase) {
+        if (dispatchedPhases.get(phase)) {
+            return false;
+        }
+        dispatchedPhases.set(phase);
+        return true;
+    }
+
     /** Ticks spent suspended so far. See the field javadoc for why this is not folded into the start. */
     public long suspendedTicks() {
         return suspendedTicks;
@@ -242,6 +262,9 @@ public final class ActiveQuest {
         tag.putBoolean("ready_notified", readyNotified);
         if (suspendedTicks != 0L) {
             tag.putLong("suspended_ticks", suspendedTicks);
+        }
+        if (!dispatchedPhases.isEmpty()) {
+            tag.putByteArray("townstead_phases", dispatchedPhases.toByteArray());
         }
         ListTag list = new ListTag();
         for (ObjectiveProgress p : progress) {
@@ -287,6 +310,9 @@ public final class ActiveQuest {
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");
         quest.suspendedTicks = tag.getLong("suspended_ticks"); // 0 when absent
+        if (tag.contains("townstead_phases", Tag.TAG_BYTE_ARRAY)) {
+            quest.dispatchedPhases.or(java.util.BitSet.valueOf(tag.getByteArray("townstead_phases")));
+        }
         if (tag.contains("frozen_rewards", Tag.TAG_COMPOUND)) {
             CompoundTag frozen = tag.getCompound("frozen_rewards");
             for (String key : frozen.getAllKeys()) {

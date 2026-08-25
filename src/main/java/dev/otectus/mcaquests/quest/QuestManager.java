@@ -38,6 +38,7 @@ import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.quest.reward.CurrencyReward;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
+import dev.otectus.mcaquests.quest.reward.TownsteadReward;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
 import dev.otectus.mcaquests.quest.template.TemplateSpec;
@@ -325,6 +326,7 @@ public final class QuestManager {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
         }
         MinecraftForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, accepted));
+        TownsteadLifecycle.dispatch(player, active, villager, TownsteadLifecycle.Phase.ACCEPTED);
         McaCompat.setQuestGiverFollow(player, villager, McaQuestsConfig.COMMON.followGiverAfterAccept.get());
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             Component acceptLine = accepted.dialogueOr(QuestDefinition.ACCEPT,
@@ -437,6 +439,23 @@ public final class QuestManager {
         }
     }
 
+    /**
+     * True when every Townstead reward on this quest could be applied right now. Only consulted when
+     * {@code rewardFailureBlocksCompletion} is on; otherwise a reward that cannot apply logs once and
+     * the turn-in proceeds.
+     */
+    private static boolean townsteadRewardsCanApply(ServerPlayer player, QuestDefinition def,
+                                                    @Nullable Entity giver) {
+        for (QuestReward reward : def.rewards()) {
+            if (reward instanceof TownsteadReward townstead
+                    && townstead.enabledByConfig()
+                    && !townstead.canApply(player, giver)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** {@code currency} with the quest's difficulty band filled in when it declares none of its own. */
     private static CurrencyReward inheritDifficulty(CurrencyReward currency, QuestDefinition def) {
         return currency.difficulty().isPresent()
@@ -452,6 +471,13 @@ public final class QuestManager {
     private static boolean completeQuest(ServerPlayer player, Entity grantVillager,
                                          QuestDefinition def, ActiveQuest active, PlayerQuestData data) {
         if (active.rewardClaimed()) {
+            return false;
+        }
+        // Optional strictness (Townstead spec 5.5). Off by default, because refusing a turn-in the
+        // player has already earned is worse than quietly skipping the villager-facing half of the
+        // reward -- but a server that would rather the quest waited can say so.
+        if (McaQuestsConfig.COMMON.townsteadRewardFailureBlocksCompletion.get()
+                && !townsteadRewardsCanApply(player, def, grantVillager)) {
             return false;
         }
         active.setRewardClaimed(true);
@@ -482,6 +508,7 @@ public final class QuestManager {
             }
         }
         grantQuestReputation(player, grantVillager, def, active, "complete");
+        TownsteadLifecycle.dispatch(player, active, grantVillager, TownsteadLifecycle.Phase.COMPLETED);
 
         long now = ((ServerLevel) player.level()).getGameTime();
         data.history().recordCompletion(def.id(), active.villagerUuid());
@@ -617,6 +644,7 @@ public final class QuestManager {
             return false; // already reached a terminal state this tick — never abandon twice
         }
         data.remove(active);
+        TownsteadLifecycle.dispatch(player, active, villager, TownsteadLifecycle.Phase.ABANDONED);
         QuestDefinitions.resolve(active.questId()).ifPresent(def -> {
             releaseEscortMovement(player, active.resolve(def), active);
             data.history().recordOutcome(def.id(), active.villagerUuid(), QuestHistory.Outcome.ABANDONED);
@@ -664,6 +692,7 @@ public final class QuestManager {
         releaseEscortMovement(player, def, active);
         data.remove(active);
 
+        TownsteadLifecycle.dispatch(player, active, resolvedGiver, TownsteadLifecycle.Phase.FAILED);
         MinecraftForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             PlaceholderResolver failResolver = active.textResolver(player);
@@ -1107,6 +1136,8 @@ public final class QuestManager {
                     if (complete && !active.readyNotified()) {
                         active.setReadyNotified(true);
                         MinecraftForge.EVENT_BUS.post(new QuestReadyEvent(player, def));
+                        TownsteadLifecycle.dispatch(player, active, resolveGiver(player, active),
+                                TownsteadLifecycle.Phase.READY);
                         // Resolve the MCA name only here (rare ready transition), not once per tick per player.
                         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                                 new QuestReadyToastS2CPacket(def.title(active.textResolver(player))));

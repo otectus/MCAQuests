@@ -69,7 +69,7 @@ public final class TownsteadBinding {
      */
     private static final String VARIANT_PROBE_METHOD = "villager";
 
-    private enum Kind { CLASS, VIRTUAL, STATIC }
+    private enum Kind { CLASS, VIRTUAL, STATIC, CONSTRUCTOR }
 
     /**
      * One thing MCA: Quests needs from Townstead, named relative to {@link #PACKAGE}.
@@ -104,7 +104,11 @@ public final class TownsteadBinding {
 
         @Override
         public String toString() {
-            return kind == Kind.CLASS ? ownerRelative : ownerRelative + "#" + name + "/" + arity;
+            return switch (kind) {
+                case CLASS -> ownerRelative;
+                case CONSTRUCTOR -> ownerRelative + "#<init>/" + arity;
+                default -> ownerRelative + "#" + name + "/" + arity;
+            };
         }
 
         /**
@@ -116,7 +120,7 @@ public final class TownsteadBinding {
         private MethodType erasedType() {
             int params = switch (kind) {
                 case VIRTUAL -> arity + 1; // receiver first
-                case STATIC -> arity;
+                case STATIC, CONSTRUCTOR -> arity;
                 case CLASS -> 0;
             };
             return MethodType.methodType(returnType, Collections.nCopies(params, Object.class));
@@ -126,6 +130,20 @@ public final class TownsteadBinding {
     private static Member statik(String ownerRelative, String name, Class<?> ret, int arity,
                                  @Nullable TownsteadCapability capability) {
         return new Member(Kind.STATIC, ownerRelative, name, ret, arity, capability);
+    }
+
+    private static Member virtual(String ownerRelative, String name, Class<?> ret, int arity,
+                                  @Nullable TownsteadCapability capability) {
+        return new Member(Kind.VIRTUAL, ownerRelative, name, ret, arity, capability);
+    }
+
+    /**
+     * A constructor. Needed because writing a villager's profession XP back means handing Townstead a
+     * new {@code ProfessionXp} record, and a record has no setters -- so there is no way to do it
+     * without building one.
+     */
+    private static Member ctor(String ownerRelative, int arity, @Nullable TownsteadCapability capability) {
+        return new Member(Kind.CONSTRUCTOR, ownerRelative, "<init>", Object.class, arity, capability);
     }
 
     /** A zero-argument accessor — every Townstead snapshot is a record, so this covers nearly all of them. */
@@ -299,6 +317,84 @@ public final class TownsteadBinding {
     public static final Member SR_SECONDARY = get(O_SPIRIT_READOUT, "secondarySpiritId", Object.class, CAP_SPIRIT);
     public static final Member SPIRIT_CONTAINS = statik(O_SPIRIT_REGISTRY, "contains", boolean.class, 1, CAP_SPIRIT);
 
+    // ---------------------------------------------------------------------------------------------
+    // Mutations. Every one of these was read off townstead-0.7.6+1.20.1.jar and is unique by
+    // (owner, name, arity, staticness).
+    //
+    // The gateway is TownsteadVillagers#get, whose one parameter is an MCA villager -- bound by arity
+    // alone, so the type is never named and the entity simply passes through as an Object.
+    // ---------------------------------------------------------------------------------------------
+
+    private static final String O_VILLAGERS = "villager.TownsteadVillagers";
+    private static final String O_STATE = "villager.TownsteadVillager";
+    private static final String O_NEEDS_STATE = "villager.TownsteadVillager$Needs";
+    private static final String O_PROFESSION_MEMORY = "villager.TownsteadVillager$ProfessionMemory";
+    private static final String O_PROFESSION_XP = "villager.ProfessionXp";
+    private static final String O_PROGRESSIONS = "villager.ProfessionProgressions";
+    private static final String O_PROGRESSION_SPEC = "villager.ProgressionSpec";
+    private static final String O_PROFESSION_PROGRESS = "villager.ProfessionProgress";
+    private static final String O_GAIN_RESULT = "villager.ProfessionProgress$GainResult";
+    private static final String O_XP_TYPE = "villager.ProfessionXpType";
+    private static final String O_LEARNED_SKILLS = "profession.skill.LearnedSkills";
+    private static final String O_SKILL_RESULT = "profession.skill.LearnedSkills$Result";
+    private static final String O_FORGET_RESULT = "profession.skill.LearnedSkills$ForgetResult";
+    private static final String O_REACTIONS = "reaction.ReactionDispatcher";
+
+    private static final TownsteadCapability CAP_MUTATE_NEEDS = TownsteadCapability.MUTATE_NEEDS;
+    private static final TownsteadCapability CAP_AWARD_XP = TownsteadCapability.AWARD_PROFESSION_XP;
+    private static final TownsteadCapability CAP_SKILLS = TownsteadCapability.MUTATE_SKILLS;
+    private static final TownsteadCapability CAP_REACTION = TownsteadCapability.DISPATCH_REACTION;
+
+    // MUTATE_NEEDS. restoreEnergy is the recovery path Townstead itself uses; a bare
+    // setCollapsed(false) would leave a villager standing up still carrying the fatigue that floored
+    // them, so it is deliberately left unbound.
+    public static final Member VILLAGERS_GET = statik(O_VILLAGERS, "get", Object.class, 1, CAP_MUTATE_NEEDS);
+    public static final Member STATE_NEEDS = virtual(O_STATE, "needs", Object.class, 0, CAP_MUTATE_NEEDS);
+    public static final Member NEEDS_SET_HUNGER = virtual(O_NEEDS_STATE, "setHunger", void.class, 1, CAP_MUTATE_NEEDS);
+    public static final Member NEEDS_SET_SATURATION = virtual(O_NEEDS_STATE, "setSaturation", void.class, 1, CAP_MUTATE_NEEDS);
+    public static final Member NEEDS_SET_THIRST = virtual(O_NEEDS_STATE, "setThirst", void.class, 1, CAP_MUTATE_NEEDS);
+    public static final Member NEEDS_SET_QUENCHED = virtual(O_NEEDS_STATE, "setQuenched", void.class, 1, CAP_MUTATE_NEEDS);
+    public static final Member NEEDS_SET_FATIGUE = virtual(O_NEEDS_STATE, "setFatigue", void.class, 1, CAP_MUTATE_NEEDS);
+    public static final Member NEEDS_RESTORE_ENERGY = virtual(O_NEEDS_STATE, "restoreEnergy", void.class, 1, CAP_MUTATE_NEEDS);
+
+    // AWARD_PROFESSION_XP. Both paths are bound. ProfessionProgress#addXp is the cap-respecting maths
+    // Townstead uses itself, but ProfessionXpType has only four constants, so the store-and-spec
+    // members below are the general path for every other profession, including data-driven ones.
+    public static final Member STATE_PROFESSION_MEMORY = virtual(O_STATE, "professionMemory", Object.class, 0, CAP_AWARD_XP);
+    public static final Member MEMORY_PROFESSION_XP = virtual(O_PROFESSION_MEMORY, "professionXp", Object.class, 1, CAP_AWARD_XP);
+    public static final Member MEMORY_SET_PROFESSION_XP = virtual(O_PROFESSION_MEMORY, "setProfessionXp", void.class, 2, CAP_AWARD_XP);
+    public static final Member XP_NEW = ctor(O_PROFESSION_XP, 5, CAP_AWARD_XP);
+    public static final Member XP_XP = virtual(O_PROFESSION_XP, "xp", int.class, 0, CAP_AWARD_XP);
+    public static final Member XP_TIER = virtual(O_PROFESSION_XP, "tier", int.class, 0, CAP_AWARD_XP);
+    public static final Member XP_LAST_TIER_UP = virtual(O_PROFESSION_XP, "lastTierUpTick", long.class, 0, CAP_AWARD_XP);
+    public static final Member XP_DAY = virtual(O_PROFESSION_XP, "xpDay", long.class, 0, CAP_AWARD_XP);
+    public static final Member XP_TODAY = virtual(O_PROFESSION_XP, "xpToday", int.class, 0, CAP_AWARD_XP);
+    public static final Member PROGRESSIONS_SPEC = statik(O_PROGRESSIONS, "spec", Object.class, 1, CAP_AWARD_XP);
+    public static final Member SPEC_DAILY_CAP = virtual(O_PROGRESSION_SPEC, "dailyXpCap", int.class, 0, CAP_AWARD_XP);
+    public static final Member SPEC_MAX_XP = virtual(O_PROGRESSION_SPEC, "maxXp", int.class, 0, CAP_AWARD_XP);
+    public static final Member SPEC_TIER_FOR_XP = virtual(O_PROGRESSION_SPEC, "tierForXp", int.class, 1, CAP_AWARD_XP);
+    public static final Member SPEC_MAX_TIER = virtual(O_PROGRESSION_SPEC, "maxTier", int.class, 0, CAP_AWARD_XP);
+    public static final Member PROGRESS_ADD_XP = statik(O_PROFESSION_PROGRESS, "addXp", Object.class, 4, CAP_AWARD_XP);
+    public static final Member GAIN_APPLIED = virtual(O_GAIN_RESULT, "appliedXp", int.class, 0, CAP_AWARD_XP);
+    public static final Member GAIN_TIER_BEFORE = virtual(O_GAIN_RESULT, "tierBefore", int.class, 0, CAP_AWARD_XP);
+    public static final Member GAIN_TIER_AFTER = virtual(O_GAIN_RESULT, "tierAfter", int.class, 0, CAP_AWARD_XP);
+    public static final Member XP_TYPE_VALUES = statik(O_XP_TYPE, "values", Object.class, 0, CAP_AWARD_XP);
+    public static final Member XP_TYPE_ID = virtual(O_XP_TYPE, "id", Object.class, 0, CAP_AWARD_XP);
+
+    // MUTATE_SKILLS. These overloads take a LivingEntity or a UUID, so this is the one part of the
+    // mutation surface with no MCA type anywhere near it.
+    public static final Member SKILLS_LEARNED = statik(O_LEARNED_SKILLS, "learned", Object.class, 1, CAP_SKILLS);
+    public static final Member SKILLS_HAS = statik(O_LEARNED_SKILLS, "has", boolean.class, 2, CAP_SKILLS);
+    public static final Member SKILLS_LEARN = statik(O_LEARNED_SKILLS, "learn", Object.class, 2, CAP_SKILLS);
+    public static final Member SKILLS_FORCE_LEARN = statik(O_LEARNED_SKILLS, "forceLearn", Object.class, 2, CAP_SKILLS);
+    public static final Member SKILLS_FORGET = statik(O_LEARNED_SKILLS, "forget", Object.class, 2, CAP_SKILLS);
+    public static final Member SKILL_RESULT_OK = virtual(O_SKILL_RESULT, "ok", boolean.class, 0, CAP_SKILLS);
+    public static final Member SKILL_RESULT_ERROR = virtual(O_SKILL_RESULT, "error", Object.class, 0, CAP_SKILLS);
+    public static final Member FORGET_RESULT_OK = virtual(O_FORGET_RESULT, "ok", boolean.class, 0, CAP_SKILLS);
+
+    // DISPATCH_REACTION. Vanilla descriptors throughout; the return is a count of reactions played.
+    public static final Member REACTION_ON_TASK = statik(O_REACTIONS, "onTaskTransition", int.class, 4, CAP_REACTION);
+
     /** Every member, in declaration order. The single source of truth for what this mod reads. */
     public static final List<Member> MANIFEST = List.of(
             API_ENTITY, V_UUID, V_NAME, V_ENTITY_TYPE, V_ROOT_ID, V_LIFE_STAGE, V_AGE_DAYS, V_AGE_YEARS,
@@ -319,7 +415,16 @@ public final class TownsteadBinding {
             API_GENE, G_ID, G_DISPLAY_NAME, G_DESCRIPTION, G_CATEGORY, G_DOMINANCE, G_LOCUS, G_WEIGHT,
             G_DISPLAY_MODE, G_VARIANTS, GV_ID, GV_DISPLAY_NAME, GV_WEIGHT, GV_TYPE,
             SPIRIT_TOTALS_FOR, SPIRIT_READOUT_FOR, SPIRIT_TIER_FOR, ST_PER_SPIRIT, ST_TOTAL,
-            ST_CONTRIBUTING, SR_CLASSIFICATION, SR_TIER_INDEX, SR_PRIMARY, SR_SECONDARY, SPIRIT_CONTAINS);
+            ST_CONTRIBUTING, SR_CLASSIFICATION, SR_TIER_INDEX, SR_PRIMARY, SR_SECONDARY, SPIRIT_CONTAINS,
+            VILLAGERS_GET, STATE_NEEDS, NEEDS_SET_HUNGER, NEEDS_SET_SATURATION, NEEDS_SET_THIRST,
+            NEEDS_SET_QUENCHED, NEEDS_SET_FATIGUE, NEEDS_RESTORE_ENERGY,
+            STATE_PROFESSION_MEMORY, MEMORY_PROFESSION_XP, MEMORY_SET_PROFESSION_XP, XP_NEW, XP_XP,
+            XP_TIER, XP_LAST_TIER_UP, XP_DAY, XP_TODAY, PROGRESSIONS_SPEC, SPEC_DAILY_CAP, SPEC_MAX_XP,
+            SPEC_TIER_FOR_XP, SPEC_MAX_TIER, PROGRESS_ADD_XP, GAIN_APPLIED, GAIN_TIER_BEFORE,
+            GAIN_TIER_AFTER, XP_TYPE_VALUES, XP_TYPE_ID,
+            SKILLS_LEARNED, SKILLS_HAS, SKILLS_LEARN, SKILLS_FORCE_LEARN, SKILLS_FORGET,
+            SKILL_RESULT_OK, SKILL_RESULT_ERROR, FORGET_RESULT_OK,
+            REACTION_ON_TASK);
 
     /**
      * The capabilities this manifest covers. Status is measured against these rather than against
@@ -430,7 +535,9 @@ public final class TownsteadBinding {
         for (Member member : MANIFEST) {
             MethodHandle handle = null;
             try {
-                handle = bindMethod(lookup, methodsOf(loader, methodCache, member.ownerRelative), member);
+                handle = member.kind == Kind.CONSTRUCTOR
+                        ? bindConstructor(lookup, loadOrNull(loader, PACKAGE + member.ownerRelative), member)
+                        : bindMethod(lookup, methodsOf(loader, methodCache, member.ownerRelative), member);
             } catch (Throwable ignored) {
                 // Recorded below as an ordinary miss; see the javadoc for why this must not escape.
             }
@@ -516,6 +623,27 @@ public final class TownsteadBinding {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    /** Finds a constructor by arity alone, for the same reason methods are found by name and arity. */
+    @Nullable
+    private static MethodHandle bindConstructor(MethodHandles.Lookup lookup, @Nullable Class<?> owner,
+                                                Member member) {
+        if (owner == null) {
+            return null;
+        }
+        for (java.lang.reflect.Constructor<?> candidate : owner.getConstructors()) {
+            if (candidate.getParameterCount() != member.arity) {
+                continue;
+            }
+            try {
+                candidate.setAccessible(true);
+                return lookup.unreflectConstructor(candidate).asType(member.erasedType());
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+        return null;
     }
 
     /**

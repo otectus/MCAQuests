@@ -1,11 +1,13 @@
 package dev.otectus.mcaquests.compat.townstead;
 
+import dev.otectus.mcaquests.compat.NeedMutation;
 import dev.otectus.mcaquests.compat.TownsteadBuildingView;
 import dev.otectus.mcaquests.compat.TownsteadCalendarView;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadGeneVariantView;
 import dev.otectus.mcaquests.compat.TownsteadGeneView;
 import dev.otectus.mcaquests.compat.TownsteadLifeStageView;
+import dev.otectus.mcaquests.compat.TownsteadMutationResult;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
 import dev.otectus.mcaquests.compat.TownsteadRootView;
 import dev.otectus.mcaquests.compat.TownsteadScheduleView;
@@ -17,15 +19,18 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -180,6 +185,46 @@ final class TownsteadHandles {
     private static final MethodHandle H_SR_PRIMARY = R.handle(TownsteadBinding.SR_PRIMARY);
     private static final MethodHandle H_SR_SECONDARY = R.handle(TownsteadBinding.SR_SECONDARY);
     private static final MethodHandle H_SPIRIT_CONTAINS = R.handle(TownsteadBinding.SPIRIT_CONTAINS);
+
+    private static final MethodHandle H_VILLAGERS_GET = R.handle(TownsteadBinding.VILLAGERS_GET);
+    private static final MethodHandle H_STATE_NEEDS = R.handle(TownsteadBinding.STATE_NEEDS);
+    private static final MethodHandle H_SET_HUNGER = R.handle(TownsteadBinding.NEEDS_SET_HUNGER);
+    private static final MethodHandle H_SET_SATURATION = R.handle(TownsteadBinding.NEEDS_SET_SATURATION);
+    private static final MethodHandle H_SET_THIRST = R.handle(TownsteadBinding.NEEDS_SET_THIRST);
+    private static final MethodHandle H_SET_QUENCHED = R.handle(TownsteadBinding.NEEDS_SET_QUENCHED);
+    private static final MethodHandle H_SET_FATIGUE = R.handle(TownsteadBinding.NEEDS_SET_FATIGUE);
+    private static final MethodHandle H_RESTORE_ENERGY = R.handle(TownsteadBinding.NEEDS_RESTORE_ENERGY);
+
+    private static final MethodHandle H_PROFESSION_MEMORY = R.handle(TownsteadBinding.STATE_PROFESSION_MEMORY);
+    private static final MethodHandle H_MEMORY_XP = R.handle(TownsteadBinding.MEMORY_PROFESSION_XP);
+    private static final MethodHandle H_MEMORY_SET_XP = R.handle(TownsteadBinding.MEMORY_SET_PROFESSION_XP);
+    private static final MethodHandle H_XP_NEW = R.handle(TownsteadBinding.XP_NEW);
+    private static final MethodHandle H_XP_XP = R.handle(TownsteadBinding.XP_XP);
+    private static final MethodHandle H_XP_TIER = R.handle(TownsteadBinding.XP_TIER);
+    private static final MethodHandle H_XP_LAST_TIER_UP = R.handle(TownsteadBinding.XP_LAST_TIER_UP);
+    private static final MethodHandle H_XP_DAY = R.handle(TownsteadBinding.XP_DAY);
+    private static final MethodHandle H_XP_TODAY = R.handle(TownsteadBinding.XP_TODAY);
+    private static final MethodHandle H_SPEC = R.handle(TownsteadBinding.PROGRESSIONS_SPEC);
+    private static final MethodHandle H_SPEC_DAILY_CAP = R.handle(TownsteadBinding.SPEC_DAILY_CAP);
+    private static final MethodHandle H_SPEC_MAX_XP = R.handle(TownsteadBinding.SPEC_MAX_XP);
+    private static final MethodHandle H_SPEC_TIER_FOR_XP = R.handle(TownsteadBinding.SPEC_TIER_FOR_XP);
+    private static final MethodHandle H_ADD_XP = R.handle(TownsteadBinding.PROGRESS_ADD_XP);
+    private static final MethodHandle H_GAIN_APPLIED = R.handle(TownsteadBinding.GAIN_APPLIED);
+    private static final MethodHandle H_GAIN_TIER_BEFORE = R.handle(TownsteadBinding.GAIN_TIER_BEFORE);
+    private static final MethodHandle H_GAIN_TIER_AFTER = R.handle(TownsteadBinding.GAIN_TIER_AFTER);
+    private static final MethodHandle H_XP_TYPE_VALUES = R.handle(TownsteadBinding.XP_TYPE_VALUES);
+    private static final MethodHandle H_XP_TYPE_ID = R.handle(TownsteadBinding.XP_TYPE_ID);
+
+    private static final MethodHandle H_SKILLS_LEARNED = R.handle(TownsteadBinding.SKILLS_LEARNED);
+    private static final MethodHandle H_SKILLS_HAS = R.handle(TownsteadBinding.SKILLS_HAS);
+    private static final MethodHandle H_SKILLS_LEARN = R.handle(TownsteadBinding.SKILLS_LEARN);
+    private static final MethodHandle H_SKILLS_FORCE_LEARN = R.handle(TownsteadBinding.SKILLS_FORCE_LEARN);
+    private static final MethodHandle H_SKILLS_FORGET = R.handle(TownsteadBinding.SKILLS_FORGET);
+    private static final MethodHandle H_SKILL_OK = R.handle(TownsteadBinding.SKILL_RESULT_OK);
+    private static final MethodHandle H_SKILL_ERROR = R.handle(TownsteadBinding.SKILL_RESULT_ERROR);
+    private static final MethodHandle H_FORGET_OK = R.handle(TownsteadBinding.FORGET_RESULT_OK);
+
+    private static final MethodHandle H_REACTION = R.handle(TownsteadBinding.REACTION_ON_TASK);
 
     // --- reads -----------------------------------------------------------------------------------
 
@@ -367,6 +412,335 @@ final class TownsteadHandles {
             return (boolean) H_SPIRIT_CONTAINS.invoke(spiritId);
         } catch (Throwable t) {
             return false;
+        }
+    }
+
+    // --- mutations -------------------------------------------------------------------------------
+
+    /**
+     * Writes one need back through the setter Townstead uses itself, so its dirty and sync bookkeeping
+     * stays correct, then <b>re-reads</b> to report what actually landed rather than what was asked for.
+     *
+     * <p>Energy is expressed through {@code restoreEnergy} rather than by writing fatigue directly.
+     * That is the path Townstead uses to bring a collapsed villager back, and setting the number alone
+     * would leave one standing up still carrying whatever floored them.
+     */
+    static TownsteadMutationResult changeNeeds(Entity villager, NeedMutation mutation) {
+        if (!R.has(TownsteadCapability.MUTATE_NEEDS)) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        }
+        TownsteadNeedsView before = needsOf(villager);
+        if (before == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+        if (before.gated() && isThirst(mutation.need())) {
+            // Townstead gates thirst behind a thirst mod. Refusing loudly beats writing a number into a
+            // need nothing simulates, where it would read back unchanged and look like a broken reward.
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.FEATURE_GATED);
+        }
+        Object needs = needsState(villager);
+        if (needs == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+
+        double current = currentOf(before, mutation.need());
+        double wanted = mutation.mode() == NeedMutation.Mode.DELTA ? current + mutation.amount()
+                : mutation.amount();
+        boolean applied = apply(needs, mutation.need(), current, wanted);
+        if (!applied) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INTERNAL_ERROR);
+        }
+
+        TownsteadNeedsView after = needsOf(villager);
+        double now = after == null ? current : currentOf(after, mutation.need());
+        int requested = (int) Math.round(Math.abs(wanted - current));
+        int landed = (int) Math.round(Math.abs(now - current));
+        return now == current && requested > 0
+                ? TownsteadMutationResult.noChange(current)
+                : TownsteadMutationResult.success(requested, landed, current, now);
+    }
+
+    private static boolean isThirst(NeedMutation.Need need) {
+        return need == NeedMutation.Need.THIRST || need == NeedMutation.Need.QUENCHED;
+    }
+
+    private static double currentOf(TownsteadNeedsView needs, NeedMutation.Need need) {
+        return switch (need) {
+            case HUNGER -> needs.hunger();
+            case SATURATION -> needs.saturation();
+            case THIRST -> needs.thirst();
+            case QUENCHED -> needs.quenched();
+            case FATIGUE -> needs.fatigue();
+            case ENERGY -> needs.energy();
+        };
+    }
+
+    /** Clamps to the range Townstead keeps the need in, then writes it. */
+    private static boolean apply(Object needs, NeedMutation.Need need, double current, double wanted) {
+        try {
+            switch (need) {
+                case HUNGER -> H_SET_HUNGER.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.HUNGER_MAX));
+                case SATURATION -> H_SET_SATURATION.invoke(needs, (float) Math.max(0.0D, wanted));
+                case THIRST -> H_SET_THIRST.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.THIRST_MAX));
+                case QUENCHED -> H_SET_QUENCHED.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.QUENCHED_MAX));
+                case FATIGUE -> H_SET_FATIGUE.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.FATIGUE_MAX));
+                case ENERGY -> {
+                    int restore = (int) Math.round(wanted - current);
+                    if (restore <= 0) {
+                        // Losing energy is fatigue gained, and there is no "tire them out" recovery call.
+                        H_SET_FATIGUE.invoke(needs,
+                                clamp(TownsteadNeedsView.FATIGUE_MAX - wanted, 0, TownsteadNeedsView.FATIGUE_MAX));
+                    } else {
+                        H_RESTORE_ENERGY.invoke(needs, restore);
+                    }
+                }
+            }
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static int clamp(double value, int min, int max) {
+        return (int) Math.max(min, Math.min(max, Math.round(value)));
+    }
+
+    /**
+     * Awards profession XP, preferring the maths Townstead does for itself.
+     *
+     * <p>{@code ProfessionProgress.addXp} already honours the daily cap, the maximum, and the tier-up
+     * bookkeeping -- but {@code ProfessionXpType} has only four constants, so it can only serve those
+     * four professions. Everything else, including data-driven ones, goes through the string-keyed
+     * store with the same rules applied by hand from the progression spec. Reimplementing the maths for
+     * all professions would have been the easier read and the wrong answer, because the two would
+     * inevitably drift.
+     */
+    static TownsteadMutationResult awardProfessionXp(Entity villager, String professionId, int requested,
+                                                     boolean respectDailyCap, long gameTime, long worldDay) {
+        if (!R.has(TownsteadCapability.AWARD_PROFESSION_XP)) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        }
+        if (requested <= 0) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INVALID_VALUE);
+        }
+        Object state = statik(H_VILLAGERS_GET, villager);
+        Object memory = ref(H_PROFESSION_MEMORY, state);
+        if (memory == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+
+        Object xpType = respectDailyCap ? xpTypeFor(professionId) : null;
+        if (xpType != null) {
+            return awardThroughTownstead(memory, xpType, requested, gameTime);
+        }
+        return awardThroughStore(memory, professionId, requested, respectDailyCap, gameTime, worldDay);
+    }
+
+    /** The preferred path: Townstead applies its own caps and tells us what it did. */
+    private static TownsteadMutationResult awardThroughTownstead(Object memory, Object xpType, int requested,
+                                                                 long gameTime) {
+        try {
+            Object result = H_ADD_XP.invoke(memory, xpType, requested, gameTime);
+            if (result == null) {
+                return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INTERNAL_ERROR);
+            }
+            int applied = integer(H_GAIN_APPLIED, result);
+            int tierBefore = integer(H_GAIN_TIER_BEFORE, result);
+            int tierAfter = integer(H_GAIN_TIER_AFTER, result);
+            return applied == 0
+                    ? TownsteadMutationResult.failed(TownsteadMutationResult.Reason.DAILY_CAP)
+                    : TownsteadMutationResult.xp(requested, applied, 0, applied, tierBefore, tierAfter);
+        } catch (Throwable t) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INTERNAL_ERROR);
+        }
+    }
+
+    /**
+     * The general path, applying the spec by hand for a profession Townstead has no enum constant for.
+     * Mirrors Townstead spec 4.4 step for step: reset the daily counter on a new world day, take the
+     * smaller of the request, the remaining cap and the room below the maximum, recompute the tier, and
+     * keep the previous tier-up tick unless the tier actually rose.
+     */
+    private static TownsteadMutationResult awardThroughStore(Object memory, String professionId, int requested,
+                                                            boolean respectDailyCap, long gameTime,
+                                                            long worldDay) {
+        Object spec = statik(H_SPEC, professionId);
+        Object record = ref(H_MEMORY_XP, memory, professionId);
+        if (spec == null || record == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+        int currentXp = integer(H_XP_XP, record);
+        int currentTier = integer(H_XP_TIER, record);
+        long lastTierUp = lng(H_XP_LAST_TIER_UP, record);
+        long recordedDay = lng(H_XP_DAY, record);
+        int xpToday = recordedDay == worldDay ? integer(H_XP_TODAY, record) : 0;
+
+        int maxXp = integer(H_SPEC_MAX_XP, spec);
+        int room = Math.max(0, maxXp - currentXp);
+        int allowed = Math.min(requested, room);
+        if (respectDailyCap) {
+            int dailyCap = integer(H_SPEC_DAILY_CAP, spec);
+            if (dailyCap > 0) {
+                allowed = Math.min(allowed, Math.max(0, dailyCap - xpToday));
+            }
+        }
+        if (allowed <= 0) {
+            return TownsteadMutationResult.failed(room <= 0
+                    ? TownsteadMutationResult.Reason.INVALID_VALUE
+                    : TownsteadMutationResult.Reason.DAILY_CAP);
+        }
+
+        int newXp = currentXp + allowed;
+        int newTier = tierForXp(spec, newXp, currentTier);
+        long tierUpTick = newTier > currentTier ? gameTime : lastTierUp;
+        try {
+            Object updated = H_XP_NEW.invoke(newXp, newTier, tierUpTick, worldDay, xpToday + allowed);
+            H_MEMORY_SET_XP.invoke(memory, professionId, updated);
+        } catch (Throwable t) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INTERNAL_ERROR);
+        }
+
+        Object after = ref(H_MEMORY_XP, memory, professionId);
+        int finalXp = after == null ? newXp : integer(H_XP_XP, after);
+        int finalTier = after == null ? newTier : integer(H_XP_TIER, after);
+        return TownsteadMutationResult.xp(requested, allowed, currentXp, finalXp, currentTier, finalTier);
+    }
+
+    private static int tierForXp(Object spec, int xp, int fallback) {
+        try {
+            return (int) H_SPEC_TIER_FOR_XP.invoke(spec, xp);
+        } catch (Throwable t) {
+            return fallback;
+        }
+    }
+
+    /** The {@code ProfessionXpType} constant whose id matches, or null when Townstead has none. */
+    @Nullable
+    private static Object xpTypeFor(String professionId) {
+        try {
+            Object values = H_XP_TYPE_VALUES.invoke();
+            if (!(values instanceof Object[] constants)) {
+                return null;
+            }
+            for (Object constant : constants) {
+                String id = str(H_XP_TYPE_ID, constant);
+                if (!id.isEmpty() && professionId.toLowerCase(Locale.ROOT).endsWith(id.toLowerCase(Locale.ROOT))) {
+                    return constant;
+                }
+            }
+        } catch (Throwable ignored) {
+            // Fall through to the general path, which serves every profession anyway.
+        }
+        return null;
+    }
+
+    static Set<ResourceLocation> learnedSkills(Entity villager) {
+        if (villager == null || !R.has(TownsteadCapability.MUTATE_SKILLS)) {
+            return Set.of();
+        }
+        Object learned = statik(H_SKILLS_LEARNED, villager);
+        if (!(learned instanceof Set<?> raw)) {
+            return Set.of();
+        }
+        Set<ResourceLocation> out = new LinkedHashSet<>();
+        for (Object element : raw) {
+            if (element instanceof ResourceLocation id) {
+                out.add(id);
+            }
+        }
+        return Set.copyOf(out);
+    }
+
+    static boolean hasSkill(Entity villager, ResourceLocation skillId) {
+        if (villager == null || skillId == null || !R.has(TownsteadCapability.MUTATE_SKILLS)) {
+            return false;
+        }
+        try {
+            return (boolean) H_SKILLS_HAS.invoke(villager, skillId);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** Learning a skill already known is an idempotent success, not an error. */
+    static TownsteadMutationResult learnSkill(Entity villager, ResourceLocation skillId, boolean force) {
+        if (!R.has(TownsteadCapability.MUTATE_SKILLS)) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        }
+        if (villager == null || skillId == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+        if (hasSkill(villager, skillId)) {
+            return TownsteadMutationResult.noChange(1);
+        }
+        Object result = statik(force ? H_SKILLS_FORCE_LEARN : H_SKILLS_LEARN, villager, skillId);
+        if (result == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INTERNAL_ERROR);
+        }
+        return bool(H_SKILL_OK, result)
+                ? TownsteadMutationResult.success(1, 1, 0, 1)
+                // Townstead refused for a reason of its own -- unmet prerequisites, usually. That is a
+                // gate, not a breakage, so it reports as gated rather than as an internal error.
+                : TownsteadMutationResult.failed(TownsteadMutationResult.Reason.FEATURE_GATED);
+    }
+
+    static TownsteadMutationResult forgetSkill(Entity villager, ResourceLocation skillId) {
+        if (!R.has(TownsteadCapability.MUTATE_SKILLS)) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        }
+        if (villager == null || skillId == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+        if (!hasSkill(villager, skillId)) {
+            return TownsteadMutationResult.noChange(0);
+        }
+        Object result = statik(H_SKILLS_FORGET, villager, skillId);
+        return result != null && bool(H_FORGET_OK, result)
+                ? TownsteadMutationResult.success(1, 1, 1, 0)
+                : TownsteadMutationResult.failed(TownsteadMutationResult.Reason.FEATURE_GATED);
+    }
+
+    /**
+     * Plays a Townstead reaction for a lifecycle transition. Always called after the quest transaction
+     * has committed, so the worst a failure here can do is leave a villager not waving.
+     */
+    static TownsteadMutationResult dispatchTransition(ServerLevel level, LivingEntity villager,
+                                                      ResourceLocation taskId, String phase) {
+        if (!R.has(TownsteadCapability.DISPATCH_REACTION)) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        }
+        if (level == null || villager == null || taskId == null) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+        try {
+            int played = (int) H_REACTION.invoke(level, villager, taskId, phase);
+            return played > 0
+                    ? TownsteadMutationResult.success(1, played, 0, played)
+                    : TownsteadMutationResult.noChange(0);
+        } catch (Throwable t) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INTERNAL_ERROR);
+        }
+    }
+
+    @Nullable
+    private static Object needsState(Entity villager) {
+        return ref(H_STATE_NEEDS, statik(H_VILLAGERS_GET, villager));
+    }
+
+    @Nullable
+    private static TownsteadNeedsView needsOf(Entity villager) {
+        return villager(villager).map(TownsteadVillagerView::needs).orElse(null);
+    }
+
+    @Nullable
+    private static Object ref(MethodHandle handle, @Nullable Object receiver, Object a) {
+        if (receiver == null) {
+            return null;
+        }
+        try {
+            return handle.invoke(receiver, a);
+        } catch (Throwable t) {
+            return null;
         }
     }
 

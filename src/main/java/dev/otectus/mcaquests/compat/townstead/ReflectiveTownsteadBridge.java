@@ -109,12 +109,12 @@ public final class ReflectiveTownsteadBridge implements TownsteadBridge {
 
     @Override
     public Set<ResourceLocation> learnedSkills(Entity villager) {
-        return Set.of();
+        return TownsteadHandles.learnedSkills(villager);
     }
 
     @Override
     public boolean hasSkill(Entity villager, ResourceLocation skillId) {
-        return false;
+        return TownsteadHandles.hasSkill(villager, skillId);
     }
 
     @Override
@@ -123,35 +123,40 @@ public final class ReflectiveTownsteadBridge implements TownsteadBridge {
     }
 
     // --- mutations -------------------------------------------------------------------------------
-    //
-    // Not yet bound. Reporting CAPABILITY_MISSING rather than throwing means a datapack that reaches
-    // for one of these gets the same graceful, explainable refusal it would get from a Townstead
-    // point release that had moved the method -- and the same diagnostic path.
 
     @Override
     public TownsteadMutationResult changeNeeds(Entity villager, NeedMutation mutation) {
-        return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        return TownsteadHandles.changeNeeds(villager, mutation);
     }
 
+    /**
+     * The world day is taken from the villager's own level rather than the overworld, because that is
+     * what Townstead compares its stored xpDay against when deciding whether a new day has reset the
+     * daily cap.
+     */
     @Override
     public TownsteadMutationResult awardProfessionXp(Entity villager, String professionId,
                                                      int requestedXp, boolean respectDailyCap) {
-        return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        if (!(villager != null && villager.level() instanceof ServerLevel level)) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.TARGET_MISSING);
+        }
+        return TownsteadHandles.awardProfessionXp(villager, professionId, requestedXp, respectDailyCap,
+                level.getGameTime(), level.getDayTime() / 24000L);
     }
 
     @Override
     public TownsteadMutationResult learnSkill(Entity villager, ResourceLocation skillId, boolean force) {
-        return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        return TownsteadHandles.learnSkill(villager, skillId, force);
     }
 
     @Override
     public TownsteadMutationResult forgetSkill(Entity villager, ResourceLocation skillId) {
-        return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        return TownsteadHandles.forgetSkill(villager, skillId);
     }
 
     @Override
     public TownsteadMutationResult dispatchTransition(ServerLevel level, LivingEntity villager,
                                                       ResourceLocation taskId, String phase) {
-        return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
+        return TownsteadHandles.dispatchTransition(level, villager, taskId, phase);
     }
 }

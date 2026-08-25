@@ -54,6 +54,8 @@ class TownsteadBindingProbeTest {
 
     private static final String API_CLASS = "com.aetherianartificer.townstead.api.TownsteadAPI";
     private static final String FATIGUE_DATA_CLASS = "com.aetherianartificer.townstead.fatigue.FatigueData";
+    private static final String HUNGER_DATA_CLASS = "com.aetherianartificer.townstead.hunger.HungerData";
+    private static final String THIRST_DATA_CLASS = "com.aetherianartificer.townstead.thirst.ThirstData";
 
     @Test
     void manifestResolvesAgainstTheRealTownsteadJar() throws Exception {
@@ -115,9 +117,10 @@ class TownsteadBindingProbeTest {
     }
 
     /**
-     * {@code TownsteadNeedsView.FATIGUE_MAX} is the zero point for the rising-scale {@code energy()}
-     * that quests and rewards are written against. Townstead owns the real number, so pin it here
-     * rather than trusting a comment: if the range widens, every energy objective would quietly drift.
+     * Townstead owns the real ranges, so they are pinned here rather than trusted to a comment. They are
+     * not all the same -- hunger runs to 100 while thirst and fatigue run to 20 -- so a widened range
+     * would not fail anything loudly, it would quietly clamp rewards short and drift every threshold in
+     * the bundled content.
      *
      * <p>Read out of the class file rather than through reflection, because reflection cannot get at
      * it. {@code Field#getInt} forces the declaring class to initialise, and Townstead's published jar
@@ -127,25 +130,30 @@ class TownsteadBindingProbeTest {
      * ever resolves <em>class</em> names, which are identical under both mappings.
      */
     @Test
-    void theFatigueCeilingMatchesTownstead() throws Exception {
+    void theNeedRangesMatchTownstead() throws Exception {
         List<Path> townstead = jars(TOWNSTEAD_JARS_PROPERTY);
         Assumptions.assumeFalse(townstead.isEmpty(), "No Townstead jar supplied.");
 
+        assertRange(townstead, FATIGUE_DATA_CLASS, "MAX_FATIGUE", TownsteadNeedsView.FATIGUE_MAX);
+        assertRange(townstead, HUNGER_DATA_CLASS, "MAX_HUNGER", TownsteadNeedsView.HUNGER_MAX);
+        assertRange(townstead, THIRST_DATA_CLASS, "MAX_THIRST", TownsteadNeedsView.THIRST_MAX);
+        assertRange(townstead, THIRST_DATA_CLASS, "MAX_QUENCHED", TownsteadNeedsView.QUENCHED_MAX);
+    }
+
+    private static void assertRange(List<Path> jars, String owner, String field, int expected)
+            throws Exception {
         Integer declared = null;
-        for (Path jar : townstead) {
-            declared = ClassFileConstants.staticFinalInt(jar, FATIGUE_DATA_CLASS, "MAX_FATIGUE");
+        for (Path jar : jars) {
+            declared = ClassFileConstants.staticFinalInt(jar, owner, field);
             if (declared != null) {
                 break;
             }
         }
-
-        assertNotNull(declared,
-                "Townstead no longer declares FatigueData.MAX_FATIGUE as a constant, so the ceiling "
-                        + "behind TownsteadNeedsView.energy() can no longer be verified. Find where the "
-                        + "range now lives before trusting any energy threshold.");
-        assertEquals(TownsteadNeedsView.FATIGUE_MAX, declared.intValue(),
-                "Townstead's fatigue ceiling has moved. Update TownsteadNeedsView.FATIGUE_MAX, and "
-                        + "re-check every bundled definition that uses an energy threshold.");
+        assertNotNull(declared, "Townstead no longer declares " + owner + "." + field
+                + " as a constant, so the range behind the needs rewards can no longer be verified.");
+        assertEquals(expected, declared.intValue(), owner + "." + field + " has moved. Update "
+                + "TownsteadNeedsView, then re-check every bundled definition and reward that uses a "
+                + "threshold on that need -- they are all written against the old range.");
     }
 
     /**

@@ -55,6 +55,19 @@ public final class RewardTypes {
     public static final QuestRewardType<UnlockReward> UNLOCK =
             register(new ResourceLocation(McaQuests.MOD_ID, "unlock"), UnlockReward.CODEC);
 
+    // Townstead (Townstead spec 5.5). Registered unconditionally so a datapack parses identically with
+    // or without Townstead; each reward gates itself on its capability and its own config switch.
+    public static final QuestRewardType<TownsteadNeedsReward> TOWNSTEAD_NEEDS =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_needs"), TownsteadNeedsReward.CODEC);
+    public static final QuestRewardType<TownsteadProfessionXpReward> TOWNSTEAD_PROFESSION_XP =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_profession_xp"),
+                    TownsteadProfessionXpReward.CODEC);
+    public static final QuestRewardType<TownsteadSkillReward> TOWNSTEAD_SKILL =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_skill"), TownsteadSkillReward.CODEC);
+    public static final QuestRewardType<TownsteadReactionReward> TOWNSTEAD_REACTION =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_reaction"),
+                    TownsteadReactionReward.CODEC);
+
     // v0.7.0 — grants a player title (village-scoped or global).
     public static final QuestRewardType<GrantTitleReward> GRANT_TITLE =
             register(new ResourceLocation(McaQuests.MOD_ID, "grant_title"), GrantTitleReward.CODEC);
