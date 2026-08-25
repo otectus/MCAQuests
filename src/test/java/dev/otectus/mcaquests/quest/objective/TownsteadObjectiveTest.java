@@ -213,6 +213,26 @@ class TownsteadObjectiveTest {
             assertEquals(120, profession.required());
         }
 
+        /**
+         * A quest offered by five different professions cannot name one of them. Without an unnamed
+         * option its objective would hardcode a trade, and every giver who practised a different one
+         * would take a quest whose progress could never move -- {@code require_current_profession}
+         * would pause it forever rather than failing it, so it would simply sit in the log.
+         */
+        @Test
+        @DisplayName("a profession objective may leave the trade unnamed")
+        void professionMayBeUnnamed() {
+            TownsteadProfessionProgressObjective any = ok(TownsteadProfessionProgressObjective.CODEC, """
+                    {"xp_delta":150,"require_current_profession":true}""");
+
+            assertTrue(any.profession().isEmpty(), "no trade named means whatever they practise");
+            assertEquals(150, any.required());
+
+            TownsteadProfessionProgressObjective named = ok(TownsteadProfessionProgressObjective.CODEC, """
+                    {"profession":"minecraft:farmer","target_tier":3}""");
+            assertEquals("minecraft:farmer", named.profession().orElseThrow());
+        }
+
         @Test
         @DisplayName("hold progress reads in seconds, not ticks")
         void holdIsCountedInSeconds() {

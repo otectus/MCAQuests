@@ -1,0 +1,93 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_dehydrated_worker",
+  "scope": "village",
+  "duration_ticks": 12000,
+  "cooldown_ticks": 48000,
+  "trigger": {
+    "type": "mcaquests:townstead_need",
+    "need": "thirst",
+    "minimum_fraction": 0.34
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 14
+    },
+    "failure": {
+      "reputation": -8
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "minecraft:farmer",
+        "minecraft:mason",
+        "minecraft:fisherman"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_dehydrated_worker.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:potion",
+        "count": 3,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 28
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_NEEDS"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_water_for_the_weary",
+  "enabled": true,
+  "weight": 10,
+  "category": "townstead",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:fisherman",
+      "minecraft:mason"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_water_for_the_weary.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_water_for_the_weary.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_water_for_the_weary.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_water_for_the_weary.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_water_for_the_weary.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_water_for_the_weary.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_water_for_the_weary.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:potion",
+      "count": 1,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 18
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_NEEDS"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "needs.gated",
+        "operator": "eq",
+        "value": false
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "needs.thirst",
+        "operator": "lte",
+        "value": 6
+      }
+    ]
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_care_for_the_young",
+  "enabled": true,
+  "weight": 10,
+  "category": "townstead",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:cleric",
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_care_for_the_young.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_care_for_the_young.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_care_for_the_young.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_care_for_the_young.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_care_for_the_young.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_care_for_the_young.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_care_for_the_young.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_beef",
+      "count": 8,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 24
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_NEEDS"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "needs.hunger",
+        "operator": "lte",
+        "value": 60
+      }
+    ]
+  }
+}

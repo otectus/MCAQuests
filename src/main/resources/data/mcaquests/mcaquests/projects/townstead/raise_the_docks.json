@@ -1,0 +1,100 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_raise_the_docks",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_raise_the_docks.title"
+  },
+  "category": "infrastructure",
+  "reputation": {
+    "on_project_complete": 14
+  },
+  "phases": [
+    {
+      "key": "gather_timber",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_raise_the_docks.gather_timber.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_raise_the_docks.gather_timber.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:oak_planks",
+          "count": 96
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:oak_log",
+          "count": 32
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 30
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "raise_it",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_raise_the_docks.raise_it.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_raise_the_docks.raise_it.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_building_project",
+          "building_type": "dock",
+          "minimum_level": 1,
+          "count": 1
+        },
+        {
+          "type": "mcaquests:townstead_spirit_project",
+          "points_delta": 30
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 8
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

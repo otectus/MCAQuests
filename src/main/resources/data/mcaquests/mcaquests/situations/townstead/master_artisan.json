@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_master_artisan",
+  "scope": "village",
+  "duration_ticks": 12000,
+  "cooldown_ticks": 48000,
+  "trigger": {
+    "type": "mcaquests:townstead_profession_tier",
+    "minimum_tier": 3
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 10
+    },
+    "failure": {
+      "reputation": -4
+    }
+  },
+  "offer": {
+    "weight": 8,
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "minecraft:farmer",
+        "minecraft:fisherman",
+        "minecraft:shepherd",
+        "minecraft:butcher",
+        "minecraft:leatherworker"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_master_artisan.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_master_artisan.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_master_artisan.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_master_artisan.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_master_artisan.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_master_artisan.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_master_artisan.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_master_artisan.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:cake",
+        "count": 1,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 30
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      },
+      {
+        "type": "mcaquests:townstead_reaction",
+        "task": "mcaquests:townstead_master_artisan",
+        "phase": "completed"
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_PROFESSION"
+          ]
+        }
+      ]
+    }
+  }
+}

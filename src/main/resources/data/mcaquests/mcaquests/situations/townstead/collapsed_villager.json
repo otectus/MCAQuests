@@ -1,0 +1,91 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_collapsed_villager",
+  "scope": "village",
+  "duration_ticks": 12000,
+  "cooldown_ticks": 36000,
+  "trigger": {
+    "type": "mcaquests:townstead_collapse"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 14
+    },
+    "failure": {
+      "reputation": -8
+    }
+  },
+  "offer": {
+    "weight": 14,
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "minecraft:cleric",
+        "minecraft:farmer"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_collapsed_villager.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_collapsed_villager.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_collapsed_villager.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_collapsed_villager.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_collapsed_villager.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_collapsed_villager.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_collapsed_villager.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_collapsed_villager.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:townstead_change",
+        "source": "villager",
+        "path": "needs.energy",
+        "operator": "gte",
+        "value": 0,
+        "direction": "increase",
+        "amount": 6,
+        "minimum_final": 10
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 42
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_NEEDS"
+          ]
+        }
+      ]
+    }
+  }
+}

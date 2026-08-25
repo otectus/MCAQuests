@@ -1,0 +1,103 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_a_working_village",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:mason",
+      "minecraft:cleric"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_a_working_village.title"
+  },
+  "category": "community",
+  "reputation": {
+    "on_project_complete": 16
+  },
+  "phases": [
+    {
+      "key": "tools_for_everyone",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_a_working_village.tools_for_everyone.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_a_working_village.tools_for_everyone.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:iron_ingot",
+          "count": 24
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:bread",
+          "count": 32
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 32
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "skilled_hands",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_a_working_village.skilled_hands.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_a_working_village.skilled_hands.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_workforce_project",
+          "professions": [
+            "minecraft:farmer",
+            "minecraft:fisherman",
+            "minecraft:shepherd",
+            "minecraft:butcher",
+            "minecraft:leatherworker"
+          ],
+          "minimum_tier": 2,
+          "count": 3
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 10
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

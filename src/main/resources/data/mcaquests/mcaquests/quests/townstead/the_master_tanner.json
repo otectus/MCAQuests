@@ -1,0 +1,88 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_the_master_tanner",
+  "enabled": true,
+  "weight": 6,
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:leatherworker"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_the_master_tanner.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_the_master_tanner.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_the_master_tanner.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_the_master_tanner.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_the_master_tanner.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_the_master_tanner.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_the_master_tanner.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:townstead_profession_progress",
+      "profession": "minecraft:leatherworker",
+      "xp_delta": 140,
+      "require_current_profession": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_PROFESSION"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "professionId",
+        "operator": "eq",
+        "value": "minecraft:leatherworker"
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "professionLevel",
+        "operator": "gte",
+        "value": 2
+      }
+    ]
+  }
+}

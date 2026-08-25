@@ -1,0 +1,92 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_hunger_crisis",
+  "scope": "village",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 72000,
+  "trigger": {
+    "type": "mcaquests:townstead_need",
+    "need": "hunger",
+    "minimum_fraction": 0.34
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 14
+    },
+    "failure": {
+      "reputation": -8
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "minecraft:farmer",
+        "minecraft:cleric"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_hunger_crisis.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_hunger_crisis.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_hunger_crisis.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_hunger_crisis.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_hunger_crisis.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_hunger_crisis.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_hunger_crisis.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_hunger_crisis.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:bread",
+        "count": 24,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 40
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_NEEDS"
+          ]
+        }
+      ]
+    }
+  }
+}

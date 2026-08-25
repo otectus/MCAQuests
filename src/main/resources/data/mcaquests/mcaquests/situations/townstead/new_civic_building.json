@@ -1,0 +1,91 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_new_civic_building",
+  "scope": "village",
+  "duration_ticks": 12000,
+  "cooldown_ticks": 60000,
+  "trigger": {
+    "type": "mcaquests:townstead_building",
+    "minimum_level": 1
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 10
+    },
+    "failure": {
+      "reputation": -4
+    }
+  },
+  "offer": {
+    "weight": 8,
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "minecraft:mason",
+        "minecraft:fisherman",
+        "minecraft:shepherd"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_new_civic_building.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_new_civic_building.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_new_civic_building.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_new_civic_building.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_new_civic_building.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_new_civic_building.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_new_civic_building.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_new_civic_building.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:oak_planks",
+        "count": 32,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 30
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_BUILDING"
+          ]
+        }
+      ]
+    }
+  }
+}

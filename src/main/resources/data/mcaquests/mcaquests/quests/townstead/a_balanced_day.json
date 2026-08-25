@@ -1,0 +1,86 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_a_balanced_day",
+  "enabled": true,
+  "weight": 10,
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:librarian",
+      "minecraft:cleric"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_a_balanced_day.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_a_balanced_day.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_a_balanced_day.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_a_balanced_day.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_a_balanced_day.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_a_balanced_day.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_a_balanced_day.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:townstead_state",
+      "source": "villager",
+      "path": "schedule.onSchedule",
+      "operator": "eq",
+      "value": true,
+      "hold_ticks": 1200,
+      "reset_on_false": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 32
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_SCHEDULE"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "schedule.onSchedule",
+        "operator": "eq",
+        "value": false
+      }
+    ]
+  }
+}

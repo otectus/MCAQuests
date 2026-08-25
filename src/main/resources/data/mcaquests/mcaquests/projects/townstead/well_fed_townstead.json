@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_well_fed_townstead",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:butcher"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_well_fed_townstead.title"
+  },
+  "category": "community",
+  "reputation": {
+    "on_project_complete": 12
+  },
+  "phases": [
+    {
+      "key": "stock_the_stores",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_well_fed_townstead.stock_the_stores.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_well_fed_townstead.stock_the_stores.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:bread",
+          "count": 48
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:cooked_beef",
+          "count": 24
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 30
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "keep_them_fed",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_well_fed_townstead.keep_them_fed.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_well_fed_townstead.keep_them_fed.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_resident_wellbeing_project",
+          "minimum_observed": 4,
+          "minimum_fraction": 0.8,
+          "hunger_min": 60,
+          "energy_min": 8,
+          "hold_ticks": 2400
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 8
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

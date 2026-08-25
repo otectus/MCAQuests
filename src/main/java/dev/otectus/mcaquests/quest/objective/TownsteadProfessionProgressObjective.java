@@ -47,13 +47,16 @@ import java.util.Set;
  * return to it the objective picks up exactly where it stopped. Wiping progress because a player
  * experimented with a workstation would be a nasty surprise for something that takes in-game days.
  */
-public record TownsteadProfessionProgressObjective(TownsteadTarget target, String profession,
+public record TownsteadProfessionProgressObjective(TownsteadTarget target,
+                                                   Optional<String> profession,
                                                    OptionalInt xpDelta, OptionalInt targetXp,
                                                    OptionalInt targetTier,
                                                    boolean requireCurrentProfession)
         implements PollingObjective, TownsteadObjective {
 
     private static final String K_PATH = "profession.xp";
+    /** {@code progress.extra()}: the profession this quest settled on, when it named none. */
+    private static final String K_PROFESSION = "townstead_profession";
 
     /**
      * Split from {@link #CODEC} so the record type can be inferred: chaining flatXmap straight
@@ -63,7 +66,7 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target, Strin
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadProfessionProgressObjective::target),
-                    Codec.STRING.fieldOf("profession")
+                    StrictCodecs.strictOptional(Codec.STRING, "profession")
                             .forGetter(TownsteadProfessionProgressObjective::profession),
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "xp_delta")
                             .forGetter((TownsteadProfessionProgressObjective o) -> box(o.xpDelta())),
@@ -147,6 +150,12 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target, Strin
         if (view == null) {
             return;
         }
+        if (profession.isEmpty() && view.hasProfession()) {
+            // The definition did not name a trade, so it means "whatever they do now" -- recorded once
+            // so a villager who is retrained mid-quest still pauses rather than silently switching the
+            // goal to their new trade.
+            progress.extra().putString(K_PROFESSION, view.professionId());
+        }
         TownsteadBaseline.freeze(progress, "villager", K_PATH, villager.getUUID(),
                 view.professionXp(), level.getGameTime());
         progress.setTargetUuid(villager.getUUID());
@@ -160,7 +169,7 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target, Strin
         if (view == null) {
             return false;
         }
-        if (requireCurrentProfession && !matchesProfession(view)) {
+        if (requireCurrentProfession && !matchesProfession(view, progress)) {
             return false; // retrained: pause, keeping every point of what they already earned
         }
         if (xpDelta.isPresent() && !TownsteadBaseline.isFrozen(progress)) {
@@ -188,8 +197,25 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target, Strin
         return baseline.isEmpty() ? 0 : (int) Math.max(0, view.professionXp() - baseline.getAsDouble());
     }
 
-    private boolean matchesProfession(TownsteadVillagerView view) {
-        return view.professionId().toLowerCase(Locale.ROOT).equals(profession.toLowerCase(Locale.ROOT));
+    /**
+     * True when the villager is still practising the trade this objective is about.
+     *
+     * <p>With no {@code profession} in the definition the objective is about whatever they were doing
+     * when it was accepted, taken from the frozen record rather than re-read -- otherwise retraining
+     * would quietly move the goalposts to the new trade instead of pausing.
+     */
+    private boolean matchesProfession(TownsteadVillagerView view, ObjectiveProgress progress) {
+        String wanted = wantedProfession(progress).orElse(null);
+        return wanted == null
+                || view.professionId().toLowerCase(Locale.ROOT).equals(wanted.toLowerCase(Locale.ROOT));
+    }
+
+    private Optional<String> wantedProfession(ObjectiveProgress progress) {
+        if (profession.isPresent()) {
+            return profession;
+        }
+        String frozen = progress.extra().getString(K_PROFESSION);
+        return frozen.isEmpty() ? Optional.empty() : Optional.of(frozen);
     }
 
     @Nullable
@@ -212,7 +238,11 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target, Strin
             return false;
         }
         TownsteadVillagerView view = read(context.villager());
-        if (view == null || (requireCurrentProfession && !matchesProfession(view))) {
+        if (view == null || !view.hasProfession()) {
+            return false;
+        }
+        if (requireCurrentProfession && profession.isPresent()
+                && !view.professionId().equalsIgnoreCase(profession.get())) {
             return false;
         }
         return targetTier.isPresent()
@@ -222,11 +252,16 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target, Strin
 
     @Override
     public Component describe() {
+        String trade = profession.orElse("");
         if (targetTier.isPresent()) {
-            return Component.translatable("mcaquests.objective.townstead_profession_tier",
-                    targetTier.getAsInt(), profession);
+            return Component.translatable(trade.isEmpty()
+                            ? "mcaquests.objective.townstead_profession_tier_any"
+                            : "mcaquests.objective.townstead_profession_tier",
+                    targetTier.getAsInt(), trade);
         }
-        return Component.translatable("mcaquests.objective.townstead_profession_xp",
-                required(), profession);
+        return Component.translatable(trade.isEmpty()
+                        ? "mcaquests.objective.townstead_profession_xp_any"
+                        : "mcaquests.objective.townstead_profession_xp",
+                required(), trade);
     }
 }

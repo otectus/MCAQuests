@@ -1,0 +1,103 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_pastures_and_wool",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:shepherd"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_pastures_and_wool.title"
+  },
+  "category": "infrastructure",
+  "reputation": {
+    "on_project_complete": 12
+  },
+  "phases": [
+    {
+      "key": "fence_the_pasture",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_pastures_and_wool.fence_the_pasture.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_pastures_and_wool.fence_the_pasture.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:oak_fence",
+          "count": 48
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:hay_block",
+          "count": 8
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 28
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "shepherds_at_work",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_pastures_and_wool.shepherds_at_work.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_pastures_and_wool.shepherds_at_work.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_building_project",
+          "building_type": "pen",
+          "count": 1
+        },
+        {
+          "type": "mcaquests:townstead_workforce_project",
+          "professions": [
+            "minecraft:shepherd"
+          ],
+          "minimum_tier": 2,
+          "count": 1
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 8
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 6
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

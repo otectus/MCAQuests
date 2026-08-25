@@ -1,0 +1,95 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_find_our_character",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:cleric",
+      "minecraft:librarian"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_find_our_character.title"
+  },
+  "category": "community",
+  "reputation": {
+    "on_project_complete": 18
+  },
+  "phases": [
+    {
+      "key": "lay_the_foundations",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_find_our_character.lay_the_foundations.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_find_our_character.lay_the_foundations.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:stone_bricks",
+          "count": 64
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:glass",
+          "count": 16
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 34
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "become_somewhere",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_find_our_character.become_somewhere.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_find_our_character.become_somewhere.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_spirit_project",
+          "target_tier": 2
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 12
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

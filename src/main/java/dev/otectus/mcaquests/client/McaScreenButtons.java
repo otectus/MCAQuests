@@ -5,6 +5,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.mixin.ScreenAccessor;
 import dev.otectus.mcaquests.network.OpenQuestMenuC2SPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
@@ -198,14 +199,29 @@ public final class McaScreenButtons {
         return null;
     }
 
-    /** True if a visible button occupies the row centred near {@code y}. */
+    /**
+     * True if any visible widget occupies the row centred near {@code y}.
+     *
+     * <p>Deliberately every {@link AbstractWidget}, not only {@link Button}. Townstead adds its own
+     * controls to this screen -- Pose among them -- and a mod that draws something other than a plain
+     * Button would otherwise be invisible to this check and get the Quests button placed on top of it.
+     * The cost of being generous is one extra instanceof per widget, once per layout rebuild.
+     */
     private static boolean rowOccupied(Screen screen, int y, int height) {
         for (GuiEventListener child : screen.children()) {
-            if (child instanceof Button button && button.visible && Math.abs(button.getY() - y) < height) {
+            if (child instanceof AbstractWidget widget && widget.visible
+                    && overlapsRow(widget, y, height)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** Rows overlap when their vertical spans do, rather than when their tops happen to be close. */
+    private static boolean overlapsRow(AbstractWidget widget, int y, int height) {
+        int top = widget.getY();
+        int bottom = top + widget.getHeight();
+        return top < y + height && bottom > y;
     }
 
     private static void warnOnce(String message, Throwable t) {

@@ -1,0 +1,86 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_pantry_run",
+  "enabled": true,
+  "weight": 10,
+  "category": "townstead",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:butcher",
+      "minecraft:shepherd"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_pantry_run.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_pantry_run.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_pantry_run.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_pantry_run.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_pantry_run.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_pantry_run.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_pantry_run.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:bread",
+      "count": 12,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_NEEDS"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "needs.hunger",
+        "operator": "lte",
+        "value": 45
+      }
+    ]
+  }
+}

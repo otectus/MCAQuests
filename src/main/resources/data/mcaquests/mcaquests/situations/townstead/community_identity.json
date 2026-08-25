@@ -1,0 +1,90 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_community_identity",
+  "scope": "village",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:townstead_spirit",
+    "minimum_tier": 2
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -4
+    }
+  },
+  "offer": {
+    "weight": 7,
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "minecraft:cleric",
+        "minecraft:librarian"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_community_identity.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_community_identity.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_community_identity.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_community_identity.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_community_identity.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_community_identity.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_community_identity.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_community_identity.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:bread",
+        "count": 16,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 34
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_SPIRIT"
+          ]
+        }
+      ]
+    }
+  }
+}
