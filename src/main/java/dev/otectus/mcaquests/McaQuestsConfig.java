@@ -387,6 +387,7 @@ public final class McaQuestsConfig {
 
     public static final class Client {
         public final ForgeConfigSpec.BooleanValue showQuestButtonInMcaMenu;
+        public final ForgeConfigSpec.BooleanValue showTownsteadQuestContext;
         public final ForgeConfigSpec.BooleanValue showQuestToasts;
         public final ForgeConfigSpec.BooleanValue showQuestTrackerHud;
         public final ForgeConfigSpec.BooleanValue showQuestTargetDirection;
@@ -404,6 +405,12 @@ public final class McaQuestsConfig {
             b.push("client");
             showQuestButtonInMcaMenu = b.comment("Inject the Quests button into MCA's villager interaction menu.")
                     .define("showQuestButtonInMcaMenu", true);
+            showTownsteadQuestContext = b.comment(
+                    "Show a short read-only summary of Townstead state under each Townstead quest in the",
+                    "log -- the villager's trade and tier, the need or schedule the quest is about, the",
+                    "village's spirit. Server-rendered, so this only hides it for you; it has no effect on",
+                    "quests, and nothing is shown for quests that are not about Townstead state.")
+                    .define("showTownsteadQuestContext", true);
             showQuestToasts = b.define("showQuestToasts", true);
             showQuestTrackerHud = b.define("showQuestTrackerHud", true);
             showQuestTargetDirection = b.comment(

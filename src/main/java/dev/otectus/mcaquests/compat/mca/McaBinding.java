@@ -56,8 +56,18 @@ public final class McaBinding {
      * Package roots to probe, in order. Each ends with a dot and is stored <em>dotted</em>, never in
      * internal slash form — that is what lets {@code NoMcaStaticLinkTest} byte-scan compiled classes
      * for slash-form MCA references and treat any hit as a regression.
+     *
+     * <p>Both axes vary independently, so all four combinations are listed. MCA 7.7.1-alpha.1 renamed
+     * the base package {@code net.mca} to {@code net.conczin.mca} but <em>kept</em> the Forgix merge,
+     * so the live root is {@code forge.net.conczin.mca} — the combination this list originally missed,
+     * which left every 7.7.1 user with "none of the known package roots matched".
      */
-    private static final String[] CANDIDATE_ROOTS = {"forge.net.mca.", "net.conczin.mca.", "net.mca."};
+    private static final String[] CANDIDATE_ROOTS = {
+            "forge.net.conczin.mca.", // MCA 7.7.1-alpha.1 and later: Forgix merge, renamed base package
+            "forge.net.mca.",         // MCA 7.6.x through 7.7.0-beta.2: Forgix merge, legacy base package
+            "net.conczin.mca.",       // un-merged layout, renamed base package
+            "net.mca.",               // un-merged layout, legacy base package
+    };
 
     /** The class whose presence identifies a root. Every layout has it at this relative name. */
     private static final String PROBE_CLASS = "entity.VillagerEntityMCA";
@@ -503,7 +513,13 @@ public final class McaBinding {
     private static MethodHandle bindMethod(MethodHandles.Lookup lookup, Class<?> owner, Member member) {
         Method match = null;
         for (Method candidate : owner.getMethods()) {
-            if (!candidate.getName().equals(member.name)
+            // Bridges are skipped, not merely deprioritised. A covariant override leaves two arity-0
+            // entries with the same name -- VillagerEntityMCA#getInteractions is the live example,
+            // declaring both the real VillagerCommandHandler return and an EntityCommandHandler
+            // bridge -- and getMethods() has no defined order, so binding whichever came first would
+            // be a coin flip that a passing probe test could not distinguish.
+            if (candidate.isBridge()
+                    || !candidate.getName().equals(member.name)
                     || candidate.getParameterCount() != member.arity
                     || Modifier.isStatic(candidate.getModifiers()) != (member.kind == Kind.STATIC)) {
                 continue;

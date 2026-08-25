@@ -13,6 +13,7 @@ import dev.otectus.mcaquests.compat.TownsteadRootView;
 import dev.otectus.mcaquests.compat.TownsteadScheduleView;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
 import dev.otectus.mcaquests.compat.TownsteadVillagerView;
+import dev.otectus.mcaquests.compat.TownsteadXpMath;
 import dev.otectus.mcaquests.compat.mca.McaHandles;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -478,18 +479,19 @@ final class TownsteadHandles {
     /** Clamps to the range Townstead keeps the need in, then writes it. */
     private static boolean apply(Object needs, NeedMutation.Need need, double current, double wanted) {
         try {
+            double bounded = NeedMutation.clamp(need, wanted);
             switch (need) {
-                case HUNGER -> H_SET_HUNGER.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.HUNGER_MAX));
-                case SATURATION -> H_SET_SATURATION.invoke(needs, (float) Math.max(0.0D, wanted));
-                case THIRST -> H_SET_THIRST.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.THIRST_MAX));
-                case QUENCHED -> H_SET_QUENCHED.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.QUENCHED_MAX));
-                case FATIGUE -> H_SET_FATIGUE.invoke(needs, clamp(wanted, 0, TownsteadNeedsView.FATIGUE_MAX));
+                case HUNGER -> H_SET_HUNGER.invoke(needs, (int) Math.round(bounded));
+                case SATURATION -> H_SET_SATURATION.invoke(needs, (float) bounded);
+                case THIRST -> H_SET_THIRST.invoke(needs, (int) Math.round(bounded));
+                case QUENCHED -> H_SET_QUENCHED.invoke(needs, (int) Math.round(bounded));
+                case FATIGUE -> H_SET_FATIGUE.invoke(needs, (int) Math.round(bounded));
                 case ENERGY -> {
-                    int restore = (int) Math.round(wanted - current);
+                    int restore = (int) Math.round(bounded - current);
                     if (restore <= 0) {
                         // Losing energy is fatigue gained, and there is no "tire them out" recovery call.
                         H_SET_FATIGUE.invoke(needs,
-                                clamp(TownsteadNeedsView.FATIGUE_MAX - wanted, 0, TownsteadNeedsView.FATIGUE_MAX));
+                                (int) Math.round(TownsteadNeedsView.FATIGUE_MAX - bounded));
                     } else {
                         H_RESTORE_ENERGY.invoke(needs, restore);
                     }
@@ -499,10 +501,6 @@ final class TownsteadHandles {
         } catch (Throwable t) {
             return false;
         }
-    }
-
-    private static int clamp(double value, int min, int max) {
-        return (int) Math.max(min, Math.min(max, Math.round(value)));
     }
 
     /**
@@ -572,38 +570,34 @@ final class TownsteadHandles {
         int currentXp = integer(H_XP_XP, record);
         int currentTier = integer(H_XP_TIER, record);
         long lastTierUp = lng(H_XP_LAST_TIER_UP, record);
-        long recordedDay = lng(H_XP_DAY, record);
-        int xpToday = recordedDay == worldDay ? integer(H_XP_TODAY, record) : 0;
 
-        int maxXp = integer(H_SPEC_MAX_XP, spec);
-        int room = Math.max(0, maxXp - currentXp);
-        int allowed = Math.min(requested, room);
-        if (respectDailyCap) {
-            int dailyCap = integer(H_SPEC_DAILY_CAP, spec);
-            if (dailyCap > 0) {
-                allowed = Math.min(allowed, Math.max(0, dailyCap - xpToday));
-            }
-        }
-        if (allowed <= 0) {
-            return TownsteadMutationResult.failed(room <= 0
-                    ? TownsteadMutationResult.Reason.INVALID_VALUE
-                    : TownsteadMutationResult.Reason.DAILY_CAP);
+        // The arithmetic lives in TownsteadXpMath so it can be tested without a bound Townstead.
+        TownsteadXpMath.Award award = TownsteadXpMath.award(requested, currentXp,
+                integer(H_SPEC_MAX_XP, spec), integer(H_XP_TODAY, record), lng(H_XP_DAY, record),
+                worldDay, integer(H_SPEC_DAILY_CAP, spec), respectDailyCap);
+        if (!award.granted()) {
+            return TownsteadMutationResult.failed(switch (award.outcome()) {
+                case DAILY_CAP -> TownsteadMutationResult.Reason.DAILY_CAP;
+                case AT_MAX, INVALID -> TownsteadMutationResult.Reason.INVALID_VALUE;
+                case GRANTED -> TownsteadMutationResult.Reason.INTERNAL_ERROR;
+            });
         }
 
-        int newXp = currentXp + allowed;
-        int newTier = tierForXp(spec, newXp, currentTier);
-        long tierUpTick = newTier > currentTier ? gameTime : lastTierUp;
+        int newTier = tierForXp(spec, award.newXp(), currentTier);
+        long tierUpTick = TownsteadXpMath.tierUpTick(currentTier, newTier, lastTierUp, gameTime);
         try {
-            Object updated = H_XP_NEW.invoke(newXp, newTier, tierUpTick, worldDay, xpToday + allowed);
+            Object updated = H_XP_NEW.invoke(award.newXp(), newTier, tierUpTick, worldDay,
+                    award.newXpToday());
             H_MEMORY_SET_XP.invoke(memory, professionId, updated);
         } catch (Throwable t) {
             return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INTERNAL_ERROR);
         }
 
         Object after = ref(H_MEMORY_XP, memory, professionId);
-        int finalXp = after == null ? newXp : integer(H_XP_XP, after);
+        int finalXp = after == null ? award.newXp() : integer(H_XP_XP, after);
         int finalTier = after == null ? newTier : integer(H_XP_TIER, after);
-        return TownsteadMutationResult.xp(requested, allowed, currentXp, finalXp, currentTier, finalTier);
+        return TownsteadMutationResult.xp(requested, award.applied(), currentXp, finalXp,
+                currentTier, finalTier);
     }
 
     private static int tierForXp(Object spec, int xp, int fallback) {

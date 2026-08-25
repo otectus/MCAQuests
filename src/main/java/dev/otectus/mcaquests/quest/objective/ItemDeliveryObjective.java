@@ -29,6 +29,16 @@ import javax.annotation.Nullable;
 public record ItemDeliveryObjective(Item item, int count, boolean consume,
                                     DeliveryDestination destination) implements QuestObjective {
 
+    /**
+     * The shape this objective had before destinations existed, kept so an add-on that constructs one
+     * in code still compiles. Adding a record component is a source break for every caller of the
+     * canonical constructor, and there was no reason to make anyone pay it: no destination means the
+     * historical behaviour, which is exactly what {@link DeliveryDestination#CONSUMED} is.
+     */
+    public ItemDeliveryObjective(Item item, int count, boolean consume) {
+        this(item, count, consume, DeliveryDestination.CONSUMED);
+    }
+
     /** {@code progress.extra()} flag: the transfer has been committed and must never run again. */
     private static final String K_DELIVERED = "delivered";
 

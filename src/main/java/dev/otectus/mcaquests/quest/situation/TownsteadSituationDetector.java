@@ -4,6 +4,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
+import dev.otectus.mcaquests.compat.TownsteadCounters;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
@@ -64,6 +65,7 @@ public final class TownsteadSituationDetector {
         if (!bridge.isAvailable() || !McaQuestsConfig.COMMON.townsteadContentEnabled.get()) {
             return;
         }
+        long startedAt = System.nanoTime();
         TownsteadSignalStateSavedData state = TownsteadSignalStateSavedData.get(server);
         TownsteadEvaluation evaluation = new TownsteadEvaluation();
 
@@ -80,6 +82,7 @@ public final class TownsteadSituationDetector {
         if (wants(SituationSignalType.TOWNSTEAD_BUILDING) && bridge.has(TownsteadCapability.READ_BUILDING)) {
             scanBuildings(server, level, villageId, state, evaluation);
         }
+        TownsteadCounters.villageScanned(System.nanoTime() - startedAt);
     }
 
     /** True when some loaded definition actually consumes this signal. */
@@ -114,6 +117,7 @@ public final class TownsteadSituationDetector {
                 continue;
             }
             observed++;
+            TownsteadCounters.residentObserved();
             TownsteadNeedsView needs = view.needs();
 
             if (wantsNeeds) {
@@ -134,6 +138,7 @@ public final class TownsteadSituationDetector {
                     resident.getUUID() + "|collapsed", needs.collapsed())) {
                 SituationManager.onSignal(server,
                         TriggerSignal.townsteadCollapse(level, villageId, resident.getUUID()));
+                    TownsteadCounters.signalFired();
             }
             if (wantsTiers && view.hasProfession()) {
                 String key = resident.getUUID() + "|tier|" + view.professionId();
@@ -141,6 +146,7 @@ public final class TownsteadSituationDetector {
                 if (state.observeIncrease(key, view.professionLevel())) {
                     SituationManager.onSignal(server, TriggerSignal.townsteadProfessionTier(level, villageId,
                             resident.getUUID(), view.professionId(), previous, view.professionLevel()));
+                    TownsteadCounters.signalFired();
                 }
             }
         }
@@ -167,15 +173,30 @@ public final class TownsteadSituationDetector {
         String key = villageId + "|need|" + need;
         boolean wasInCrisis = state.lastReading(key, 0) == 1;
 
-        // The gap is read as a percentage of this need's own range, because the ranges differ.
         double hysteresis = McaQuestsConfig.COMMON.townsteadNeedCrisisHysteresis.get() / 100.0D;
-        double leaveAt = CRISIS_FRACTION - hysteresis;
-        boolean inCrisis = wasInCrisis ? fraction > Math.max(0.0D, leaveAt) : fraction >= CRISIS_FRACTION;
+        boolean inCrisis = inCrisis(wasInCrisis, fraction, CRISIS_FRACTION, hysteresis);
 
         if (state.observeChanged(key, inCrisis ? 1 : 0) && inCrisis) {
             SituationManager.onSignal(server, TriggerSignal.townsteadNeed(level, villageId, need,
                     (float) fraction, worst / Math.max(1, needMax)));
+            TownsteadCounters.signalFired();
         }
+    }
+
+    /**
+     * Whether a village counts as in crisis, given whether it already did.
+     *
+     * <p>Two thresholds, not one. A crisis opens when the suffering fraction reaches {@code enterAt},
+     * and closes only once it falls back below {@code enterAt - hysteresis}. With a single threshold a
+     * village sitting exactly on the line would open and close the same emergency every scan, which
+     * reads to a player as a situation flickering in and out of their quest list.
+     *
+     * <p>Extracted and package-visible so the banding can be tested directly; it is otherwise buried
+     * behind a live server and a saved-data store.
+     */
+    static boolean inCrisis(boolean wasInCrisis, double fraction, double enterAt, double hysteresis) {
+        double leaveAt = Math.max(0.0D, enterAt - hysteresis);
+        return wasInCrisis ? fraction > leaveAt : fraction >= enterAt;
     }
 
     // ---------------------------------------------------------------------------------- village
@@ -198,6 +219,7 @@ public final class TownsteadSituationDetector {
         if (roseATier || changedIdentity) {
             SituationManager.onSignal(server, TriggerSignal.townsteadSpirit(level, villageId,
                     view.primaryId(), previous, view.tier()));
+            TownsteadCounters.signalFired();
         }
     }
 
@@ -220,6 +242,7 @@ public final class TownsteadSituationDetector {
         if (state.observeChanged(villageId + "|buildings", signature)) {
             SituationManager.onSignal(server, TriggerSignal.townsteadBuilding(level, villageId,
                     newest.family(), newest.level()));
+            TownsteadCounters.signalFired();
         }
     }
 

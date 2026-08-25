@@ -358,6 +358,7 @@
   "mcaquests.command.townstead.status.missing": "Unavailable: %s",
   "mcaquests.command.townstead.status.unresolved": "%s Townstead member(s) could not be found; please report this with your Townstead version: %s",
   "mcaquests.command.townstead.status.toggles": "Content %s, reactions %s, need rewards %s, profession XP rewards %s, skill rewards %s.",
+  "mcaquests.command.townstead.status.counters": "Since startup: %s",
   "mcaquests.command.townstead.toggle.on": "on",
   "mcaquests.command.townstead.toggle.off": "off",
   "mcaquests.command.townstead.probe.unavailable": "Townstead is not connected, so there is nothing to probe.",

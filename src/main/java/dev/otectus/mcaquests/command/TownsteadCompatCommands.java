@@ -6,6 +6,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
+import dev.otectus.mcaquests.compat.TownsteadCounters;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadStatus;
 import net.minecraft.commands.CommandSourceStack;
@@ -82,6 +83,12 @@ public final class TownsteadCompatCommands {
                     unresolved.size(), String.join(", ", unresolved)), false);
         }
 
+        if (McaQuestsConfig.COMMON.townsteadDebugBindingLogs.get()) {
+            // Only on request, and only when asked for. A server that is running fine says nothing;
+            // a server that is not can be asked what the integration has actually been doing.
+            source.sendSuccess(() -> Component.translatable("mcaquests.command.townstead.status.counters",
+                    TownsteadCounters.describe()), false);
+        }
         source.sendSuccess(() -> Component.translatable("mcaquests.command.townstead.status.toggles",
                 onOff(McaQuestsConfig.COMMON.townsteadContentEnabled.get()),
                 onOff(McaQuestsConfig.COMMON.townsteadReactionsEnabled.get()),

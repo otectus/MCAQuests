@@ -358,6 +358,7 @@
   "mcaquests.command.townstead.status.missing": "Indisponiveis: %s",
   "mcaquests.command.townstead.status.unresolved": "%s item(ns) do Townstead não foram encontrados; relate isto informando a sua versão do Townstead: %s",
   "mcaquests.command.townstead.status.toggles": "Conteudo %s, reações %s, recompensas de necessidades %s, recompensas de XP de profissão %s, recompensas de habilidade %s.",
+  "mcaquests.command.townstead.status.counters": "Desde a inicialização: %s",
   "mcaquests.command.townstead.toggle.on": "ativado",
   "mcaquests.command.townstead.toggle.off": "desativado",
   "mcaquests.command.townstead.probe.unavailable": "O Townstead não está conectado, então não há nada para verificar.",

@@ -29,6 +29,12 @@ import java.util.Set;
  * authoritative — it renders the strings it is given, so a client without Townstead installed shows
  * exactly what the server tells it.
  *
+ * <p>The client option that hides this panel is applied when the log is <em>drawn</em>, not here.
+ * A CLIENT config spec is not loaded on a dedicated server, so reading one from this method -- which
+ * runs inside {@code syncLog} -- would throw the moment a player joined. Sending the lines and letting
+ * each client decide whether to draw them is also what makes the option per-player rather than
+ * server-wide, which is what a display preference should be.
+ *
  * <p><b>Only what the quest is actually about.</b> Lines are chosen from the union of the capabilities
  * its Townstead objectives declare, so a quest about a villager's schedule does not display their
  * hunger, and a quest with no Townstead objectives at all shows nothing and takes no space. Reading

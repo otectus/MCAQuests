@@ -71,8 +71,19 @@ public record TownsteadMutationResult(
         return new TownsteadMutationResult(Reason.NO_CHANGE, 0, 0, value, value, 0, 0);
     }
 
-    /** A mutation that never ran. Carries no numbers, because none were observed. */
+    /**
+     * A mutation that never ran. Carries no numbers, because none were observed.
+     *
+     * <p>Counted here rather than at each call site: every refusal in the integration is built through
+     * this one factory, so it is the only place that cannot be forgotten when a new one is added.
+     */
     public static TownsteadMutationResult failed(Reason reason) {
+        if (reason == Reason.CAPABILITY_MISSING) {
+            TownsteadCounters.capabilityMiss();
+        } else if (reason != Reason.MOD_ABSENT) {
+            // An absent mod is not a failure, it is the normal state of most servers.
+            TownsteadCounters.mutationFailure();
+        }
         return new TownsteadMutationResult(reason, 0, 0, 0.0D, 0.0D, 0, 0);
     }
 }

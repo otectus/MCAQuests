@@ -199,4 +199,72 @@ class TownsteadSignalStateTest {
             assertTrue(SituationSignalType.TOWNSTEAD_NEED.ordinal() > SituationSignalType.NIGHT.ordinal());
         }
     }
+
+    @Nested
+    @DisplayName("crisis hysteresis")
+    class Hysteresis {
+
+        private static final double ENTER = 0.34D;
+        private static final double GAP = 0.10D;
+
+        private boolean state(boolean was, double fraction) {
+            return TownsteadSituationDetector.inCrisis(was, fraction, ENTER, GAP);
+        }
+
+        @Test
+        @DisplayName("opens at the threshold and not before")
+        void opensAtTheThreshold() {
+            assertFalse(state(false, 0.33D));
+            assertTrue(state(false, 0.34D));
+            assertTrue(state(false, 0.90D));
+        }
+
+        /**
+         * The point of the gap. On a single threshold a village sitting exactly on the line opens and
+         * closes the same emergency every scan, which a player sees as a situation flickering in and out
+         * of their list.
+         */
+        @Test
+        @DisplayName("stays open through the band below the threshold")
+        void staysOpenInsideTheBand() {
+            assertTrue(state(true, 0.30D), "still above the leave threshold of 0.24");
+            assertTrue(state(true, 0.25D));
+            assertFalse(state(true, 0.24D), "at the leave threshold it finally closes");
+            assertFalse(state(true, 0.10D));
+        }
+
+        @Test
+        @DisplayName("a village on the exact threshold does not flap")
+        void doesNotFlapOnTheLine() {
+            boolean open = state(false, 0.34D);
+            assertTrue(open);
+            // The fraction wobbles a little either side of the entry threshold, as it will when one
+            // villager in a village of thirty eats.
+            for (double fraction : new double[] {0.33D, 0.35D, 0.32D, 0.34D, 0.31D}) {
+                assertTrue(state(open, fraction),
+                        "the crisis must stay open at " + fraction + " rather than re-firing");
+            }
+        }
+
+        @Test
+        @DisplayName("a hysteresis of zero degrades to a single threshold rather than misbehaving")
+        void zeroGapIsASingleThreshold() {
+            assertTrue(TownsteadSituationDetector.inCrisis(false, ENTER, ENTER, 0.0D),
+                    "it still opens at the threshold");
+            assertTrue(TownsteadSituationDetector.inCrisis(true, 0.35D, ENTER, 0.0D),
+                    "and stays open above it");
+            assertFalse(TownsteadSituationDetector.inCrisis(true, ENTER, ENTER, 0.0D),
+                    "with no gap, sitting exactly on the line closes it -- which is precisely the "
+                            + "flapping the configurable gap exists to prevent");
+        }
+
+        @Test
+        @DisplayName("a hysteresis wider than the threshold cannot make the band negative")
+        void anOversizedGapIsClamped() {
+            assertTrue(TownsteadSituationDetector.inCrisis(true, 0.01D, ENTER, 0.90D),
+                    "the leave threshold floors at zero, so any suffering at all keeps it open");
+            assertFalse(TownsteadSituationDetector.inCrisis(true, 0.0D, ENTER, 0.90D),
+                    "and no suffering at all still closes it");
+        }
+    }
 }

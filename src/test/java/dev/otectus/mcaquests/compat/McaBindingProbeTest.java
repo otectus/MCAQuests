@@ -44,47 +44,48 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code McaHandles} has a fallback for — {@code Village#hasResident} is the standing example, gone in
  * the later 7.7 line and replaced by a scan of the resident-UUID stream.
  *
- * <h2>Checking a different MCA version</h2>
+ * <h2>Which MCA versions</h2>
  *
- * <p>This exercises whichever MCA build is on the dev runtime. To verify another one — in particular
- * a build with a different package root — run the suite again with it selected:
+ * <p>Every build listed in {@code mca_probe_versions}, each opened in its own loader — one entry per
+ * known package root. That fleet is the point: the root cannot be inferred from the version number
+ * (7.7.0-beta.2 is {@code forge.net.mca}, 7.7.1-alpha.2 is {@code forge.net.conczin.mca}), so probing
+ * only the dev-runtime build is how a root the binding does not recognise reaches players.
  *
- * <pre>./gradlew test -PmcaDevVersion=7.7.0-beta.2+1.20.1</pre>
- *
- * <p>Skipped rather than failed when no MCA jar is on the dev runtime, so the suite still runs in a
- * checkout that has not resolved it.
+ * <p>Skipped rather than failed when no MCA jar has been resolved, so the suite still runs in a
+ * checkout that has not fetched them.
  */
 class McaBindingProbeTest {
 
     private static final String JARS_PROPERTY = "mcaquests.probe.jars";
 
     @Test
-    void manifestResolvesAgainstTheRealMcaJar() throws Exception {
+    void manifestResolvesAgainstEveryProbedMcaJar() throws Exception {
         List<Path> jars = probeJars();
         Assumptions.assumeFalse(jars.isEmpty(),
-                "No MCA jar on the dev runtime (" + JARS_PROPERTY + "); run via Gradle to exercise this.");
+                "No MCA jar to probe (" + JARS_PROPERTY + "); run via Gradle to exercise this.");
 
-        List<URL> urls = new ArrayList<>();
+        // One loader per jar, never one loader spanning all of them. The package root is what this
+        // really tests, and probeRoot() stops at the first root that resolves — so two MCA builds
+        // sharing a loader would silently exercise whichever root won, and the other would go
+        // unchecked. That is precisely how the missing forge.net.conczin.mca root shipped.
         for (Path jar : jars) {
-            urls.add(jar.toUri().toURL());
-        }
+            try (URLClassLoader loader = new URLClassLoader(new URL[] {jar.toUri().toURL()},
+                    McaBindingProbeTest.class.getClassLoader())) {
+                McaBinding.Resolution resolution = McaBinding.resolveAgainst(loader);
 
-        try (URLClassLoader loader = new URLClassLoader(urls.toArray(URL[]::new),
-                McaBindingProbeTest.class.getClassLoader())) {
-            McaBinding.Resolution resolution = McaBinding.resolveAgainst(loader);
+                assertNotNull(resolution.root(),
+                        "No candidate package root matched " + jar.getFileName() + ". If MCA has moved "
+                                + "again, add the new root to McaBinding's CANDIDATE_ROOTS.");
+                assertEquals(List.of(), resolution.unresolvedRequired(),
+                        jar.getFileName() + " is missing member(s) the mod requires. Either MCA renamed "
+                                + "them (update the manifest in McaBinding) or removed them (make the "
+                                + "member optional and give McaHandles a fallback, as "
+                                + "Village#hasResident already has).");
+                assertEquals(McaBinding.Status.BOUND, resolution.status(), jar.getFileName().toString());
 
-            assertNotNull(resolution.root(),
-                    "No candidate package root matched " + jars + ". If MCA has moved again, add the new "
-                            + "root to McaBinding's CANDIDATE_ROOTS.");
-            assertEquals(List.of(), resolution.unresolvedRequired(),
-                    "MCA is missing member(s) the mod requires. Either MCA renamed them (update the "
-                            + "manifest in McaBinding) or removed them (make the member optional and give "
-                            + "McaHandles a fallback, as Village#hasResident already has).");
-            assertEquals(McaBinding.Status.BOUND, resolution.status());
-
-            if (!resolution.unresolvedOptional().isEmpty()) {
-                System.out.println("[probe] " + resolution.root() + " lacks optional member(s), "
-                        + "fallbacks apply: " + resolution.unresolvedOptional());
+                System.out.println("[probe] " + jar.getFileName() + " -> " + resolution.root()
+                        + (resolution.unresolvedOptional().isEmpty() ? ""
+                                : " (optional absent, fallbacks apply: " + resolution.unresolvedOptional() + ")"));
             }
         }
     }

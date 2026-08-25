@@ -59,7 +59,15 @@ public final class TownsteadEvaluation {
         if (entity == null) {
             return Optional.empty();
         }
-        return villagers.computeIfAbsent(entity.getUUID(), uuid -> bridge().villager(entity));
+        Optional<TownsteadVillagerView> cached = villagers.get(entity.getUUID());
+        if (cached != null) {
+            TownsteadCounters.cacheHit();
+            return cached;
+        }
+        TownsteadCounters.villagerRead();
+        Optional<TownsteadVillagerView> read = bridge().villager(entity);
+        villagers.put(entity.getUUID(), read);
+        return read;
     }
 
     public Optional<TownsteadCalendarView> calendar(@Nullable MinecraftServer server) {

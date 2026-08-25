@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.project;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.TownsteadCounters;
 import dev.otectus.mcaquests.network.ProjectCard;
 import dev.otectus.mcaquests.network.ProjectLogSyncS2CPacket;
 import dev.otectus.mcaquests.network.ProjectMenuDataS2CPacket;
@@ -850,6 +851,7 @@ public final class ProjectManager {
         if (!enabled()) {
             return;
         }
+        TownsteadCounters.projectPoll();
         ProjectSavedData data = ProjectSavedData.get(server);
         boolean dirty = false;
         for (ProjectState state : data.allInstances()) {

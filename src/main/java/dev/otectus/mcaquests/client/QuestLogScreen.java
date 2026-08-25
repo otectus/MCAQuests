@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.client;
 
+import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.network.QuestAbandonFromLogC2SPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
@@ -101,13 +102,23 @@ public class QuestLogScreen extends Screen {
      * Total vertical space one quest occupies. Shared by {@link #init} (button placement) and
      * {@link #render} (drawing) so the two can never drift apart.
      */
+    /**
+     * Whether this player wants the Townstead context panel. Read here rather than on the server: a
+     * CLIENT config spec is not loaded on a dedicated server, and a display preference should be the
+     * viewer's own rather than server-wide. Used by both {@link #entryHeight} and the render pass, so
+     * the two cannot disagree about how tall an entry is.
+     */
+    private static boolean showContext() {
+        return McaQuestsConfig.CLIENT.showTownsteadQuestContext.get();
+    }
+
     private static int entryHeight(QuestLogEntry entry) {
         return 11
                 + (entry.chainLabel().getString().isEmpty() ? 0 : 10)
                 + entry.objectives().size() * 10
                 + (entry.ready() ? 10 : 0)
                 + (entry.suspended() ? 10 : 0)
-                + entry.townsteadContext().size() * 10
+                + (showContext() ? entry.townsteadContext().size() * 10 : 0)
                 + 6;
     }
 
@@ -182,7 +193,7 @@ public class QuestLogScreen extends Screen {
                     graphics.drawString(this.font,
                             Component.translatable("mcaquests.status.ready"), left + 6, lineY, 0x5CFF5C);
                 }
-                for (Component context : entry.townsteadContext()) {
+                for (Component context : showContext() ? entry.townsteadContext() : List.<Component>of()) {
                     // Dimmer than the objectives: this is background about the villager, not a task.
                     graphics.drawString(this.font, context, left + 6, lineY, 0x7F9AA8);
                     lineY += 10;
