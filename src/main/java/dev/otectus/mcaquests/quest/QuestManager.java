@@ -23,6 +23,7 @@ import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
+import dev.otectus.mcaquests.quest.objective.ItemDeliveryObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.objective.TownsteadObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
@@ -440,6 +441,28 @@ public final class QuestManager {
     }
 
     /**
+     * True when every item delivery on this quest has somewhere to put its goods. A villager whose
+     * inventory is full refuses the hand-over and says so, rather than the player paying for a transfer
+     * that cannot happen.
+     */
+    private static boolean deliveriesCanLand(ServerPlayer player, QuestDefinition def, ActiveQuest active,
+                                             @Nullable Entity giver) {
+        List<QuestObjective> objectives = def.objectives();
+        for (int i = 0; i < objectives.size(); i++) {
+            if (!(objectives.get(i) instanceof ItemDeliveryObjective delivery)
+                    || !delivery.destination().isTransfer()
+                    || active.progress(i).extra().getBoolean("delivered")) {
+                continue;
+            }
+            if (!delivery.canDeliver(player, giver)) {
+                player.sendSystemMessage(delivery.refusalReason(player, giver));
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * True when every Townstead reward on this quest could be applied right now. Only consulted when
      * {@code rewardFailureBlocksCompletion} is on; otherwise a reward that cannot apply logs once and
      * the turn-in proceeds.
@@ -480,10 +503,19 @@ public final class QuestManager {
                 && !townsteadRewardsCanApply(player, def, grantVillager)) {
             return false;
         }
+        // A delivery with nowhere to go always blocks, whatever the reward policy says: consuming the
+        // goods into a villager who cannot hold them would take them off the player for nothing.
+        if (!deliveriesCanLand(player, def, active, grantVillager)) {
+            return false;
+        }
         active.setRewardClaimed(true);
 
         for (int i = 0; i < def.objectives().size(); i++) {
-            def.objectives().get(i).consumeOnTurnIn(player, active.progress(i));
+            QuestObjective objective = def.objectives().get(i);
+            if (objective instanceof ItemDeliveryObjective delivery) {
+                delivery.deliver(player, grantVillager, active.progress(i));
+            }
+            objective.consumeOnTurnIn(player, active.progress(i));
         }
         List<QuestReward> rewards = def.rewards();
         for (int i = 0; i < rewards.size(); i++) {

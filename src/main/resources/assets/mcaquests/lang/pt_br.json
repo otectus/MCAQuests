@@ -71,6 +71,8 @@
   "mcaquests.reward.townstead_skill.learn": "Ensina %s ao aldeão",
   "mcaquests.reward.townstead_skill.forget": "O aldeão desaprende %s",
   "mcaquests.reward.townstead_reaction": "Uma palavra de agradecimento",
+  "mcaquests.message.delivery_full": "Não há mais espaço para o %s.",
+  "mcaquests.message.delivery_no_target": "Não há ninguem aqui para receber isso.",
   "mcaquests.status.objectives": "Objetivos",
   "mcaquests.status.rewards": "Recompensas",
   "mcaquests.message.giver_died": "Um aldeão que lhe deu uma missão morreu.",
