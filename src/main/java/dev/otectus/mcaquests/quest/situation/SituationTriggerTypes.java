@@ -7,6 +7,11 @@ import dev.otectus.mcaquests.quest.situation.trigger.InfectionTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.LowFoodTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.MissingKinTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.NightTrigger;
+import dev.otectus.mcaquests.quest.situation.trigger.TownsteadBuildingTrigger;
+import dev.otectus.mcaquests.quest.situation.trigger.TownsteadCollapseTrigger;
+import dev.otectus.mcaquests.quest.situation.trigger.TownsteadNeedTrigger;
+import dev.otectus.mcaquests.quest.situation.trigger.TownsteadProfessionTierTrigger;
+import dev.otectus.mcaquests.quest.situation.trigger.TownsteadSpiritTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.RaidTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.VillagerDeathTrigger;
 import net.minecraft.resources.ResourceLocation;
@@ -30,6 +35,19 @@ public final class SituationTriggerTypes {
     public static final SituationTriggerType<MissingKinTrigger> MISSING_KIN = register("missing_kin", MissingKinTrigger.CODEC);
     public static final SituationTriggerType<LowFoodTrigger> LOW_FOOD = register("low_food", LowFoodTrigger.CODEC);
     public static final SituationTriggerType<NightTrigger> NIGHT = register("night", NightTrigger.CODEC);
+
+    // Townstead (Townstead spec 7.3). Registered unconditionally so a datapack parses either way; the
+    // detector that produces these signals simply never runs when Townstead is absent.
+    public static final SituationTriggerType<TownsteadNeedTrigger> TOWNSTEAD_NEED =
+            register("townstead_need", TownsteadNeedTrigger.CODEC);
+    public static final SituationTriggerType<TownsteadCollapseTrigger> TOWNSTEAD_COLLAPSE =
+            register("townstead_collapse", TownsteadCollapseTrigger.CODEC);
+    public static final SituationTriggerType<TownsteadProfessionTierTrigger> TOWNSTEAD_PROFESSION_TIER =
+            register("townstead_profession_tier", TownsteadProfessionTierTrigger.CODEC);
+    public static final SituationTriggerType<TownsteadSpiritTrigger> TOWNSTEAD_SPIRIT =
+            register("townstead_spirit", TownsteadSpiritTrigger.CODEC);
+    public static final SituationTriggerType<TownsteadBuildingTrigger> TOWNSTEAD_BUILDING =
+            register("townstead_building", TownsteadBuildingTrigger.CODEC);
 
     public static final Codec<SituationTriggerType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

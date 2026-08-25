@@ -12,5 +12,19 @@ public enum SituationSignalType {
     INFECTION,
     MISSING_KIN,
     LOW_FOOD,
-    NIGHT
+    NIGHT,
+
+    // Townstead (Townstead spec 7.3). Appended, never reordered: the ordinal is one term of the
+    // per-village draw seed in SituationManager.onSignal, so inserting above would silently reshuffle
+    // which situation an existing village opens on an existing day.
+    /** A need -- hunger, thirst, energy -- has crossed into crisis across a village. */
+    TOWNSTEAD_NEED,
+    /** A villager has just collapsed. Fires on the transition, never once per scan. */
+    TOWNSTEAD_COLLAPSE,
+    /** A villager has risen a profession tier. */
+    TOWNSTEAD_PROFESSION_TIER,
+    /** A village spirit has gained a tier, or settled into a different identity. */
+    TOWNSTEAD_SPIRIT,
+    /** A registered building has appeared, been upgraded, or been lost. */
+    TOWNSTEAD_BUILDING
 }

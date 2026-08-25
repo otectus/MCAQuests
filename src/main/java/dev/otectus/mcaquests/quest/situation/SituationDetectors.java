@@ -54,7 +54,12 @@ public final class SituationDetectors {
             return;
         }
         Set<String> scanned = new HashSet<>();
+        int budget = McaQuestsConfig.COMMON.townsteadMaxVillagesPerPass.get();
+        long rotation = server.overworld().getGameTime();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (scanned.size() >= budget) {
+                break; // bounded per pass; the players not reached this time are reached the next
+            }
             ServerLevel level = player.serverLevel();
             OptionalInt villageId = McaCompat.findNearestVillageId(level, player.blockPosition(), DETECTION_RADIUS);
             if (villageId.isEmpty()) {
@@ -63,6 +68,7 @@ public final class SituationDetectors {
             String key = level.dimension().location() + "#" + villageId.getAsInt();
             if (scanned.add(key)) {
                 scanVillage(server, level, villageId.getAsInt());
+                TownsteadSituationDetector.scanVillage(server, level, villageId.getAsInt(), rotation);
             }
         }
     }
