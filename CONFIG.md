@@ -124,6 +124,26 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 
 See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
 
+### `[compat.townstead]`
+| Option | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch for the [Townstead integration](TOWNSTEAD.md) (1.4.0). When off (or Townstead isn't installed): no Townstead class is loaded and no Townstead state is read, `townstead_*` conditions answer false so the bundled content never becomes eligible, `townstead_*` rewards no-op, and an already-accepted Townstead quest **suspends** rather than failing — it keeps its progress and frozen baselines and resumes if Townstead comes back. Datapack **types stay registered** either way, so a pack always parses. Takes effect on restart. |
+| `contentEnabled` | `true` | Offer the quests, projects and situations MCA: Quests ships for Townstead. Turn off to keep the mechanics available to your own datapacks without the built-in content competing for menu slots. |
+| `reactionsEnabled` | `true` | Let quest, project and situation transitions play Townstead reactions, and gate the `mcaquests:townstead_reaction` reward. Purely cosmetic: a reaction never affects quest state, and one that fails never blocks a completion. |
+| `needRewardsEnabled` | `true` | Gates `mcaquests:townstead_needs`. Values are always clamped to Townstead's own range for that need, which differ (hunger `100`, thirst/quenched/energy `20`). |
+| `professionXpRewardsEnabled` | `true` | Gates `mcaquests:townstead_profession_xp`. |
+| `skillRewardsEnabled` | `true` | Gates `mcaquests:townstead_skill`. |
+| `allowUncappedProfessionXp` | `false` | Permit XP rewards that ask to bypass Townstead's daily cap, and skill rewards that ask to skip its prerequisites. Bypassing needs **both** this and the request in the reward JSON, because uncapped XP lets a repeatable quest outrun the progression pacing Townstead deliberately sets — and a datapack alone should not decide that for someone else's server. |
+| `rewardFailureBlocksCompletion` | `false` | Refuse a turn-in when a Townstead reward cannot be applied, instead of completing without it. Default off: the player has already done the work, and trapping them with a finished quest they can never hand in is worse than quietly skipping the villager-facing half of the reward. |
+| `pollIntervalTicks` | `20` | How often (ticks) Townstead-backed quest objectives re-read villager state. Shares the existing once-per-second objective pass. Clamp `10`–`1200`. |
+| `projectPollIntervalTicks` | `20` | How often (ticks) Townstead-backed project objectives re-read village state. Clamp `10`–`1200`. |
+| `maxVillagersPerPass` | `64` | Cap on residents inspected per pass. Larger villages are visited round-robin across passes, so nobody is skipped and no pass is unbounded. Clamp `1`–`256`. |
+| `maxVillagesPerPass` | `8` | Cap on villages inspected per situation scan, also round-robin. Clamp `1`–`64`. |
+| `needCrisisHysteresis` | `10` | Gap in percentage points between the share of a village that opens a need crisis and the share that closes it. A village sitting exactly on one threshold would otherwise flap the same emergency on and off every scan. Clamp `0`–`100`. |
+| `debugBindingLogs` | `false` | Log every binding decision at startup, and add a counters line to `/mcaquests compat townstead status` — reads, cache hits, villages and residents observed, signals fired, capability misses, mutation failures, and average/max scan time. For diagnosing a problem or checking the performance budget, not for normal play. |
+
+See [TOWNSTEAD.md](TOWNSTEAD.md) for the full condition/objective/reward reference.
+
 ---
 
 ## Client (`mcaquests-client.toml`)
@@ -132,6 +152,7 @@ See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
 | Option | Default | What it does |
 |---|---|---|
 | `showQuestButtonInMcaMenu` | `true` | Inject the **Quests** button into MCA's villager interaction menu. |
+| `showTownsteadQuestContext` | `true` | Show a short read-only summary under each [Townstead](TOWNSTEAD.md) quest in the log — the villager's trade and tier, the need or schedule the quest is about, the village's spirit (1.4.0). Only what that quest actually reads is shown, and quests that are not about Townstead state show nothing. Server-rendered, so this hides it for you alone and has no effect on quests. |
 | `showQuestToasts` | `true` | Toast popup when a quest becomes ready to turn in. |
 | `showSituationToast` | `true` | Toast popup when a nearby village opens a situation that needs help (0.8.0). |
 | `playQuestSounds` | `true` | Play a sound with the ready toast. |

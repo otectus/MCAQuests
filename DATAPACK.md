@@ -178,7 +178,7 @@ Every objective shares an optional `count` (default `1`). "Targets" accept **eit
 
 | `type` | Fields | Meaning |
 |---|---|---|
-| `mcaquests:item_delivery` | item target, `count`, `consume` (bool, default `true`) | Bring items; consumed on turn-in unless `consume:false`. |
+| `mcaquests:item_delivery` | item target, `count`, `consume` (bool, default `true`), `destination` (optional) | Bring items; consumed on turn-in unless `consume:false`. **`destination`** sends the goods somewhere instead of destroying them: `{"type": "townstead_villager_inventory", "target": "giver"}` puts them in the villager's own inventory, where [Townstead](TOWNSTEAD.md) lets them be eaten or used. A destination overrides `consume`, and the turn-in is **refused** rather than half-done when the goods will not fit. The default, `consume`, is the behaviour every existing pack already has. |
 | `mcaquests:obtain_item` | item target, `count` | Have the items in inventory. |
 | `mcaquests:craft_item` | item target, `count` | Craft that many. |
 | `mcaquests:fish_item` | item target, `count` | Fish up that many. |
@@ -925,6 +925,12 @@ the project's pool, not a single player's inventory or kill count. **Quest objec
 | `mcaquests:project_kill_entity` | `entity` or `tag`, `count` | Kills inside the project's village/scope, banked into the pool. |
 | `mcaquests:project_place_block` | `block` or `tag`, `count` | Blocks placed inside the scope. |
 | `mcaquests:project_talk_to_profession` | `profession` (resource location), `count` | Talk to that many **distinct** villagers of a profession inside the scope. |
+| `mcaquests:townstead_building_project` | `building_type` (required), `minimum_level` (def `1`), `count` (def `1`) | *(optional [Townstead](TOWNSTEAD.md))* The village has that many buildings of the family at the tier. **Polled**, not banked: it reads the village's real building registry, so it is satisfied by whoever raises the dock, and it un-satisfies if the dock is lost. |
+| `mcaquests:townstead_spirit_project` | `spirit` (optional), `points_delta` **or** `target_tier` | *(optional Townstead)* The village's character has grown — either by so many points from where the project started, or up to a tier outright. `points_delta` freezes its baseline when the project opens, so pre-existing progress does not count. |
+| `mcaquests:townstead_workforce_project` | `professions` (list, required), `minimum_tier` (def `1`), `count` (def `1`) | *(optional Townstead)* That many residents practise one of those trades at the tier — "three journeyman farmers before the granary is worth building". |
+| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed` (def `1`), `minimum_fraction` (0–1), `hunger_min`, `energy_min`, `hold_ticks` | *(optional Townstead)* Enough of the village has been fed and rested for long enough. `minimum_observed` stops a one-resident village trivially satisfying a fraction. |
+
+The four `townstead_*` project objectives are **polled** rather than contributed to: they read village state on the project sweep instead of banking a player's donation, so they progress and regress with the village itself. Without Townstead installed they simply sit at zero and the project stalls rather than breaking. See **[TOWNSTEAD.md](TOWNSTEAD.md)**.
 
 ### Shared rewards
 
@@ -1210,6 +1216,11 @@ player-proximity-driven (villages near players are scanned periodically) plus ev
 | `mcaquests:missing_kin` | `relation` (default `any`) | A resident has a missing relative (spouse/parent/child/sibling). |
 | `mcaquests:low_food` | `threshold` (default 16) | The village's banked edible items drop to the threshold. Closes as **cleared** if food recovers. |
 | `mcaquests:night` | `require_full_moon` (default false) | Nightfall in the village. |
+| `mcaquests:townstead_need` | `need` (required), `minimum_fraction` (0–1) | *(optional [Townstead](TOWNSTEAD.md))* That share of the village has crossed into a need crisis. Banded: it closes only once the village recovers past a margin (`needCrisisHysteresis`), so a village sitting on the line does not flap the same famine on and off. |
+| `mcaquests:townstead_collapse` | *(none)* | *(optional Townstead)* A resident has collapsed. |
+| `mcaquests:townstead_profession_tier` | `profession` (optional), `minimum_tier` | *(optional Townstead)* A resident **rises** to that tier. Edge-triggered from a persisted baseline, so an already-master blacksmith never fires it. |
+| `mcaquests:townstead_spirit` | `spirit` (optional), `minimum_tier` | *(optional Townstead)* The village gains a spirit tier, or its dominant character changes. |
+| `mcaquests:townstead_building` | `building_type` (optional), `minimum_level` | *(optional Townstead)* A matching building is newly registered or upgraded. |
 
 ### The `offer` block
 
@@ -1297,6 +1308,149 @@ Gated by the `allowFtbqProgressRewards` config option (on by default) — when d
 ```
 
 `/mcaquests ftbq validate` flags an `id` that doesn't currently resolve as a **warning** (not an error) in this direction too — datapacks legitimately reference FTB book content that hasn't been built yet. See [FTBQUESTS.md](FTBQUESTS.md#commands) for the full command reference.
+
+---
+
+## Townstead integration (optional)
+
+*(1.4.0; requires the optional [Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead) mod,
+version range `[0.7.5,0.8)` and verified against **0.7.6** — see [TOWNSTEAD.md](TOWNSTEAD.md) for the
+full guide, including the bundled quests, projects and situations, the capability model, and what
+happens to a save when Townstead is removed.)*
+
+Townstead gives MCA villagers **needs** (hunger, thirst, energy), a **shift schedule**, **profession
+tiers**, **learned skills** and **ancestry**, and gives villages a **spirit** — a character built from
+what they have built and who lives there. This integration turns all of that into things a quest can
+read, wait for, and change: five conditions, six objectives, four project objectives, four rewards, five
+situation triggers, and a delivery destination.
+
+**They are registered whether or not Townstead is installed**, so a datapack using them parses and
+validates identically either way. What changes is the answer: with Townstead absent every
+`townstead_*` condition is **not met** (so the content is never offered), every `townstead_*` reward
+no-ops, and an already-accepted quest **suspends** — it keeps its progress and its frozen baselines,
+stays abandonable, stops counting down towards its deadline, and resumes exactly where it was if
+Townstead comes back. Nothing fails and nothing is lost.
+
+**Open every Townstead quest with `townstead_available`.** It is the gate that makes all of the above
+true, and without it your content will be offered to players who cannot complete it.
+
+```json
+{ "type": "mcaquests:townstead_available", "capabilities": ["READ_VILLAGER", "READ_NEEDS"] }
+```
+
+Capability names are case-insensitive; one that is not a real capability **fails the reload** rather
+than quietly gating on nothing. `/mcaquests compat townstead status` lists what bound on this server.
+
+### The query
+
+Four of the types below share one query language — a `source`, a dot `path` into it, an `operator`, and
+a `value`:
+
+| Field | Default | Meaning |
+|---|---|---|
+| `source` | (required) | `villager`, `calendar`, `building`, `spirit`, `root`, `gene` |
+| `target` | `giver` | `giver`, `bound`, `related`, `nearest`, `village_any` |
+| `path` | (required) | Dot path into the source; max 128 characters and 8 segments |
+| `operator` | (required) | `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `contains`, `in`, `matches`, `exists` |
+| `value` | (required except `exists`) | A JSON primitive, or an array for `in` |
+| `missing` | `false` | The answer when the source, target, path or capability cannot be read |
+
+Numbers compare by value; strings compare case-insensitively; `matches` is a full-match regex compiled
+at load, so a broken expression fails the reload rather than a quest. **`missing` defaults to `false`**
+on purpose: an unreadable hunger value must make content *ineligible*, not read as "starving" and start
+handing out famine quests.
+
+Useful paths: `needs.hunger` (0–100), `needs.thirst` / `needs.quenched` / `needs.energy` (0–20),
+`needs.fatigue` (0–20, **lower is more rested**), `needs.collapsed`, `schedule.currentActivity`
+(`work`/`meet`/`rest`/`idle`), `schedule.onSchedule`, `professionId`, `professionLevel`,
+`professionXp`, `lifeStage`, `senior`, `heritage.<root id>`.
+`/mcaquests compat townstead snapshot` prints a nearby villager using these exact paths, so its output
+pastes straight into a condition.
+
+### Conditions
+
+| `type` | Fields |
+|---|---|
+| `mcaquests:townstead_available` | `capability` **or** `capabilities` (list) |
+| `mcaquests:townstead_value` | the query fields above |
+| `mcaquests:townstead_building` | `building_type` (required), `minimum_level`, `count`, `minimum_size` |
+| `mcaquests:townstead_spirit` | `spirit`, `minimum_points`, `minimum_tier`, `classification`, `primary`, `minimum_share` |
+| `mcaquests:townstead_skill` | `target`, `skill` (required), `has` (bool, default `true`) |
+
+`building_type` matches a **family**, so `dock` covers `dock_l1` through `dock_l3` and `minimum_level`
+picks the tier. On `townstead_spirit`, points and share are per-spirit when `spirit` names one and
+village-wide when it does not.
+
+### Objectives
+
+| `type` | Fields | Meaning |
+|---|---|---|
+| `mcaquests:townstead_state` | query fields, `hold_ticks` (def `0`), `reset_on_false` (bool, def `true`) | Hold a value true for a stretch — "keep them rested until morning". |
+| `mcaquests:townstead_change` | query fields, `direction` (required, `increase`/`decrease`), `amount` (required), `minimum_final`, `maximum_final`, `baseline_on_accept` (bool, def `true`) | Move a value from where it started. |
+| `mcaquests:townstead_profession_progress` | `target`, `profession` (optional), `xp_delta` **or** `target_xp` **or** `target_tier`, `require_current_profession` (bool, def `true`) | Advance a trade. Leave `profession` out to mean *whatever they practise*, frozen at accept. |
+| `mcaquests:townstead_building_registered` | `building_type` (required), `minimum_level`, `count`, `minimum_size`, `require_new_or_upgraded` (bool, def `true`) | Get something built. |
+| `mcaquests:townstead_spirit_progress` | `spirit` (optional), `points_delta` **or** `target_tier` | Grow a village's character. |
+| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `energy_min`, `require_not_collapsed`, `hold_ticks` | Keep a whole village well. |
+
+**Baselines are frozen once, when the quest is accepted**, and stored with the quest. That is what makes
+"raise their hunger by 40" mean *forty from where they were when you took the job* rather than forty
+from wherever they happen to be at the moment of the check — and it is why a quest survives a Townstead
+absence without silently re-basing itself on resume.
+
+### Rewards
+
+| `type` | Fields | Notes |
+|---|---|---|
+| `mcaquests:townstead_needs` | `target`, `need` (required), `mode` (`delta`/`target`, def `delta`), `amount` (required) | Always clamped to that need's own range, and they differ (hunger `100`, thirst/quenched/energy `20`). Gated by `needRewardsEnabled`. |
+| `mcaquests:townstead_profession_xp` | `target`, `profession` (required), `amount` (required), `respect_daily_cap` (bool, def `true`) | Bypassing the cap needs **both** `respect_daily_cap: false` here **and** `allowUncappedProfessionXp` in config — a datapack alone should not undo a server's progression pacing. Gated by `professionXpRewardsEnabled`. |
+| `mcaquests:townstead_skill` | `target`, `skill` (required), `forget` (bool), `force` (bool) | Teaching an already-known skill is a **success that changes nothing**, not a failure. `force` skips prerequisites and also needs `allowUncappedProfessionXp`. Gated by `skillRewardsEnabled`. |
+| `mcaquests:townstead_reaction` | `target`, `task` (required), `phase` | Purely cosmetic. Quest, project and situation lifecycle reactions already play automatically; this is an *extra* flourish. Gated by `reactionsEnabled`. |
+
+By default a Townstead reward that cannot be applied is **skipped and the quest still completes** — the
+player has already done the work, and trapping them with a finished quest they can never hand in is
+worse. Set `rewardFailureBlocksCompletion` to reverse that.
+
+### Delivering goods that arrive
+
+`mcaquests:item_delivery` takes an optional `destination`:
+
+```json
+{ "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 8,
+  "destination": { "type": "townstead_villager_inventory", "target": "giver" } }
+```
+
+The bread goes **into that villager's inventory**, where Townstead lets them actually eat it, instead of
+being destroyed on hand-over. The transfer is all-or-nothing: if it will not fit, the turn-in is refused
+with a message rather than half-completing. `target` accepts the same values as a query target.
+
+*(`townstead_village_storage` is **not** implemented — Townstead exposes no registered storage API that
+can be written to safely — and the parse error names it explicitly so nobody has to find out the hard
+way.)*
+
+### Example
+
+```json
+{
+  "id": "mypack:a_proper_supper",
+  "difficulty": "easy",
+  "giver": { "professions": ["minecraft:farmer"] },
+  "dialogue": { "offer": {"text": "I have not eaten since the fields flooded."}, "...": "..." },
+  "conditions": { "all_of": [
+      { "type": "mcaquests:townstead_available", "capabilities": ["READ_NEEDS", "MUTATE_NEEDS"] },
+      { "type": "mcaquests:townstead_value", "source": "villager", "target": "giver",
+        "path": "needs.hunger", "operator": "lte", "value": 30 } ] },
+  "objectives": [
+      { "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 6,
+        "destination": { "type": "townstead_villager_inventory", "target": "giver" } },
+      { "type": "mcaquests:townstead_change", "source": "villager", "target": "giver",
+        "path": "needs.hunger", "direction": "increase", "amount": 30, "minimum_final": 60 } ],
+  "rewards": [ { "type": "mcaquests:hearts", "amount": 10 },
+               { "type": "mcaquests:townstead_reaction", "target": "giver", "task": "eat" } ]
+}
+```
+
+Both halves of that are real: the bread physically arrives, and the objective waits for Townstead's own
+simulation to register that they ate it. Neither is a stand-in for the other.
 
 ---
 

@@ -107,6 +107,22 @@ repositories {
 // be exercised without editing a file: `./gradlew runServer -PmcaDevVersion=7.7.0-beta.2+1.20.1`.
 ext.mcaDevVersion = project.findProperty('mcaDevVersion') ?: mca_dev_version
 
+// Every MCA build McaBindingProbeTest verifies the manifest against, one configuration each. Two
+// versions of the same module cannot share a configuration -- Gradle's conflict resolution would
+// collapse them to the newer and the older root would go untested, which is exactly how the missing
+// forge.net.conczin.mca root reached players. Each is probed in its own class loader, so a root the
+// binding no longer recognises fails the build instead of a user's log.
+ext.mcaProbeVersions = (project.findProperty('mcaProbeVersions') ?: mca_probe_versions)
+        .toString().split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+mcaProbeVersions.eachWithIndex { version, i ->
+    configurations.create("mcaProbe${i}") {
+        canBeConsumed = false
+        // Just the MCA jar: the probe opens it against the test classloader, which already carries
+        // Minecraft, and pulling MCA's own dependency graph in would only slow the build.
+        transitive = false
+    }
+}
+
 configurations {
     // Keep MCA off the unit-test runtime. Gradle's testRuntimeOnly extends runtimeOnly, so the dev-run
     // MCA jar would otherwise land on testRuntimeClasspath -- and the unit suite is precisely where
@@ -130,6 +146,16 @@ dependencies {
     // build if it ever returns. runtimeOnly also keeps MCA off testRuntimeClasspath, so the unit
     // suite exercises the genuine "MCA absent" degradation path rather than a half-bound one.
     runtimeOnly fg.deobf("maven.modrinth:minecraft-comes-alive-reborn:${mcaDevVersion}")
+
+    // The probe fleet (see ext.mcaProbeVersions). Deliberately NOT fg.deobf: only Minecraft's methods
+    // and fields carry SRG names in a production jar, never its class names, so MCA's own declarations
+    // already read as e.g. `getResidents(net.minecraft.server.level.ServerLevel)` -- which is exactly
+    // what the manifest's parameter hints compare against. Skipping the deobf round-trip also keeps
+    // these configurations out of ForgeGradle's remap pipeline, which only materialises artifacts for
+    // configurations it owns and cannot serve one resolved from a test task's doFirst.
+    mcaProbeVersions.eachWithIndex { version, i ->
+        add("mcaProbe${i}", "maven.modrinth:minecraft-comes-alive-reborn:${version}")
+    }
 
     // Architectury API (Forge) — required at runtime by MCA, and at compile time by the FTB Quests
     // bridge, which names Architectury event types directly (FtbqEventBridge). Unlike MCA this stays a
@@ -177,21 +203,22 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    // The MCA jar travels as a path, not a classpath: McaBindingProbeTest opens it in its own
+    // The MCA jars travel as paths, not a classpath: McaBindingProbeTest opens each in its own
     // URLClassLoader, so the binding manifest is verified against real MCA without MCA ever being
-    // linked into the test JVM. It is taken from runtimeClasspath because that is a configuration
-    // ForgeGradle deobfuscates -- the probe needs Minecraft's real type names to match the manifest's
-    // parameter hints, which a raw production jar does not carry.
+    // linked into the test JVM. They come from the mcaProbe* configurations, one per version, so that
+    // Gradle's conflict resolution cannot collapse the fleet down to the newest jar.
     //
-    // To verify another MCA build (in particular one with a different package root), run the suite
-    // again with that version on the dev runtime:
-    //     ./gradlew test -PmcaDevVersion=7.7.0-beta.2+1.20.1
+    // The whole fleet is probed on every run (see mca_probe_versions), one entry per known package
+    // root, so a root the binding no longer recognises fails here. To probe a different set:
+    //     ./gradlew test -PmcaProbeVersions=7.7.1-alpha.2+1.20.1
     //
     // Resolved in doFirst, not at configuration time: resolving a configuration while the build is
     // still being configured freezes ForgeGradle's deobf repository before every fg.deobf dependency
     // is registered ("cannot mutate content repository descriptor after repository has been used").
     doFirst {
-        systemProperty 'mcaquests.probe.jars', configurations.runtimeClasspath
+        systemProperty 'mcaquests.probe.jars', mcaProbeVersions.indices
+                .collect { i -> configurations.getByName("mcaProbe${i}").files }
+                .flatten()
                 .findAll { it.name.contains('minecraft-comes-alive') }
                 .join(File.pathSeparator)
     }

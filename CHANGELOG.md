@@ -4,6 +4,186 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-25
+
+### Added — Townstead integration (optional)
+
+**[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead) gives MCA villagers needs, shifts,
+professions, skills and ancestry, and gives villages a character of their own. With it installed, all of
+that becomes something a quest can be about.** Feed a farmer who has not eaten since the fields flooded
+and watch Townstead's own simulation register the meal. Hold someone to their rest through the night.
+Take an apprentice to master of their trade. Raise a dock. Keep a whole village fed through winter.
+Twenty-five quests, five village projects and seven situations ship with it, and the whole surface is
+open to datapacks: **five conditions, six objectives, four project objectives, four rewards, five
+situation triggers and a delivery destination**. Entirely optional — see
+**[TOWNSTEAD.md](TOWNSTEAD.md)**.
+
+- **Bread you hand over actually arrives.** `mcaquests:item_delivery` takes a new `destination`; set it
+  to `townstead_villager_inventory` and the goods go **into that villager's inventory**, where Townstead
+  lets them be eaten and used, instead of being destroyed on hand-over. The transfer is
+  all-or-nothing — a turn-in that will not fit is refused with a message rather than half-completing,
+  and the goods are never taken twice. The default, `consume`, is what every existing pack already does.
+- **Conditions** — `mcaquests:townstead_available`, `townstead_value`, `townstead_building`,
+  `townstead_spirit`, `townstead_skill`.
+- **Objectives** — `mcaquests:townstead_state`, `townstead_change`, `townstead_profession_progress`,
+  `townstead_building_registered`, `townstead_spirit_progress`, `townstead_healthy_residents`.
+- **Project objectives** — `mcaquests:townstead_building_project`, `townstead_spirit_project`,
+  `townstead_workforce_project`, `townstead_resident_wellbeing_project`. These are the first **polled**
+  project objectives: they read village state on a sweep rather than banking a donation, so they
+  progress — and regress — with the village itself.
+- **Rewards** — `mcaquests:townstead_needs`, `townstead_profession_xp`, `townstead_skill`,
+  `townstead_reaction`.
+- **Situation triggers** — `mcaquests:townstead_need`, `townstead_collapse`,
+  `townstead_profession_tier`, `townstead_spirit`, `townstead_building`.
+- **One query language across all of it.** A `source` (`villager`, `calendar`, `building`, `spirit`,
+  `root`, `gene`), a dot `path`, an `operator` and a `value`, with a `missing` answer that defaults to
+  **false** so an unreadable value makes content *ineligible* rather than accidentally satisfied.
+  Regexes are compiled at load, so a broken one fails the reload rather than a quest.
+- **Baselines are frozen when the quest is accepted**, not read fresh on every check, so "raise their
+  hunger by 40" means forty from where they were when you took the job. Stored with the quest, which is
+  what lets one survive Townstead being absent without silently re-basing itself.
+- **New commands.** `/mcaquests compat townstead status` reports the detected version and which of the
+  thirteen capabilities bound; `probe` exercises each one for real; `snapshot` prints a nearby
+  villager's state **using the exact paths a condition takes**, so its output pastes straight into a
+  datapack.
+- Network protocol bumped to `10`.
+
+### Added — quests suspend instead of failing
+
+**Removing a mod should not destroy the work you have already done.** A quest whose objectives need
+Townstead now *suspends* when Townstead is absent, disabled or unbound, rather than failing:
+
+- It keeps its progress and its frozen baselines, and resumes exactly where it was if Townstead comes
+  back.
+- **It stops counting down.** Suspended time is accumulated on the quest and subtracted at the
+  comparison, so a deadline is not eaten by an absence. Applied at the comparison rather than by
+  shifting the accept time, because `deadline_time_of_day` anchors on the hour you accepted.
+- **It can still be abandoned.** Suspension is derived rather than stored as a new menu status,
+  precisely so the existing card buttons keep working — a new status would have silently made suspended
+  quests unabandonable.
+- The quest log says **why**, from the objective itself, rather than showing a stalled bar with no
+  explanation.
+
+### Added — the bundled Townstead content
+
+- **Twenty-five quests** across five professions, from a pantry run to *The Master Tanner*, including
+  *A Proper Night's Rest*, *Water for the Weary*, *Deep Water Days*, *The Long Harvest* and
+  *Master of the Trade*.
+- **Five village projects** — *A Working Village*, *Well-Fed Townstead*, *Raise the Docks*,
+  *Pastures and Wool*, *Find Our Character*.
+- **Seven situations** — hunger crisis, dehydrated worker, exhausted workforce, collapsed villager,
+  master artisan, new civic building, community identity.
+- All of it is behind `contentEnabled`, so a server can keep the mechanics for its own datapacks
+  without the built-in content competing for menu slots.
+
+### Added — the quest log shows the state a quest is about
+
+- A Townstead quest's card carries a short read-only summary: the villager's trade and tier, the need or
+  schedule the quest turns on, the village's spirit. **Only what that quest actually reads is shown**,
+  and a quest that is not about Townstead state shows nothing. New client option
+  `showTownsteadQuestContext` (default `true`) hides it for you alone.
+
+### Changed
+
+- **Fourteen new common config options under `[compat.townstead]`** — `enabled`, `contentEnabled`,
+  `reactionsEnabled`, `needRewardsEnabled`, `professionXpRewardsEnabled`, `skillRewardsEnabled`,
+  `allowUncappedProfessionXp`, `rewardFailureBlocksCompletion`, `pollIntervalTicks`,
+  `projectPollIntervalTicks`, `maxVillagersPerPass`, `maxVillagesPerPass`, `needCrisisHysteresis`,
+  `debugBindingLogs` — plus the client option `showTownsteadQuestContext`. See
+  [CONFIG.md](CONFIG.md).
+- **Bypassing Townstead's own pacing takes two keys, not one.** An XP reward that asks to skip the daily
+  cap, or a skill reward that asks to skip prerequisites, is honoured only when the server has also set
+  `allowUncappedProfessionXp`. A datapack alone should not be able to undo the progression pacing
+  Townstead deliberately sets on somebody else's server.
+- **A Townstead reward that cannot be applied is skipped and the quest still completes.** The player has
+  already done the work, and trapping them with a finished quest they can never hand in is worse than
+  quietly missing the villager-facing half of the reward. `rewardFailureBlocksCompletion` reverses this.
+- **Villager and village sweeps are bounded and round-robin.** At most `maxVillagersPerPass` residents
+  and `maxVillagesPerPass` villages are inspected per pass, continuing where the last pass stopped, so
+  nobody is skipped and no single tick is unbounded on a large server.
+- **Need crises are banded.** A crisis opens at its threshold and closes only once the village recovers
+  past `needCrisisHysteresis` percentage points, so a village sitting exactly on the line does not flap
+  the same famine on and off every scan.
+- **The Quests button in MCA's villager menu now avoids every widget, not only buttons.** It looked for
+  `Button` instances at a similar height; Townstead adds its own controls to that screen (Pose among
+  them), which the old check could not see, and it compared top edges rather than testing whether the
+  rows actually overlap. Both are fixed, so the button places itself correctly beneath whatever is
+  there.
+- **Reactions are cosmetic, always.** Quest, project and situation lifecycle transitions play Townstead
+  reactions automatically; a reaction that fails never blocks a completion, and `mcaquests:townstead_reaction`
+  is an extra flourish rather than a mechanism.
+- Six members were added to the MCA binding manifest — `Village#getBuildings`, `#getBuildingsOfType`, and
+  `Building`'s `getId`/`getType`/`getSize`/`getCenter`. **Village-wide building reads belong to MCA, not
+  Townstead**, which only adds type ids to buildings MCA already owns; routing them through MCA means the
+  same code serves a vanilla-MCA library and a Townstead dock.
+- **314 new translation keys**, shipped complete in both `en_us` and `pt_br` as always. No existing key
+  was reworded or removed.
+
+### Fixed
+
+- **Loading a younger single-player world stopped situation detection permanently.** The "is a
+  server-wide pass due" guards are static and survive a world change, so after loading a world whose
+  game time was *lower* than the last one's, `now - lastScan` stayed negative for as long as it took to
+  catch up — which for a fresh world after a long-lived one is effectively forever. Both that guard and
+  the new project sweep now tolerate time going backwards. This bug predates 1.4.0.
+
+### Compatibility
+
+- **Townstead `[0.7.5,0.8)`, verified against 0.7.6**, declared in `mods.toml` as a soft optional
+  dependency (`mandatory=false`, `ordering="AFTER"`). MCA: Quests loads and plays exactly as before
+  without it.
+- **Nothing is bound by parameter type, and the jar contains zero Townstead code.** Townstead is itself
+  built against MCA, so its own method signatures name MCA classes — binding any of them directly would
+  tie this mod to one MCA package layout and undo the runtime resolution added in 1.3.0. Members are
+  therefore matched by **name and arity** and invoked through handles whose arguments are all `Object`.
+  A build-time tripwire scans every compiled class's constant pool and fails the build if one so much as
+  mentions a Townstead type.
+- **Binding reports capabilities, not a yes or no.** Thirteen of them, resolved independently, so a
+  Townstead point release that moves one internal method disables exactly the feature that needed it and
+  leaves the rest working. An unresolved member becomes an inert stub; nothing can throw.
+- **Removing Townstead from an existing world is safe.** Active Townstead quests suspend with their
+  progress and baselines intact and stay abandonable; datapack types stay registered either way, so a
+  pack always parses. See [TOWNSTEAD.md](TOWNSTEAD.md) for the full removal contract.
+- **Protocol `9` → `10`.** `QuestLogEntry` gained a `suspended` flag and a list of context lines, so the
+  client and server must be on matching versions — as always for a protocol bump.
+- **Save format — additive only.** `ActiveQuest` gained `suspended_ticks` (read as `0` when absent) and
+  `SharedObjectiveProgress` gained an `extra` compound that is **written only when non-empty**, so a
+  project that never polled serialises byte-for-byte as it did in 1.3.0. No migration is needed in
+  either direction.
+- **Add-on API — `SituationSignalType` gained five constants.** They are **appended**, never inserted:
+  the ordinal is one term of the per-village situation draw seed, so inserting above would silently
+  reshuffle which situation an existing village opens on an existing day. An exhaustive `switch` over
+  this enum without a `default` will no longer compile; add one.
+- **Add-on API — `QuestObjective` gained a defaulted `unavailableReason(...)`.** It is what a suspended
+  quest shows in the log instead of a stalled bar. Defaulted, so nothing breaks.
+- **Add-on API — `ItemDeliveryObjective` gained a `destination` component.** Its three-argument
+  constructor is kept as a convenience that defaults to `CONSUMED`, so existing add-on code compiles
+  unchanged; `TriggerSignal` likewise keeps its previous-arity constructor beside the widened one.
+- `mcaquests.mixins.json` is unchanged and still targets only vanilla classes — the Townstead
+  integration adds no mixins at all.
+
+### Notes for maintainers
+
+- `./gradlew townsteadProbeTest -PtownsteadLegacyJar=<path to townstead jar>` binds against a real
+  Townstead jar and reports every capability, catching a signature change before players do. It is not
+  part of `check`, because it needs a jar the repository does not ship.
+- **The MCA binding probe now replays the manifest against every known package root on every run**, not
+  only whichever build the dev runtime happened to pin. `mca_probe_versions` lists one MCA version per
+  root — `7.6.20` and `7.7.0-beta.2` are `forge.net.mca`, `7.7.1-alpha.2` is
+  `forge.net.conczin.mca` — each resolved through its own configuration, because two versions of one
+  module in a shared configuration would be collapsed to the newer by Gradle's conflict resolution and
+  the older root would go untested. That is exactly how the missing `forge.net.conczin.mca` root reached
+  players in the first place. Add a version there whenever MCA moves again.
+- With `debugBindingLogs` on, `/mcaquests compat townstead status` adds a counters line — reads, cache
+  hits, villages and residents observed, signals fired, capability misses, mutation failures, and
+  average and maximum scan time — for checking the performance budget on a large server.
+- **The end-to-end scenarios and the installation matrix are a checklist in
+  [TOWNSTEAD.md](TOWNSTEAD.md), not an automated suite.** MCA cannot load in a dev run (its Forge mixins
+  ship refmap-less with hard-coded SRG names), so a GameTest cannot reach an MCA villager at all. The
+  arithmetic that those tests would otherwise have been the only cover for — the XP award algorithm, the
+  per-need clamps, the crisis hysteresis band — is extracted into pure functions and unit-tested
+  directly instead.
+
 ## [1.3.0] - 2026-08-25
 
 ### Added — Journal link into MCA: Reputation

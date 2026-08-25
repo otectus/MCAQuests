@@ -32,6 +32,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 - 🧩 **Extensible** — a public Java API lets add-ons register their own objective/reward/condition types, and five Forge events (`QuestAccepted/Ready/Completed/Abandoned/Failed`) let other mods react.
 - 💬 **MCA: Conversations integration** (optional) — with the **MCA: Conversations** add-on installed, villagers **speak** a quest's offer / progress / completion / failure line in their own personality instead of the static text, and "talk to this villager" objectives progress from an **actual conversation**. MCA: Quests ships only the hooks and safe fallbacks — without the add-on, dialogue stays as written and nothing else changes.
 - 📖 **FTB Quests integration** (optional) — ten task types and three reward types let an FTB Quests book read and grant real MCA: Quests progress (villager quests, relationship arcs, reputation, titles, projects, situations, hearts, marriage), and three conditions plus an objective and a reward let MCA: Quests datapacks read and write FTB book progress right back. Fully optional in both directions — see **[FTBQUESTS.md](FTBQUESTS.md)**.
+- 🏡 **Townstead integration** (optional) — with **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** installed, a villager's **hunger, thirst, energy, shift schedule, profession tier, learned skills** and their village's **buildings and character** all become things a quest can be about. Twenty-five quests, five community projects and seven situations ship with it: feed a starving farmer and watch them recover, hold someone to their rest, take an apprentice to master, raise a dock, keep a whole village fed. Bread you hand over goes **into the villager's own inventory**, where Townstead lets them actually eat it. Remove Townstead later and an in-progress quest **suspends with its progress intact** rather than failing — see **[TOWNSTEAD.md](TOWNSTEAD.md)**.
 
 ## Requirements
 
@@ -43,6 +44,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | **[Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api)** | **Required** (Forge) — MCA Reborn depends on it |
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
 | **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2001.4.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
+| **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.8)`, verified against **0.7.6**; adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
 | **Create: Numismatics** | *Optional* — set `currencyProvider = NUMISMATICS` to pay quest rewards in coins ([CONFIG.md](CONFIG.md#rewardscurrency)) |
 
 MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
@@ -95,6 +97,10 @@ If an MCA build ever ships a layout this version does not recognise, MCA-backed 
 The **MCA: Conversations** integration is a soft dependency: MCA: Quests exposes the dialogue and objective hooks (`QuestDialogueHooks`, `ExternalSignalObjective`) and the add-on registers itself against them. When it isn't installed the hooks simply no-op — quest dialogue falls back to the static datapack text and objectives progress through their normal detectors.
 
 The **FTB Quests** integration is likewise a soft, optional dependency (`mandatory=false`, tested against **2001.4.x**): every FTB-facing task/reward routes through an internal bridge that becomes an inert no-op if FTB Quests is absent, disabled, or throws, so nothing about MCA: Quests' own datapack format or world save depends on it being installed. The integration compiles against FTB's publicly published maven artifacts and ships none of them — the jar contains zero FTB code. See **[FTBQUESTS.md](FTBQUESTS.md)** for the full task/reward/condition reference.
+
+The **Townstead** integration is optional in the same way, and is reached even more carefully. Townstead is itself built against MCA, so its own method signatures name MCA classes — binding any of them directly would tie this mod to one MCA package layout and undo the runtime resolution described above. So nothing is bound by parameter type: Townstead members are matched by name and arity and invoked through handles whose arguments are all `Object`, and a build-time check fails the build if any compiled class so much as mentions a Townstead type. The jar contains zero Townstead code and is not compiled against it.
+
+Binding reports **capabilities** rather than a single yes or no, so a Townstead point release that moves one internal method disables exactly the feature that needed it and nothing else. `/mcaquests compat townstead status` says what bound; `probe` checks each capability by actually using it. **Removing Townstead from an existing world is safe**: quests that depend on it suspend with their progress and frozen baselines intact, stay abandonable, and resume where they left off if it comes back. See **[TOWNSTEAD.md](TOWNSTEAD.md)**.
 
 ## License & credits
 
