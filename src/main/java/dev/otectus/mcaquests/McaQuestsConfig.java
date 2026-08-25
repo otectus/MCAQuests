@@ -95,6 +95,22 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue allowFtbqProgressRewards;
         public final ForgeConfigSpec.BooleanValue syncFtbqEditorIds;
 
+        // Townstead optional integration (Townstead spec section 11, v1.4.0).
+        public final ForgeConfigSpec.BooleanValue townsteadEnabled;
+        public final ForgeConfigSpec.BooleanValue townsteadContentEnabled;
+        public final ForgeConfigSpec.BooleanValue townsteadReactionsEnabled;
+        public final ForgeConfigSpec.BooleanValue townsteadNeedRewardsEnabled;
+        public final ForgeConfigSpec.BooleanValue townsteadProfessionXpRewardsEnabled;
+        public final ForgeConfigSpec.BooleanValue townsteadSkillRewardsEnabled;
+        public final ForgeConfigSpec.BooleanValue townsteadAllowUncappedProfessionXp;
+        public final ForgeConfigSpec.BooleanValue townsteadRewardFailureBlocksCompletion;
+        public final ForgeConfigSpec.IntValue townsteadPollIntervalTicks;
+        public final ForgeConfigSpec.IntValue townsteadProjectPollIntervalTicks;
+        public final ForgeConfigSpec.IntValue townsteadMaxVillagersPerPass;
+        public final ForgeConfigSpec.IntValue townsteadMaxVillagesPerPass;
+        public final ForgeConfigSpec.IntValue townsteadNeedCrisisHysteresis;
+        public final ForgeConfigSpec.BooleanValue townsteadDebugBindingLogs;
+
         Common(ForgeConfigSpec.Builder b) {
             b.push("quests");
             enableDefaultQuestPack = b.comment("Ship and enable the built-in default quest pack.")
@@ -303,6 +319,68 @@ public final class McaQuestsConfig {
                     "Send the known-ids packet to clients on login/reload when FTB Quests is present,",
                     "so the mcaquests condition/reward editor dropdowns can offer real quest/task ids.")
                     .define("syncFtbqEditorIds", true);
+            b.pop();
+
+            b.push("compat.townstead");
+            townsteadEnabled = b.comment(
+                    "Master switch for the optional Townstead integration. When false (or Townstead is",
+                    "absent) no Townstead class is loaded, no Townstead state is queried, and Townstead",
+                    "content stays ineligible. Datapack type registration is unaffected either way, so",
+                    "packs still parse. Takes effect on restart.")
+                    .define("enabled", true);
+            townsteadContentEnabled = b.comment(
+                    "Offer the quests, projects and situations that MCA: Quests ships for Townstead. Turn",
+                    "this off to keep the mechanics available to your own datapacks without the built-in",
+                    "content competing for menu slots.")
+                    .define("contentEnabled", true);
+            townsteadReactionsEnabled = b.comment(
+                    "Let quest, project and situation transitions play Townstead reactions (villagers",
+                    "applaud, wave, and so on). Purely cosmetic: a reaction never affects quest state, and",
+                    "a failed one never blocks a completion.")
+                    .define("reactionsEnabled", true);
+            townsteadNeedRewardsEnabled = b.comment(
+                    "Allow the mcaquests:townstead_needs reward to change a villager's hunger, thirst or",
+                    "energy. Values are always clamped to Townstead's own ranges.")
+                    .define("needRewardsEnabled", true);
+            townsteadProfessionXpRewardsEnabled = b.comment(
+                    "Allow the mcaquests:townstead_profession_xp reward to award Townstead profession XP.")
+                    .define("professionXpRewardsEnabled", true);
+            townsteadSkillRewardsEnabled = b.comment(
+                    "Allow the mcaquests:townstead_skill reward to teach or remove Townstead skills.")
+                    .define("skillRewardsEnabled", true);
+            townsteadAllowUncappedProfessionXp = b.comment(
+                    "Permit profession XP rewards that ask to bypass Townstead's daily cap. Bypassing needs",
+                    "BOTH this switch and \"respect_daily_cap\": false in the reward JSON, because uncapped",
+                    "XP lets a quest loop outrun Townstead's intended progression pacing.")
+                    .define("allowUncappedProfessionXp", false);
+            townsteadRewardFailureBlocksCompletion = b.comment(
+                    "When a Townstead reward cannot be applied (mod removed mid-quest, villager gone,",
+                    "capability missing), refuse the turn-in instead of completing without it. Default off:",
+                    "removing Townstead should never trap a player in a quest they have finished.")
+                    .define("rewardFailureBlocksCompletion", false);
+            townsteadPollIntervalTicks = b.comment(
+                    "How often (ticks) Townstead-backed quest objectives re-read villager state. Shares the",
+                    "existing once-per-second objective pass; raising this trades responsiveness for tick time.")
+                    .defineInRange("pollIntervalTicks", 20, 10, 1200);
+            townsteadProjectPollIntervalTicks = b.comment(
+                    "How often (ticks) Townstead-backed project objectives re-read village state.")
+                    .defineInRange("projectPollIntervalTicks", 20, 10, 1200);
+            townsteadMaxVillagersPerPass = b.comment(
+                    "Cap on how many village residents one player's pass inspects. Larger villages are",
+                    "visited round-robin across passes, so nobody is ignored and no pass is unbounded.")
+                    .defineInRange("maxVillagersPerPass", 64, 1, 256);
+            townsteadMaxVillagesPerPass = b.comment(
+                    "Cap on how many villages one situation scan inspects, also round-robin.")
+                    .defineInRange("maxVillagesPerPass", 8, 1, 64);
+            townsteadNeedCrisisHysteresis = b.comment(
+                    "Gap between the value that opens a need crisis and the value that closes it. With a",
+                    "hunger crisis at 20 and a hysteresis of 10, the village leaves the crisis at 30 -- so a",
+                    "villager hovering on the threshold cannot flap the situation on and off.")
+                    .defineInRange("needCrisisHysteresis", 10, 0, 100);
+            townsteadDebugBindingLogs = b.comment(
+                    "Log every Townstead binding decision at startup and each capability miss at runtime.",
+                    "Verbose; for diagnosing an integration problem, not for normal play.")
+                    .define("debugBindingLogs", false);
             b.pop();
         }
     }

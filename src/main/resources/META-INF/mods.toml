@@ -60,3 +60,16 @@ description='''${mod_description}'''
     versionRange="[0.2,)"
     ordering="AFTER"
     side="BOTH"
+
+# Townstead is an OPTIONAL integration (compat.townstead). Quests loads and plays exactly as it does
+# today without it. When present we load AFTER it so its registries, profession/skill definitions and
+# saved data exist before TownsteadCompat binds; from that point Townstead needs, schedules,
+# professions, skills, buildings and village spirit become quest state. Removing Townstead later does
+# not corrupt a save: active Townstead objectives suspend with their baselines intact and can still be
+# abandoned (Townstead spec 1.2, 10.1).
+[[dependencies.${mod_id}]]
+    modId="townstead"
+    mandatory=false
+    versionRange="[0.7.5,0.8)"
+    ordering="AFTER"
+    side="BOTH"

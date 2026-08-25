@@ -71,5 +71,9 @@ public final class McaQuests {
         // classloader is authoritative. Resolution itself already happened lazily and cannot fail; this
         // only surfaces the outcome so a bug report can say which root matched (spec §35.1).
         event.enqueueWork(dev.otectus.mcaquests.compat.mca.McaBinding::init);
+        // Bind the optional Townstead integration LAST: its village-spirit capability reaches MCA's
+        // Village object through McaHandles, so MCA must already be resolved. Absent Townstead this is
+        // one ModList check and nothing else (Townstead spec 3.2).
+        event.enqueueWork(dev.otectus.mcaquests.compat.TownsteadCompat::init);
     }
 }

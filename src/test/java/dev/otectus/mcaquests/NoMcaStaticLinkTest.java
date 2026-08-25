@@ -44,6 +44,10 @@ class NoMcaStaticLinkTest {
     /**
      * Every MCA package root this mod has ever seen, in internal form. {@code net/mca/} keeps its
      * trailing slash so it cannot collide with an unrelated {@code net/mcaSomething} package.
+     *
+     * <p>The Townstead compatibility spec also names a {@code forge.net.conczin.mca} root. It needs no
+     * entry of its own: {@code net/conczin/mca} is a substring of it, so any class referencing that
+     * root already trips the second needle. Adding it would be dead weight that reads like coverage.
      */
     private static final String[] MCA_ROOTS = {"forge/net/mca", "net/conczin/mca", "net/mca/"};
 
