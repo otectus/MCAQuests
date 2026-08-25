@@ -8,6 +8,7 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.FtbqBridge;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.mca.McaBinding;
 import dev.otectus.mcaquests.data.FtbqReferenceWalker;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
@@ -54,8 +55,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Admin/debug commands under {@code /mcaquests} (spec section 24). Phase 0 ships only
- * {@code debug villager}, which exercises the entire {@link McaCompat} adapter end-to-end.
+ * Admin/debug commands under {@code /mcaquests} (spec section 24). {@code debug villager} exercises
+ * the entire {@link McaCompat} adapter end-to-end, and {@code debug mca} reports which MCA package
+ * layout the runtime binding resolved against — ask for that one first on any MCA-shaped bug report.
  */
 @Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class McaQuestsCommand {
@@ -86,6 +88,8 @@ public final class McaQuestsCommand {
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.literal("villager")
                                 .executes(McaQuestsCommand::debugVillager))
+                        .then(Commands.literal("mca")
+                                .executes(McaQuestsCommand::debugMca))
                         .then(Commands.literal("quest")
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
                                         .executes(McaQuestsCommand::debugQuest))))
@@ -720,6 +724,18 @@ public final class McaQuestsCommand {
               }
             }
             """;
+
+    /**
+     * Reports which MCA package layout the runtime binding matched, and anything in its manifest that
+     * did not resolve. This is the single most useful thing to ask a bug reporter for: MCA has
+     * repackaged mid-version-line before, and the difference between "bound to forge.net.mca.",
+     * "bound to net.conczin.mca." and "no root matched" explains most MCA-shaped reports outright.
+     */
+    private static int debugMca(CommandContext<CommandSourceStack> ctx) {
+        String report = "MCA binding: " + McaBinding.describe();
+        ctx.getSource().sendSuccess(() -> Component.literal(report), false);
+        return 1;
+    }
 
     private static int debugVillager(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();

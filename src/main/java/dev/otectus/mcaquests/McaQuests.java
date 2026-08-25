@@ -67,5 +67,9 @@ public final class McaQuests {
         // is the only place the optional MCA: Reputation integration is ever switched on; without the
         // call Quests simply uses its own per-player standing store (spec 29.1).
         event.enqueueWork(dev.otectus.mcaquests.compat.ReputationBridge::init);
+        // Report which MCA package layout we bound to, once, now that every mod is constructed and the
+        // classloader is authoritative. Resolution itself already happened lazily and cannot fail; this
+        // only surfaces the outcome so a bug report can say which root matched (spec §35.1).
+        event.enqueueWork(dev.otectus.mcaquests.compat.mca.McaBinding::init);
     }
 }

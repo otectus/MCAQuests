@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.target.LocationAnchor;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -43,7 +44,7 @@ import java.util.UUID;
  */
 public record EscortEntityObjective(VillagerTarget villager, LocationAnchor destination,
                                     int radius, boolean follow, boolean lead, int waitDistance,
-                                    Optional<Boolean> stageUntilNear)
+                                    Optional<Boolean> stageUntilNear, Optional<Integer> minJourney)
         implements QuestObjective, VillagerTargeted {
 
     public static final Codec<EscortEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -53,8 +54,31 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
             Codec.BOOL.optionalFieldOf("follow", true).forGetter(EscortEntityObjective::follow),
             Codec.BOOL.optionalFieldOf("lead", false).forGetter(EscortEntityObjective::lead),
             Codec.intRange(1, 64).optionalFieldOf("wait_distance", 6).forGetter(EscortEntityObjective::waitDistance),
-            Codec.BOOL.optionalFieldOf("stage_until_near").forGetter(EscortEntityObjective::stageUntilNear)
+            Codec.BOOL.optionalFieldOf("stage_until_near").forGetter(EscortEntityObjective::stageUntilNear),
+            Codec.intRange(0, 512).optionalFieldOf("min_journey").forGetter(EscortEntityObjective::minJourney)
     ).apply(instance, EscortEntityObjective::new));
+
+    /** How far the escortee must start from the destination, defaulting to {@code minEscortJourney}. */
+    public int effectiveMinJourney() {
+        return ObjectiveSupport.effectiveMinJourney(minJourney);
+    }
+
+    /**
+     * An escort whose escortee is already at the destination is not a quest, it is a free reward, so the
+     * offer is withheld while that is true. Answers {@code false} when the escortee or the anchor cannot
+     * be resolved: a quest that might be doable beats one silently withheld.
+     */
+    @Override
+    public boolean isTriviallySatisfied(QuestContext context) {
+        Optional<LivingEntity> escortee = villager.resolveFrom(context.player(), context.villager(), context.level());
+        if (escortee.isEmpty()) {
+            return false;
+        }
+        return destination.resolveTarget(context.player(), context.villager(), context.level())
+                .map(dest -> ObjectiveSupport.withinJourneyOf(escortee.get(), context.level(), dest,
+                        radius, effectiveMinJourney()))
+                .orElse(false);
+    }
 
     @Override
     public QuestObjectiveType<?> type() {
@@ -180,7 +204,7 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         if (dest.isEmpty()) {
             return; // destination not resolvable yet — pause
         }
-        if (hasArrived(escorted, level, dest.get())) {
+        if (isArmed(active, escorted, progress, level, dest.get()) && hasArrived(escorted, level, dest.get())) {
             progress.setCount(1);
             if (follow) {
                 McaCompat.setQuestGiverFollow(player, escorted, false);
@@ -230,15 +254,31 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         }
     }
 
-    /** Freezes the destination if needed and sticks the objective complete once the escortee has arrived. */
+    /**
+     * Freezes the destination if needed and sticks the objective complete once the escortee has arrived —
+     * provided the escort was a real journey. A quest that reaches {@code accept} without passing the
+     * offer gate (a chain stage, a command) can begin with the escortee already standing at the
+     * destination, and crediting that would pay the reward for nothing; see
+     * {@link ObjectiveSupport#isJourneyArmed}.
+     */
     private void evalArrival(ServerPlayer player, ActiveQuest active, LivingEntity escortee,
                              ObjectiveProgress progress, ServerLevel level) {
         Optional<FrozenDest> dest = ensureFrozenDest(player, active, progress, level);
-        if (dest.isPresent() && hasArrived(escortee, level, dest.get())) {
+        if (dest.isEmpty() || !isArmed(active, escortee, progress, level, dest.get())) {
+            return;
+        }
+        if (hasArrived(escortee, level, dest.get())) {
             progress.setCount(1);
             progress.extra().putBoolean(K_LEADING, false);
             McaCompat.stopVillagerLeading(escortee);
         }
+    }
+
+    /** Bridges the frozen destination back to a {@link LocationAnchor.Resolved} for the journey latch. */
+    private boolean isArmed(ActiveQuest active, LivingEntity escortee, ObjectiveProgress progress,
+                            ServerLevel level, FrozenDest dest) {
+        return ObjectiveSupport.isJourneyArmed(progress, active, level, escortee,
+                new LocationAnchor.Resolved(dest.pos(), dest.villageId()), radius, effectiveMinJourney());
     }
 
     /**

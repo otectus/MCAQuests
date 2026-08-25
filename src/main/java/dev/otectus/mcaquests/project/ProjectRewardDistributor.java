@@ -211,12 +211,7 @@ public final class ProjectRewardDistributor {
         }
         int id = villageId.getAsInt();
         for (UUID residentUuid : McaCompat.villageResidentUuids(level, id)) {
-            Entity resident = level.getEntity(residentUuid);
-            if (resident != null && resident.isAlive() && McaCompat.isMcaVillager(resident)) {
-                McaCompat.addHearts(player, resident, amount);
-            } else {
-                McaCompat.pushVillageHearts(level, id, residentUuid, amount);
-            }
+            McaCompat.awardHearts(level, residentUuid, player, amount);
         }
         return true;
     }
@@ -280,12 +275,7 @@ public final class ProjectRewardDistributor {
             villagers.addAll(McaCompat.villageResidentUuids(level, state.villageId().getAsInt()));
         }
         for (UUID villagerUuid : villagers) {
-            Entity villager = level.getEntity(villagerUuid);
-            if (villager != null && villager.isAlive() && McaCompat.isMcaVillager(villager)) {
-                McaCompat.addHearts(player, villager, amount);
-            } else if (state.villageId().isPresent()) {
-                McaCompat.pushVillageHearts(level, state.villageId().getAsInt(), villagerUuid, amount);
-            }
+            McaCompat.awardHearts(level, villagerUuid, player, amount);
         }
     }
 

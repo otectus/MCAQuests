@@ -60,6 +60,7 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue hardCurrencyMax;
         public final ForgeConfigSpec.BooleanValue followGiverAfterAccept;
         public final ForgeConfigSpec.DoubleValue leadVillagerSpeed;
+        public final ForgeConfigSpec.IntValue minEscortJourney;
         public final ForgeConfigSpec.BooleanValue highlightQuestTargets;
         public final ForgeConfigSpec.BooleanValue highlightUsesGlowingEffect;
         public final ForgeConfigSpec.BooleanValue questChatMessages;
@@ -186,6 +187,15 @@ public final class McaQuestsConfig {
                     "(escort_entity with \"lead\": true). Lower keeps the villager near walking pace so the",
                     "player can stay close and guard it.")
                     .defineInRange("leadVillagerSpeed", 0.6, 0.1, 2.0);
+            minEscortJourney = b.comment(
+                    "How far, in blocks, the subject of an escort_entity or reach_location objective must",
+                    "START from the destination for the quest to be worth doing. A quest whose subject is",
+                    "already inside this distance is not offered, and one granted some other way (a quest",
+                    "chain, a command) will not credit arrival until the subject has genuinely travelled.",
+                    "This is what stops 'walk me to my bed' being offered by a villager standing at their",
+                    "bed and completed instantly for the reward. A datapack can override it per objective",
+                    "with \"min_journey\"; set 0 here to fall back to the objective's own arrival radius.")
+                    .defineInRange("minEscortJourney", 24, 0, 512);
             highlightQuestTargets = b.comment(
                     "If true (default), a villager that is the target of one of your active quests (the",
                     "recipient of a delivery, a missing relative to find, or the villager to",

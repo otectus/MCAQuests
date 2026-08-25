@@ -68,6 +68,7 @@
   ],
   "conditions": {
     "type": "mcaquests:giver_distance_from_village",
-    "min_distance": 64
+    "min_distance": 64,
+    "require_outside_border": true
   }
 }

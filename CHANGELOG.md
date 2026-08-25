@@ -4,7 +4,7 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - unreleased
+## [1.3.0] - 2026-08-25
 
 ### Added — Journal link into MCA: Reputation
 
@@ -57,6 +57,67 @@ actual MCA villager, and the mod shows you where that villager is.
   in both locales.
 - Network protocol bumped to `9` for the highlight packet and the tracker's target hint.
 
+### Fixed — MCA: Quests crashed a server on MCA 7.7
+
+**Right-clicking any entity killed a dedicated server** running MCA Reborn 7.7.1-alpha.2:
+
+```
+java.lang.NoClassDefFoundError: forge/net/mca/entity/VillagerEntityMCA
+    at dev.otectus.mcaquests.event.QuestProgressEvents.onTalkToVillager(QuestProgressEvents.java:652)
+    at net.minecraftforge.common.ForgeHooks.onInteractEntity(ForgeHooks.java:765)
+```
+
+MCA repackaged mid-7.7-line. Through 7.6.20 it shipped a Forgix-merged jar whose Forge classes live at
+`forge.net.mca.*`; a later 7.7 build dropped the merge and renamed the base package. `McaCompat`
+imported the old root directly, so on a renamed build the very first MCA reference failed to link — and
+it failed inside an `EntityInteract` handler, which is why a right-click was enough to take the server
+down. `mods.toml` accepts `[7.6,8)`, so Forge admitted the combination rather than refusing it.
+
+- **MCA is now resolved by name at runtime, and one jar serves every layout.** New
+  `compat.mca.McaBinding` probes `forge.net.mca.` → `net.conczin.mca.` → `net.mca.` for MCA's villager
+  class and binds a manifest of ~60 classes and members against whichever root matched. **The root is
+  never inferred from the version number** — 7.7.0-beta.2 still ships `forge.net.mca` while later 7.7
+  builds do not, so only a class probe can tell.
+- **No MCA type is named anywhere in the mod any more.** `compat.mca.McaHandles` presents MCA entirely
+  in vanilla and JDK types, MCA enums included (reads return the lowercase `name()`).
+- **Nothing can crash.** An unresolved member becomes a constant stub returning that type's default, so
+  there are no null handles and no NPE path; the resolver never throws, and all ~60 `McaCompat` methods
+  now carry a `try`/`catch` — ten of them, `isMcaVillager` among them, previously had none at all.
+  Fully unbound, the mod is inert but installed: no quest is offered, no villager menu opens, no hearts
+  move, and the server stays up.
+- **New `/mcaquests debug mca`** reports the matched root and anything in the manifest that did not
+  resolve. Ask for this first on any MCA-shaped bug report.
+- Startup logs the binding outcome exactly **once** — never per call, which a partially-bound MCA would
+  otherwise turn into a flood during an eligibility pass.
+
+### Fixed — escort quests could be turned in without doing them
+
+**Some quests were free emeralds.** Nothing asked whether a quest's objectives were *already* satisfied
+before offering it. `escort_entity` freezes its destination on the first poll, about a second after
+accept, and evaluates arrival in the same call — so a villager standing at the destination completed the
+quest before the player moved. Accept it, hand it straight back to the giver standing right there,
+collect currency, XP and hearts, and repeat every cooldown. *Walk Me to Bed*, offered at night by a
+villager already at their bed, was the worst case; seven shipped quests were affected.
+
+- **Such a quest is no longer offered.** `QuestManager.eligibleOffers` now drops any quest whose
+  objectives report themselves already satisfied for this player and giver.
+- **And it cannot be credited even if it is granted another way.** `escort_entity` and `reach_location`
+  refuse to credit arrival until the subject has genuinely been away from the destination. This is what
+  covers a quest that never passed the offer gate — a chain stage, or one granted by command.
+- **New objective field `min_journey`** on `escort_entity` and `reach_location`: how far the subject must
+  *start* from the destination for the trip to count. Defaults to the new `minEscortJourney` config
+  (24 blocks), so third-party datapacks that never added a distance guard are fixed too. See
+  [DATAPACK.md](DATAPACK.md) and [CONFIG.md](CONFIG.md).
+- Six shipped quests gained an explicit `min_journey`: *Walk Me to Bed*, *Night Pilgrimage* and
+  *Guide the Surveyor* (32), *A Last Walk* and *Reunite with Spouse* (24), and *Walk Together* (64) —
+  the last of which had **no conditions at all**.
+- *Escort to Market* was only half-guarded: its `giver_distance_from_village` measured 64 blocks from the
+  village **centre**, so a giver that far out but still inside the border resolved `nearest_village` to
+  the village it was already standing in. It now also sets `require_outside_border`.
+- *Reunite with Spouse* required the spouse to be `nearby` — within about 12 blocks — while asking you to
+  escort the giver *to* them, so it was a free reward by construction regardless of any distance floor.
+  It now gates on `same_village`, which keeps the spouse findable while letting the walk be a walk.
+
 ### Changed
 
 - **A family delivery must now go to the villager the quest named.** Family targets are bound to one
@@ -73,6 +134,30 @@ actual MCA villager, and the mod shows you where that villager is.
   restore the old behaviour.
 - Datapacks gating on `related_villager_status <relation> missing` will see those quests offered **less
   often**, because `missing` no longer counts a villager who is merely unloaded (see Fixed).
+- **The Quests button is no longer added to MCA's menu by a mixin.** Two client mixins used to target
+  MCA's `AbstractDynamicScreen#setLayout` and `InteractScreen`'s private `villager` field; both named MCA
+  classes at compile time, and a Mixin `@Accessor`'s descriptor is validated against the target field's
+  declared type, so the accessor *could not* be made agnostic of MCA's package root. Both are replaced by
+  ordinary Forge `ScreenEvent` handlers (`client.McaScreenButtons`) that identify MCA's screen by class
+  name and read the villager reflectively. `mcaquests.mixins.json` now targets **only vanilla classes**,
+  which both narrows the conflict surface with other MCA add-ons and makes its `"required": true` safe —
+  nothing it targets can be absent. The button behaves as before, including re-appearing after you leave
+  and re-enter MCA's main menu.
+- **Hearts owed to an unloaded villager are now MCA: Quests' own ledger, and are per-player.** MCA deleted
+  `Village#pushHearts(UUID,int)` and the entire "unspent hearts" queue behind it in the 7.7 line, so there
+  is nothing left to hand off to. A new saved-data store (`<world>/data/mcaquests_pending_hearts.dat`)
+  records what is owed and pays it when the villager next loads or the player next logs in. This also
+  fixes a long-standing inconsistency: MCA's queue was village-wide and player-agnostic while the
+  loaded-villager path beside it has always been per-player, so the same community-project payout meant
+  two different things depending on whether a chunk happened to be loaded. It now means the same thing
+  either way, on every MCA version.
+- **A situation that pays hearts now needs a player to credit**, exactly as its reputation award already
+  did — MCA hearts are a relationship between one villager and one player, so with nobody to credit there
+  is nothing to award. Situations resolved with no attributable player no longer move hearts.
+- Dev runs pick their MCA build from `mca_dev_version`, overridable per invocation with
+  `-PmcaDevVersion=…`, so both MCA package layouts can be exercised without editing a file. MCA is a
+  `runtimeOnly` dependency now — nothing compiles against it — and is excluded from the unit-test runtime
+  so "MCA is absent" is the genuine, exercised state there.
 
 ### Fixed
 
@@ -97,6 +182,29 @@ actual MCA villager, and the mod shows you where that villager is.
 
 ### Compatibility
 
+- **MCA 7.7 is supported, and 7.6 still is.** `mods.toml` continues to accept `[7.6,8)`; the difference is
+  that the mod now binds to whichever package layout is actually installed instead of assuming one. On an
+  MCA build whose layout is unknown to this version, MCA-backed features disable themselves with a single
+  `ERROR` naming the roots that were tried — the server does not crash.
+- **Add-on API — `QuestObjective` gained a defaulted `isTriviallySatisfied(QuestContext)`.** It answers
+  "would this objective already be satisfied if the quest were offered right now?", and returning `true`
+  withholds the offer. It **defaults to `false`**, so it is purely additive: existing objective types,
+  add-ons included, need no change and keep compiling. (Contrast `VillagerTargeted#targetSelector()` above,
+  which is source-breaking.)
+- **Add-on API — `McaCompat.asMcaVillager` was removed.** It returned `Optional<VillagerEntityMCA>`, and a
+  typed MCA reference cannot survive MCA's package rename. It had no callers anywhere in the mod. Anything
+  that used it should call `McaCompat.isMcaVillager(entity)` and keep the plain `Entity`; every other
+  `McaCompat` signature is now vanilla-typed, as its documentation always claimed.
+- **Add-on API — `McaCompat.pushVillageHearts` was replaced.** Use `awardHearts(level, villagerUuid,
+  player, amount)`, which applies hearts immediately when the villager is loaded and ledgers them
+  otherwise; `queueHeartsForLater` is the ledger-only half. The village id parameter is gone (the ledger is
+  keyed by villager) and a `ServerPlayer` is now required, because MCA's own hearts API needs one.
+- **Datapack/add-on — `EscortEntityObjective` and `ReachLocationObjective` gained a record component**
+  (`Optional<Integer> minJourney`). Datapack JSON is unaffected — `min_journey` is optional — but code
+  constructing either record directly needs the extra argument.
+- **`LocationAnchor.resolveTarget` and `VillagerTarget.resolveFrom` gained giver-based overloads** that
+  take the giver `Entity` instead of an `ActiveQuest`, which is all the `ActiveQuest` was ever used for.
+  Purely additive; the existing methods delegate to them and behave identically.
 - The optional MCA: Reputation dependency floor is now `0.2` — this version calls API surface that
   first exists there. With an older (never-published) build the integration disables itself with one
   log line, exactly as with the mod absent.
@@ -117,7 +225,7 @@ actual MCA villager, and the mod shows you where that villager is.
   call writes the flag back to its own value and does nothing. Client-only — dedicated servers never load
   it.
 - **Protocol `8` → `9`.** `HighlightTargetsS2CPacket` is new and `QuestLogEntry` carries an optional target
-  hint, so client and server must both be on 1.2.0; the channel handshake enforces it. World saves are
+  hint, so client and server must both be on 1.3.0; the channel handshake enforces it. World saves are
   unaffected.
 - Materialising a missing relative goes through MCA's `initialize(MobSpawnType)` rather than
   `finalizeSpawn`, because MCA's `finalizeSpawn` invents two random deceased parents whenever a family node
@@ -869,6 +977,7 @@ and **Architectury API**. Prod-tested against MCA Reborn 7.6.20.
 - MCA Reborn exposes no public API, so this release links against MCA's internal classes and is pinned to the **7.6.x** line; all access is isolated behind a single `McaCompat` adapter.
 - Turn-in is atomic and idempotent — rewards cannot be duplicated by packet spam.
 
+[1.3.0]: https://github.com/otectus/MCAQuests/releases/tag/v1.3.0
 [1.1.0]: https://github.com/otectus/MCAQuests/releases/tag/v1.1.0
 [0.9.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.9.0
 [0.2.0]: https://github.com/otectus/MCAQuests/releases/tag/v0.2.0

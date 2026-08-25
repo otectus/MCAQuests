@@ -21,9 +21,9 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
- * {@code mcaquests:hearts} (spec §16.2) — grants MCA relationship hearts via {@link McaCompat#addHearts}
- * / {@link McaCompat#pushVillageHearts}, so a village never loses a queued reward just because a resident
- * is unloaded.
+ * {@code mcaquests:hearts} (spec §16.2) — grants MCA relationship hearts via
+ * {@link McaCompat#awardHearts}, so a village never loses a reward just because a resident is
+ * unloaded: an absent villager's hearts are ledgered and paid when it next loads.
  *
  * <p><b>Clamp finding:</b> the configured {@code heartsRewardMultiplier}/min/max clamp
  * ({@code McaQuestsConfig}) is applied in {@link HeartsReward#effectiveAmount()} — the <em>native</em>
@@ -110,12 +110,7 @@ public class McaHeartsReward extends McaRewardBase {
         int id = villageId.getAsInt();
         int clamped = clampedAmount();
         for (UUID residentUuid : McaCompat.villageResidentUuids(level, id)) {
-            Entity resident = level.getEntity(residentUuid);
-            if (resident != null && resident.isAlive() && McaCompat.isMcaVillager(resident)) {
-                McaCompat.addHearts(player, resident, clamped);
-            } else {
-                McaCompat.pushVillageHearts(level, id, residentUuid, clamped);
-            }
+            McaCompat.awardHearts(level, residentUuid, player, clamped);
         }
     }
 

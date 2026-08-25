@@ -896,6 +896,13 @@ public final class QuestManager {
                         .map(condition -> condition.test(
                                 new QuestContext(player, villager, data, def.id(), mcaSnapshot)))
                         .orElse(true))
+                // Never offer a quest that is already done. An escort whose villager is standing at the
+                // destination, or a reach_location the player is already inside, would otherwise be
+                // accepted and handed straight back for the full reward. Deliberately last in the chain:
+                // it is the most expensive filter (it resolves anchors and villager targets), so it only
+                // runs on quests that are eligible in every other respect.
+                .filter(def -> def.objectives().stream().noneMatch(objective -> objective.isTriviallySatisfied(
+                        new QuestContext(player, villager, data, def.id(), mcaSnapshot))))
                 .sorted(Comparator.comparing(def -> def.id().toString()))
                 .toList();
         // Static quests first, then any open situations this villager can surface (0.8.0). Situation

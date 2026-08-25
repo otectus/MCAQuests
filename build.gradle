@@ -103,15 +103,39 @@ repositories {
     }
 }
 
+// Which MCA build dev runs launch with. Overridable per invocation so both MCA package layouts can
+// be exercised without editing a file: `./gradlew runServer -PmcaDevVersion=7.7.0-beta.2+1.20.1`.
+ext.mcaDevVersion = project.findProperty('mcaDevVersion') ?: mca_dev_version
+
+configurations {
+    // Keep MCA off the unit-test runtime. Gradle's testRuntimeOnly extends runtimeOnly, so the dev-run
+    // MCA jar would otherwise land on testRuntimeClasspath -- and the unit suite is precisely where
+    // "MCA is absent" has to be the real, exercised state, because that is the degradation path
+    // McaCompatSafeFailTest asserts. McaBindingProbeTest still reaches the real MCA jar, by opening it
+    // in a throwaway class loader rather than by having it on the classpath.
+    testRuntimeClasspath {
+        exclude group: 'maven.modrinth', module: 'minecraft-comes-alive-reborn'
+    }
+}
+
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // MCA Reborn — obfuscated production (Universal) jar, remapped to our dev mappings
-    // by fg.deobf. All MCA access is isolated behind dev.otectus.mcaquests.compat.McaCompat.
-    implementation fg.deobf("maven.modrinth:minecraft-comes-alive-reborn:${mca_version}")
+    // MCA Reborn — obfuscated production (Universal) jar, remapped to our dev mappings by fg.deobf.
+    //
+    // runtimeOnly, NOT implementation: no class in src/main/java names an MCA type, because
+    // compat.mca.McaBinding resolves every MCA class and member by name at runtime (that is what lets
+    // one jar serve both MCA's forge.net.mca.* layout and the renamed net.conczin.mca.* one). A
+    // compile dependency would only invite the static linkage back — NoMcaStaticLinkTest fails the
+    // build if it ever returns. runtimeOnly also keeps MCA off testRuntimeClasspath, so the unit
+    // suite exercises the genuine "MCA absent" degradation path rather than a half-bound one.
+    runtimeOnly fg.deobf("maven.modrinth:minecraft-comes-alive-reborn:${mcaDevVersion}")
 
-    // Architectury API (Forge) — required at runtime by MCA. deobf for dev remapping.
+    // Architectury API (Forge) — required at runtime by MCA, and at compile time by the FTB Quests
+    // bridge, which names Architectury event types directly (FtbqEventBridge). Unlike MCA this stays a
+    // compile dependency: Architectury has not repackaged, and nothing here has to survive it doing so.
     implementation fg.deobf("dev.architectury:architectury-forge:${architectury_version}")
+
 
     // MCA: Reputation — OPTIONAL integration, compile-only. The sibling mod is not published to a
     // Maven, so we compile against its dev-mapped class output; both mods use `official` 1.20.1
@@ -153,6 +177,24 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // The MCA jar travels as a path, not a classpath: McaBindingProbeTest opens it in its own
+    // URLClassLoader, so the binding manifest is verified against real MCA without MCA ever being
+    // linked into the test JVM. It is taken from runtimeClasspath because that is a configuration
+    // ForgeGradle deobfuscates -- the probe needs Minecraft's real type names to match the manifest's
+    // parameter hints, which a raw production jar does not carry.
+    //
+    // To verify another MCA build (in particular one with a different package root), run the suite
+    // again with that version on the dev runtime:
+    //     ./gradlew test -PmcaDevVersion=7.7.0-beta.2+1.20.1
+    //
+    // Resolved in doFirst, not at configuration time: resolving a configuration while the build is
+    // still being configured freezes ForgeGradle's deobf repository before every fg.deobf dependency
+    // is registered ("cannot mutate content repository descriptor after repository has been used").
+    doFirst {
+        systemProperty 'mcaquests.probe.jars', configurations.runtimeClasspath
+                .findAll { it.name.contains('minecraft-comes-alive') }
+                .join(File.pathSeparator)
+    }
 }
 
 // MixinGradle: generate the refmap for our mixin and register the config for reobfuscation.

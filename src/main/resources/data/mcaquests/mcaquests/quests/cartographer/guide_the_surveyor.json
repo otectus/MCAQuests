@@ -52,6 +52,7 @@
         "anchor": "workstation"
       },
       "radius": 6,
+      "min_journey": 32,
       "lead": true
     }
   ],

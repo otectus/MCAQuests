@@ -1,9 +1,13 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
+import dev.otectus.mcaquests.quest.target.LocationAnchor;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -142,5 +146,101 @@ public final class ObjectiveSupport {
             }
         }
         return amount - remaining;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // "Did the player actually travel?" — the guard on escort_entity / reach_location.
+    //
+    // Without it, a quest whose subject is ALREADY at the destination is satisfied by the first poll a
+    // second after accept, and can be handed straight back to the giver standing right there for
+    // currency, XP and hearts — repeatable every cooldown. "Walk me to my bed", offered at night by a
+    // villager already at their bed, was the worst case.
+    //
+    // Two layers use these helpers. At offer time, QuestObjective#isTriviallySatisfied stops such a
+    // quest being offered at all. At runtime, the latch below refuses to credit arrival until the
+    // subject has genuinely been away from the destination — which is what covers a quest that never
+    // passed the offer gate, such as a chain stage or one granted by command.
+    // ---------------------------------------------------------------------------------------------
+
+    /** {@code progress.extra()} key: the subject began this quest away from its destination. */
+    private static final String K_STARTED_AWAY = "startedAway";
+
+    /**
+     * How soon after accept the latch may still be initialised from the subject's position. Beyond it a
+     * quest is assumed to be mid-journey and is latched <em>armed</em>, so introducing this guard can
+     * never strand a quest a player was already part-way through when the mod updated.
+     */
+    private static final long ARM_WINDOW_TICKS = 100L;
+
+    /** The journey distance an objective asks for, falling back to the configured default. */
+    public static int effectiveMinJourney(Optional<Integer> minJourney) {
+        return minJourney.orElseGet(() -> McaQuestsConfig.COMMON.minEscortJourney.get());
+    }
+
+    /**
+     * True when {@code subject} is close enough to {@code dest} that going there is not a journey: inside
+     * the village border for a village anchor, or within whichever is larger of the objective's own
+     * arrival radius and {@code minJourney} for any other anchor.
+     *
+     * <p>Deliberately reuses the village-border test that arrival itself uses, so "already there" and
+     * "has arrived" can never disagree about a village anchor.
+     */
+    public static boolean withinJourneyOf(Entity subject, ServerLevel level, LocationAnchor.Resolved dest,
+                                          int arrivalRadius, int minJourney) {
+        if (subject == null) {
+            return false;
+        }
+        if (dest.villageId().isPresent() && McaCompat.villageExists(level, dest.villageId().getAsInt())
+                && McaCompat.isWithinVillage(level, dest.villageId().getAsInt(), subject.blockPosition())) {
+            return true;
+        }
+        return withinRadiusXZ(subject, dest.pos(), Math.max(arrivalRadius, minJourney));
+    }
+
+    /**
+     * Whether arrival may be credited yet, initialising and maintaining the one-way "started away" latch
+     * in {@code progress}.
+     *
+     * <p>Semantics, in order:
+     * <ul>
+     *   <li>No latch yet, and the quest was accepted within {@link #ARM_WINDOW_TICKS}: set it from where
+     *   the subject is standing now. This is the real decision — a subject already at the destination
+     *   starts <em>disarmed</em>.</li>
+     *   <li>No latch yet, and the quest is older: latch <em>armed</em>. The quest predates this guard, so
+     *   it must complete exactly as it always would have.</li>
+     *   <li>Latched disarmed, but the subject is now outside the journey distance: latch armed. The
+     *   journey has genuinely begun, and arriving from here is worth the reward.</li>
+     * </ul>
+     */
+    public static boolean isJourneyArmed(ObjectiveProgress progress, ActiveQuest active, ServerLevel level,
+                                         Entity subject, LocationAnchor.Resolved dest,
+                                         int arrivalRadius, int minJourney) {
+        return isJourneyArmed(progress, level.getGameTime(), active.startGameTime(),
+                withinJourneyOf(subject, level, dest, arrivalRadius, minJourney));
+    }
+
+    /**
+     * The latch itself, over plain values — the world lookups live in the overload above. Split out so
+     * the decision table can be tested directly, without a live {@link ServerLevel}.
+     *
+     * @param gameTime        the level's current game time
+     * @param questStartTime  when the owning quest was accepted
+     * @param withinJourney   whether the subject is currently too close to the destination to count
+     */
+    public static boolean isJourneyArmed(ObjectiveProgress progress, long gameTime, long questStartTime,
+                                         boolean withinJourney) {
+        CompoundTag extra = progress.extra();
+        if (!extra.contains(K_STARTED_AWAY)) {
+            boolean freshlyAccepted = gameTime - questStartTime <= ARM_WINDOW_TICKS;
+            extra.putBoolean(K_STARTED_AWAY, !freshlyAccepted || !withinJourney);
+        }
+        if (extra.getBoolean(K_STARTED_AWAY)) {
+            return true;
+        }
+        if (!withinJourney) {
+            extra.putBoolean(K_STARTED_AWAY, true); // one-way: the journey has begun
+            return true;
+        }
+        return false;
     }
 }

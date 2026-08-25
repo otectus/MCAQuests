@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -58,6 +59,24 @@ public interface QuestObjective {
 
     /** True if progress accumulates via game events rather than a live state check. */
     default boolean isEventDriven() {
+        return false;
+    }
+
+    /**
+     * True when this objective would <em>already</em> be satisfied for this player and giver at the moment
+     * the quest is about to be offered — in which case offering it is nonsense, because the player could
+     * accept and turn it straight back in for the full reward without doing anything.
+     *
+     * <p>Checked by {@code QuestManager.eligibleOffers} against every objective of every otherwise-eligible
+     * quest; one {@code true} drops the quest from the offer pool for as long as the condition holds.
+     * Implementations must be cheap and side-effect free, and must answer {@code false} when they cannot
+     * tell (an unloaded target, an anchor that will not resolve) — an offer that might be doable is always
+     * better than one silently withheld.
+     *
+     * <p>Defaults to {@code false}, so existing objective types — including those registered by add-ons —
+     * are unaffected and keep compiling.
+     */
+    default boolean isTriviallySatisfied(QuestContext context) {
         return false;
     }
 

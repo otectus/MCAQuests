@@ -49,6 +49,7 @@
         "anchor": "bed"
       },
       "radius": 4,
+      "min_journey": 24,
       "lead": true
     }
   ],

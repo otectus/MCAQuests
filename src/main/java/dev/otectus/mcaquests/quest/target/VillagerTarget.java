@@ -91,13 +91,26 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
         if (bound != null) {
             return living(level.getEntity(bound));
         }
+        return resolveFrom(player, level.getEntity(active.villagerUuid()), level);
+    }
+
+    /**
+     * As {@link #resolve(ServerPlayer, ActiveQuest, ServerLevel)}, but keyed on the giver entity rather
+     * than on an accepted quest — every mode resolves <em>relative to the giver</em>, and the
+     * {@link ActiveQuest} was only ever used to look that giver up.
+     *
+     * <p>This is what lets an objective answer "would I already be satisfied?" while a quest is merely
+     * being <em>offered</em>, when no {@code ActiveQuest} exists yet — the check that stops a quest being
+     * offered in a state where it could be turned straight back in for the reward.
+     */
+    public Optional<LivingEntity> resolveFrom(ServerPlayer player, @Nullable Entity giver, ServerLevel level) {
         return switch (mode) {
-            case SELF -> living(level.getEntity(active.villagerUuid()));
+            case SELF -> living(giver);
             case UUID -> uuid.flatMap(u -> living(level.getEntity(u)));
-            case FAMILY -> giver(level, active)
+            case FAMILY -> Optional.ofNullable(giver)
                     .flatMap(g -> McaCompat.findGiverRelative(level, g, relation.orElse("any")))
                     .flatMap(u -> living(level.getEntity(u)));
-            case PROFESSION -> resolveProfession(player, active, level);
+            case PROFESSION -> resolveProfession(player, giver, level);
         };
     }
 
@@ -223,13 +236,14 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
         }
     }
 
-    private Optional<LivingEntity> resolveProfession(ServerPlayer player, ActiveQuest active, ServerLevel level) {
+    private Optional<LivingEntity> resolveProfession(ServerPlayer player, @Nullable Entity giverEntity,
+                                                    ServerLevel level) {
         if (profession.isEmpty()) {
             return Optional.empty();
         }
         ResourceLocation prof = profession.get();
         // Prefer a resident of the giver's home village...
-        Optional<Entity> giver = giver(level, active);
+        Optional<Entity> giver = Optional.ofNullable(giverEntity);
         if (giver.isPresent()) {
             OptionalInt villageId = McaCompat.getHomeVillageId(giver.get());
             if (villageId.isPresent()) {

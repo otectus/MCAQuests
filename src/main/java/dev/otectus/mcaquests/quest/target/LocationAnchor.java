@@ -12,6 +12,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -82,21 +84,33 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
      * when frozen at accept and never snaps to a different village as the player wanders.
      */
     public Optional<Resolved> resolveTarget(ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        return resolveTarget(player, level.getEntity(active.villagerUuid()), level);
+    }
+
+    /**
+     * As {@link #resolveTarget(ServerPlayer, ActiveQuest, ServerLevel)}, but keyed on the giver entity
+     * rather than on an accepted quest — which is all the {@link ActiveQuest} was ever used for here.
+     *
+     * <p>This is what lets a location objective answer "would I already be satisfied?" while its quest is
+     * merely being <em>offered</em> and no {@code ActiveQuest} exists yet, so a quest whose destination
+     * has already been reached is never offered in the first place.
+     */
+    public Optional<Resolved> resolveTarget(ServerPlayer player, @Nullable Entity giver, ServerLevel level) {
         return switch (type) {
-            case HOME_VILLAGE -> giver(level, active).flatMap(g ->
+            case HOME_VILLAGE -> Optional.ofNullable(giver).flatMap(g ->
                     McaCompat.getHomeVillageCenter(g).map(c -> new Resolved(c, McaCompat.getHomeVillageId(g))));
             case NEAREST_VILLAGE -> {
-                BlockPos from = giver(level, active).map(Entity::blockPosition).orElseGet(player::blockPosition);
+                BlockPos from = giver != null ? giver.blockPosition() : player.blockPosition();
                 OptionalInt id = McaCompat.findNearestVillageId(level, from, radius.orElse(DEFAULT_NEAREST_RADIUS));
                 yield id.isPresent()
                         ? McaCompat.villageCenter(level, id.getAsInt()).map(c -> new Resolved(c, id))
                         : Optional.empty();
             }
-            case GIVER_POS -> giver(level, active).map(Entity::blockPosition).map(Resolved::of);
-            case VILLAGER -> villager.flatMap(v -> v.resolve(player, active, level))
+            case GIVER_POS -> Optional.ofNullable(giver).map(Entity::blockPosition).map(Resolved::of);
+            case VILLAGER -> villager.flatMap(v -> v.resolveFrom(player, giver, level))
                     .map(Entity::blockPosition).map(Resolved::of);
-            case WORKSTATION -> giver(level, active).flatMap(McaCompat::getWorkstationPos).map(Resolved::of);
-            case BED -> giver(level, active).flatMap(McaCompat::getHomePos).map(Resolved::of);
+            case WORKSTATION -> Optional.ofNullable(giver).flatMap(McaCompat::getWorkstationPos).map(Resolved::of);
+            case BED -> Optional.ofNullable(giver).flatMap(McaCompat::getHomePos).map(Resolved::of);
             case COORDS -> pos.map(Resolved::of);
         };
     }
@@ -127,9 +141,5 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
             }
         });
         villager.ifPresent(v -> v.validate(prefix + " villager", errors));
-    }
-
-    private static Optional<Entity> giver(ServerLevel level, ActiveQuest active) {
-        return Optional.ofNullable(level.getEntity(active.villagerUuid()));
     }
 }

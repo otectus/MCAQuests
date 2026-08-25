@@ -314,9 +314,12 @@ public final class SituationManager {
                             .context("source_title", instance.defId().getPath())
                             .build());
         }
-        if (outcome.hearts() != 0) {
+        // Hearts are per-player for the same reason standing is (see above): MCA's own hearts are a
+        // relationship between one villager and one player, so with nobody to credit there is nothing
+        // to award.
+        if (outcome.hearts() != 0 && player != null) {
             instance.villagerUuid().ifPresent(uuid ->
-                    McaCompat.pushVillageHearts(server.overworld(), instance.villageId(), uuid, outcome.hearts()));
+                    McaCompat.awardHearts(server.overworld(), uuid, player, outcome.hearts()));
         }
     }
 

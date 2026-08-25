@@ -49,6 +49,7 @@
         "radius": 256
       },
       "radius": 12,
+      "min_journey": 64,
       "lead": true
     }
   ],

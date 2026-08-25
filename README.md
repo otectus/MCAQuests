@@ -88,7 +88,9 @@ The jar lands in `build/libs/`. MCA Reborn and Architectury are pulled automatic
 
 ## Compatibility note
 
-MCA Reborn exposes no public API, so MCA: Quests links against its internal classes and is therefore pinned to the **7.6.x** line. A future MCA major version may require an update here. All MCA access is isolated behind a single `McaCompat` adapter to make that easy.
+MCA Reborn exposes no public API, so MCA: Quests reaches into its internal classes. It supports the **7.6.x and 7.7.x** lines from one jar: rather than linking MCA at compile time, every MCA class and member is resolved **by name at runtime**, against whichever package layout is installed. MCA repackaged mid-7.7 — from a Forgix-merged jar (`forge.net.mca.*`) to a single-root one (`net.conczin.mca.*`) — and the layout cannot be inferred from the version number, so the mod probes for it on startup.
+
+If an MCA build ever ships a layout this version does not recognise, MCA-backed features disable themselves with a single log line and **the server keeps running**; run `/mcaquests debug mca` to see which package root matched and whether anything is missing. All MCA access stays isolated behind the `McaCompat` adapter and its binding layer (`compat.mca`), and a build-time check fails the build if any class ever references an MCA type directly again.
 
 The **MCA: Conversations** integration is a soft dependency: MCA: Quests exposes the dialogue and objective hooks (`QuestDialogueHooks`, `ExternalSignalObjective`) and the add-on registers itself against them. When it isn't installed the hooks simply no-op — quest dialogue falls back to the static datapack text and objectives progress through their normal detectors.
 
