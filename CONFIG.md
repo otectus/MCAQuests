@@ -14,17 +14,19 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 ### `[quests]`
 | Option | Default | What it does |
 |---|---|---|
-| `enableDefaultQuestPack` | `true` | Load the 165 built-in quests. Set `false` to ship only your own datapack quests. |
+| `enableDefaultQuestPack` | `true` | Load the built-in content this mod ships with. Set `false` to run only your own datapack's quests, projects, situations, titles and tier ladders. A datapack that *overrides* a bundled file keeps its override — what is skipped is decided by which pack won the merge, not by the namespace. |
 | `maxActiveQuestsPerPlayer` | `10` | Hard cap on a player's simultaneously-active quests. |
 | `maxActiveQuestsPerVillager` | `1` | Cap on active quests per individual villager, per player. |
 | `offersPerVillager` | `3` | How many quest cards a villager shows at once. The cards scroll, so this is not limited by screen height. |
-| `offerRefreshTicks` | `24000` | Ticks before a villager's offered set rerolls (24000 = 1 MC day). |
-| `defaultQuestCooldownTicks` | `24000` | Cooldown applied to quests that don't define their own. |
+| `offerRefreshTicks` | `24000` | Ticks a villager keeps the same offers before drawing a fresh set (24000 = 1 MC day). Reopening the menu inside this window shows exactly what it showed before — the same quests, the same numbers, the same dialogue. Counted on the monotonic game clock, so sleeping through a night does not reroll a village. |
+| `defaultQuestCooldownTicks` | `24000` | Cooldown applied to quests that don't define their own. A quest with an explicit `cooldown_ticks` always wins. |
+| `declineCooldownTicks` | `0` | Ticks a quest stays out of a villager's offers after you decline it. `0` means the refusal lasts until that villager's offers next refresh, which is the gentler reading — turning something down should not lock it away for a week. Declining is never punitive: no hearts, no reputation, no failure is recorded. |
+| `declineRefillsSlot` | `true` | Whether declining draws a replacement into that slot straight away. The other offers never change either way; only the card you turned down is replaced. |
 
 ### `[turn_in]`
 | Option | Default | What it does |
 |---|---|---|
-| `requireOriginalVillagerForTurnIn` | `true` | Quests must be handed in to the villager who gave them (unless the quest overrides via `turn_in.mode`). |
+| `requireOriginalVillagerForTurnIn` | `true` | What a quest that states no `turn_in.mode` means: `true` hands it back to the villager who gave it, `false` to any MCA villager. A quest that *does* state a mode always wins; this only fills in the blank. |
 | `allowTurnInToSameProfessionIfOriginalMissing` | `false` | If the original giver is gone, allow any same-profession villager. |
 | `failQuestIfGiverDies` | `false` | If `true`, a quest fails when its giver dies; otherwise it waits / can be turned in elsewhere per its mode. |
 
@@ -135,7 +137,7 @@ See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
 | `skillRewardsEnabled` | `true` | Gates `mcaquests:townstead_skill`. |
 | `allowUncappedProfessionXp` | `false` | Permit XP rewards that ask to bypass Townstead's daily cap, and skill rewards that ask to skip its prerequisites. Bypassing needs **both** this and the request in the reward JSON, because uncapped XP lets a repeatable quest outrun the progression pacing Townstead deliberately sets — and a datapack alone should not decide that for someone else's server. |
 | `rewardFailureBlocksCompletion` | `false` | Refuse a turn-in when a Townstead reward cannot be applied, instead of completing without it. Default off: the player has already done the work, and trapping them with a finished quest they can never hand in is worse than quietly skipping the villager-facing half of the reward. |
-| `pollIntervalTicks` | `20` | How often (ticks) Townstead-backed quest objectives re-read villager state. Shares the existing once-per-second objective pass. Clamp `10`–`1200`. |
+| `pollIntervalTicks` | `20` | How often (ticks) Townstead-backed quest objectives re-read villager state, per player. Rides the existing once-per-second objective pass, so `20` is that pass unchanged; raising it trades responsiveness for tick time. Clamp `10`–`1200`. |
 | `projectPollIntervalTicks` | `20` | How often (ticks) Townstead-backed project objectives re-read village state. Clamp `10`–`1200`. |
 | `maxVillagersPerPass` | `64` | Cap on residents inspected per pass. Larger villages are visited round-robin across passes, so nobody is skipped and no pass is unbounded. Clamp `1`–`256`. |
 | `maxVillagesPerPass` | `8` | Cap on villages inspected per situation scan, also round-robin. Clamp `1`–`64`. |

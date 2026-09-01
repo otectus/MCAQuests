@@ -4,6 +4,241 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-09-01
+
+Two reports, one cause: the quest offer menu was recomputed from scratch every time it opened, never
+remembered, and never checked against the world it described.
+
+### Fixed — declining a quest now declines it
+
+**"When you hit decline, it changes the context/story of every quest of that villager, but the three
+quests remain the same, so it doesn't actually decline the quest."**
+
+Both halves of that were true, and both came from the same gap. The client sent a real decision; the
+server dropped it and re-rendered a menu recomputed from a seed that nothing about the refusal had
+changed, so the same three quests came straight back. And because offer dialogue was resolved through
+`QuestDialogueHooks` once per card per *render*, reopening the menu made a villager re-voice all three
+offers — with MCA: Conversations installed, that is a whole new conversation about quests you had already
+read.
+
+A villager's offers are now **drawn once and remembered**, saved with the player's quest data:
+
+- Reopening the menu inside the refresh window shows the same quests, the same numbers and the same
+  words. Offer dialogue is voiced once, on the server thread, when the set is drawn.
+- Declining removes one card and refills one card. The others do not move — not their identity, not their
+  template values, not their dialogue. (`WeightedPicker` draws sequentially from a shrinking pool, so
+  re-running selection with the declined quest filtered out would have replaced the entire menu.)
+- The refusal survives closing the menu, relogging, dying, changing dimension and restarting the server.
+- Declining is **free**: no hearts, no reputation, no failure, no effect on completion counts. Declining a
+  situation offer refuses it for you alone and never resolves, fails or cancels it for anyone else.
+- The villager finally says the quest's own `decline` line, which every shipped quest has always written
+  and which the mod had never once displayed.
+- A declined quest becomes offerable again when the villager's offers next refresh, or after
+  `declineCooldownTicks` if a server owner sets one.
+
+Declining records its own `DECLINED` outcome, so a pack can branch on it with the new
+`mcaquests:quest_declined` condition — "if they turned this down, offer the softer version instead" — and
+add-ons can react to the new `QuestDeclinedEvent`.
+
+### Fixed — no more letters to siblings who do not exist
+
+**"Sometimes there are family quests (I got the *1 paper to a sibling*) when the villager doesn't have
+family (or at least a sibling in this case)."**
+
+`relations_letter_to_brother` *was* gated: `related_villager_status sibling same_village`. The gate passed
+anyway, because it asked one question and the objective asked another.
+
+- The gate asked "is there a sibling on this village's resident roll?" — and **MCA never takes the dead
+  off that roll**. `Village.residentNames` is only pruned when a villager changes village or an admin
+  command removes them, never on death.
+- The objective then called for "the first sibling in list order, preferring a loaded one", with no status
+  filter, no deceased filter and no existence filter at all. A different sibling entirely.
+
+`McaCompat`'s own javadoc claimed the two could never disagree. They could: only `any` and `grandparent`
+shared the relation walk, and the other four relations re-derived their own list inline, skipping even the
+self/nil/duplicate cleaning.
+
+There is now **one predicate**. `McaCompat.relativeCandidates` walks the family tree once and reads the
+village rolls once for the whole list, and the condition gate, the offer-time check, the accept-time
+binder, `matches` and the display name are all filters over it. The statuses were tightened with it:
+
+- **`same_village`** now requires the relative to be alive, not merely on the roll. This is the reported
+  bug, and it is a behaviour change datapack authors should know about: the condition matches less often
+  than it used to, and correctly so.
+- **`dead`** excludes the two deceased ancestors MCA invents for every villager it spawns. A villager the
+  game made up to pad a family tree was never alive, so mourning them is not a thing.
+- **`alive`** and **`nearby`** exclude those invented ancestors and player nodes too.
+- **`reachable`** is new: a real person a quest can send you to.
+- **`any_known`** is new: the old unfiltered behaviour, for a pack that deliberately wants it.
+
+A villager target now declares which of those it will accept, with `require`, defaulting to `reachable` —
+so a pack that has never heard of the field gets the fix for free, and one that deliberately targets the
+dead or the missing has to say so. Nothing is offered unless somebody satisfies it, and **accept asks
+again**, because a relative can die between the menu opening and the button being clicked.
+
+### Fixed — content that named people it had not established existed
+
+- **`mcaquests:cure_the_infected`** asked the giver to cure "a relative of whoever is talking" while the
+  situation instance already knew exactly who was infected. It uses the new `situation_focus` target.
+- **`lost_child/2_deeper`** and **`lost_survey_party`** had a `mode: family` objective and **no conditions
+  at all**. Both now gate on the relation they select.
+- **`relations_widow_memorial`** could deliver its memorial poppies to the dead spouse it commemorates.
+  Its target requires a reachable relative.
+- **`townstead_names_in_the_family_book`** gated only on `is_family_member`, which asks how the *player*
+  is related to the giver and says nothing about whether the giver has a findable relative.
+- Every remaining `mode: family` target in the bundled pack now states its `require` outright, so the
+  content is readable without knowing what the code defaults to.
+
+### Fixed — situation offers skipped the entire eligibility chain
+
+Situation offers were appended to the offer pool *after* the static filter chain had run, so they never
+passed cooldowns, repeat rules, period completion, the Townstead content gate or the already-satisfied
+check. That is how two shipped situations carried an ungated family objective for several releases. There
+is now one chain, `OfferFilters`, used by the menu, by situation offers, and by `/mcaquests debug quest` —
+which had kept its own copy of the chain and had already drifted out of step with the menu it described.
+
+Situation JSON also had **no cross-reference validation of any kind** until now.
+
+### Fixed — other gates that were not gating
+
+- **A quest whose bound villager died sat in the log forever at 0/1.** It now says so, through the same
+  suspension channel Townstead objectives use: a reason line instead of a counter, the deadline stopped,
+  the quest still abandonable, and it resumes if they come back.
+- **A situation's `failure` and `cleared` outcomes were parsed and discarded.** Both resolution paths
+  passed a literal `null` player and both branches required one, so every `"failure": {"reputation": -10}`
+  in the shipped pack was dead JSON. They reach the recorded participants now.
+- **`find_missing_child` opened when a spouse went missing.** Its trigger says `"relation": "child"`;
+  `MissingKinTrigger` read that field out of the JSON and ignored it.
+- **`VillagerDeathTrigger.relation`** was likewise parsed and ignored, its javadoc claiming a filter "at
+  offer eligibility" that had no call site anywhere. It has one now.
+- **`is_family_member` rejected `spouse`** — not by design, but because `McaCompat.isFamilyOfPlayer` had
+  no branch for it, so one condition hard-errored on a value its sibling accepted silently.
+- **A project's `conditions` and the `maxConcurrentProjectsPerScope` cap** were not consulted when
+  deciding whether to offer a *new* project. Both are now. A project already under way is deliberately
+  exempt from both: hiding it would strand contributions players had already made.
+
+### Added — controls that used to do nothing
+
+Six config keys were declared, written into every server's TOML, documented in `CONFIG.md` with a
+description of what they did, and read by nothing at all. All six are live. See
+[CONFIG.md](CONFIG.md).
+
+- **`offerRefreshTicks`** controls how long a villager keeps the same offers. The cadence had been
+  hardcoded to one Minecraft day. It is now counted on the monotonic game clock rather than the world
+  clock, so sleeping through a night no longer rerolls every villager in the village.
+- **`enableDefaultQuestPack`** skips this mod's own bundled quests, projects, situations, titles and tier
+  ladders. A datapack that *overrides* a bundled file keeps its override.
+- **`defaultQuestCooldownTicks`** applies to a quest that states no `cooldown_ticks`. The effective
+  default came from a hardcoded `24000`, so a server owner who set a week got a day.
+- **`requireOriginalVillagerForTurnIn`** decides what a quest that states no `turn_in.mode` means — which
+  is what `CONFIG.md` always said it did. At its default of `true` nothing changes.
+- **`maxConcurrentProjectsPerScope`** caps how many projects one village can have running.
+- **`compat.townstead.pollIntervalTicks`** gates the Townstead objective pass it had always claimed to
+  share. At its default of 20 that pass is unchanged.
+
+Two keys are new: **`declineCooldownTicks`** (default `0` — the refusal lasts until the villager's offers
+next refresh) and **`declineRefillsSlot`** (default `true`).
+
+Three dialogue states were parsed and never spoken:
+
+- **`decline`** now is, on declining.
+- **`cooldown`** and **`locked`** are shown when a villager has nothing to offer, so "I do not need
+  anything right now" can become "you did that yesterday" or "not until you have done something else
+  first". Rendered as an informational card under the existing no-quests state, so no protocol change was
+  needed.
+
+And **`sponsor.required_count`**, which described itself as "informational/UX" and was shown to nobody, is
+on the project card when a project wants more than one sponsor.
+
+### Added — the loader tells pack authors what the runtime is withholding
+
+`TargetGateValidator` refuses a `mode: family` target whose `require` asserts the villager can be found
+while nothing in the definition's conditions establishes that one does. The message names the file, the
+objective index, the relation, and the exact block to add.
+
+It is careful about what it will *not* claim. A leaf inside `any_of` establishes nothing, because it may
+not be the branch taken. A narrower gate covers a broader target — proving a sibling exists proves a
+member of `any` exists — but never the reverse, and `grandparent` covers neither. An `is_family_member`
+gate does not count. And a contradiction between gate and target is only reported for a relation a
+villager can have one of, because a giver may perfectly well have one dead sibling and another alive next
+door.
+
+`StructureTarget` and `BiomeTarget` can now be asked whether a running level knows what they name. A
+mistyped id parses cleanly — both live in datapack-driven dynamic registries that do not exist at load
+time — and then matches nothing for the rest of the save; such a quest is no longer offered. `BiomeTarget`
+also gained its first `validate()`, so `{"biome": {}}` is reported rather than parsed into a target that
+can never match. `LocationAnchor` refuses a `home_village` destination on a giver who has no home village.
+`ProjectObjective` gained a `validate()` hook, which it had never had despite the stakes being higher than
+on the quest side: an unfinishable quest strands one player, an unfinishable project phase strands a
+village. And `/mcaquests validate` now reports `mcaquests`-namespaced translation keys with nothing behind
+them.
+
+### Added — observability
+
+`/mcaquests debug offers` prints the offer set a villager is holding for you: what was drawn, when, how
+long until it rerolls, and what you have already turned down. `/mcaquests debug offers reroll` discards it.
+This is the observability that would have made the decline report a five-minute diagnosis.
+
+### Changed — breaking for third-party datapacks
+
+**A quest with a `mode: family` objective and no matching gate is now reported at load.** For this release
+it is a **warning**, and a hard error only under `strictJsonValidation`; a future release will promote it.
+The bundled pack is held to the strict standard at build time, because a player cannot fix a broken
+built-in.
+
+If your pack is affected, the message tells you exactly what to add — for a target selecting the giver's
+sibling:
+
+```json
+"conditions": { "type": "mcaquests:related_villager_status", "relation": "sibling", "status": "same_village" }
+```
+
+Alternatively, state the intent on the target instead: `"require": "missing"`, `"require": "dead"` or
+`"require": "any_known"` all assert nothing that needs establishing.
+
+**`related_villager_status status: same_village` matches less often**, because it no longer counts
+relatives who have died. That is the fix, but it will make some quests appear less than they used to.
+
+### Compatibility
+
+Source-breaking changes for add-ons that build these types in code. Datapacks are unaffected — every new
+field is optional with a safe default.
+
+- **`VillagerTarget`** gained a fifth component, `Optional<String> require`. The four-argument constructor
+  is kept, so `new VillagerTarget(mode, profession, relation, uuid)` still compiles and means "the safe
+  default".
+- **`VillagerTargeted` now extends `QuestObjective`.** Every implementor in the mod already implemented
+  both; an add-on that implemented `VillagerTargeted` alone must add `QuestObjective`, which it needed to
+  be registered anyway. This is what lets all seven villager-targeted objectives inherit the offer-time
+  and target-lost checks rather than copying them.
+- **`RepeatRule`**'s `int cooldownTicks` component became `Optional<Integer> declaredCooldownTicks`, and
+  **`TurnInSpec`**'s `TurnInMode mode` became `Optional<TurnInMode> declaredMode`. Both keep a
+  convenience constructor taking the old shape, and both keep the old accessor name as a derived method —
+  `repeat.cooldownTicks()` and `turnIn.mode()` are unchanged for readers. The Optional exists only to tell
+  "the author wrote nothing" from "the author wrote the default", which is what makes the two config keys
+  above possible.
+- **`FailureSpec`** gained `fail_on_target_lost` (default `false`), with the old constructor kept.
+- **`QuestObjective`** gained `unofferableReason(QuestContext)`, defaulting to empty, so existing objective
+  types are unaffected.
+- **`QuestFailedEvent.Reason`** gained `TARGET_LOST`.
+- **`QuestHistory.Outcome`** gained `DECLINED`. It flows through the existing `outcomes` /
+  `outcomes_by_giver` NBT, whose keys already carry the outcome name, so **the save format does not
+  change**.
+- **New API:** `QuestDeclinedEvent`, `RelativeCandidate`, `McaCompat.relativeCandidates`,
+  `McaCompat.describeVillager`, and a `findGiverRelative` overload taking a required status.
+
+### Save compatibility
+
+`PlayerQuestData` gains an `offers` compound. An absent one loads as an empty store, so a pre-1.4.3 save
+simply draws fresh offers on the next villager interaction. Active quests, history, titles, standing,
+projects and situations are untouched. The network protocol is unchanged at version `10`.
+
+### Localization
+
+New keys in both shipped locales: the decline confirmation, the two target-lost suspension reasons, the
+three unofferable reasons, the accept-refused line, the situation-focus target name, and the sponsor count
+label.
+
 ## [1.4.2] - 2026-08-28
 
 Three ways a quest could go quiet without saying why.

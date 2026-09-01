@@ -221,6 +221,8 @@ object always carries a `mode`:
 { "mode": "self" }                                       // the giver
 { "mode": "profession", "profession": "minecraft:weaponsmith" }
 { "mode": "family", "relation": "sibling" }              // any | spouse | parent | child | sibling | grandparent
+{ "mode": "family", "relation": "child", "require": "missing" }
+{ "mode": "situation_focus" }                            // the villager an open situation is about
 { "mode": "uuid", "uuid": "<uuid>" }
 ```
 
@@ -247,9 +249,49 @@ alone — other players never see your markers. Toggle with `highlightQuestTarge
 `showQuestTargetDirection` client-side); a quest whose objectives target nobody falls back to highlighting the
 **giver**, which is the right answer for the many quests written in the first person ("bring *me* six loaves").
 
-When a target is a *relative* of the giver, gate the quest on `related_villager_status <relation> same_village`
-so it is only offered when a findable relative actually exists (otherwise it can be offered as an impossible
-quest).
+#### `require` — who a family target is allowed to name
+
+A `family` target states which villagers it is willing to be about. `require` takes any of the seven
+relative statuses below, and **defaults to `reachable`**: a real person, not dead, not one of the two
+ancestors MCA invents for every villager it spawns, and either loaded or on a village roll that says where
+to find them.
+
+```json
+{ "mode": "family", "relation": "sibling", "require": "same_village" }
+```
+
+The default is the safe one, so a pack that has never heard of `require` gets the right behaviour. A quest
+that *deliberately* names someone dead or missing has to say so — `"require": "dead"`, `"require":
+"missing"` — and `"require": "any_known"` is the old loose behaviour for a pack that genuinely wants
+"anybody in the family tree at all".
+
+**A family target needs a gate, and the loader now says so.** A quest whose target requires the villager to
+be findable (`reachable`, `alive`, `nearby`, `same_village`) must establish that one exists, with a
+`related_villager_status` leaf on the same relation:
+
+```json
+"conditions": { "type": "mcaquests:related_villager_status", "relation": "sibling", "status": "same_village" }
+```
+
+Without it the reload reports the file, the objective index, the relation and the block to add. It is a
+**warning** by default and a hard error under `strictJsonValidation`; a future release will promote it.
+
+Two things that do *not* count as a gate:
+
+- **A leaf inside `any_of`.** An alternative is not a guarantee.
+- **`is_family_member`.** That condition asks how the *player* is related to the giver, in the opposite
+  direction. It says nothing about whether the giver has a findable relative.
+
+A gate on a narrower relation does count: proving a sibling exists proves a member of `any` exists. The
+reverse does not, and `grandparent` covers neither — `any` is the union of spouse, parents, children and
+siblings, deliberately excluding grandparents.
+
+#### `situation_focus`
+
+`{ "mode": "situation_focus" }` names the villager an open situation is **about** — the one who collapsed,
+caught the infection, or went missing — rather than a relative of whoever happens to be telling you about
+it. Only meaningful inside a situation's `offer`; anywhere else it resolves to nobody, which makes the
+objective unofferable rather than silently pointing somewhere else.
 
 ### Location anchors
 
@@ -371,6 +413,7 @@ An extra gate on whether the quest is **offered**. A single condition object, wh
 | `mcaquests:quest_not_completed` | `quest` (resource location), `scope` (`global`/`giver`, default `global`) |
 | `mcaquests:quest_failed` | `quest` (resource location), `scope` — true once that quest has failed (giver died / timed out) |
 | `mcaquests:quest_abandoned` | `quest` (resource location), `scope` — true once the player abandoned that quest |
+| `mcaquests:quest_declined` | `quest` (resource location), `scope` — true once the player turned that offer down. Declining costs nothing, so branch on it as a preference ("offer the softer version instead"), not as a punishment |
 | `mcaquests:village_reputation` | `min`, `max` — raw reputation with the giver's village |
 | `mcaquests:reputation_tier` | `min_tier` (required), `max_tier`, `ladder` (default `mcaquests:default`) — tier with the giver's village (see Progression) |
 
@@ -387,7 +430,7 @@ These gate a quest on the giver's **MCA Reborn** state (relationship to the play
 |---|---|---|
 | `mcaquests:is_player_spouse` | *(none)* | The giver is married to the interacting player. |
 | `mcaquests:relationship_state` | `states` (list, required) | The giver's relationship state is in the list. Values: `single`, `promised`, `engaged`, `married_to_villager`, `married_to_player`, `widow`. |
-| `mcaquests:is_family_member` | `relation` (default `any`) | The giver is that relation **to the player** in the family tree. Values: `any`, `parent`, `child`, `sibling`, `grandparent`. Note this list is deliberately *not* the same as `related_villager_status`'s: it is player-relative and blood-only, so it has no `spouse` — use `is_player_spouse` for that. |
+| `mcaquests:is_family_member` | `relation` (default `any`) | The giver is that relation **to the player** in the family tree. Values: `any`, `spouse`, `parent`, `child`, `sibling`, `grandparent`. Player-relative, and so the *opposite direction* to `related_villager_status`: the giver being the player's `child` means the player is one of the giver's parents. **This is not a gate for a `family` target** — it says nothing about whether the giver has a findable relative. |
 | `mcaquests:age_group` | `groups` (list, required) | The giver's age is in the list. Values: `baby`, `toddler`, `child`, `teen`, `adult`. *(MCA has no "elder" age — see Limitations.)* |
 | `mcaquests:personality` | `personalities` (list, required) | The giver's personality is in the list. Values: `athletic`, `confident`, `friendly`, `flirty`, `witty`, `shy`, `gloomy`, `sensitive`, `greedy`, `odd`, `lazy`, `grumpy`, `peppy`. |
 | `mcaquests:mood` | `min`/`max` (ints) and/or `moods` (list); at least one required | The giver's mood value is within `min`/`max` **and** (if given) its mood name is in `moods`. Mood names are data-driven in MCA, so they are not checked against a fixed list. |
@@ -395,7 +438,7 @@ These gate a quest on the giver's **MCA Reborn** state (relationship to the play
 | `mcaquests:has_home` | `value` (bool, default `true`) | Whether the giver has an assigned home equals `value`. |
 | `mcaquests:health_below` | `threshold` (required, `(0,1]`) | The giver's health fraction (current ÷ max) is below `threshold`. |
 | `mcaquests:infected` | `min_progress` (default `0`) | The giver's zombie-infection progress is `> 0` and at least `min_progress` (range `[0,1]`). |
-| `mcaquests:related_villager_status` | `relation` + `status` (both required) | The giver has at least one relative of `relation` (`any`/`spouse`/`parent`/`child`/`sibling`/`grandparent` — the same set `"mode": "family"` targets accept) whose `status` matches: `alive`, `nearby`, `missing`, `dead`, or `same_village`. **`missing`** means *in the family tree, not deceased, not a filler ancestor MCA generated, has no entity anywhere in the world, and is not on any village's resident roll* — that last part is what separates "genuinely vanished" from "merely outside render distance", and it is what stops `find_missing_relative` from spawning a duplicate of someone who is alive and well. |
+| `mcaquests:related_villager_status` | `relation` + `status` (both required) | The giver has at least one relative of `relation` (`any`/`spouse`/`parent`/`child`/`sibling`/`grandparent` — the same set `"mode": "family"` targets accept) whose `status` matches. The seven statuses are listed below, and are **exactly** what a target's `require` accepts, so a quest can gate on precisely the question its objective will later ask. |
 | `mcaquests:giver_distance_from_village` | `min_distance` (default `0`), `require_outside_border` (bool, default `false`) | The giver is at least `min_distance` blocks from its **home-village center** (and, when `require_outside_border`, also outside the village border). Fails safe to *not met* when the giver has no home village — so a villager standing in its own square is never offered an "escort me home" quest. The gate for lead-style escorts and "out after dark" content; pair with `time:NIGHT` via `any_of`. |
 
 Examples:
@@ -430,6 +473,21 @@ A lead-style escort is gated to "far from home, or a little out after dark" like
   ]
 }
 ```
+
+#### Relative statuses
+
+Used by `related_villager_status`'s `status` and by a villager target's `require`. One vocabulary, so the
+gate and the target cannot disagree about who is in scope.
+
+| `status` | Means |
+|---|---|
+| `reachable` | **The default for a `family` target.** A real person a quest can send you to: not dead, not one of MCA's invented ancestors, not a player, and either loaded or on some village's resident roll. |
+| `alive` | A real person who is not dead. Includes the missing — being missing is not being dead. |
+| `nearby` | Alive and standing within interaction range of the giver. |
+| `same_village` | Alive **and** on the giver's own village roll. The "alive" half matters: MCA never removes the dead from a village's resident roll, so this used to be satisfied by relatives who had died. |
+| `missing` | Alive, with no body anywhere in the world and on no village's resident roll. That last part separates "genuinely vanished" from "merely outside render distance", and is what stops `find_missing_relative` spawning a duplicate of someone alive and well. |
+| `dead` | Flagged deceased in the family tree, and not one of MCA's invented ancestors — a villager the game made up to pad a family tree was never alive, so mourning them is not a thing. |
+| `any_known` | Anyone with a family-tree node at all, dead or invented. The old unfiltered behaviour, available to a pack that deliberately wants it. |
 
 **Failure behavior.** A non-MCA giver, a missing/partly-loaded relationship or family graph, or any internal MCA error all evaluate to *not met* (debug-logged), never an exception. `health_below` and `related_villager_status` read live/persistent state, so a quest can appear or disappear as that state changes — reopen the menu to refresh.
 
@@ -565,6 +623,7 @@ logout/restart). A failed quest is removed from your log, grants **no** rewards,
   "deadline_time": 23000,
   "require_weather": "rain",
   "fail_on_giver_death": true,
+  "fail_on_target_lost": false,
   "failure_hearts": -10,
   "retry_after": 24000,
   "block_retry": false
@@ -581,6 +640,7 @@ Declare one or more. The first to fire wins. (A `failure` block with no trigger 
 | `deadline_time` | int (0–24000) | Fail when the world clock next reaches this **time-of-day** after acceptance, e.g. `23000` for "before sunrise". Accepting exactly on the boundary grants a full day. |
 | `require_weather` | `clear` / `rain` / `thunder` | The quest demands this weather; it fails the instant the weather stops matching. Pair with a `conditions` weather gate so it's only offered when the weather is right. |
 | `fail_on_giver_death` | bool | Fail if the quest giver dies, regardless of the global `failQuestIfGiverDies` config. |
+| `fail_on_target_lost` | bool (default `false`) | Fail if the villager an objective **bound** dies or leaves the world for good. Off by default: the standing contract is that a quest you cannot currently play is *suspended*, not taken away, so by default the objective shows a reason line instead of a counter, the deadline stops running down, the quest stays abandonable, and it resumes if they come back. Turn it on for a story that should close rather than wait. |
 
 When both `deadline_ticks` and `deadline_time` are set, whichever runs out first wins. Time deadlines
 drive the live countdown shown in the HUD tracker; weather/giver-death failures show no countdown.
@@ -1107,7 +1167,7 @@ Projects add a `projects` block to the common config plus two client keys (full 
 | `projectContributeMinIntervalTicks` | `5` | Per-player contribution rate limit. |
 | `defaultPerPlayerContributionCap` | `0` | Default `donate_item` `per_player_cap` (`0` = unlimited). |
 | `allowProjectCommandRewards` | `false` | Gates `command` rewards inside projects (also needs `allowCommandRewards`). |
-| `maxConcurrentProjectsPerScope` | `8` | Cap on simultaneously active projects sharing a scope. |
+| `maxConcurrentProjectsPerScope` | `8` | Cap on simultaneously active projects sharing a scope. New projects only — one already under way is never hidden by a lowered cap. |
 | `showProjectTrackerHud` *(client)* | `true` | Show the project tracker HUD. |
 | `projectTrackerMaxEntries` *(client)* | `3` | Max project entries shown in the HUD. |
 
@@ -1302,9 +1362,9 @@ player-proximity-driven (villages near players are scanned periodically) plus ev
 | Type | Fields | Fires when |
 | --- | --- | --- |
 | `mcaquests:raid` | — | A raid is active at the village. Closes as **cleared** if the raid ends first. |
-| `mcaquests:villager_death` | `relation` (default `any`) | A village resident dies. |
+| `mcaquests:villager_death` | `relation` (default `any`) | A village resident dies. `relation` narrows **who may raise it**: with `child`, only a villager who lost a child offers the situation. Every death still opens it — the village has lost someone either way. |
 | `mcaquests:infection` | `min_progress` (0–1, default 0) | A resident's zombie-infection reaches the threshold. |
-| `mcaquests:missing_kin` | `relation` (default `any`) | A resident has a missing relative (spouse/parent/child/sibling). |
+| `mcaquests:missing_kin` | `relation` (default `any`) | A resident has a missing relative of that relation. Narrowing it means the situation fires **only** for that kind of loss — `child` will not open on a missing spouse. |
 | `mcaquests:low_food` | `threshold` (default 16) | The village's banked edible items drop to the threshold. Closes as **cleared** if food recovers. |
 | `mcaquests:night` | `require_full_moon` (default false) | Nightfall in the village. |
 | `mcaquests:townstead_need` | `need` (required), `minimum_fraction` (0–1) | *(optional [Townstead](TOWNSTEAD.md))* That share of the village has crossed into a need crisis. Banded: it closes only once the village recovers past a margin (`needCrisisHysteresis`), so a village sitting on the line does not flap the same famine on and off. |
@@ -1316,10 +1376,19 @@ player-proximity-driven (villages near players are scanned periodically) plus ev
 ### The `offer` block
 
 The offer is the body of a quest: it accepts the same `weight`, `title`, `giver`, `dialogue`,
-`objectives`, `rewards`, `turn_in`, `template`, and offer-shaping (`priority`, `weight_bonus`) fields a
-normal quest does. It has no `id`, `chain`, or `conditions` — a situation's eligibility is decided by
-its scope and the giver gate, not by static conditions. Objectives resolve relative to the giver, just
-like ordinary NPC/village objectives. A `dialogue.failed` line is shown if the situation fails.
+`objectives`, `rewards`, `turn_in`, `template`, `conditions`, and offer-shaping (`priority`,
+`weight_bonus`, `difficulty`, `offer_group`) fields a normal quest does. It has no `id` and no `chain`.
+A situation always *opens* on its signal; its scope, its giver gate and its `conditions` decide which
+villager is allowed to be the one who asks. A `dialogue.failed` line is shown if the situation fails.
+
+Objectives resolve relative to the giver, just like ordinary NPC/village objectives — **or** relative to
+the villager the situation is about, with `{ "mode": "situation_focus" }`. Prefer the latter whenever the
+situation names someone: "cure your relative" asked of any adult in the village is a different quest from
+"cure the villager who is actually infected".
+
+**Situation offers pass the same gates static quests do**, as of 1.4.3: conditions, cooldowns, repeat
+rules, the already-satisfied check, and the check that the villager an objective names actually exists.
+Before that they were appended to the offer pool *after* the static filter chain and skipped all of it.
 
 ### Resolution
 
@@ -1587,6 +1656,23 @@ simulation to register that they ate it. Neither is a stand-in for the other.
   }
 }
 ```
+
+---
+
+## Two invariants
+
+Everything the loader refuses, and much of what the runtime withholds, comes back to these two. They are
+worth knowing before writing content, because content that breaks one of them tends to fail in the worst
+possible way: silently, in front of a player, with nothing anywhere saying why.
+
+> **No inert surface.** Every config key, datapack field, dialogue state and UI button either changes
+> observable state or does not exist. A field that is parsed and ignored is a bug with a documentation
+> page — and there were fourteen of them, including a Decline button that did nothing at all.
+
+> **Nothing is offered that names something unresolvable.** Any content that references a villager, a
+> structure, a biome, a location or a village must prove that reference resolves *before* it is offered,
+> using the same predicate that will later resolve it for real. A quest gated on one question and
+> targeted on another is how a player was asked to deliver a letter to a brother who had died.
 
 ---
 
