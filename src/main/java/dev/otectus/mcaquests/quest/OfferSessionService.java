@@ -144,9 +144,10 @@ public final class OfferSessionService {
     // ---------------------------------------------------------------- drawing
 
     private static void redraw(OfferFilters.Pass pass, OfferSession session, long now, int refreshTicks) {
-        // A fresh draw forgets every refusal: turning something down is meant to last until the villager
-        // has something new to say, not to ban it. A pack that wants longer sets declineCooldownTicks,
-        // which outlives the session because it is compared against the clock rather than the set.
+        // OfferSession#redraw drops the refusals that were only meant to last as long as the old set --
+        // turning something down is meant to last until the villager has something new to say, not to ban
+        // it. A refusal given an explicit declineCooldownTicks is about the clock rather than about this
+        // menu, so it survives.
         long epoch = refreshTicks <= 0 ? 0L : now / refreshTicks;
         long seed = offerSeed(pass.player(), session.villagerUuid(), epoch);
         List<QuestDefinition> pool = offerablePool(pass, session, now);
