@@ -15,7 +15,10 @@ import java.util.UUID;
  *
  * <ul>
  *   <li>{@code professions} — eligible sponsor professions; empty means any adult villager.</li>
- *   <li>{@code requiredCount} — how many distinct living sponsors the project wants (informational/UX).</li>
+ *   <li>{@code requiredCount} — how many distinct living sponsors the project wants. Shown on the
+ *       project card when it is more than one, alongside how many have signed on. It does not gate
+ *       anything: a project with one sponsor of three still runs, because refusing contributions until
+ *       enough villagers volunteered would stall a project on something the player cannot influence.</li>
  *   <li>{@code adultOnly} — restrict sponsors to adults (default true).</li>
  *   <li>{@code pinnedSponsors} — explicit villager UUIDs that always count as sponsors.</li>
  *   <li>{@code onDeath} — sponsor-loss behavior; absent means use the config default.</li>

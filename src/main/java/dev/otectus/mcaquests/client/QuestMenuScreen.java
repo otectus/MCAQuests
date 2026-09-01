@@ -103,8 +103,24 @@ public class QuestMenuScreen extends Screen {
             height += CardText.heightBulleted(this.font, BULLET, objective, wrapWidth());
         }
         height += CardText.height(this.font, joinRewards(card.rewards()), wrapWidth()) + 2;
-        height += 24; // buttons + padding
+        if (hasButtons()) {
+            height += 24; // buttons + padding
+        }
         return height;
+    }
+
+    /**
+     * Whether this status puts buttons on its cards.
+     *
+     * <p>{@code NO_QUESTS} can now carry one informational card — the villager saying why they have
+     * nothing, from a quest's own {@code cooldown} or {@code locked} line — and reserving the button strip
+     * under it would leave an empty band of nothing.
+     */
+    private boolean hasButtons() {
+        return switch (data.status()) {
+            case OFFER, READY, IN_PROGRESS -> true;
+            case NO_QUESTS, BLOCKED -> false;
+        };
     }
 
     /** The objective marker, shared by the height calculation and the draw so the indents match. */

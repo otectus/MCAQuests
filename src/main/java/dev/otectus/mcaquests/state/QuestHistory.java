@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -91,6 +92,12 @@ public final class QuestHistory {
     public boolean onCooldown(ResourceLocation quest, UUID villager, long now) {
         Long until = cooldownUntil.get(key(quest, villager));
         return until != null && now < until;
+    }
+
+    /** Ticks until this quest can be taken from this villager again, or empty if it can be now. */
+    public Optional<Long> cooldownRemaining(ResourceLocation quest, UUID villager, long now) {
+        Long until = cooldownUntil.get(key(quest, villager));
+        return until == null || now >= until ? Optional.empty() : Optional.of(until - now);
     }
 
     public void setCooldownUntil(ResourceLocation quest, UUID villager, long gameTime) {

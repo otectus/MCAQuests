@@ -17,7 +17,8 @@ import java.util.Optional;
  * "once a season" means once a season on this server rather than once per a tick count guessed at
  * authoring time.
  */
-public record RepeatRule(RepeatType type, int cooldownTicks, Optional<TownsteadPeriod> period,
+public record RepeatRule(RepeatType type, Optional<Integer> declaredCooldownTicks,
+                         Optional<TownsteadPeriod> period,
                          RepeatScope scope, int fallbackCooldownTicks) {
 
     public enum RepeatType {
@@ -55,16 +56,49 @@ public record RepeatRule(RepeatType type, int cooldownTicks, Optional<TownsteadP
                 scope -> DataResult.success(scope.name().toLowerCase(Locale.ROOT)));
     }
 
-    public static final RepeatRule DEFAULT = new RepeatRule(RepeatType.COOLDOWN, 24000);
+    /**
+     * The rule a quest gets when it declares none: a cooldown of whatever
+     * {@code defaultQuestCooldownTicks} says.
+     */
+    public static final RepeatRule DEFAULT =
+            new RepeatRule(RepeatType.COOLDOWN, Optional.empty(), Optional.empty(), RepeatScope.GIVER, 24000);
 
     /** The pre-1.4.1 shape, for the three rules that take none of the period fields. */
     public RepeatRule(RepeatType type, int cooldownTicks) {
-        this(type, cooldownTicks, Optional.empty(), RepeatScope.GIVER, 24000);
+        this(type, Optional.of(cooldownTicks), Optional.empty(), RepeatScope.GIVER, 24000);
+    }
+
+    /**
+     * How long this quest waits before it can be taken again from the same villager.
+     *
+     * <p>Falls back to {@code defaultQuestCooldownTicks} when the JSON did not say. That key was declared
+     * and documented from the first release and read absolutely nowhere: the effective default came from a
+     * hardcoded {@code 24000} in this codec, so a server owner who set it to a week got a day. Telling the
+     * declared value apart from an omitted one is why this is an {@link Optional} rather than an
+     * {@code int} — you cannot tell "the author wrote 24000" from "the author wrote nothing" otherwise.
+     */
+    public int cooldownTicks() {
+        return declaredCooldownTicks.orElseGet(RepeatRule::configuredDefaultCooldown);
+    }
+
+    /**
+     * Reads the configured default, falling back to the historical 24000 when no config is attached.
+     *
+     * <p>Forge throws rather than answering before a config file is bound, which is right for a running
+     * game and wrong for a unit test constructing a quest. The literal is the value this codec used to
+     * hardcode, so an unconfigured read behaves exactly as the mod always did.
+     */
+    private static int configuredDefaultCooldown() {
+        try {
+            return dev.otectus.mcaquests.McaQuestsConfig.COMMON.defaultQuestCooldownTicks.get();
+        } catch (RuntimeException e) {
+            return 24000;
+        }
     }
 
     public static final Codec<RepeatRule> BASE_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RepeatType.CODEC.optionalFieldOf("type", RepeatType.COOLDOWN).forGetter(RepeatRule::type),
-            Codec.INT.optionalFieldOf("cooldown_ticks", 24000).forGetter(RepeatRule::cooldownTicks),
+            Codec.INT.optionalFieldOf("cooldown_ticks").forGetter(RepeatRule::declaredCooldownTicks),
             TownsteadPeriod.CODEC.optionalFieldOf("period").forGetter(RepeatRule::period),
             RepeatScope.CODEC.optionalFieldOf("scope", RepeatScope.GIVER).forGetter(RepeatRule::scope),
             Codec.INT.optionalFieldOf("fallback_cooldown_ticks", 24000)

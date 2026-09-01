@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.event;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
+import dev.otectus.mcaquests.quest.objective.TownsteadObjective;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
@@ -363,8 +364,19 @@ public final class QuestProgressEvents {
         // Generic poll pass (spec section 11.3): any objective type implementing PollingObjective is
         // picked up here automatically, after all built-ins above, so this is a pure additive extension
         // point — new poll-driven objective types no longer require editing this method.
+        //
+        // Townstead-backed objectives are additionally gated on townsteadPollIntervalTicks. That key had
+        // promised since 1.4.0 that it "shares the existing once-per-second objective pass", and this pass
+        // had never read it; a server owner raising it to trade responsiveness for tick time got nothing.
+        // At its default of 20 the gate opens every second, so nothing changes for anyone who left it be.
+        boolean townsteadDue = townsteadPollDue(player, level);
         forActiveObjectives(player, PollingObjective.class,
-                (objective, active, progress) -> objective.poll(player, active, progress));
+                (objective, active, progress) -> {
+                    if (objective instanceof TownsteadObjective && !townsteadDue) {
+                        return;
+                    }
+                    objective.poll(player, active, progress);
+                });
         highlightTargets(player, level);
         accrueSuspendedTime(player);
         checkFailureTriggers(player);
@@ -406,6 +418,26 @@ public final class QuestProgressEvents {
         lastSituationScan = now;
         SituationDetectors.scan(server);
         SituationManager.tick(server);
+    }
+
+    /** Game time each player's Townstead objectives were last read, so the interval is honoured per player. */
+    private static final Map<UUID, Long> lastTownsteadPoll = new HashMap<>();
+
+    /**
+     * Whether this player's Townstead-backed objectives are due to re-read villager state.
+     *
+     * <p>Per player rather than server-wide, because these objectives read the state of the villager
+     * <em>that player's</em> quest is about; a shared clock would let one player's tick consume another's
+     * turn and leave a quest sitting still.
+     */
+    private static boolean townsteadPollDue(ServerPlayer player, ServerLevel level) {
+        long now = level.getGameTime();
+        Long last = lastTownsteadPoll.get(player.getUUID());
+        if (last != null && !due(now, last, McaQuestsConfig.COMMON.townsteadPollIntervalTicks.get())) {
+            return false;
+        }
+        lastTownsteadPoll.put(player.getUUID(), now);
+        return true;
     }
 
     /**

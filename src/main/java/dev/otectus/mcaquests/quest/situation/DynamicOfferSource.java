@@ -8,9 +8,11 @@ import dev.otectus.mcaquests.quest.GiverSpec;
 import dev.otectus.mcaquests.quest.OfferFilters;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
+import dev.otectus.mcaquests.quest.situation.trigger.VillagerDeathTrigger;
 import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
 import javax.annotation.Nullable;
@@ -85,6 +87,9 @@ public final class DynamicOfferSource {
                     instance.familyRootUuid().orElse(null), villagerUuid, villagerFamily)) {
                 continue;
             }
+            if (!bereavementMatches(def, instance, villager)) {
+                continue;
+            }
             // Every other question — enabled, giver, hearts, cooldown, repeat rule, conditions, already
             // satisfied, and whether the villager it names exists — is the same question a static quest
             // is asked, so it is asked by the same code.
@@ -95,6 +100,31 @@ public final class DynamicOfferSource {
             offers.add(offer);
         }
         return offers;
+    }
+
+    /**
+     * Whether this villager is close enough to the death for the situation to be theirs to raise.
+     *
+     * <p>{@code VillagerDeathTrigger}'s {@code relation} promised in its own javadoc to be "applied at
+     * offer eligibility", and no such call site existed: the field was parsed and ignored, so "only a
+     * villager who lost a child offers this" was a sentence in a comment and nothing else. This is that
+     * call site.
+     *
+     * <p>{@code any} — the default, and what every shipped situation uses — narrows nothing, so this is
+     * free for existing content. Anything else fails closed when the death's villager or the level cannot
+     * be read: an unanswerable filter withholds the offer rather than ignoring itself.
+     */
+    private static boolean bereavementMatches(SituationDefinition def, SituationInstance instance,
+                                              Entity villager) {
+        if (!(def.trigger() instanceof VillagerDeathTrigger death) || death.relation().equals("any")) {
+            return true;
+        }
+        UUID dead = instance.villagerUuid().orElse(null);
+        if (dead == null || !(villager.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        return McaCompat.relativeCandidates(level, villager, death.relation()).stream()
+                .anyMatch(candidate -> candidate.uuid().equals(dead));
     }
 
     /** Whether {@code villager} is in this situation's scope (pure). */

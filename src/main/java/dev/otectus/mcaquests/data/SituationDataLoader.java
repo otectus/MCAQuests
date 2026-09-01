@@ -44,6 +44,9 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager manager, ProfilerFiller profiler) {
+        // enableDefaultQuestPack: an owner who wants only their own content gets only their
+        // own content. A datapack that overrides a bundled file keeps its override.
+        files = BuiltinPack.filter(files, manager, DIRECTORY);
         boolean strict = McaQuestsConfig.COMMON.strictJsonValidation.get();
         Map<ResourceLocation, SituationDefinition> loaded = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();

@@ -208,7 +208,14 @@ public final class QuestManager {
         // declining an offer brought the very same three straight back).
         List<OfferSessionService.Offer> offers = OfferSessionService.currentOffers(player, villager, data);
         if (offers.isEmpty()) {
-            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
+            // "I do not need anything right now" is true but unhelpful when the reason is "you did that
+            // yesterday" or "not until you have done something else first". Every quest already authors a
+            // `cooldown` and a `locked` line for exactly this, and both were parsed and never shown.
+            List<QuestCard> explanation = whyNothingIsOffered(player, villager, data);
+            send(player, explanation.isEmpty()
+                    ? QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS)
+                    : QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts,
+                            QuestMenuStatus.NO_QUESTS, explanation));
             return;
         }
         List<QuestCard> cards = new ArrayList<>();
@@ -217,6 +224,64 @@ public final class QuestManager {
                     QuestDefinition.OFFER, offer.dialogue(player, villager)));
         }
         send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, QuestMenuStatus.OFFER, cards));
+    }
+
+    /**
+     * The villager's own explanation for having nothing to offer, if one of their quests wrote one.
+     *
+     * <p>Prefers a quest on cooldown over a locked one, and among quests on cooldown the one coming back
+     * soonest — "come back tomorrow" is more use than "there is a thing you cannot do yet".
+     *
+     * <p>Rendered as a card under {@link QuestMenuStatus#NO_QUESTS}, which adds no buttons, so this needs
+     * no protocol change. Returns an empty list when no quest of this villager's has anything to say, and
+     * the plain no-quests state is shown exactly as before.
+     */
+    private static List<QuestCard> whyNothingIsOffered(ServerPlayer player, Entity villager,
+                                                       PlayerQuestData data) {
+        OfferFilters.Pass pass = OfferFilters.Pass.of(player, villager, data);
+        PlaceholderResolver resolver = PlaceholderResolver.forPlayer(player);
+        QuestDefinition soonest = null;
+        long soonestRemaining = Long.MAX_VALUE;
+        QuestDefinition locked = null;
+        for (QuestDefinition def : QuestRegistry.all()) {
+            // Only this villager's own repertoire, and only the cheap giver filters: this runs on a menu
+            // that is already empty, and walking every condition of every quest in the catalogue to
+            // produce one line of flavour would not be worth it.
+            if (!def.enabled() || !givenBy(def, pass)) {
+                continue;
+            }
+            if (def.dialogue().containsKey(QuestDefinition.COOLDOWN)) {
+                Optional<Long> remaining = data.history()
+                        .cooldownRemaining(def.id(), pass.villagerUuid(), pass.now());
+                if (remaining.isPresent() && remaining.get() < soonestRemaining) {
+                    soonestRemaining = remaining.get();
+                    soonest = def;
+                }
+            }
+            if (locked == null && def.dialogue().containsKey(QuestDefinition.LOCKED)
+                    && !data.history().onCooldown(def.id(), pass.villagerUuid(), pass.now())
+                    && !data.hasActive(def.id(), pass.villagerUuid())
+                    && !def.effectiveConditions().map(c -> c.test(pass.contextFor(def))).orElse(true)) {
+                locked = def;
+            }
+        }
+        QuestDefinition chosen = soonest != null ? soonest : locked;
+        if (chosen == null) {
+            return List.of();
+        }
+        String state = soonest != null ? QuestDefinition.COOLDOWN : QuestDefinition.LOCKED;
+        Component line = chosen.dialogueOr(state, chosen.title(resolver), resolver);
+        return List.of(new QuestCard(chosen.id(), chosen.title(resolver), Component.empty(),
+                QuestDialogueHooks.resolve(player, villager, chosen, state, line),
+                List.of(), List.of()));
+    }
+
+    /** Whether this villager is one of the givers {@code def} names — the cheap half of the gate. */
+    private static boolean givenBy(QuestDefinition def, OfferFilters.Pass pass) {
+        return (def.giver().isGeneric()
+                        || ProfessionMatcher.matchesAny(def.giver().professions(), pass.profession(), pass.matching()))
+                && (!def.giver().adultOnly() || pass.adult())
+                && def.giver().acceptsHearts(pass.hearts());
     }
 
     private static QuestCard buildCard(ServerPlayer player, @Nullable Entity villager, QuestDefinition def,

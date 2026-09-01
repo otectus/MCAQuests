@@ -304,34 +304,66 @@ public final class SituationManager {
         return false;
     }
 
+    /**
+     * Applies one resolution's reputation and hearts to whoever earned them.
+     *
+     * <p>Both are per-player: MCA's hearts are a relationship between one villager and one player, and
+     * §29.5 says a situation's standing goes to whoever resolved it rather than to everyone nearby or to
+     * an anonymous village total.
+     *
+     * <p>What that reasoning got wrong was the <em>failure</em> case. {@code resolveFailure} and
+     * {@code resolveCleared} passed a literal {@code null} player and both branches here required one, so
+     * every {@code "failure": {"reputation": -10}} a datapack wrote was parsed and silently discarded —
+     * including in the shipped pack. But a situation that expires has people who signed up for it and did
+     * not finish: the participants. They are who the penalty is for.
+     */
     private static void applyOutcome(MinecraftServer server, SituationInstance instance, Outcome outcome,
                                      @Nullable ServerPlayer player) {
-        // §29.5: a situation's standing goes to the player who resolved it, not to everyone nearby
-        // and not to an anonymous village total. With nobody to credit there is nothing to award.
-        if (outcome.reputation() != 0 && player != null) {
-            var community = dev.otectus.mcaquests.quest.reputation.QuestReputation
-                    .inLevel(server.overworld(), instance.villageId());
-            dev.otectus.mcaquests.quest.reputation.QuestReputation.award(
-                    dev.otectus.mcaquests.compat.ReputationAward
-                            .builder(server, player.getUUID(), community.dimension(),
-                                    community.villageId(),
-                                    dev.otectus.mcaquests.quest.reputation.QuestReputation.SOURCE)
-                            .delta(outcome.reputation())
-                            .incident(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock
-                                    .Incidents.SITUATION_RESOLVED)
-                            .dedupeKey(dev.otectus.mcaquests.quest.reputation.ReputationDedupe
-                                    .situation(instance.instanceId(), player.getUUID(),
-                                            outcome.reputation() >= 0 ? "success" : "failure"))
-                            .context("source_title", instance.defId().getPath())
-                            .build());
+        for (ServerPlayer recipient : recipients(server, instance, player)) {
+            if (outcome.reputation() != 0) {
+                var community = dev.otectus.mcaquests.quest.reputation.QuestReputation
+                        .inLevel(server.overworld(), instance.villageId());
+                dev.otectus.mcaquests.quest.reputation.QuestReputation.award(
+                        dev.otectus.mcaquests.compat.ReputationAward
+                                .builder(server, recipient.getUUID(), community.dimension(),
+                                        community.villageId(),
+                                        dev.otectus.mcaquests.quest.reputation.QuestReputation.SOURCE)
+                                .delta(outcome.reputation())
+                                .incident(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock
+                                        .Incidents.SITUATION_RESOLVED)
+                                .dedupeKey(dev.otectus.mcaquests.quest.reputation.ReputationDedupe
+                                        .situation(instance.instanceId(), recipient.getUUID(),
+                                                outcome.reputation() >= 0 ? "success" : "failure"))
+                                .context("source_title", instance.defId().getPath())
+                                .build());
+            }
+            if (outcome.hearts() != 0) {
+                instance.villagerUuid().ifPresent(uuid ->
+                        McaCompat.awardHearts(server.overworld(), uuid, recipient, outcome.hearts()));
+            }
         }
-        // Hearts are per-player for the same reason standing is (see above): MCA's own hearts are a
-        // relationship between one villager and one player, so with nobody to credit there is nothing
-        // to award.
-        if (outcome.hearts() != 0 && player != null) {
-            instance.villagerUuid().ifPresent(uuid ->
-                    McaCompat.awardHearts(server.overworld(), uuid, player, outcome.hearts()));
+    }
+
+    /**
+     * Who an outcome lands on: the player who resolved it if there is one, otherwise everyone who took
+     * part and is online to receive it.
+     *
+     * <p>Offline participants are skipped rather than banked. Reputation and hearts both need a live
+     * player object, and a penalty delivered days later, out of context, would be worse than one missed.
+     */
+    private static List<ServerPlayer> recipients(MinecraftServer server, SituationInstance instance,
+                                                 @Nullable ServerPlayer player) {
+        if (player != null) {
+            return List.of(player);
         }
+        List<ServerPlayer> online = new ArrayList<>();
+        for (UUID uuid : instance.participants()) {
+            ServerPlayer participant = server.getPlayerList().getPlayer(uuid);
+            if (participant != null) {
+                online.add(participant);
+            }
+        }
+        return online;
     }
 
     private static void failOutstandingCopies(MinecraftServer server, UUID instanceId) {

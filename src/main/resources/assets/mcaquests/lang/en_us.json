@@ -2829,5 +2829,6 @@
   "mcaquests.message.target_gone": "Never mind - %s.",
   "mcaquests.status.target_died": "%s has died",
   "mcaquests.status.target_lost": "%s can no longer be found anywhere",
-  "mcaquests.message.quest_declined": "Maybe another time: %s"
+  "mcaquests.message.quest_declined": "Maybe another time: %s",
+  "mcaquests.label.project.sponsors_of": "%s - %s of %s sponsors"
 }

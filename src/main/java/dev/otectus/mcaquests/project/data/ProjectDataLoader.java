@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.data.BuiltinPack;
 import dev.otectus.mcaquests.data.QuestValidationException;
 import dev.otectus.mcaquests.project.ProjectDefinition;
 import net.minecraft.resources.ResourceLocation;
@@ -44,6 +45,9 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager manager, ProfilerFiller profiler) {
+        // enableDefaultQuestPack: an owner who wants only their own content gets only their
+        // own content. A datapack that overrides a bundled file keeps its override.
+        files = BuiltinPack.filter(files, manager, DIRECTORY);
         if (!McaQuestsConfig.COMMON.enableVillageProjects.get()) {
             ProjectRegistry.replaceAll(Map.of(), List.of());
             return;

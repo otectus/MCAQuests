@@ -33,8 +33,25 @@ class SituationTriggerMatchTest {
     @Test
     void parameterlessTriggersAlwaysMatch() {
         assertTrue(new RaidTrigger().matches(TriggerSignal.raid(null, 1)));
+        // A death opens the situation whoever died; which villager may then raise it is decided by
+        // VillagerDeathTrigger#relation at offer eligibility, where there is a candidate giver to ask about.
         assertTrue(new VillagerDeathTrigger("any").matches(TriggerSignal.villagerDeath(null, 1, null, null)));
-        assertTrue(new MissingKinTrigger("child").matches(TriggerSignal.missingKin(null, 1, null)));
+        assertTrue(new MissingKinTrigger("any").matches(TriggerSignal.missingKin(null, 1, null)));
+    }
+
+    /**
+     * A narrowed missing-kin trigger asks about a specific villager, and refuses when it cannot.
+     *
+     * <p>This used to return {@code true} unconditionally — the {@code relation} field was parsed and
+     * never read — which is why {@code find_missing_child}, whose trigger says {@code "relation": "child"},
+     * opened just as readily when a villager's spouse went missing. With no level and no villager in the
+     * signal there is nothing to ask, so it fails closed rather than firing as if it had no filter.
+     */
+    @Test
+    void narrowedMissingKinFailsClosedWhenItCannotTell() {
+        assertFalse(new MissingKinTrigger("child").matches(TriggerSignal.missingKin(null, 1, null)));
+        assertFalse(new MissingKinTrigger("child")
+                .matches(TriggerSignal.missingKin(null, 1, java.util.UUID.randomUUID(), null)));
     }
 
     @Test

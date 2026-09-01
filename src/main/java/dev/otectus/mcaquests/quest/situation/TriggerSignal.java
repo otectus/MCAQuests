@@ -66,10 +66,25 @@ public record TriggerSignal(
                 villagerUuid, null, progress, 0, false);
     }
 
+    /** The pre-1.4.3 form, which could not say whose kin were missing. */
     public static TriggerSignal missingKin(@Nullable ServerLevel level, int villageId,
                                            @Nullable UUID familyRootUuid) {
+        return missingKin(level, villageId, null, familyRootUuid);
+    }
+
+    /**
+     * A resident of {@code villageId} has a relative who has gone missing.
+     *
+     * <p>{@code villagerUuid} is the resident who is <em>missing someone</em>, not the missing person —
+     * they are, by definition, nowhere. It has to be carried because {@code MissingKinTrigger} narrows on
+     * which relation went missing, and that question can only be asked of a specific villager. Without it
+     * the trigger's {@code relation} was unanswerable, which is why it sat unread and
+     * {@code find_missing_child} opened for a missing spouse.
+     */
+    public static TriggerSignal missingKin(@Nullable ServerLevel level, int villageId,
+                                           @Nullable UUID villagerUuid, @Nullable UUID familyRootUuid) {
         return new TriggerSignal(SituationSignalType.MISSING_KIN, level, villageId,
-                null, familyRootUuid, 0f, 0, false);
+                villagerUuid, familyRootUuid, 0f, 0, false);
     }
 
     public static TriggerSignal lowFood(@Nullable ServerLevel level, int villageId, int foodCount) {

@@ -21,8 +21,12 @@ import java.util.Optional;
  *
  * <ul>
  *   <li>{@code key} — author label for dialogue/display/debug (e.g. {@code "gather_stone"}).</li>
- *   <li>{@code dialogue} — sponsor lines keyed by the {@code QuestDefinition} state names
- *       ({@code offer}/{@code in_progress}/{@code ready}/{@code complete}).</li>
+ *   <li>{@code dialogue} — sponsor lines keyed by state name. A project has exactly two states a
+ *       sponsor can be spoken to in: {@code offer} before it has begun and {@code in_progress} once it
+ *       has. There is deliberately no {@code ready} or {@code complete} line — a phase advances the
+ *       moment its objectives are met, so "ready" never lasts long enough to say anything in, and a
+ *       finished project leaves the menu rather than standing there being finished at you. This list
+ *       named all four until 1.4.3, which promised two lines that nothing would ever ask for.</li>
  *   <li>{@code objectives} — shared {@link ProjectObjective}s for this phase.</li>
  *   <li>{@code rewards} — {@link SharedReward}s granted when the phase completes.</li>
  *   <li>{@code unlock} — an extra condition gating entry into this phase, beyond "prior phase done".</li>

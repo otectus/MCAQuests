@@ -103,6 +103,7 @@ public final class SituationDetectors {
         UUID infectedVillager = null;
         float infectionProgress = 0f;
         UUID missingKinRoot = null;
+        UUID missingKinVillager = null;
         for (Entity resident : McaCompat.loadedVillageResidents(level, villageId)) {
             if (infectedVillager == null) {
                 float progress = McaCompat.getInfectionProgress(resident);
@@ -113,6 +114,7 @@ public final class SituationDetectors {
             }
             if (missingKinRoot == null && McaCompat.hasMissingRelative(level, resident)) {
                 missingKinRoot = McaCompat.getFamilyRootId(resident).orElse(resident.getUUID());
+                missingKinVillager = resident.getUUID();
             }
             if (infectedVillager != null && missingKinRoot != null) {
                 break;
@@ -123,7 +125,8 @@ public final class SituationDetectors {
                     TriggerSignal.infection(level, villageId, infectedVillager, infectionProgress));
         }
         if (missingKinRoot != null) {
-            SituationManager.onSignal(server, TriggerSignal.missingKin(level, villageId, missingKinRoot));
+            SituationManager.onSignal(server, TriggerSignal.missingKin(level, villageId,
+                    missingKinVillager, missingKinRoot));
         }
         if (wants(SituationSignalType.VILLAGER_STRANDED)) {
             scanStranded(server, level, villageId);

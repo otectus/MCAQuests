@@ -161,7 +161,12 @@ public final class McaQuestsConfig {
             b.pop();
 
             b.push("turn_in");
-            requireOriginalVillagerForTurnIn = b.define("requireOriginalVillagerForTurnIn", true);
+            requireOriginalVillagerForTurnIn = b.comment(
+                    "What a quest that does not state a \"turn_in\": {\"mode\"} means.",
+                    "  true  (default) - hand it back to the villager who gave it",
+                    "  false           - hand it to any MCA villager",
+                    "A quest that DOES state a mode always wins; this only fills in the blank.")
+                    .define("requireOriginalVillagerForTurnIn", true);
             allowTurnInToSameProfessionIfOriginalMissing = b.define("allowTurnInToSameProfessionIfOriginalMissing", false);
             failQuestIfGiverDies = b.define("failQuestIfGiverDies", false);
             b.pop();

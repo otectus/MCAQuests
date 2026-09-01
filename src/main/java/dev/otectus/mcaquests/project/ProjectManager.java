@@ -163,6 +163,27 @@ public final class ProjectManager {
 
     // ---------------------------------------------------------------- offers / menu
 
+    /**
+     * How many non-terminal project instances already share one scope identity.
+     *
+     * <p>Enforces {@code maxConcurrentProjectsPerScope}, which had been declared and documented since
+     * 0.4.0 with nothing anywhere reading it: a village could accumulate every project in the catalogue at
+     * once, which is not a village with a lot going on so much as a menu nobody can read.
+     *
+     * <p>Only new projects are capped. One already under way is never hidden from a sponsor because the
+     * cap was later lowered — that would strand contributions the players have already made.
+     */
+    private static int openCountInScope(ProjectSavedData data, ProjectScope scope, String identity) {
+        int open = 0;
+        for (ProjectState state : data.allInstances()) {
+            if (state.scope() == scope && state.identity().equals(identity)
+                    && !state.status().isTerminal()) {
+                open++;
+            }
+        }
+        return open;
+    }
+
     /** Projects this villager should show now: an in-progress instance it can host, or a new offer. */
     public static List<ProjectDefinition> projectsToShow(ServerPlayer player, Entity villager) {
         if (!enabled() || !(player.level() instanceof ServerLevel level)) {
@@ -190,10 +211,16 @@ public final class ProjectManager {
             ProjectInstanceKey key = new ProjectInstanceKey(def.id(), def.scopeType(), scope.get().identity());
             Optional<ProjectState> existing = data.getInstance(key);
             if (existing.isPresent()) {
+                // Deliberately NOT re-tested against conditions. A project already under way must stay
+                // reachable even once its gate has drifted from true — a winter project running into
+                // spring — or the contributions players have already made are stranded with no way to
+                // finish them. Conditions decide who may START a project, not who may finish one.
                 if (!existing.get().status().isTerminal()) {
                     shown.add(def); // already running here — any eligible sponsor can take contributions
                 }
             } else if (conditionsPass(player, villager, def)
+                    && openCountInScope(data, def.scopeType(), scope.get().identity())
+                            < McaQuestsConfig.COMMON.maxConcurrentProjectsPerScope.get()
                     && isDailyRepresentative(level, def, villager, scope.get().villageId(), worldDay)) {
                 shown.add(def); // a fresh offer to begin the project
             }
@@ -230,7 +257,7 @@ public final class ProjectManager {
         ProjectPhase phase = def.phase(phaseIdx);
         Component dialogue = phase.dialogueOr(status == ProjectMenuStatus.OFFER ? "offer" : "in_progress", def.displayTitle());
         return new ProjectCard(def.id(), def.displayTitle(), scopeLabel(def),
-                sponsorLabel(def, villager, scope), phaseLabel(def, phaseIdx), dialogue,
+                sponsorLabel(def, villager, scope, state), phaseLabel(def, phaseIdx), dialogue,
                 objectiveLines(player, def, state, phaseIdx), rewardLines(phase), status);
     }
 
@@ -265,15 +292,31 @@ public final class ProjectManager {
         return Component.translatable("mcaquests.project.scope." + def.scopeType().lower());
     }
 
-    private static Component sponsorLabel(ProjectDefinition def, Entity villager, ScopeIdentity scope) {
+    /**
+     * Who is backing this project, and — when the pack asked for more than one — how many have signed on.
+     *
+     * <p>{@code sponsor.required_count} was described in its own javadoc as "informational/UX" and then
+     * never shown to anyone, which made it informational to nobody. A project that wants three sponsors
+     * now says so on its card, and says how many it has.
+     */
+    private static Component sponsorLabel(ProjectDefinition def, Entity villager, ScopeIdentity scope,
+                                          @Nullable ProjectState state) {
+        Component who;
         if (def.scopeType() == ProjectScope.VILLAGE && scope.villageId().isPresent()
-                && villager.level() instanceof ServerLevel level) {
-            Optional<String> name = McaCompat.villageName(level, scope.villageId().getAsInt());
-            if (name.isPresent()) {
-                return Component.translatable("mcaquests.label.project.village", name.get());
-            }
+                && villager.level() instanceof ServerLevel level
+                && McaCompat.villageName(level, scope.villageId().getAsInt()).isPresent()) {
+            who = Component.translatable("mcaquests.label.project.village",
+                    McaCompat.villageName(level, scope.villageId().getAsInt()).orElseThrow());
+        } else {
+            who = Component.translatable("mcaquests.label.project.sponsor",
+                    McaCompat.getVillagerDisplayName(villager));
         }
-        return Component.translatable("mcaquests.label.project.sponsor", McaCompat.getVillagerDisplayName(villager));
+        int wanted = def.sponsor().requiredCount();
+        if (wanted <= 1) {
+            return who; // the overwhelmingly common case; saying "1 of 1" would be noise
+        }
+        int have = state == null ? 0 : state.sponsors().size();
+        return Component.translatable("mcaquests.label.project.sponsors_of", who, have, wanted);
     }
 
     private static Component phaseLabel(ProjectDefinition def, int phaseIdx) {
