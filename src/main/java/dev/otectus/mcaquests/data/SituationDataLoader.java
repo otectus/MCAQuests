@@ -62,6 +62,14 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
                     });
         }
 
+        // The first cross-reference validation situations have ever had. Until 1.4.3 a situation offer
+        // was parsed and nothing else, which is how two of the shipped ones carried a family target with
+        // no gate at all for several releases.
+        int alreadyLogged = errors.size();
+        TargetGateValidator.validateSituations(loaded.values(), strict ? errors : warnings, warnings);
+        errors.subList(alreadyLogged, errors.size())
+                .forEach(e -> McaQuests.LOGGER.error("[MCA: Quests] {}", e));
+
         if (strict && !errors.isEmpty()) {
             throw new QuestValidationException(errors.get(errors.size() - 1));
         }

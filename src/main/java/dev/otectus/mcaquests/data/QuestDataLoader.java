@@ -71,6 +71,13 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         FailureValidator.validate(loaded, errors);
         ObjectiveValidator.validate(loaded, errors);
         AgeEligibilityValidator.validate(loaded, warnings);
+        // New in 1.4.3, and deliberately lenient for one release: it rejects third-party content that has
+        // always loaded, so outside strict mode the author gets a loud line rather than a dead server.
+        if (strict) {
+            TargetGateValidator.validate(loaded, errors, warnings);
+        } else {
+            TargetGateValidator.validate(loaded, warnings, warnings);
+        }
         errors.subList(alreadyLogged, errors.size())
                 .forEach(e -> McaQuests.LOGGER.error("[MCA: Quests] {}", e));
         if (strict && !errors.isEmpty()) {
