@@ -62,9 +62,13 @@
       "amount": 8
     },
     {
-      "type": "mcaquests:townstead_profession_xp",
-      "profession": "minecraft:leatherworker",
-      "amount": 45
+      "type": "mcaquests:xp",
+      "amount": 6
+    },
+    {
+      "type": "mcaquests:townstead_reaction",
+      "task": "mcaquests:townstead_tanned_and_ready",
+      "phase": "completed"
     }
   ],
   "conditions": {
@@ -86,5 +90,6 @@
         "value": "minecraft:leatherworker"
       }
     ]
-  }
+  },
+  "offer_group": "townstead_work"
 }

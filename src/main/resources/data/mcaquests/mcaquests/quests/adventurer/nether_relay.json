@@ -1,0 +1,75 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:nether_relay",
+  "enabled": true,
+  "weight": 6,
+  "priority": 2,
+  "offer_group": "core_adventure",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 120000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric",
+      "minecraft:weaponsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.nether_relay.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.nether_relay.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.nether_relay.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.nether_relay.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.nether_relay.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.nether_relay.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.nether_relay.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:visit_dimension",
+      "dimension": "minecraft:the_nether"
+    },
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:blaze",
+      "count": 8
+    },
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "self"
+      },
+      "item": "minecraft:blaze_rod",
+      "count": 6
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ]
+}

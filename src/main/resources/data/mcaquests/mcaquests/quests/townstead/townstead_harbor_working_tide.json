@@ -1,0 +1,110 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_harbor_working_tide",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "townstead_work",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_harbor_working_tide.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:fish_item",
+      "item": "minecraft:cod",
+      "count": 8
+    },
+    {
+      "type": "mcaquests:fish_item",
+      "item": "minecraft:salmon",
+      "count": 8
+    },
+    {
+      "type": "mcaquests:townstead_schedule_streak",
+      "activity": "work",
+      "required_shifts": 2,
+      "minimum_coverage": 0.6,
+      "require_on_schedule": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_SCHEDULE",
+          "READ_CALENDAR",
+          "READ_BUILDING"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_building",
+        "building_type": "dock",
+        "minimum_level": 1,
+        "count": 1
+      }
+    ]
+  },
+  "chain": {
+    "chain": "harbor_of_hands",
+    "stage": 2,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:townstead_harbor_first_piling"
+    ],
+    "unlocks": [
+      "mcaquests:townstead_harbor_lantern_line"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.townstead_harbor_working_tide.chain.chapter"
+    }
+  }
+}

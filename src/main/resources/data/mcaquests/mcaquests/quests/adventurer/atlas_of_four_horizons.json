@@ -1,0 +1,85 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:atlas_of_four_horizons",
+  "enabled": true,
+  "weight": 6,
+  "priority": 2,
+  "offer_group": "core_adventure",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.atlas_of_four_horizons.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.atlas_of_four_horizons.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.atlas_of_four_horizons.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.atlas_of_four_horizons.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.atlas_of_four_horizons.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.atlas_of_four_horizons.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.atlas_of_four_horizons.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_forest"
+    },
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_mountain"
+    },
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_ocean"
+    },
+    {
+      "type": "mcaquests:visit_biome",
+      "tag": "minecraft:is_badlands"
+    },
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:cartographer",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:player_level",
+        "min": 10
+      }
+    ]
+  }
+}

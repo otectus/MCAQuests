@@ -3,14 +3,19 @@ package dev.otectus.mcaquests.quest.situation;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
+import dev.otectus.mcaquests.compat.TownsteadCalendarView;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadCounters;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
+import dev.otectus.mcaquests.compat.TownsteadLifeStageView;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
+import dev.otectus.mcaquests.compat.TownsteadPeriod;
+import dev.otectus.mcaquests.compat.TownsteadRootView;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
 import dev.otectus.mcaquests.compat.TownsteadVillageBuilding;
 import dev.otectus.mcaquests.compat.TownsteadVillagerView;
 import dev.otectus.mcaquests.quest.situation.state.TownsteadSignalStateSavedData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -50,6 +55,16 @@ public final class TownsteadSituationDetector {
     /** How much of a village must be suffering before it is the village that is in trouble. */
     private static final double CRISIS_FRACTION = 0.34D;
 
+    /**
+     * The schedule-disruption thresholds (spec 10.2). The recovery gap is deliberately wider than the
+     * need hysteresis: a routine recovers gradually, and re-arming the moment it dipped back under the
+     * line would open a second situation while the player was still resolving the first.
+     */
+    private static final int DISRUPTION_MINIMUM_OBSERVED = 5;
+    private static final double DISRUPTION_FRACTION = 0.50D;
+    private static final double DISRUPTION_RECOVERY_GAP = 0.15D;
+    private static final long DISRUPTION_HOLD_TICKS = 1200L;
+
     private TownsteadSituationDetector() {
     }
 
@@ -72,15 +87,25 @@ public final class TownsteadSituationDetector {
         boolean wantsNeeds = wants(SituationSignalType.TOWNSTEAD_NEED);
         boolean wantsCollapse = wants(SituationSignalType.TOWNSTEAD_COLLAPSE);
         boolean wantsTiers = wants(SituationSignalType.TOWNSTEAD_PROFESSION_TIER);
-        if ((wantsNeeds || wantsCollapse || wantsTiers) && bridge.has(TownsteadCapability.READ_VILLAGER)) {
+        boolean wantsLife = wants(SituationSignalType.TOWNSTEAD_LIFE_TRANSITION);
+        if ((wantsNeeds || wantsCollapse || wantsTiers || wantsLife)
+                && bridge.has(TownsteadCapability.READ_VILLAGER)) {
             scanResidents(server, level, villageId, rotation, state, evaluation,
-                    wantsNeeds, wantsCollapse, wantsTiers);
+                    wantsNeeds, wantsCollapse, wantsTiers, wantsLife);
         }
         if (wants(SituationSignalType.TOWNSTEAD_SPIRIT) && bridge.has(TownsteadCapability.READ_SPIRIT)) {
             scanSpirit(server, level, villageId, state, evaluation);
         }
         if (wants(SituationSignalType.TOWNSTEAD_BUILDING) && bridge.has(TownsteadCapability.READ_BUILDING)) {
             scanBuildings(server, level, villageId, state, evaluation);
+        }
+        if (wants(SituationSignalType.TOWNSTEAD_CALENDAR_TRANSITION)
+                && bridge.has(TownsteadCapability.READ_CALENDAR)) {
+            scanCalendar(server, level, villageId, state, evaluation);
+        }
+        if (wants(SituationSignalType.TOWNSTEAD_SCHEDULE_DISRUPTION)
+                && bridge.has(TownsteadCapability.READ_SCHEDULE)) {
+            scanSchedules(server, level, villageId, rotation, state, evaluation);
         }
         TownsteadCounters.villageScanned(System.nanoTime() - startedAt);
     }
@@ -97,7 +122,7 @@ public final class TownsteadSituationDetector {
     private static void scanResidents(MinecraftServer server, ServerLevel level, int villageId,
                                       long rotation, TownsteadSignalStateSavedData state,
                                       TownsteadEvaluation evaluation, boolean wantsNeeds,
-                                      boolean wantsCollapse, boolean wantsTiers) {
+                                      boolean wantsCollapse, boolean wantsTiers, boolean wantsLife) {
         List<Entity> residents = window(McaCompat.loadedVillageResidents(level, villageId), rotation);
         if (residents.isEmpty()) {
             return;
@@ -139,6 +164,9 @@ public final class TownsteadSituationDetector {
                 SituationManager.onSignal(server,
                         TriggerSignal.townsteadCollapse(level, villageId, resident.getUUID()));
                     TownsteadCounters.signalFired();
+            }
+            if (wantsLife) {
+                scanLife(server, level, villageId, state, evaluation, resident, view);
             }
             if (wantsTiers && view.hasProfession()) {
                 String key = resident.getUUID() + "|tier|" + view.professionId();
@@ -216,9 +244,16 @@ public final class TownsteadSituationDetector {
         String identityKey = villageId + "|spirit_id";
         boolean changedIdentity = state.observeChanged(identityKey, view.primaryId().hashCode());
 
-        if (roseATier || changedIdentity) {
+        // The classification is a separate axis again -- settlement, a single name, blend, mixed -- and
+        // it is the one a "what kind of place is this" situation is really about. Observed as a label
+        // rather than a hash so the signal can say what it changed from.
+        String previousClassification =
+                state.observeLabel(villageId + "|spirit_class", view.classification()).orElse(null);
+
+        if (roseATier || changedIdentity || previousClassification != null) {
             SituationManager.onSignal(server, TriggerSignal.townsteadSpirit(level, villageId,
-                    view.primaryId(), previous, view.tier()));
+                    view.primaryId(), previous, view.tier(),
+                    previousClassification, view.classification()));
             TownsteadCounters.signalFired();
         }
     }
@@ -244,6 +279,165 @@ public final class TownsteadSituationDetector {
                     newest.family(), newest.level()));
             TownsteadCounters.signalFired();
         }
+    }
+
+    // ------------------------------------------------------------------------------ transitions
+
+    /**
+     * Fires when the calendar turns over a week, a season or a year (spec 5.8).
+     *
+     * <p>Baselines are keyed by the calendar <b>profile</b> as well as the period, so switching
+     * profiles mid-world seeds a fresh baseline instead of synthesising a season change out of two
+     * incomparable calendars. Each period is observed independently: a year rolling over is genuinely
+     * a different event from a season doing so, even though they happen on the same day.
+     *
+     * <p>The signal is emitted per village because situations are village-scoped, but the reading is
+     * server-wide, so the baseline is keyed on the profile rather than on the village -- otherwise the
+     * first village scanned after a season change would fire and the rest would find the baseline
+     * already updated and stay silent.
+     */
+    private static void scanCalendar(MinecraftServer server, ServerLevel level, int villageId,
+                                     TownsteadSignalStateSavedData state, TownsteadEvaluation evaluation) {
+        TownsteadCalendarView calendar = evaluation.calendar(server).orElse(null);
+        if (calendar == null || calendar.profileId().isEmpty()) {
+            return;
+        }
+        for (TownsteadPeriod period : TownsteadPeriod.values()) {
+            String value = period.currentValue(calendar);
+            if (value.isEmpty()) {
+                continue; // a profile with no seasons simply has no season transitions
+            }
+            String key = "calendar|" + calendar.profileId() + '|' + period.id() + '|' + villageId;
+            state.observeLabel(key, value).ifPresent(previous -> {
+                SituationManager.onSignal(server, TriggerSignal.townsteadCalendarTransition(
+                        level, villageId, period.id(), previous, value));
+                TownsteadCounters.signalFired();
+            });
+        }
+    }
+
+    /**
+     * Fires when a villager comes of age or becomes a senior (spec 5.8).
+     *
+     * <p>{@code canonical_stage} is resolved through the villager's root definition rather than read
+     * off the stage id, because Townstead roots may name their stages anything they like. A root whose
+     * adult stage is called "butterfly" still produces the semantic child-to-adult crossing, which is
+     * what a coming-of-age story actually wants to know.
+     *
+     * <p>The raw stage id is observed as well, for a pack that means one specific stage of one specific
+     * root; both are cheap, and offering only the semantic axis would make that pack impossible.
+     */
+    private static void scanLife(MinecraftServer server, ServerLevel level, int villageId,
+                                 TownsteadSignalStateSavedData state, TownsteadEvaluation evaluation,
+                                 Entity resident, TownsteadVillagerView view) {
+        String uuid = resident.getUUID().toString();
+        fireLife(server, level, villageId, state, resident, "senior",
+                uuid + "|senior", String.valueOf(view.senior()));
+        fireLife(server, level, villageId, state, resident, "life_stage",
+                uuid + "|life_stage", view.lifeStage());
+        String canonical = canonicalStage(evaluation, view);
+        if (!canonical.isEmpty()) {
+            fireLife(server, level, villageId, state, resident, "canonical_stage",
+                    uuid + "|canonical_stage", canonical);
+        }
+    }
+
+    private static void fireLife(MinecraftServer server, ServerLevel level, int villageId,
+                                 TownsteadSignalStateSavedData state, Entity resident, String axis,
+                                 String key, String value) {
+        if (value == null || value.isEmpty()) {
+            return;
+        }
+        state.observeLabel(key, value).ifPresent(previous -> {
+            SituationManager.onSignal(server, TriggerSignal.townsteadLifeTransition(
+                    level, villageId, resident.getUUID(), axis, previous, value));
+            TownsteadCounters.signalFired();
+        });
+    }
+
+    /**
+     * What this villager's current life stage <em>presents as</em>, per their root's own definition.
+     * Empty when the root cannot be read, which means the semantic axis is simply not observed rather
+     * than being guessed at from the stage's name.
+     */
+    private static String canonicalStage(TownsteadEvaluation evaluation, TownsteadVillagerView view) {
+        if (view.lifeStage().isEmpty() || view.rootId().isEmpty()
+                || !TownsteadEvaluation.has(TownsteadCapability.READ_ROOT)) {
+            return "";
+        }
+        TownsteadRootView root = evaluation.root(ResourceLocation.tryParse(view.rootId())).orElse(null);
+        if (root == null) {
+            return "";
+        }
+        for (TownsteadLifeStageView stage : root.lifeStages()) {
+            if (stage.id().equalsIgnoreCase(view.lifeStage())) {
+                return stage.presentsAs();
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Fires when a village has been off its own schedule for long enough to mean something (spec 5.8).
+     *
+     * <p>Three guards, and every one of them is there because the naive version cries wolf. Villagers
+     * are routinely off schedule for a few seconds while walking between jobs, so the disruption has to
+     * <b>persist</b>: the detector counts consecutive observations rather than firing on the first.
+     * A claim about a village needs enough of the village <b>visible</b>. And once fired, it cannot
+     * arm again until the fraction has fallen well below the one that opened it, so a village sitting
+     * on the boundary does not flicker a situation in and out of the quest list.
+     */
+    private static void scanSchedules(MinecraftServer server, ServerLevel level, int villageId,
+                                      long rotation, TownsteadSignalStateSavedData state,
+                                      TownsteadEvaluation evaluation) {
+        List<Entity> residents = window(McaCompat.loadedVillageResidents(level, villageId), rotation);
+        int observed = 0;
+        int adrift = 0;
+        for (Entity resident : residents) {
+            TownsteadVillagerView view = evaluation.villager(resident).orElse(null);
+            if (view == null) {
+                continue;
+            }
+            observed++;
+            if (!view.schedule().onSchedule()) {
+                adrift++;
+            }
+        }
+        String holdKey = villageId + "|schedule_hold";
+        String firedKey = villageId + "|schedule_fired";
+        if (observed < DISRUPTION_MINIMUM_OBSERVED) {
+            state.observeChanged(holdKey, 0);
+            return;
+        }
+
+        double fraction = (double) adrift / observed;
+        boolean alreadyFired = state.lastReading(firedKey, 0) == 1;
+        if (alreadyFired) {
+            // Recovery: only once the village is comfortably back on its feet does this re-arm.
+            if (fraction < DISRUPTION_FRACTION - DISRUPTION_RECOVERY_GAP) {
+                state.observeChanged(firedKey, 0);
+                state.observeChanged(holdKey, 0);
+            }
+            return;
+        }
+        if (fraction < DISRUPTION_FRACTION) {
+            state.observeChanged(holdKey, 0);
+            return;
+        }
+
+        int held = state.lastReading(holdKey, 0) + 1;
+        state.observeChanged(holdKey, held);
+        // Consecutive observations x the sweep interval is how much game time the disruption has
+        // actually persisted for, so a server configured to scan less often still holds for as long.
+        long scanInterval = Math.max(1, McaQuestsConfig.COMMON.situationDetectionIntervalTicks.get());
+        if ((long) held * scanInterval < DISRUPTION_HOLD_TICKS) {
+            return;
+        }
+        state.observeChanged(firedKey, 1);
+        state.observeChanged(holdKey, 0);
+        SituationManager.onSignal(server,
+                TriggerSignal.townsteadScheduleDisruption(level, villageId, (float) fraction, observed));
+        TownsteadCounters.signalFired();
     }
 
     // ----------------------------------------------------------------------------------- budgets

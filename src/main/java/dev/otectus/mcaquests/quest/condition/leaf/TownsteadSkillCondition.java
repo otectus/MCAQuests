@@ -3,8 +3,10 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
+import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadTarget;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.quest.TownsteadNames;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestConditionType;
@@ -52,6 +54,13 @@ public record TownsteadSkillCondition(TownsteadTarget target, ResourceLocation s
         if (!bridge.isAvailable()) {
             return false;
         }
+        // A skill id the registry has never heard of makes this condition unanswerable, not false:
+        // with `has: false` an unknown id would otherwise read as "nobody has it" and let a whole
+        // quest line through on a typo. Only refuse when the registry could actually be consulted --
+        // an unbound registry leaves the id unverified, and unverified is not the same as wrong.
+        if (bridge.has(TownsteadCapability.READ_SKILL_REGISTRY) && !bridge.isKnownSkill(skill)) {
+            return false;
+        }
         Entity villager = TownsteadTargetResolver
                 .resolveForOffer(target, context.player(), context.villager(), context.level())
                 .orElse(null);
@@ -65,6 +74,6 @@ public record TownsteadSkillCondition(TownsteadTarget target, ResourceLocation s
     public Component describe() {
         return Component.translatable(has
                 ? "mcaquests.condition.townstead_skill.has"
-                : "mcaquests.condition.townstead_skill.lacks", skill.toString());
+                : "mcaquests.condition.townstead_skill.lacks", TownsteadNames.skill(skill));
     }
 }

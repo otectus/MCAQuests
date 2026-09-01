@@ -605,6 +605,48 @@ public final class McaCompat {
         }
     }
 
+    /**
+     * The nearest village to {@code pos} within {@code radius}, skipping {@code excluded} (spec §5.4).
+     *
+     * <p>Enumerates rather than delegating to MCA's own nearest-village search, because that search
+     * has no notion of "but not that one" and would keep answering with the giver's own village — the
+     * one case a route quest must never point at. Ties break on the lower village id so the same world
+     * always yields the same road.
+     *
+     * <p>Safe default: {@code empty}, which makes the quest ineligible rather than sending the player
+     * to nowhere.
+     */
+    public static OptionalInt findNearestVillageIdExcluding(ServerLevel level, BlockPos pos, int radius,
+                                                            OptionalInt excluded) {
+        try {
+            double limit = (double) radius * radius;
+            int bestId = -1;
+            double bestDistance = Double.MAX_VALUE;
+            for (Object village : McaHandles.allVillages(level)) {
+                OptionalInt id = villageIdOf(village);
+                if (id.isEmpty() || (excluded.isPresent() && id.getAsInt() == excluded.getAsInt())) {
+                    continue;
+                }
+                BlockPos center = McaHandles.villageCenter(village);
+                if (center == null) {
+                    continue;
+                }
+                double distance = center.distSqr(pos);
+                if (distance > limit) {
+                    continue;
+                }
+                if (distance < bestDistance || (distance == bestDistance && id.getAsInt() < bestId)) {
+                    bestId = id.getAsInt();
+                    bestDistance = distance;
+                }
+            }
+            return bestId < 0 ? OptionalInt.empty() : OptionalInt.of(bestId);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA findNearestVillageIdExcluding failed; defaulting empty", t);
+            return OptionalInt.empty();
+        }
+    }
+
     /** True when {@code pos} lies within the border of the village with {@code villageId}. Safe default: {@code false}. */
     public static boolean isWithinVillage(ServerLevel level, int villageId, BlockPos pos) {
         try {

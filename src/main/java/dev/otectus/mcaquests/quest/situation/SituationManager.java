@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.situation;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.compat.TownsteadContentGate;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.api.event.SituationResolvedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -57,6 +58,15 @@ public final class SituationManager {
     private SituationManager() {
     }
 
+    /**
+     * True when this situation is driven by Townstead state, so the content switch knows whether it
+     * applies. Read off the trigger's own id rather than the file's location, so the answer stays right
+     * if a definition moves.
+     */
+    private static boolean readsTownstead(SituationDefinition def) {
+        return def.trigger().type().id().getPath().startsWith("townstead_");
+    }
+
     /** Dispatches a detected signal: matches definitions, picks one, and opens it if the throttle allows. */
     public static void onSignal(MinecraftServer server, TriggerSignal signal) {
         if (!McaQuestsConfig.COMMON.enableSituations.get()) {
@@ -66,6 +76,7 @@ public final class SituationManager {
                 .filter(SituationDefinition::enabled)
                 .filter(def -> def.trigger().signalType() == signal.type())
                 .filter(def -> def.trigger().matches(signal))
+                .filter(def -> TownsteadContentGate.allowsSituation(def.id(), readsTownstead(def)))
                 .toList();
         if (matches.isEmpty()) {
             return;

@@ -1,0 +1,106 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:remedy_the_fevered_word",
+  "enabled": true,
+  "weight": 3,
+  "priority": 3,
+  "offer_group": "core_relationship",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.remedy_the_fevered_word.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "profession",
+        "profession": "minecraft:cleric"
+      },
+      "item": "minecraft:spider_eye",
+      "count": 2
+    },
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "profession",
+        "profession": "minecraft:cleric"
+      },
+      "item": "minecraft:glass_bottle",
+      "count": 3
+    },
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "profession",
+        "profession": "minecraft:cleric"
+      },
+      "item": "minecraft:paper",
+      "count": 1
+    },
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:cleric",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:infected"
+      }
+    ]
+  },
+  "chain": {
+    "chain": "the_ashen_remedy",
+    "stage": 1,
+    "stage_total": 4,
+    "unlocks": [
+      "mcaquests:remedy_embers_and_wart"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.remedy_the_fevered_word.chain.chapter"
+    }
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_four_seasons_larder",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:butcher"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_four_seasons_larder.title"
+  },
+  "category": "community",
+  "reputation": {
+    "on_project_complete": 20
+  },
+  "phases": [
+    {
+      "key": "seed_chest",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.seed_chest.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.seed_chest.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:wheat_seeds",
+          "count": 128
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:carrot",
+          "count": 64
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:potato",
+          "count": 64
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 30
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "summer_table",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.summer_table.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.summer_table.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:bread",
+          "count": 96
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:honey_bottle",
+          "count": 24
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:cooked_chicken",
+          "count": 32
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 34
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "autumn_stores",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.autumn_stores.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.autumn_stores.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:wheat",
+          "count": 128
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:cooked_beef",
+          "count": 48
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:cooked_porkchop",
+          "count": 48
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 40
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "winter_wellbeing",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.winter_wellbeing.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_four_seasons_larder.winter_wellbeing.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_resident_wellbeing_project",
+          "minimum_observed": 8,
+          "minimum_fraction": 0.8,
+          "hunger_min": 65,
+          "thirst_min": 12,
+          "energy_min": 10,
+          "require_not_collapsed": true,
+          "minimum_loaded_fraction": 0.6,
+          "hold_ticks": 4800
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 12
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

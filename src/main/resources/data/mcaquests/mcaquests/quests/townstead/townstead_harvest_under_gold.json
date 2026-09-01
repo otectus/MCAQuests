@@ -1,0 +1,127 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_harvest_under_gold",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "townstead_season",
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_harvest_under_gold.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:wheat",
+      "count": 64,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:carrot",
+      "count": 32,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:potato",
+      "count": 32,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:townstead_schedule_streak",
+      "activity": "work",
+      "required_shifts": 2,
+      "minimum_coverage": 0.65,
+      "require_on_schedule": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_SCHEDULE",
+          "READ_CALENDAR"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "calendar",
+        "path": "season",
+        "operator": "eq",
+        "value": "autumn"
+      }
+    ]
+  },
+  "chain": {
+    "chain": "seasons_of_the_soil",
+    "stage": 3,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:townstead_heat_over_the_fields"
+    ],
+    "unlocks": [
+      "mcaquests:townstead_winter_at_the_table"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.townstead_harvest_under_gold.chain.chapter"
+    }
+  }
+}

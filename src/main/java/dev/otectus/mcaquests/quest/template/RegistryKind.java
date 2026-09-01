@@ -127,6 +127,25 @@ public enum RegistryKind {
         return this == ITEM || this == BLOCK || this == ENTITY;
     }
 
+    /**
+     * Whether this kind's tags have been bound to its registry yet.
+     *
+     * <p>{@link #isStatic()} is about <em>ids</em>, which really are known the moment the registry
+     * freezes. Tags are not: they are datapack content, bound to the registry only when a reload
+     * finishes. Until then {@link #staticMembers} returns an empty list for every tag, so an empty
+     * result cannot tell "this tag does not exist" apart from "no tag exists yet" — which is how
+     * {@code minecraft:fishes}, a vanilla tag with six items in it, got reported as empty or unknown.
+     * Callers that treat emptiness as a finding must ask this first.
+     */
+    public boolean tagsBound() {
+        return switch (this) {
+            case ITEM -> BuiltInRegistries.ITEM.getTagNames().findAny().isPresent();
+            case BLOCK -> BuiltInRegistries.BLOCK.getTagNames().findAny().isPresent();
+            case ENTITY -> BuiltInRegistries.ENTITY_TYPE.getTagNames().findAny().isPresent();
+            case BIOME, DIMENSION -> false;
+        };
+    }
+
     private static <T> void collectMembers(Registry<T> registry, ResourceKey<? extends Registry<T>> registryKey,
                                            ResourceLocation tag, List<ResourceLocation> out) {
         TagKey<T> tagKey = TagKey.create(registryKey, tag);

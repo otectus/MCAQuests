@@ -9,6 +9,7 @@ import dev.otectus.mcaquests.compat.TownsteadGeneView;
 import dev.otectus.mcaquests.compat.TownsteadLifeStageView;
 import dev.otectus.mcaquests.compat.TownsteadMutationResult;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
+import dev.otectus.mcaquests.compat.TownsteadProfessionTrackView;
 import dev.otectus.mcaquests.compat.TownsteadRootView;
 import dev.otectus.mcaquests.compat.TownsteadScheduleView;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The typed facade over {@link TownsteadBinding}'s resolved handles: Townstead objects go in, MCA:
@@ -227,6 +229,35 @@ final class TownsteadHandles {
 
     private static final MethodHandle H_REACTION = R.handle(TownsteadBinding.REACTION_ON_TASK);
 
+    private static final MethodHandle H_TRACK_SPEC = R.handle(TownsteadBinding.TRACK_SPEC);
+    private static final MethodHandle H_TRACK_MAX_XP = R.handle(TownsteadBinding.TRACK_MAX_XP);
+    private static final MethodHandle H_TRACK_MAX_TIER = R.handle(TownsteadBinding.TRACK_MAX_TIER);
+    private static final MethodHandle H_TRACK_TIER_FOR_XP = R.handle(TownsteadBinding.TRACK_TIER_FOR_XP);
+    private static final MethodHandle H_TRACK_DAILY_CAP = R.handle(TownsteadBinding.TRACK_DAILY_CAP);
+    private static final MethodHandle H_TRACK_DEFS_BY_ID = R.handle(TownsteadBinding.TRACK_DEFS_BY_ID);
+    private static final boolean HAS_TRACK_DEFS = R.has(TownsteadBinding.TRACK_DEFS_BY_ID);
+
+    private static final MethodHandle H_SKILL_DEFS_BY_ID = R.handle(TownsteadBinding.SKILL_DEFS_BY_ID);
+    private static final MethodHandle H_SKILL_DEFS_ALL = R.handle(TownsteadBinding.SKILL_DEFS_ALL);
+
+    /**
+     * Resolved tracks, by the id the caller asked for. Keyed on the <em>requested</em> id rather than
+     * on whichever spelling Townstead answered to, so the namespaced/bare retry below happens once per
+     * profession per game run instead of on every offer. Bounded by the number of professions in the
+     * world, which is small and fixed; no eviction is warranted.
+     *
+     * <p><b>Only progressive tracks are cached.</b> A non-progressive answer is not a fact about the
+     * world, it is a fact about this instant: Townstead resolves a profession against its data-driven
+     * registry before its built-in enum, so a query that lands before that registry is populated — or
+     * during a datapack reload that is adding the track — reports "no progression" for a trade that
+     * has one. Caching that answer would make one unlucky lookup permanent for the rest of the run,
+     * and the quest it gates would stay hidden with nothing in the log to explain why. Re-deriving it
+     * costs a single reflective call, because the threshold bisection only runs on the progressive
+     * path; it is the progressive answer that is expensive and it is the progressive answer that is
+     * stable, so that is the one worth keeping.
+     */
+    private static final Map<String, TownsteadProfessionTrackView> TRACKS = new ConcurrentHashMap<>();
+
     // --- reads -----------------------------------------------------------------------------------
 
     /**
@@ -405,6 +436,183 @@ final class TownsteadHandles {
     }
 
     /** True when Townstead recognises this spirit id, so content can be validated against reality. */
+    /**
+     * What a profession's progression can reach (spec §5.1), or {@link TownsteadProfessionTrackView#none}
+     * when the capability is unbound — the caller distinguishes those two cases by asking the bridge
+     * whether {@code READ_PROFESSION_SPEC} is available, because "no track" and "cannot tell" must not
+     * both silently read as "impossible" at validation time.
+     *
+     * <p><b>Two spellings, both tried.</b> Townstead's built-in progressions are keyed by bare path
+     * ({@code farmer}), while MCA reports namespaced ids ({@code minecraft:farmer}). Asking with the
+     * wrong one gets the zero/default spec back rather than nothing, so a single lookup that stopped
+     * at the first answer would conclude every profession is a dead end. The full id is tried first
+     * (a data-driven definition may legitimately be registered under it) and the bare path only if
+     * that came back non-progressive.
+     */
+    static TownsteadProfessionTrackView professionTrack(String professionId) {
+        if (professionId == null || professionId.isEmpty()
+                || !R.has(TownsteadCapability.READ_PROFESSION_SPEC)) {
+            return TownsteadProfessionTrackView.none(professionId == null ? "" : professionId);
+        }
+        TownsteadProfessionTrackView cached = TRACKS.get(professionId);
+        if (cached != null) {
+            return cached;
+        }
+        TownsteadProfessionTrackView track = readTrack(professionId);
+        if (track.progressive()) {
+            TRACKS.put(professionId, track);
+        }
+        return track;
+    }
+
+    private static TownsteadProfessionTrackView readTrack(String professionId) {
+        TownsteadProfessionTrackView full = trackUnder(professionId, professionId);
+        if (full.progressive()) {
+            return full;
+        }
+        int colon = professionId.indexOf(':');
+        if (colon < 0 || colon + 1 >= professionId.length()) {
+            return full;
+        }
+        TownsteadProfessionTrackView bare = trackUnder(professionId, professionId.substring(colon + 1));
+        return bare.progressive() ? bare : full;
+    }
+
+    /** One lookup, reported under {@code canonicalId} whichever spelling actually answered. */
+    private static TownsteadProfessionTrackView trackUnder(String canonicalId, String lookupId) {
+        Object spec = statik(H_TRACK_SPEC, lookupId);
+        if (spec == null) {
+            return TownsteadProfessionTrackView.none(canonicalId);
+        }
+        int maxXp = integer(H_TRACK_MAX_XP, spec);
+        int dailyCap = integer(H_TRACK_DAILY_CAP, spec);
+        // Townstead's own tier calculation at the ceiling, never the size of a threshold array: the
+        // 0.7.6 built-ins report tier 5 from five thresholds, so counting entries would be off by one
+        // on some tracks and right on others.
+        int maxTier = Math.max(integer(H_TRACK_MAX_TIER, spec), tierAt(spec, maxXp));
+        if (maxXp <= 0 || maxTier <= 0) {
+            return TownsteadProfessionTrackView.none(canonicalId); // the zero/default fallback
+        }
+        return new TownsteadProfessionTrackView(canonicalId, thresholds(spec, maxTier, maxXp), maxTier,
+                maxXp, dailyCap, isDataDriven(lookupId));
+    }
+
+    /**
+     * The XP at which each tier begins, found by bisecting Townstead's own {@code tierForXp} rather
+     * than by reading a thresholds accessor. Two reasons: the spec's tier boundaries are whatever that
+     * method says they are, including for a data-driven definition that computes them; and it needs no
+     * member beyond the four already bound, so a renamed accessor cannot cost the capability.
+     * Runs once per profession per game run — see {@link #TRACKS}.
+     */
+    private static List<Integer> thresholds(Object spec, int maxTier, int maxXp) {
+        List<Integer> out = new ArrayList<>(maxTier);
+        int low = 0;
+        for (int tier = 1; tier <= maxTier; tier++) {
+            int lo = low;
+            int hi = maxXp;
+            if (tierAt(spec, hi) < tier) {
+                break; // unreachable at the ceiling; nothing above it is reachable either
+            }
+            while (lo < hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (tierAt(spec, mid) >= tier) {
+                    hi = mid;
+                } else {
+                    lo = mid + 1;
+                }
+            }
+            out.add(lo);
+            low = lo;
+        }
+        return List.copyOf(out);
+    }
+
+    private static int tierAt(Object spec, int xp) {
+        try {
+            return (int) H_TRACK_TIER_FOR_XP.invoke(spec, xp);
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
+     * Whether Townstead's data-driven registry knows this id. False also covers "the registry could
+     * not be read", so this is reported as metadata and never gates anything: Townstead 0.7.6 bundles
+     * no profession JSON, and a built-in track is perfectly valid without an entry here.
+     */
+    private static boolean isDataDriven(String professionId) {
+        if (!HAS_TRACK_DEFS) {
+            return false;
+        }
+        Object definition = statik(H_TRACK_DEFS_BY_ID, professionId);
+        return definition != null && !(definition instanceof Optional<?> o && o.isEmpty());
+    }
+
+    /**
+     * True when Townstead's skill registry knows this id (spec §5.2). False when the registry did not
+     * bind, so callers check {@code READ_SKILL_REGISTRY} first and treat an unbound registry as
+     * "unverified" rather than as "absent" — refusing a datapack's skill because we could not look it
+     * up would be the same class of bug this release exists to fix.
+     */
+    static boolean isKnownSkill(ResourceLocation skillId) {
+        if (skillId == null || !R.has(TownsteadCapability.READ_SKILL_REGISTRY)) {
+            return false;
+        }
+        Object definition = statik(H_SKILL_DEFS_BY_ID, skillId);
+        if (definition != null && !(definition instanceof Optional<?> o && o.isEmpty())) {
+            return true;
+        }
+        // byId may key on the string form; all() is the authoritative fallback and is cheap enough
+        // here because skill checks happen at reload and at offer time, not in the polling pass.
+        return knownSkillIds().contains(skillId);
+    }
+
+    /** Every registered skill id, or empty when the registry is unbound or unreadable. */
+    static Set<ResourceLocation> knownSkillIds() {
+        if (!R.has(TownsteadCapability.READ_SKILL_REGISTRY)) {
+            return Set.of();
+        }
+        Object all;
+        try {
+            all = H_SKILL_DEFS_ALL.invoke();
+        } catch (Throwable t) {
+            return Set.of();
+        }
+        Set<ResourceLocation> out = new LinkedHashSet<>();
+        collectSkillIds(all, out);
+        return Set.copyOf(out);
+    }
+
+    /**
+     * {@code all()} may hand back a collection of definitions or a map keyed by id, depending on how
+     * the registry is shaped; both are walked and anything that is not an id is skipped, so a shape
+     * change degrades to "no skills known" instead of throwing.
+     */
+    private static void collectSkillIds(@Nullable Object all, Set<ResourceLocation> out) {
+        if (all instanceof Map<?, ?> map) {
+            for (Object key : map.keySet()) {
+                addSkillId(key, out);
+            }
+            return;
+        }
+        if (all instanceof Iterable<?> items) {
+            for (Object item : items) {
+                addSkillId(item, out);
+            }
+        }
+    }
+
+    private static void addSkillId(@Nullable Object value, Set<ResourceLocation> out) {
+        if (value instanceof ResourceLocation id) {
+            out.add(id);
+        } else if (value instanceof String s) {
+            ResourceLocation parsed = ResourceLocation.tryParse(s);
+            if (parsed != null) {
+                out.add(parsed);
+            }
+        }
+    }
+
     static boolean isKnownSpirit(String spiritId) {
         if (spiritId == null || spiritId.isEmpty() || !R.has(TownsteadCapability.READ_SPIRIT)) {
             return false;

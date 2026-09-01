@@ -11,6 +11,8 @@ import dev.otectus.mcaquests.api.event.QuestCompletedEvent;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.api.event.QuestReadyEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.TownsteadContentGate;
+import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.McaVillagerSnapshot;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
@@ -63,10 +65,12 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToIntFunction;
 
@@ -548,6 +552,16 @@ public final class QuestManager {
             case COOLDOWN -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), now + def.cooldownTicks());
             case ONCE -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), Long.MAX_VALUE);
             case REPEATABLE -> { /* immediately available again */ }
+            // A period rule records the calendar period it was finished in, and additionally arms the
+            // fallback cooldown. Both, deliberately: the token is the real rule, and the cooldown is
+            // what still holds the quest back if the calendar becomes unreadable before the next offer.
+            case PERIOD -> {
+                data.history().recordPeriod(def.id(), active.villagerUuid(),
+                        def.repeat().scope() == RepeatRule.RepeatScope.GIVER,
+                        periodToken(player, def).orElse(""));
+                data.history().setCooldownUntil(def.id(), active.villagerUuid(),
+                        now + def.repeat().fallbackCooldownTicks());
+            }
         }
         releaseEscortMovement(player, def, active);
         data.remove(active);
@@ -1005,6 +1019,9 @@ public final class QuestManager {
                 .filter(def -> !data.history().onCooldown(def.id(), villagerUuid, now))
                 .filter(def -> def.repeat().type() != RepeatRule.RepeatType.ONCE
                         || onceCompletionCount(data, def, villagerUuid) == 0)
+                .filter(def -> !completedThisPeriod(player, data, def, villagerUuid))
+                .filter(def -> TownsteadContentGate.allowsQuest(def.id(), def.category(),
+                        def.offerGroup()))
                 // effectiveConditions() folds chain prerequisites into the condition gate, so a later
                 // stage can never be offered before its prerequisites are completed.
                 .filter(def -> def.effectiveConditions()
@@ -1063,12 +1080,74 @@ public final class QuestManager {
         List<QuestDefinition> chosen = new ArrayList<>();
         List<Integer> tiers = eligible.stream().map(QuestManager::effectivePriority).distinct()
                 .sorted(Comparator.reverseOrder()).toList();
+        Set<String> usedGroups = new HashSet<>();
         for (int tier : tiers) {
             if (chosen.size() >= slots) {
                 break;
             }
             List<QuestDefinition> bucket = eligible.stream().filter(def -> effectivePriority(def) == tier).toList();
-            chosen.addAll(WeightedPicker.pickMany(bucket, weightFn, seed, slots - chosen.size()));
+            chosen.addAll(pickDiverse(bucket, weightFn, seed, slots - chosen.size(), usedGroups));
+        }
+        return chosen;
+    }
+
+    /**
+     * Weighted selection within one priority tier, taking at most one quest per
+     * {@link QuestDefinition#offerGroup() offer group} before allowing seconds (spec §5.9).
+     *
+     * <p>The problem this solves is arithmetic, not aesthetic. With three slots and a catalogue in which
+     * dozens of quests are "a villager needs something", plain weighted selection will regularly fill
+     * every slot with the same kind of errand, and the menu stops looking like a village with things
+     * going on. So the first pass draws from a pool with one representative per unused group; only if
+     * slots remain does it fall back to the ordinary weighted draw over everything left.
+     *
+     * <p><b>Priority still wins.</b> Grouping happens inside a tier, never across tiers, so an emergency
+     * cannot be crowded out by diversity. And an ungrouped quest — every pre-1.4.1 datapack — is never
+     * excluded by this pass, so third-party content behaves exactly as it did.
+     *
+     * <p>{@code usedGroups} carries across tiers, so a need emergency at priority 8 also spends the
+     * need group for the ordinary tier below it. That is deliberate: the player should not see the same
+     * theme twice merely because one instance of it was urgent.
+     */
+    private static List<QuestDefinition> pickDiverse(List<QuestDefinition> bucket,
+                                                     ToIntFunction<QuestDefinition> weightFn, long seed,
+                                                     int slots, Set<String> usedGroups) {
+        if (slots <= 0 || bucket.isEmpty()) {
+            return List.of();
+        }
+        List<QuestDefinition> chosen = new ArrayList<>();
+        List<QuestDefinition> remaining = new ArrayList<>(bucket);
+
+        // First pass: at most one from each group not yet represented. Ungrouped quests all stay in the
+        // pool, because "no group" is not a group and they must not shut each other out.
+        while (chosen.size() < slots) {
+            Set<String> seenThisPass = new HashSet<>();
+            List<QuestDefinition> candidates = new ArrayList<>();
+            for (QuestDefinition def : remaining) {
+                String group = def.offerGroup().orElse("");
+                if (group.isEmpty()) {
+                    candidates.add(def);
+                } else if (!usedGroups.contains(group) && seenThisPass.add(group)) {
+                    candidates.add(def);
+                }
+            }
+            if (candidates.isEmpty()) {
+                break;
+            }
+            List<QuestDefinition> picked = WeightedPicker.pickMany(candidates, weightFn,
+                    seed + chosen.size(), 1);
+            if (picked.isEmpty()) {
+                break;
+            }
+            QuestDefinition winner = picked.get(0);
+            winner.offerGroup().filter(g -> !g.isEmpty()).ifPresent(usedGroups::add);
+            chosen.add(winner);
+            remaining.remove(winner);
+        }
+
+        // Second pass: every group has had its chance, so fill what is left on weight alone.
+        if (chosen.size() < slots && !remaining.isEmpty()) {
+            chosen.addAll(WeightedPicker.pickMany(remaining, weightFn, seed, slots - chosen.size()));
         }
         return chosen;
     }
@@ -1086,6 +1165,37 @@ public final class QuestManager {
             return McaQuestsConfig.COMMON.situationDefaultPriority.get();
         }
         return isChainContinuation(def) ? 1 : 0;
+    }
+
+    /**
+     * The live Townstead calendar token for a {@code period} repeat rule, or empty when the rule is not
+     * periodic or the calendar cannot be read (spec §5.6).
+     */
+    private static Optional<String> periodToken(ServerPlayer player, QuestDefinition def) {
+        if (!def.repeat().isPeriodic()) {
+            return Optional.empty();
+        }
+        return new TownsteadEvaluation().calendar(player.getServer())
+                .flatMap(calendar -> def.repeat().period().orElseThrow().token(calendar));
+    }
+
+    /**
+     * True when a {@code period} quest has already been completed in the period the world is currently
+     * in (spec §5.6, §12.3).
+     *
+     * <p>An unreadable calendar answers <b>false</b> here rather than true. That is not a loophole: the
+     * fallback cooldown armed at completion is still in force, so the quest is held back by ticks
+     * instead of by a token, and the player is never permanently locked out of a seasonal quest because
+     * Townstead was uninstalled for an evening.
+     */
+    private static boolean completedThisPeriod(ServerPlayer player, PlayerQuestData data,
+                                               QuestDefinition def, UUID villagerUuid) {
+        if (!def.repeat().isPeriodic()) {
+            return false;
+        }
+        String token = periodToken(player, def).orElse("");
+        return data.history().completedInPeriod(def.id(), villagerUuid,
+                def.repeat().scope() == RepeatRule.RepeatScope.GIVER, token);
     }
 
     /** ONCE-quest completion count: per-villager for chain stages (1:1 arcs), global for standalone quests. */
@@ -1393,6 +1503,9 @@ public final class QuestManager {
         if (data.history().onCooldown(def.id(), villagerUuid, now)) {
             return "ON_COOLDOWN";
         }
+        if (completedThisPeriod(player, data, def, villagerUuid)) {
+            return "COMPLETED (this " + def.repeat().period().map(p -> p.id()).orElse("period") + ")";
+        }
         if (passesIndividualFilters(player, villager, data, def)) {
             String by = def.chain().flatMap(c -> eligible.stream()
                     .filter(e -> e.chain()
@@ -1417,7 +1530,9 @@ public final class QuestManager {
                 || data.hasActive(def.id(), villagerUuid)
                 || data.history().onCooldown(def.id(), villagerUuid, now)
                 || (def.repeat().type() == RepeatRule.RepeatType.ONCE
-                        && onceCompletionCount(data, def, villagerUuid) != 0)) {
+                        && onceCompletionCount(data, def, villagerUuid) != 0)
+                || completedThisPeriod(player, data, def, villagerUuid)
+                || !TownsteadContentGate.allowsQuest(def.id(), def.category(), def.offerGroup())) {
             return false;
         }
         McaVillagerSnapshot snapshot = new McaVillagerSnapshot(player, villager);

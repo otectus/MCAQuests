@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 import com.mojang.serialization.Codec;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadQuery;
+import dev.otectus.mcaquests.quest.TownsteadNames;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.QuestConditionType;
@@ -32,8 +33,11 @@ import net.minecraft.world.entity.Entity;
  */
 public record TownsteadValueCondition(TownsteadQuery query) implements QuestCondition {
 
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type". See DispatchedCodecInlinesTest.
     public static final Codec<TownsteadValueCondition> CODEC =
-            TownsteadQuery.CODEC.xmap(TownsteadValueCondition::new, TownsteadValueCondition::query);
+            TownsteadQuery.MAP_CODEC.xmap(TownsteadValueCondition::new, TownsteadValueCondition::query).codec();
 
     @Override
     public QuestConditionType<?> type() {
@@ -56,8 +60,15 @@ public record TownsteadValueCondition(TownsteadQuery query) implements QuestCond
                 TownsteadEvaluation.effectivePath(query));
     }
 
+    /**
+     * The player-facing wording, which is not the same thing as
+     * {@link dev.otectus.mcaquests.compat.TownsteadQuery#describe()} -- that one renders the raw path
+     * and operator for {@code /mcaquests compat townstead explain}, and showing it on a quest card was
+     * how "villager.schedule.currentActivity eq work" ended up in front of players.
+     */
     @Override
     public Component describe() {
-        return Component.literal(query.describe());
+        return Component.translatable("mcaquests.condition.townstead_value",
+                TownsteadNames.statement(query));
     }
 }

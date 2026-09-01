@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.reward;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadMutationResult;
@@ -70,6 +71,14 @@ public record TownsteadSkillReward(TownsteadTarget target, ResourceLocation skil
             return;
         }
         TownsteadBridge bridge = TownsteadBridge.Holder.get();
+        // Spec 5.2: prove the id before mutating. Townstead's skill calls report success for an id it
+        // does not know, so without this the player is told a skill was taught and nothing happened.
+        if (bridge.has(TownsteadCapability.READ_SKILL_REGISTRY) && !bridge.isKnownSkill(skill)) {
+            McaQuests.LOGGER.warn("[MCA: Quests] Skipping a townstead_skill reward for unknown skill "
+                    + "'{}'; Townstead's registry does not contain it, so granting it would report a "
+                    + "success that changed nothing.", skill);
+            return;
+        }
         TownsteadMutationResult result = forget
                 ? bridge.forgetSkill(subject, skill)
                 : bridge.learnSkill(subject, skill,
@@ -83,6 +92,7 @@ public record TownsteadSkillReward(TownsteadTarget target, ResourceLocation skil
     public Component describe() {
         return Component.translatable(forget
                 ? "mcaquests.reward.townstead_skill.forget"
-                : "mcaquests.reward.townstead_skill.learn", skill.toString());
+                : "mcaquests.reward.townstead_skill.learn",
+                dev.otectus.mcaquests.quest.TownsteadNames.skill(skill));
     }
 }

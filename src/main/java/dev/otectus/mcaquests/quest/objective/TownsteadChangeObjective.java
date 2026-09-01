@@ -9,6 +9,7 @@ import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadPaths;
 import dev.otectus.mcaquests.compat.TownsteadQuery;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.quest.TownsteadNames;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
@@ -214,6 +215,6 @@ public record TownsteadChangeObjective(TownsteadQuery query, Direction direction
     @Override
     public Component describe() {
         return Component.translatable("mcaquests.objective.townstead_change." + direction.id(),
-                required(), String.join(".", query.path()));
+                required(), TownsteadNames.subject(query));
     }
 }

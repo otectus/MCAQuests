@@ -76,6 +76,7 @@ To **disable the built-in quests** entirely and ship only your own, set `enableD
 | `chain` | object | no | none | Relationship-arc metadata: stage, prerequisites, unlocks. See [Quest chains](#quest-chains). |
 | `template` | object | no | none | Turns the quest into a randomized template: variable pools + the objective/reward JSON that uses them. See [Quest templates](#quest-templates). |
 | `difficulty` | string | no | — | `easy`, `medium`, or `hard`. Optional metadata that supplies default reward amounts. See [Difficulty](#difficulty). |
+| `offer_group` | string | no | — | Names the *kind* of quest this is, so the offer menu does not fill every slot with the same one. See [Offer groups](#offer-groups). |
 
 ¹ Required for a hand-authored quest. A **template** quest omits top-level `objectives`/`rewards` and supplies them inside its `template` block instead.
 
@@ -207,7 +208,7 @@ dimension change, villager/chunk unload, and dedicated-server restart. They neve
 | `mcaquests:sleep_or_rest` | `require_morning` (bool, def true) | Sleep through to morning. |
 | `mcaquests:build_near_location` | block target (req.), `location` (anchor, req.), `radius` (1–64, def 8), `count` (def 8) | Place blocks near a place (each position counts once). |
 | `mcaquests:enter_structure` | `structure` (id) **or** `structure_tag` (tag) | Enter a generated structure. |
-| `mcaquests:deliver_to_villager` | `recipient` (villager, req.), item target (req.), `count` (def 1), `consume` (bool, def true) | Hand an item to a specific villager (consumed at hand-off). |
+| `mcaquests:deliver_to_villager` | `recipient` (villager, req.), item target (req.), `count` (def 1), `consume` (bool, def true), `destination` (object, optional) | Hand an item to a specific villager. Consumed at hand-off by default; with a `destination` of `townstead_villager_inventory` the goods go **into the recipient's own inventory** instead. That transfer is all-or-nothing — capacity is simulated before a single item leaves the player, a recipient with no room refuses rather than swallowing half a stack, and a replayed interact packet cannot pay twice. Set `"target": "recipient"` on the destination; it is the only value that makes sense here and the validator rejects the others. |
 | `mcaquests:find_missing_relative` | `relative` (villager, req. — `family` mode), `biome` (biome target, optional), `structure` (structure target, optional), `min_distance` (0–4096, def 96), `discover_radius` (1–64, def 24), `spawn_distance` (1–64, def 12) | Search the wilds for a relative of the giver who has gone **missing**, and find them. MCA's `missing` means *in the family tree, not deceased, and no entity anywhere in the world* — so there is nobody to walk up to. This objective **materialises** them: once the player is inside the named `biome`/`structure` and at least `min_distance` from the giver, the relative appears `spawn_distance` blocks away with their real identity (same UUID, name, gender, profession — MCA's family tree keeps every link), is highlighted, and completes the objective within `discover_radius`. Never spawns twice, and never spawns a relative who is merely unloaded: an alive villager on any village's resident roll is skipped. Gate the quest on `related_villager_status <relation> missing`. Once found they are an ordinary villager, so later chain stages can `escort_entity` or `deliver_to_villager` them through the usual `"mode": "family"` path — and `missing` flips to false, so a `once` search quest stops being re-offered. **Finding someone is permanent:** abandoning or failing the quest drops the quest, never the villager. |
 | `mcaquests:reach_location` | `location` (anchor, req.), `radius` (1–64, def 6), `min_journey` (0–512, optional) | The **player** travels to a location anchor; arrival sticks complete. Border-aware like `escort_entity`: a `home_village`/`nearest_village` anchor completes anywhere **inside the village border**; other anchors use a horizontal (Y-ignored) distance within `radius`. (Distinct from `enter_structure`, which keys off a named structure.) `min_journey` works exactly as it does for `escort_entity`, measured on the **player**: a quest whose destination the player is already standing in is not offered, and arrival is not credited until they have genuinely left and come back. |
 
@@ -262,7 +263,29 @@ Fields named `destination` / `location` / `near` resolve to a position via an `a
 { "anchor": "workstation" }                               // the giver's job site
 { "anchor": "bed" }                                       // the giver's home/bed
 { "anchor": "coords", "pos": [100, 64, -200] }
+{ "anchor": "nearest_other_village", "radius": 2048 }     // the next MCA village along, never the giver's own
+{ "anchor": "townstead_building", "building_type": "dock", "minimum_level": 2 }
 ```
+
+**Two of these are frozen; the rest resolve live.** A bed that moves with its owner should keep being the
+right destination, so `bed` is re-resolved every poll. But `townstead_building` and
+`nearest_other_village` are *choices* among several valid answers, and a choice re-made every second is
+not a destination — the map marker would jump the moment a closer dock was built. Both are decided once
+when the quest is accepted and kept.
+
+That freezing is also what makes two objectives agree. "Place six lanterns at the dock" and "place twelve
+chains at the dock" in the same quest are one instruction about one dock; they share a binding, so they
+cannot drift to different docks the moment a second one qualifies.
+
+| Field | Anchor | Default | Meaning |
+|---|---|---|---|
+| `building_type` | `townstead_building` | **required** | The building family. `dock` covers `dock_l1` through `dock_l3`; `butcher` and `butcher_shop` are the same family. |
+| `minimum_level` | `townstead_building` | `1` | Minimum registered tier. |
+| `selection` | both frozen anchors | `nearest_to_giver` | Or `nearest_to_player_at_accept`. Ties break on the lower registered id, so the same world always chooses the same one. |
+| `radius` | `nearest_other_village` | `2048` | How far to look. |
+
+If the building is demolished later the frozen position stays a perfectly good place to walk to, build at
+or defend. An objective that needs the building to still be *registered* reads that live and separately.
 
 ### Validation & MCA limitations
 
@@ -412,6 +435,30 @@ A lead-style escort is gated to "far from home, or a little out after dark" like
 
 **Limitations.** `age_group` does **not** support `elder`: MCA Reborn has no elder age state (its ages are baby/toddler/child/teen/adult). All MCA access is isolated behind the mod's compatibility layer; if MCA Reborn is absent these conditions simply never match. See the built-in `relations/` quests for working examples of every category.
 
+### Offer groups
+
+A villager offers three quests at a time. With a catalogue this size, plain weighted selection regularly
+fills all three with variations of the same errand, and the menu stops looking like a village with things
+going on.
+
+```json
+"offer_group": "townstead_need"
+```
+
+During a reroll the menu takes **at most one quest from each group** before allowing seconds. Grouping
+happens *inside* a priority tier, never across tiers, so an emergency can never be crowded out by
+diversity — and a quest with no `offer_group` is never excluded by this pass, so every pre-1.4.1 datapack
+selects exactly as it always did.
+
+The built-in groups are `townstead_need`, `townstead_schedule`, `townstead_work`, `townstead_life`,
+`townstead_spirit`, `townstead_season`, `core_adventure` and `core_relationship`. Your own names work
+just as well — the group is only ever compared against other groups, so any string that means "this kind
+of quest" will do.
+
+`offer_group` is server-only and never crosses the wire.
+
+---
+
 ### Composites
 
 Composites nest other conditions (any depth):
@@ -428,6 +475,29 @@ Composites nest other conditions (any depth):
 - `{ "all_of": [ ... ] }` — every child must pass
 - `{ "any_of": [ ... ] }` — at least one child must pass
 - `{ "not": { ... } }` — child must fail
+
+---
+
+### Delivering into a villager's inventory
+
+Both `mcaquests:item_delivery` and `mcaquests:deliver_to_villager` take an optional `destination`:
+
+```json
+"destination": { "type": "townstead_villager_inventory", "target": "giver" }
+```
+
+Without it the goods are consumed on hand-over, which is what every quest did before 1.4.0 and still the
+default. With it they land in the villager's real inventory, where **Townstead lets them actually be
+eaten and used** — which is what turns "bring me bread" from a token gesture into the thing that keeps
+somebody alive.
+
+**No Townstead capability is required.** The inventory belongs to MCA and the whole transfer is vanilla
+container work; Townstead only supplies the reason to care. A delivery quest therefore keeps working when
+Townstead is absent rather than suspending, because nothing about it has stopped being possible.
+
+`townstead_village_storage` is **not** implemented and never parses: Townstead exposes no registered
+storage API that could be written to safely, and a destination that silently ate a donation would be
+worse than none.
 
 ---
 
@@ -457,6 +527,27 @@ Composites nest other conditions (any depth):
 |---|---|---|
 | `cooldown` | `cooldown_ticks` | Repeatable after the cooldown (24000 ticks = 1 MC day). |
 | `once` | — | Completable a single time, ever. |
+| `repeatable` | — | Available again immediately. |
+| `period` | `period`, `scope`, `fallback_cooldown_ticks` | Once per Townstead calendar period. |
+
+### Calendar-relative repeats
+
+```json
+"repeat": { "type": "period", "period": "season", "scope": "giver", "fallback_cooldown_ticks": 96000 }
+```
+
+`period` is `townstead_week`, `season` or `year`. A tick cooldown cannot express "once a season", because
+a Townstead season may be three days on one server and thirty on another — so a completion records a
+**token** naming the period it happened in, and the quest is eligible again exactly when the live token
+differs. The token includes the calendar profile id, so switching profiles mid-world does not collide two
+different definitions of spring.
+
+Nothing here assumes four seasons, seven-day weeks or a fixed year length; every value comes from the
+loaded profile. `scope` is `giver` (default) or `global`, matching cooldown scoping.
+
+**A missing calendar never grants a second reward.** If `READ_CALENDAR` is unavailable the quest falls
+back to `fallback_cooldown_ticks`, which is armed at completion alongside the token for exactly this case,
+and an already-accepted calendar-bound objective suspends rather than completing on an unreadable clock.
 
 ---
 

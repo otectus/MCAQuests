@@ -1,0 +1,152 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_harbor_quarter",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:fisherman",
+      "minecraft:cartographer"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_harbor_quarter.title"
+  },
+  "category": "infrastructure",
+  "reputation": {
+    "on_project_complete": 22
+  },
+  "phases": [
+    {
+      "key": "timber_and_iron",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_harbor_quarter.timber_and_iron.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_harbor_quarter.timber_and_iron.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:oak_planks",
+          "count": 128
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:oak_log",
+          "count": 48
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:chain",
+          "count": 32
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:lantern",
+          "count": 16
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 34
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "working_dock",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_harbor_quarter.working_dock.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_harbor_quarter.working_dock.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_building_project",
+          "building_type": "dock",
+          "minimum_level": 2,
+          "count": 1
+        },
+        {
+          "type": "mcaquests:townstead_spirit_project",
+          "spirit": "nautical",
+          "points_delta": 5
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 8
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 8
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    },
+    {
+      "key": "deep_harbor",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_harbor_quarter.deep_harbor.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_harbor_quarter.deep_harbor.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_building_project",
+          "building_type": "dock",
+          "minimum_level": 3,
+          "count": 1
+        },
+        {
+          "type": "mcaquests:townstead_spirit_project",
+          "spirit": "nautical",
+          "points_delta": 10
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 12
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

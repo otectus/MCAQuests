@@ -104,12 +104,13 @@ public class ProjectMenuScreen extends Screen {
         height += 10; // phase
         height += this.font.split(card.dialogue(), wrapWidth()).size() * 10;
         for (ProjectObjectiveLine line : card.objectives()) {
-            height += 12; // label + count + bar
+            height += CardText.heightBulleted(this.font, BULLET, objectiveLabel(line), wrapWidth());
+            height += BAR_HEIGHT;
             if (line.yourContribution() > 0) {
                 height += 9;
             }
         }
-        height += 12; // rewards
+        height += CardText.height(this.font, joinRewards(card.rewards()), wrapWidth()) + 2;
         height += 26; // button + padding
         return height;
     }
@@ -165,11 +166,8 @@ public class ProjectMenuScreen extends Screen {
             y += 10;
         }
         for (ProjectObjectiveLine line : card.objectives()) {
-            Component label = Component.literal(" - ").append(line.label())
-                    .append(Component.literal("  "))
-                    .append(Component.translatable("mcaquests.label.project.shared", line.sharedCurrent(), line.required()));
-            graphics.drawString(this.font, label, left, y, 0xBFBFBF);
-            y += 10;
+            y = CardText.drawBulleted(graphics, this.font, BULLET, objectiveLabel(line), left, y,
+                    wrapWidth(), 0xBFBFBF);
             renderBar(graphics, left, y, line.sharedCurrent(), line.required());
             y += BAR_HEIGHT;
             if (line.yourContribution() > 0) {
@@ -178,8 +176,18 @@ public class ProjectMenuScreen extends Screen {
                 y += 9;
             }
         }
-        graphics.drawString(this.font, joinRewards(card.rewards()), left, y, 0x88CC88);
+        CardText.draw(graphics, this.font, joinRewards(card.rewards()), left, y, wrapWidth(), 0x88CC88);
     }
+
+    /** Built once so the height calculation and the draw wrap identical text. */
+    private static Component objectiveLabel(ProjectObjectiveLine line) {
+        return Component.empty().append(line.label()).append(Component.literal("  "))
+                .append(Component.translatable("mcaquests.label.project.shared",
+                        line.sharedCurrent(), line.required()));
+    }
+
+    /** The objective marker, shared by the height calculation and the draw so the indents match. */
+    private static final String BULLET = " - ";
 
     private void renderBar(GuiGraphics graphics, int left, int y, int current, int required) {
         int width = wrapWidth() - 8;

@@ -1,0 +1,92 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:remedy_the_returning_voice",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "core_relationship",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.remedy_the_returning_voice.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:cure_villager"
+    },
+    {
+      "type": "mcaquests:protect_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "duration_ticks": 1200,
+      "require_near_player": true,
+      "near_radius": 16,
+      "fail_on_death": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    },
+    {
+      "type": "mcaquests:village_reputation",
+      "amount": 12
+    },
+    {
+      "type": "mcaquests:grant_title",
+      "title": "mcaquests:mender_of_kin",
+      "scope": "village"
+    }
+  ],
+  "failure": {
+    "fail_on_giver_death": true
+  },
+  "chain": {
+    "chain": "the_ashen_remedy",
+    "stage": 4,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:remedy_gold_against_ash"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.remedy_the_returning_voice.chain.chapter"
+    }
+  }
+}

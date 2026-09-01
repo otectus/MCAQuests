@@ -1,0 +1,109 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_pasture_wool_under_roof",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "townstead_work",
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:shepherd"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:townstead_building_registered",
+      "building_type": "wool_shed",
+      "count": 1,
+      "require_new_or_upgraded": true
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:white_wool",
+      "count": 32,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:townstead_schedule_streak",
+      "activity": "work",
+      "required_shifts": 2,
+      "minimum_coverage": 0.6,
+      "require_on_schedule": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_SCHEDULE",
+          "READ_CALENDAR",
+          "READ_BUILDING"
+        ]
+      }
+    ]
+  },
+  "chain": {
+    "chain": "wool_and_winter",
+    "stage": 3,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:townstead_pasture_lambing_day"
+    ],
+    "unlocks": [
+      "mcaquests:townstead_pasture_keeper_of_the_flock"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.townstead_pasture_wool_under_roof.chain.chapter"
+    }
+  }
+}

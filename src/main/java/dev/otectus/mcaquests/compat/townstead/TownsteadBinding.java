@@ -85,21 +85,36 @@ public final class TownsteadBinding {
         private final int arity;
         @Nullable
         private final TownsteadCapability capability;
+        private final boolean optional;
 
         private Member(Kind kind, String ownerRelative, String name, Class<?> returnType, int arity,
-                       @Nullable TownsteadCapability capability) {
+                       @Nullable TownsteadCapability capability, boolean optional) {
             this.kind = kind;
             this.ownerRelative = ownerRelative;
             this.name = name;
             this.returnType = returnType;
             this.arity = arity;
             this.capability = capability;
+            this.optional = optional;
         }
 
         /** The capability this member belongs to, or {@code null} for a core facade member. */
         @Nullable
         public TownsteadCapability capability() {
             return capability;
+        }
+
+        /**
+         * True for a member that enriches its capability without being required by it.
+         *
+         * <p>Every required member in this manifest was read off a real Townstead jar, so its absence
+         * is genuine news. An optional member is one whose value is <em>informational</em> — the
+         * capability answers correctly without it, just less completely. Missing one therefore does
+         * not disable the capability and is not reported as a binding failure, because degrading a
+         * whole feature over a display detail would be a worse outcome than the missing detail.
+         */
+        public boolean optional() {
+            return optional;
         }
 
         @Override
@@ -129,12 +144,18 @@ public final class TownsteadBinding {
 
     private static Member statik(String ownerRelative, String name, Class<?> ret, int arity,
                                  @Nullable TownsteadCapability capability) {
-        return new Member(Kind.STATIC, ownerRelative, name, ret, arity, capability);
+        return new Member(Kind.STATIC, ownerRelative, name, ret, arity, capability, false);
+    }
+
+    /** A {@link Member#optional() best-effort} static; see that method for when this is right. */
+    private static Member optionalStatik(String ownerRelative, String name, Class<?> ret, int arity,
+                                         @Nullable TownsteadCapability capability) {
+        return new Member(Kind.STATIC, ownerRelative, name, ret, arity, capability, true);
     }
 
     private static Member virtual(String ownerRelative, String name, Class<?> ret, int arity,
                                   @Nullable TownsteadCapability capability) {
-        return new Member(Kind.VIRTUAL, ownerRelative, name, ret, arity, capability);
+        return new Member(Kind.VIRTUAL, ownerRelative, name, ret, arity, capability, false);
     }
 
     /**
@@ -143,13 +164,13 @@ public final class TownsteadBinding {
      * without building one.
      */
     private static Member ctor(String ownerRelative, int arity, @Nullable TownsteadCapability capability) {
-        return new Member(Kind.CONSTRUCTOR, ownerRelative, "<init>", Object.class, arity, capability);
+        return new Member(Kind.CONSTRUCTOR, ownerRelative, "<init>", Object.class, arity, capability, false);
     }
 
     /** A zero-argument accessor — every Townstead snapshot is a record, so this covers nearly all of them. */
     private static Member get(String ownerRelative, String name, Class<?> ret,
                               TownsteadCapability capability) {
-        return new Member(Kind.VIRTUAL, ownerRelative, name, ret, 0, capability);
+        return new Member(Kind.VIRTUAL, ownerRelative, name, ret, 0, capability, false);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -395,6 +416,42 @@ public final class TownsteadBinding {
     // DISPATCH_REACTION. Vanilla descriptors throughout; the return is a count of reactions played.
     public static final Member REACTION_ON_TASK = statik(O_REACTIONS, "onTaskTransition", int.class, 4, CAP_REACTION);
 
+    // ---------------------------------------------------------------------------------------------
+    // READ_PROFESSION_SPEC and READ_SKILL_REGISTRY (spec §5.1, §5.2). Both read-only, both added to
+    // close the 1.4.0 defect where a quest could ask a fisherman for XP that Townstead never awards.
+    //
+    // The progression members below deliberately duplicate the ones declared for AWARD_PROFESSION_XP
+    // rather than being shared with them. They resolve the same Townstead methods, but a Member is
+    // identity-keyed, so declaring them twice buys two independent bindings: a Townstead that can no
+    // longer be written to still answers "can this profession advance at all?", which is what decides
+    // whether content is *offered*. Sharing one member would have tied the honesty of every offer to
+    // the health of a mutation path it never uses.
+    // ---------------------------------------------------------------------------------------------
+
+    private static final String O_PROFESSION_DEFS = "profession.def.ProfessionDefs";
+    private static final String O_SKILL_DEFS = "profession.def.SkillDefs";
+
+    private static final TownsteadCapability CAP_PROFESSION_SPEC = TownsteadCapability.READ_PROFESSION_SPEC;
+    private static final TownsteadCapability CAP_SKILL_REGISTRY = TownsteadCapability.READ_SKILL_REGISTRY;
+
+    public static final Member TRACK_SPEC = statik(O_PROGRESSIONS, "spec", Object.class, 1, CAP_PROFESSION_SPEC);
+    public static final Member TRACK_MAX_XP = virtual(O_PROGRESSION_SPEC, "maxXp", int.class, 0, CAP_PROFESSION_SPEC);
+    public static final Member TRACK_MAX_TIER = virtual(O_PROGRESSION_SPEC, "maxTier", int.class, 0, CAP_PROFESSION_SPEC);
+    public static final Member TRACK_TIER_FOR_XP = virtual(O_PROGRESSION_SPEC, "tierForXp", int.class, 1, CAP_PROFESSION_SPEC);
+    public static final Member TRACK_DAILY_CAP = virtual(O_PROGRESSION_SPEC, "dailyXpCap", int.class, 0, CAP_PROFESSION_SPEC);
+
+    /**
+     * Optional: it only decides whether a track is <em>labelled</em> data-driven. Townstead 0.7.6
+     * ships no profession JSON at all, so this map is legitimately empty on a stock install and a
+     * built-in track must stay valid without it — which is exactly why it must not be allowed to
+     * disable the capability that proves the track exists.
+     */
+    public static final Member TRACK_DEFS_BY_ID =
+            optionalStatik(O_PROFESSION_DEFS, "byId", Object.class, 1, CAP_PROFESSION_SPEC);
+
+    public static final Member SKILL_DEFS_BY_ID = statik(O_SKILL_DEFS, "byId", Object.class, 1, CAP_SKILL_REGISTRY);
+    public static final Member SKILL_DEFS_ALL = statik(O_SKILL_DEFS, "all", Object.class, 0, CAP_SKILL_REGISTRY);
+
     /** Every member, in declaration order. The single source of truth for what this mod reads. */
     public static final List<Member> MANIFEST = List.of(
             API_ENTITY, V_UUID, V_NAME, V_ENTITY_TYPE, V_ROOT_ID, V_LIFE_STAGE, V_AGE_DAYS, V_AGE_YEARS,
@@ -424,7 +481,9 @@ public final class TownsteadBinding {
             GAIN_TIER_AFTER, XP_TYPE_VALUES, XP_TYPE_ID,
             SKILLS_LEARNED, SKILLS_HAS, SKILLS_LEARN, SKILLS_FORCE_LEARN, SKILLS_FORGET,
             SKILL_RESULT_OK, SKILL_RESULT_ERROR, FORGET_RESULT_OK,
-            REACTION_ON_TASK);
+            REACTION_ON_TASK,
+            TRACK_SPEC, TRACK_MAX_XP, TRACK_MAX_TIER, TRACK_TIER_FOR_XP, TRACK_DAILY_CAP,
+            TRACK_DEFS_BY_ID, SKILL_DEFS_BY_ID, SKILL_DEFS_ALL);
 
     /**
      * The capabilities this manifest covers. Status is measured against these rather than against
@@ -436,7 +495,9 @@ public final class TownsteadBinding {
     private static Set<TownsteadCapability> declaredCapabilities() {
         EnumSet<TownsteadCapability> declared = EnumSet.noneOf(TownsteadCapability.class);
         for (Member member : MANIFEST) {
-            if (member.capability != null) {
+            // Required members only: a capability whose every member were optional could never be
+            // found missing, and would report as bound on a Townstead that has none of it.
+            if (member.capability != null && !member.optional) {
                 declared.add(member.capability);
             }
         }
@@ -542,7 +603,11 @@ public final class TownsteadBinding {
                 // Recorded below as an ordinary miss; see the javadoc for why this must not escape.
             }
             if (handle == null) {
-                unresolved.add(member.toString());
+                // An optional member is not news: its capability answers correctly without it, and
+                // reporting it would send someone chasing a binding failure that has no symptom.
+                if (!member.optional) {
+                    unresolved.add(member.toString());
+                }
             } else {
                 resolved.put(member, handle);
             }
@@ -550,7 +615,7 @@ public final class TownsteadBinding {
 
         EnumSet<TownsteadCapability> bound = EnumSet.copyOf(DECLARED_CAPABILITIES);
         for (Member member : MANIFEST) {
-            if (member.capability != null && !resolved.containsKey(member)) {
+            if (member.capability != null && !member.optional && !resolved.containsKey(member)) {
                 bound.remove(member.capability);
             }
         }

@@ -1,0 +1,125 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_first_frost",
+  "scope": "village",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:townstead_calendar_transition",
+    "transition": "season",
+    "to": "winter"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 14
+    },
+    "failure": {
+      "reputation": -5
+    }
+  },
+  "offer": {
+    "weight": 12,
+    "priority": 9,
+    "offer_group": "townstead_season",
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "minecraft:farmer",
+        "minecraft:butcher",
+        "minecraft:cleric"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_first_frost.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_first_frost.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_first_frost.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_first_frost.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_first_frost.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_first_frost.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_first_frost.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_first_frost.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:bread",
+        "count": 24,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:coal",
+        "count": 24,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:cooked_beef",
+        "count": 16,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:townstead_healthy_residents",
+        "minimum_observed": 5,
+        "minimum_fraction": 0.7,
+        "hunger_min": 55,
+        "thirst_min": 10,
+        "energy_min": 8,
+        "require_not_collapsed": true,
+        "minimum_loaded_fraction": 0.5,
+        "hold_ticks": 600
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 55
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_NEEDS",
+            "READ_CALENDAR"
+          ]
+        }
+      ]
+    }
+  }
+}

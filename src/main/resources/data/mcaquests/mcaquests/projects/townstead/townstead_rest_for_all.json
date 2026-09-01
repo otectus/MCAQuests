@@ -1,0 +1,108 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_rest_for_all",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:cleric",
+      "minecraft:farmer",
+      "minecraft:shepherd"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_rest_for_all.title"
+  },
+  "category": "community",
+  "reputation": {
+    "on_project_complete": 18
+  },
+  "phases": [
+    {
+      "key": "beds_and_supper",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_rest_for_all.beds_and_supper.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_rest_for_all.beds_and_supper.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:white_bed",
+          "count": 12
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:bread",
+          "count": 96
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:honey_bottle",
+          "count": 24
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 30
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "a_restored_village",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_rest_for_all.a_restored_village.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_rest_for_all.a_restored_village.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_resident_wellbeing_project",
+          "minimum_observed": 10,
+          "minimum_fraction": 0.8,
+          "hunger_min": 60,
+          "thirst_min": 12,
+          "energy_min": 11,
+          "require_not_collapsed": true,
+          "minimum_loaded_fraction": 0.6,
+          "hold_ticks": 4800
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 14
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

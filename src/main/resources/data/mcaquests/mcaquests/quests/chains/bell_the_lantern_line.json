@@ -1,0 +1,93 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:bell_the_lantern_line",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "core_adventure",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "mca:guard",
+      "minecraft:armorer",
+      "minecraft:fletcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.bell_the_lantern_line.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:lantern",
+      "location": {
+        "anchor": "home_village"
+      },
+      "radius": 40,
+      "count": 12
+    },
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:cobblestone_wall",
+      "location": {
+        "anchor": "home_village"
+      },
+      "radius": 40,
+      "count": 24
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "chain": {
+    "chain": "the_bell_at_dawn",
+    "stage": 2,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:bell_shields_for_neighbors"
+    ],
+    "unlocks": [
+      "mcaquests:bell_watch_before_dawn"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.bell_the_lantern_line.chain.chapter"
+    }
+  }
+}

@@ -9,6 +9,7 @@ import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.QuestText;
 import dev.otectus.mcaquests.quest.RepeatRule;
 import dev.otectus.mcaquests.quest.TurnInSpec;
+import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveTypes;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
@@ -39,7 +40,8 @@ public record SituationOffer(
         TurnInSpec turnIn,
         Optional<FailureSpec> failure,
         Optional<TemplateSpec> template,
-        OfferShaping offerShaping) {
+        OfferShaping offerShaping,
+        Optional<QuestCondition> conditions) {
 
     /** Category stamped on the synthesized quest so the rest of the mod can recognise situation offers. */
     public static final String CATEGORY = "situation";
@@ -55,15 +57,34 @@ public record SituationOffer(
             TurnInSpec.CODEC.optionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(SituationOffer::turnIn),
             FailureSpec.CODEC.optionalFieldOf("failure").forGetter(SituationOffer::failure),
             TemplateSpec.CODEC.optionalFieldOf("template").forGetter(SituationOffer::template),
-            OfferShaping.MAP_CODEC.forGetter(SituationOffer::offerShaping)
+            OfferShaping.MAP_CODEC.forGetter(SituationOffer::offerShaping),
+            ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(SituationOffer::conditions)
     ).apply(instance, SituationOffer::new));
 
+    /** The pre-1.4.1 shape, for callers and tests that predate offer conditions. */
+    public SituationOffer(int weight, Optional<QuestText> title, GiverSpec giver,
+                          Map<String, QuestText> dialogue, List<QuestObjective> objectives,
+                          List<QuestReward> rewards, TurnInSpec turnIn,
+                          Optional<FailureSpec> failure, Optional<TemplateSpec> template,
+                          OfferShaping offerShaping) {
+        this(weight, title, giver, dialogue, objectives, rewards, turnIn, failure, template,
+                offerShaping, Optional.empty());
+    }
+
     /**
-     * Builds the base {@link QuestDefinition} for this offer under {@code id}. Conditions and chain are
-     * always empty — a situation's eligibility is decided by the open instance (its scope/giver match),
-     * not by static condition gates. {@code failureOverride} is the effective failure block (the caller
-     * folds the situation's duration deadline into the author's outcome fields); when empty the author's
-     * own {@code failure} is used unchanged.
+     * Builds the base {@link QuestDefinition} for this offer under {@code id}.
+     *
+     * <p>An offer's {@code conditions} are carried onto the derived quest, in addition to the instance's
+     * own scope and giver match rather than instead of it. They were dropped entirely before 1.4.1,
+     * which meant every {@code townstead_available} gate written into a shipped situation was inert —
+     * the JSON read like a gate and was not one. A situation still opens on its signal; conditions
+     * decide which villager is allowed to be the one who asks.
+     *
+     * <p>Chain stays empty: a situation offer is never part of a static chain.
+     *
+     * <p>{@code failureOverride} is the effective failure block (the caller folds the situation's
+     * duration deadline into the author's outcome fields); when empty the author's own {@code failure}
+     * is used unchanged.
      */
     public QuestDefinition toQuestDefinition(ResourceLocation id, boolean enabled, Optional<FailureSpec> failureOverride) {
         return new QuestDefinition(
@@ -78,7 +99,7 @@ public record SituationOffer(
                 objectives,
                 rewards,
                 turnIn,
-                Optional.<QuestCondition>empty(),
+                conditions,
                 Optional.empty(),
                 failureOverride.isPresent() ? failureOverride : failure,
                 template,

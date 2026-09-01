@@ -38,6 +38,7 @@ public final class TownsteadEvaluation {
     private final Map<Integer, List<TownsteadVillageBuilding>> villageBuildings = new HashMap<>();
     private final Map<ResourceLocation, Optional<TownsteadRootView>> roots = new HashMap<>();
     private final Map<ResourceLocation, Optional<TownsteadGeneView>> genes = new HashMap<>();
+    private final Map<String, TownsteadProfessionTrackView> tracks = new HashMap<>();
 
     @Nullable
     private Optional<TownsteadCalendarView> calendar;
@@ -147,6 +148,31 @@ public final class TownsteadEvaluation {
             return Optional.empty();
         }
         return genes.computeIfAbsent(id, bridge()::gene);
+    }
+
+    /**
+     * What a profession's progression can reach (spec §5.1), memoised for the pass.
+     *
+     * <p>The bridge caches these for the whole game run already -- a track cannot change without a
+     * datapack reload -- so this second layer exists only to keep an eligibility pass that asks about
+     * the same trade for eight villagers down to one map lookup each.
+     */
+    public TownsteadProfessionTrackView professionTrack(@Nullable String professionId) {
+        if (professionId == null || professionId.isEmpty()) {
+            return TownsteadProfessionTrackView.none("");
+        }
+        return tracks.computeIfAbsent(professionId, bridge()::professionTrack);
+    }
+
+    /**
+     * True when this profession can be asked to advance <em>and</em> we are entitled to say so.
+     *
+     * <p>Deliberately false when {@code READ_PROFESSION_SPEC} is unbound: an unreadable registry means
+     * "cannot tell", and content that cannot be proven achievable must hide rather than be offered on
+     * a guess. That is the whole of the 1.4.0 fisherman defect, expressed as one method.
+     */
+    public boolean canProgress(@Nullable String professionId) {
+        return has(TownsteadCapability.READ_PROFESSION_SPEC) && professionTrack(professionId).progressive();
     }
 
     /**

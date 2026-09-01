@@ -8,6 +8,7 @@ import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadVillageBuilding;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.quest.TownsteadNames;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.nbt.CompoundTag;
@@ -179,6 +180,6 @@ public record TownsteadBuildingRegisteredObjective(String buildingType, int mini
         return Component.translatable(requireNewOrUpgraded
                         ? "mcaquests.objective.townstead_building_new"
                         : "mcaquests.objective.townstead_building_have",
-                count, buildingType, minimumLevel);
+                count, TownsteadNames.building(buildingType), minimumLevel);
     }
 }

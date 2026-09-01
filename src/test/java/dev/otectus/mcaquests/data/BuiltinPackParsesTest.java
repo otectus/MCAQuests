@@ -6,9 +6,12 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.project.ProjectDefinition;
 import dev.otectus.mcaquests.quest.QuestDefinition;
+import dev.otectus.mcaquests.quest.condition.ConditionTypes;
+import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.QuestDifficulty;
 import dev.otectus.mcaquests.quest.situation.SituationDefinition;
 import dev.otectus.mcaquests.support.TestBootstrap;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +21,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -105,6 +110,106 @@ class BuiltinPackParsesTest {
         }
         assertTrue(QuestDifficulty.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"impossible\""))
                 .error().isPresent(), "an unknown difficulty should be a parse error, not a silent default");
+    }
+
+    /**
+     * Runs the loader's own {@link AgeEligibilityValidator} over codec-parsed quests — the path the game
+     * actually takes.
+     *
+     * <p>{@code BuiltinAgeEligibilityTest} walks the raw JSON with Gson instead, so it can only prove the
+     * files say the right thing; it cannot see a condition tree that parses into something the validator
+     * does not recognise. A live game warned that {@code relations_child_treat} had no age_group
+     * condition while its JSON plainly carries one, which is exactly the gap between those two views.
+     */
+    @Test
+    @DisplayName("no built-in quest trips the age-eligibility warning after codec parsing")
+    void ageEligibilityIsCleanAfterCodecParsing() {
+        Map<ResourceLocation, QuestDefinition> loaded = new LinkedHashMap<>();
+        for (Path file : jsonUnder("quests")) {
+            QuestDefinition def = parseOrThrow(file, QuestDefinition.CODEC);
+            loaded.put(def.id(), def);
+        }
+        assertTrue(!loaded.isEmpty(), "no quests parsed, so this would pass vacuously");
+
+        List<String> warnings = new ArrayList<>();
+        AgeEligibilityValidator.validate(loaded, warnings);
+        assertEquals(List.of(), warnings,
+                "QuestDataLoader logs these verbatim at runtime; the shipped pack must not produce any");
+    }
+
+    /**
+     * A file that declares {@code conditions} must still have them after parsing.
+     *
+     * <p>{@code assertAllParse} cannot see this: {@code QuestDefinition} reads the field through
+     * {@code optionalFieldOf("conditions")}, and DFU's implementation of that turns a decode failure
+     * into {@code Optional.empty()} with no error on the result. The quest then loads looking perfectly
+     * healthy, with its entire eligibility gate gone — which is how 36 shipped quests, including ones
+     * gated on being the player's own child or spouse, came to be offered by any villager at all.
+     *
+     * @see dev.otectus.mcaquests.quest.DispatchedCodecInlinesTest for the cause that produced it
+     */
+    @Test
+    @DisplayName("no quest, project or situation silently loses declared conditions")
+    void declaredConditionsSurviveParsing() {
+        List<String> lost = new ArrayList<>();
+        for (String folder : List.of("quests", "projects", "situations")) {
+            for (Path file : jsonUnder(folder)) {
+                JsonElement root = json(file);
+                if (!root.isJsonObject()) {
+                    continue;
+                }
+                checkConditions(file, root.getAsJsonObject(), lost);
+                // A situation's gate lives inside its offer, and reading only the top level is how it
+                // went unnoticed until 1.4.1 that the offer codec was dropping the whole block.
+                JsonElement offer = root.getAsJsonObject().get("offer");
+                if (offer != null && offer.isJsonObject()) {
+                    checkConditions(file, offer.getAsJsonObject(), lost);
+                }
+            }
+        }
+        assertEquals(List.of(), lost, "these files declare conditions that do not parse; at runtime the "
+                + "gate is silently dropped rather than reported");
+    }
+
+    private static void checkConditions(Path file, com.google.gson.JsonObject owner, List<String> lost) {
+        if (!owner.has("conditions")) {
+            return;
+        }
+        DataResult<QuestCondition> parsed = ConditionTypes.CODEC
+                .parse(JsonOps.INSTANCE, owner.get("conditions"));
+        if (parsed.result().isEmpty()) {
+            lost.add(file + ": " + parsed.error().map(DataResult.PartialResult::message).orElse("?"));
+        }
+    }
+
+    /**
+     * A declared gate must survive the codec that owns it, not merely parse in isolation.
+     *
+     * <p>Situation offers accepted a {@code conditions} block in the JSON and threw it away, so every
+     * bundled Townstead situation shipped 1.4.0 with a capability gate that read like a gate and was
+     * not one. Round-tripping the whole definition and looking for the block on the other side is the
+     * only check that would have caught that.
+     */
+    @Test
+    @DisplayName("a situation offer's condition gate survives its own codec")
+    void situationOfferConditionsRoundTrip() {
+        List<String> dropped = new ArrayList<>();
+        for (Path file : jsonUnder("situations")) {
+            JsonElement root = json(file);
+            JsonElement offer = root.getAsJsonObject().get("offer");
+            if (offer == null || !offer.isJsonObject() || !offer.getAsJsonObject().has("conditions")) {
+                continue;
+            }
+            SituationDefinition parsed = SituationDefinition.CODEC.parse(JsonOps.INSTANCE, root)
+                    .result().orElse(null);
+            if (parsed == null) {
+                dropped.add(file + ": did not decode");
+            } else if (parsed.offer().conditions().isEmpty()) {
+                dropped.add(file.toString());
+            }
+        }
+        assertEquals(List.of(), dropped, "these situations declare an offer gate that the codec "
+                + "discards, so it never runs");
     }
 
     private static <T> void assertAllParse(String folder, com.mojang.serialization.Codec<T> codec) {

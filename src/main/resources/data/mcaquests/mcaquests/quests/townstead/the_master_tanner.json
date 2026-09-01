@@ -39,10 +39,20 @@
   },
   "objectives": [
     {
-      "type": "mcaquests:townstead_profession_progress",
-      "profession": "minecraft:leatherworker",
-      "xp_delta": 140,
-      "require_current_profession": true
+      "type": "mcaquests:townstead_schedule_streak",
+      "activity": "work",
+      "required_shifts": 3,
+      "minimum_coverage": 0.65,
+      "require_on_schedule": true
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:leather",
+      "count": 32,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
     }
   ],
   "rewards": [
@@ -64,7 +74,9 @@
         "type": "mcaquests:townstead_available",
         "capabilities": [
           "READ_VILLAGER",
-          "READ_PROFESSION"
+          "READ_SCHEDULE",
+          "READ_CALENDAR",
+          "READ_BUILDING"
         ]
       },
       {
@@ -76,13 +88,11 @@
         "value": "minecraft:leatherworker"
       },
       {
-        "type": "mcaquests:townstead_value",
-        "source": "villager",
-        "target": "giver",
-        "path": "professionLevel",
-        "operator": "gte",
-        "value": 2
+        "type": "mcaquests:townstead_building",
+        "building_type": "leatherworker",
+        "count": 1
       }
     ]
-  }
+  },
+  "offer_group": "townstead_work"
 }

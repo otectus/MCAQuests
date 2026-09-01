@@ -618,6 +618,12 @@ public final class McaQuestsCommand {
         var warnings = new java.util.ArrayList<>(QuestRegistry.lastWarnings());
         // Progression cross-refs are computed here (after all datapacks loaded) since runtime fails safe.
         warnings.addAll(dev.otectus.mcaquests.data.ProgressionValidator.collectWarnings(QuestRegistry.all()));
+        // Achievability against the *running* Townstead: the only place a quest that parses perfectly
+        // and can still never be finished shows up (spec 5.11).
+        warnings.addAll(dev.otectus.mcaquests.data.TownsteadContentValidator.collectWarnings(
+                QuestRegistry.all(),
+                dev.otectus.mcaquests.project.data.ProjectRegistry.all(),
+                dev.otectus.mcaquests.quest.situation.SituationRegistry.all()));
         if (errors.isEmpty() && warnings.isEmpty()) {
             ctx.getSource().sendSuccess(
                     () -> Component.literal("All " + QuestRegistry.size() + " loaded quest(s) are valid."), false);
@@ -643,6 +649,9 @@ public final class McaQuestsCommand {
                     src.sendSuccess(() -> Component.literal(
                             "Quests reloaded: " + QuestRegistry.size() + " loaded, "
                                     + QuestRegistry.lastErrors().size() + " error(s)."), true);
+                    // Every loader has swapped by the time this callback runs, so this is the one point
+                    // after a reload where the achievability pass can see all three registries at once.
+                    dev.otectus.mcaquests.data.TownsteadAchievabilityReport.run();
                     // §12.6: re-evaluate FTB progress for online players now that the registry swap is
                     // done (new/changed quest ids may change what mcaquests-side FTB tasks match). Routed
                     // strictly through the FtbqBridge interface — never compat.ftbq — so this is a free

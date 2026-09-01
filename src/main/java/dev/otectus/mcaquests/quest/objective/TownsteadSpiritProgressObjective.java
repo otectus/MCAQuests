@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -9,6 +10,7 @@ import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.quest.TownsteadNames;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
@@ -50,7 +52,7 @@ public record TownsteadSpiritProgressObjective(Optional<String> spirit, Optional
      * Split from {@link #CODEC} so the record type can be inferred: chaining flatXmap straight
      * onto RecordCodecBuilder.create leaves it with no target type to infer from.
      */
-    private static final Codec<TownsteadSpiritProgressObjective> BASE = RecordCodecBuilder.create(
+    private static final MapCodec<TownsteadSpiritProgressObjective> BASE = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(Codec.STRING, "spirit")
                             .forGetter(TownsteadSpiritProgressObjective::spirit),
@@ -62,8 +64,11 @@ public record TownsteadSpiritProgressObjective(Optional<String> spirit, Optional
                     new TownsteadSpiritProgressObjective(spirit, unbox(delta), unbox(tier))));
 
     /** Validated at parse time, so a contradictory goal fails the reload rather than a quest. */
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type". See DispatchedCodecInlinesTest.
     public static final Codec<TownsteadSpiritProgressObjective> CODEC =
-            BASE.flatXmap(TownsteadSpiritProgressObjective::validateGoal, DataResult::success);
+            BASE.flatXmap(TownsteadSpiritProgressObjective::validateGoal, DataResult::success).codec();
 
     private static DataResult<TownsteadSpiritProgressObjective> validateGoal(
             TownsteadSpiritProgressObjective objective) {
@@ -177,11 +182,22 @@ public record TownsteadSpiritProgressObjective(Optional<String> spirit, Optional
                 .orElse(false);
     }
 
+    /**
+     * Four wordings rather than one with an argument that is sometimes blank. "Raise the village to
+     * spirit tier 2 " -- with a trailing space where the spirit should have been -- is what the single
+     * key produced whenever the goal named no particular spirit, which is most of the time.
+     */
     @Override
     public Component describe() {
-        return Component.translatable(targetTier.isPresent()
+        boolean tier = targetTier.isPresent();
+        if (spirit.isEmpty()) {
+            return Component.translatable(tier
+                    ? "mcaquests.objective.townstead_spirit_tier_any"
+                    : "mcaquests.objective.townstead_spirit_points_any", required());
+        }
+        return Component.translatable(tier
                         ? "mcaquests.objective.townstead_spirit_tier"
                         : "mcaquests.objective.townstead_spirit_points",
-                required(), spirit.orElse(""));
+                required(), TownsteadNames.spirit(spirit.get()));
     }
 }

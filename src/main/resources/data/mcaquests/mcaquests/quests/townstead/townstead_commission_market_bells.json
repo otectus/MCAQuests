@@ -1,0 +1,94 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_commission_market_bells",
+  "enabled": true,
+  "weight": 6,
+  "priority": 2,
+  "offer_group": "townstead_spirit",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "period",
+    "period": "season",
+    "scope": "giver",
+    "fallback_cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:butcher",
+      "minecraft:none",
+      "minecraft:nitwit"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_commission_market_bells.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_commission_market_bells.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_commission_market_bells.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_commission_market_bells.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_commission_market_bells.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_commission_market_bells.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_commission_market_bells.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:trade_with_villager",
+      "count": 12
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:emerald",
+      "count": 16,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_BUILDING",
+          "READ_SPIRIT",
+          "READ_CALENDAR"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_spirit",
+        "primary": "commercial",
+        "minimum_tier": 1
+      }
+    ]
+  }
+}

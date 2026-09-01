@@ -21,6 +21,7 @@ import dev.otectus.mcaquests.quest.condition.leaf.HealthBelowCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HeartsCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadAvailableCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadBuildingCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.TownsteadProfessionTrackCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadSkillCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadSpiritCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadValueCondition;
@@ -86,6 +87,12 @@ public final class ConditionTypes {
             register("townstead_spirit", TownsteadSpiritCondition.CODEC);
     public static final QuestConditionType<TownsteadSkillCondition> TOWNSTEAD_SKILL =
             register("townstead_skill", TownsteadSkillCondition.CODEC);
+    /**
+     * Spec §5.1. The gate that proves a profession goal is reachable in the <em>loaded</em> Townstead
+     * before the quest is offered, rather than after the player has accepted it and started waiting.
+     */
+    public static final QuestConditionType<TownsteadProfessionTrackCondition> TOWNSTEAD_PROFESSION_TRACK =
+            register("townstead_profession_track", TownsteadProfessionTrackCondition.CODEC);
 
     public static final QuestConditionType<HeartsCondition> HEARTS = register("hearts", HeartsCondition.CODEC);
     public static final QuestConditionType<ProfessionCondition> PROFESSION = register("profession", ProfessionCondition.CODEC);

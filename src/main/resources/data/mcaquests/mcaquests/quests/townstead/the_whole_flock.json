@@ -64,7 +64,8 @@
         "type": "mcaquests:townstead_available",
         "capabilities": [
           "READ_VILLAGER",
-          "READ_PROFESSION"
+          "READ_PROFESSION",
+          "READ_PROFESSION_SPEC"
         ]
       },
       {
@@ -82,7 +83,14 @@
         "path": "professionLevel",
         "operator": "gte",
         "value": 2
+      },
+      {
+        "type": "mcaquests:townstead_profession_track",
+        "target": "giver",
+        "minimum_max_tier": 3,
+        "missing": false
       }
     ]
-  }
+  },
+  "offer_group": "townstead_work"
 }

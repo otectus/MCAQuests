@@ -112,18 +112,36 @@ public class QuestLogScreen extends Screen {
         return McaQuestsConfig.CLIENT.showTownsteadQuestContext.get();
     }
 
-    private static int entryHeight(QuestLogEntry entry) {
-        return 11
+    /** The width the log's scissor rectangle allows; text beyond it is cut off, not wrapped. */
+    private static final int CONTENT_WIDTH = 310;
+
+    /** The objective marker, shared by the height calculation and the draw so the indents match. */
+    private static final String BULLET = "  - ";
+
+    /**
+     * Instance rather than static because measuring wrapped text needs a font, and every row below an
+     * entry — including the Abandon buttons — is positioned from this. It has to count exactly the rows
+     * {@code render} draws.
+     */
+    private int entryHeight(QuestLogEntry entry) {
+        int height = 11
                 + (entry.chainLabel().getString().isEmpty() ? 0 : 10)
-                + entry.objectives().size() * 10
                 + (entry.ready() ? 10 : 0)
                 + (entry.suspended() ? 10 : 0)
-                + (showContext() ? entry.townsteadContext().size() * 10 : 0)
                 + 6;
+        for (Component objective : entry.objectives()) {
+            height += CardText.heightBulleted(this.font, BULLET, objective, CONTENT_WIDTH);
+        }
+        if (showContext()) {
+            for (Component context : entry.townsteadContext()) {
+                height += CardText.height(this.font, context, CONTENT_WIDTH - 6);
+            }
+        }
+        return height;
     }
 
     /** Height of the whole "Village Projects" section, including its heading; 0 when there are none. */
-    private static int projectsHeight(List<ProjectLogEntry> projects) {
+    private int projectsHeight(List<ProjectLogEntry> projects) {
         if (projects.isEmpty()) {
             return 0;
         }
@@ -131,10 +149,19 @@ public class QuestLogScreen extends Screen {
         for (ProjectLogEntry project : projects) {
             height += 11 + 10 + 6; // title + scope/phase + gap
             for (ProjectObjectiveLine line : project.objectives()) {
-                height += 10 + (line.yourContribution() > 0 ? 9 : 0);
+                height += CardText.heightBulleted(this.font, BULLET, projectObjectiveLabel(line),
+                        CONTENT_WIDTH);
+                height += line.yourContribution() > 0 ? 9 : 0;
             }
         }
         return height;
+    }
+
+    /** Built once so the height calculation and the draw wrap identical text. */
+    private static Component projectObjectiveLabel(ProjectObjectiveLine line) {
+        return Component.empty().append(line.label()).append(Component.literal("  "))
+                .append(Component.translatable("mcaquests.label.project.shared",
+                        line.sharedCurrent(), line.required()));
     }
 
     @Override
@@ -186,8 +213,8 @@ public class QuestLogScreen extends Screen {
                     lineY += 10;
                 }
                 for (Component objective : entry.objectives()) {
-                    graphics.drawString(this.font, Component.literal("  - ").append(objective), left, lineY, 0xBFBFBF);
-                    lineY += 10;
+                    lineY = CardText.drawBulleted(graphics, this.font, BULLET, objective, left, lineY,
+                            CONTENT_WIDTH, 0xBFBFBF);
                 }
                 if (entry.ready()) {
                     graphics.drawString(this.font,
@@ -195,8 +222,8 @@ public class QuestLogScreen extends Screen {
                 }
                 for (Component context : showContext() ? entry.townsteadContext() : List.<Component>of()) {
                     // Dimmer than the objectives: this is background about the villager, not a task.
-                    graphics.drawString(this.font, context, left + 6, lineY, 0x7F9AA8);
-                    lineY += 10;
+                    lineY = CardText.draw(graphics, this.font, context, left + 6, lineY,
+                            CONTENT_WIDTH - 6, 0x7F9AA8);
                 }
                 if (entry.suspended()) {
                     // Amber, not red: the quest is on hold, not lost. Progress and frozen baselines are
@@ -220,12 +247,8 @@ public class QuestLogScreen extends Screen {
                             .append(Component.literal("  ")).append(project.phaseLabel()), left + 2, y, 0x9A9A9A);
                     y += 10;
                     for (ProjectObjectiveLine line : project.objectives()) {
-                        Component text = Component.literal("  - ").append(line.label())
-                                .append(Component.literal("  "))
-                                .append(Component.translatable("mcaquests.label.project.shared",
-                                        line.sharedCurrent(), line.required()));
-                        graphics.drawString(this.font, text, left, y, 0xBFBFBF);
-                        y += 10;
+                        y = CardText.drawBulleted(graphics, this.font, BULLET,
+                                projectObjectiveLabel(line), left, y, CONTENT_WIDTH, 0xBFBFBF);
                         if (line.yourContribution() > 0) {
                             graphics.drawString(this.font,
                                     Component.translatable("mcaquests.label.project.you", line.yourContribution()),

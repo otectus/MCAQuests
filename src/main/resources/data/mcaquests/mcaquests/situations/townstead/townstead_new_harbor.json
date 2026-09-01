@@ -1,0 +1,112 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_new_harbor",
+  "scope": "village",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 72000,
+  "trigger": {
+    "type": "mcaquests:townstead_building",
+    "building_type": "dock",
+    "minimum_level": 2
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -4
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "priority": 8,
+    "offer_group": "townstead_work",
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "minecraft:fisherman",
+        "minecraft:cartographer"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_new_harbor.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_new_harbor.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_new_harbor.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_new_harbor.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_new_harbor.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_new_harbor.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_new_harbor.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_new_harbor.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:build_near_location",
+        "block": "minecraft:lantern",
+        "location": {
+          "anchor": "townstead_building",
+          "building_type": "dock",
+          "minimum_level": 2
+        },
+        "radius": 16,
+        "count": 6
+      },
+      {
+        "type": "mcaquests:build_near_location",
+        "block": "minecraft:chain",
+        "location": {
+          "anchor": "townstead_building",
+          "building_type": "dock",
+          "minimum_level": 2
+        },
+        "radius": 16,
+        "count": 8
+      },
+      {
+        "type": "mcaquests:fish_item",
+        "item": "minecraft:cod",
+        "count": 8
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 34
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_BUILDING"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_commission_watch_at_the_gate",
+  "enabled": true,
+  "weight": 6,
+  "priority": 2,
+  "offer_group": "townstead_spirit",
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "period",
+    "period": "season",
+    "scope": "giver",
+    "fallback_cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard",
+      "minecraft:armorer",
+      "minecraft:weaponsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_commission_watch_at_the_gate.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_commission_watch_at_the_gate.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_commission_watch_at_the_gate.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_commission_watch_at_the_gate.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_commission_watch_at_the_gate.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_commission_watch_at_the_gate.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_commission_watch_at_the_gate.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:defend_location",
+      "location": {
+        "anchor": "townstead_building",
+        "building_type": "armory"
+      },
+      "entity": "minecraft:pillager",
+      "radius": 32,
+      "count": 8
+    },
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:lantern",
+      "location": {
+        "anchor": "townstead_building",
+        "building_type": "armory"
+      },
+      "radius": 16,
+      "count": 4
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_BUILDING",
+          "READ_SPIRIT",
+          "READ_CALENDAR"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_spirit",
+        "primary": "martial",
+        "minimum_tier": 1
+      }
+    ]
+  }
+}

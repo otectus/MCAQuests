@@ -1,0 +1,120 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_retirement_feast",
+  "scope": "family",
+  "duration_ticks": 36000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:townstead_life_transition",
+    "transition": "senior",
+    "from": "false",
+    "to": "true"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": 0
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "priority": 8,
+    "offer_group": "townstead_life",
+    "difficulty": "medium",
+    "giver": {
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_retirement_feast.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_retirement_feast.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_retirement_feast.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_retirement_feast.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_retirement_feast.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_retirement_feast.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_retirement_feast.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_retirement_feast.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:cake",
+        "count": 1,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:cooked_chicken",
+        "count": 8,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:escort_entity",
+        "villager": {
+          "mode": "self"
+        },
+        "destination": {
+          "anchor": "bed"
+        },
+        "radius": 8,
+        "min_journey": 32
+      },
+      {
+        "type": "mcaquests:protect_entity",
+        "villager": {
+          "mode": "self"
+        },
+        "duration_ticks": 1200,
+        "require_near_player": true,
+        "near_radius": 16
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 34
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_CALENDAR"
+          ]
+        }
+      ]
+    }
+  }
+}

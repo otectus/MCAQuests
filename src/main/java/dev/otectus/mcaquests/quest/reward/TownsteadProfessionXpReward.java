@@ -84,6 +84,7 @@ public record TownsteadProfessionXpReward(TownsteadTarget target, String profess
 
     @Override
     public Component describe() {
-        return Component.translatable("mcaquests.reward.townstead_profession_xp", amount, profession);
+        return Component.translatable("mcaquests.reward.townstead_profession_xp", amount,
+                dev.otectus.mcaquests.quest.TownsteadNames.profession(profession));
     }
 }

@@ -1,0 +1,107 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_coming_of_age",
+  "scope": "family",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:townstead_life_transition",
+    "transition": "canonical_stage",
+    "from": "child",
+    "to": "adult"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 10
+    },
+    "failure": {
+      "reputation": 0
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "priority": 8,
+    "offer_group": "townstead_life",
+    "difficulty": "medium",
+    "giver": {
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_coming_of_age.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_coming_of_age.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_coming_of_age.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_coming_of_age.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_coming_of_age.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_coming_of_age.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_coming_of_age.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_coming_of_age.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:compass",
+        "count": 1,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:book",
+        "count": 1,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:reach_location",
+        "location": {
+          "anchor": "workstation"
+        },
+        "radius": 8
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 34
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_ROOT"
+          ]
+        }
+      ]
+    }
+  }
+}

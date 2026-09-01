@@ -15,15 +15,30 @@ import java.util.Optional;
  * limit, and {@code QuestDefinition} re-exposes each one through its own accessor. The default
  * ({@link #NONE}) is no explicit priority, no bonuses, and no declared difficulty — identical to the
  * pre-existing behaviour, so standalone quests are unaffected.
+ *
+ * <p>{@code offer_group} (1.4.1) is the newest member and joined this record for the same reason the
+ * others did: {@code QuestDefinition}'s own {@code RecordCodecBuilder} group is full. It names a
+ * <em>kind</em> of quest — a need, a shift, a season, an adventure — so that a menu with three slots
+ * and two hundred eligible quests does not fill all three with variations of "someone is hungry". See
+ * {@code QuestManager}'s selection pass for how it is honoured, and note that a quest without one keeps
+ * exactly its old behaviour: ungrouped quests compete on weight as they always have.
  */
 public record OfferShaping(Optional<Integer> priority, List<WeightBonus> weightBonus,
-                           Optional<QuestDifficulty> difficulty) {
+                           Optional<QuestDifficulty> difficulty, Optional<String> offerGroup) {
 
-    public static final OfferShaping NONE = new OfferShaping(Optional.empty(), List.of(), Optional.empty());
+    public static final OfferShaping NONE =
+            new OfferShaping(Optional.empty(), List.of(), Optional.empty(), Optional.empty());
 
     public static final MapCodec<OfferShaping> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("priority").forGetter(OfferShaping::priority),
             WeightBonus.CODEC.listOf().optionalFieldOf("weight_bonus", List.of()).forGetter(OfferShaping::weightBonus),
-            QuestDifficulty.CODEC.optionalFieldOf("difficulty").forGetter(OfferShaping::difficulty)
+            QuestDifficulty.CODEC.optionalFieldOf("difficulty").forGetter(OfferShaping::difficulty),
+            Codec.STRING.optionalFieldOf("offer_group").forGetter(OfferShaping::offerGroup)
     ).apply(instance, OfferShaping::new));
+
+    /** The pre-1.4.1 shape, for callers and tests that predate {@code offer_group}. */
+    public OfferShaping(Optional<Integer> priority, List<WeightBonus> weightBonus,
+                        Optional<QuestDifficulty> difficulty) {
+        this(priority, weightBonus, difficulty, Optional.empty());
+    }
 }

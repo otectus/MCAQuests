@@ -68,6 +68,6 @@ public record TownsteadBuildingProjectObjective(String buildingType, int minimum
     @Override
     public Component describe() {
         return Component.translatable("mcaquests.project.objective.townstead_building",
-                count, buildingType, minimumLevel);
+                count, dev.otectus.mcaquests.quest.TownsteadNames.building(buildingType), minimumLevel);
     }
 }

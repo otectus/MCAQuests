@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.project;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.TownsteadContentGate;
 import dev.otectus.mcaquests.compat.TownsteadCounters;
 import dev.otectus.mcaquests.network.ProjectCard;
 import dev.otectus.mcaquests.network.ProjectLogSyncS2CPacket;
@@ -285,6 +286,9 @@ public final class ProjectManager {
         if (!McaCompat.isMcaVillager(villager)) {
             return false;
         }
+        if (!TownsteadContentGate.allowsProject(def.id(), readsTownstead(def))) {
+            return false;
+        }
         if (def.sponsor().adultOnly() && !McaCompat.isAdult(villager)) {
             return false;
         }
@@ -295,6 +299,16 @@ public final class ProjectManager {
         return def.sponsor().isGeneric()
                 || ProfessionMatcher.matchesAny(def.sponsor().professions(), profession,
                         McaQuestsConfig.COMMON.professionMatchingMode.get());
+    }
+
+    /**
+     * True when any phase of this project reads Townstead state, so the content switch knows whether it
+     * applies. Derived from the objective types rather than from the id, so a project that stops using
+     * Townstead stops being gated by it without anyone having to remember to rename the file.
+     */
+    private static boolean readsTownstead(ProjectDefinition def) {
+        return def.phases().stream().flatMap(phase -> phase.objectives().stream())
+                .anyMatch(objective -> objective.type().id().getPath().startsWith("townstead_"));
     }
 
     private static boolean conditionsPass(ServerPlayer player, Entity villager, ProjectDefinition def) {

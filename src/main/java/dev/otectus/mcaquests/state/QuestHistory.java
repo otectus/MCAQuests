@@ -33,6 +33,15 @@ public final class QuestHistory {
     private final Map<String, Integer> completionsByGiver = new HashMap<>();
     // Per-giver non-completion outcomes, keyed "<quest>|<villager>|<OUTCOME>".
     private final Map<String, Integer> outcomesByGiver = new HashMap<>();
+    /**
+     * The Townstead calendar period each {@code repeat: period} quest was last completed in, keyed
+     * "<quest>" for global scope and "<quest>|<villager>" for giver scope (spec §5.6).
+     *
+     * <p>Additive alongside the cooldown deadlines rather than replacing them: a tick deadline answers
+     * "how long until this comes back", which a calendar period cannot, and the two coexist so a
+     * definition may fall back to a cooldown when the calendar is unreadable.
+     */
+    private final Map<String, String> periodTokens = new HashMap<>();
 
     private static String key(ResourceLocation quest, UUID villager) {
         return quest + "|" + villager;
@@ -44,6 +53,32 @@ public final class QuestHistory {
 
     private static String giverOutcomeKey(ResourceLocation quest, UUID villager, Outcome outcome) {
         return quest + "|" + villager + "|" + outcome.name();
+    }
+
+    /**
+     * Records the calendar period a completion happened in. An empty token is <b>not</b> stored: it
+     * means the calendar could not be read, and writing it would make the next unreadable-calendar
+     * check compare equal and lock the quest out permanently.
+     */
+    public void recordPeriod(ResourceLocation quest, UUID villager, boolean perGiver, String token) {
+        if (!token.isEmpty()) {
+            periodTokens.put(periodKey(quest, villager, perGiver), token);
+        }
+    }
+
+    /**
+     * True when this quest has already been completed in the period {@code token} names.
+     *
+     * <p>False for an empty token, so an unreadable calendar never <em>blocks</em> an offer here; the
+     * caller falls back to the definition's {@code fallback_cooldown_ticks} instead, which is the
+     * conservative answer in the other direction.
+     */
+    public boolean completedInPeriod(ResourceLocation quest, UUID villager, boolean perGiver, String token) {
+        return !token.isEmpty() && token.equals(periodTokens.get(periodKey(quest, villager, perGiver)));
+    }
+
+    private static String periodKey(ResourceLocation quest, UUID villager, boolean perGiver) {
+        return perGiver ? quest + "|" + villager : quest.toString();
     }
 
     public boolean onCooldown(ResourceLocation quest, UUID villager, long now) {
@@ -149,6 +184,8 @@ public final class QuestHistory {
         completionsByGiver.putAll(other.completionsByGiver);
         outcomesByGiver.clear();
         outcomesByGiver.putAll(other.outcomesByGiver);
+        periodTokens.clear();
+        periodTokens.putAll(other.periodTokens);
     }
 
     public CompoundTag save() {
@@ -168,6 +205,11 @@ public final class QuestHistory {
         CompoundTag outByGiver = new CompoundTag();
         outcomesByGiver.forEach(outByGiver::putInt);
         tag.put("outcomes_by_giver", outByGiver);
+        if (!periodTokens.isEmpty()) {
+            CompoundTag periods = new CompoundTag();
+            periodTokens.forEach(periods::putString);
+            tag.put("period_tokens", periods);
+        }
         return tag;
     }
 
@@ -177,6 +219,7 @@ public final class QuestHistory {
         outcomes.clear();
         completionsByGiver.clear();
         outcomesByGiver.clear();
+        periodTokens.clear();
         CompoundTag cd = tag.getCompound("cooldowns");
         cd.getAllKeys().forEach(k -> cooldownUntil.put(k, cd.getLong(k)));
         CompoundTag done = tag.getCompound("completions");
@@ -188,5 +231,8 @@ public final class QuestHistory {
         doneByGiver.getAllKeys().forEach(k -> completionsByGiver.put(k, doneByGiver.getInt(k)));
         CompoundTag outByGiver = tag.getCompound("outcomes_by_giver");
         outByGiver.getAllKeys().forEach(k -> outcomesByGiver.put(k, outByGiver.getInt(k)));
+        // Absent on every pre-1.4.1 save -> empty, which correctly reads as "no period completed yet".
+        CompoundTag periods = tag.getCompound("period_tokens");
+        periods.getAllKeys().forEach(k -> periodTokens.put(k, periods.getString(k)));
     }
 }

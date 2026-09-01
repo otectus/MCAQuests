@@ -26,5 +26,18 @@ public enum SituationSignalType {
     /** A village spirit has gained a tier, or settled into a different identity. */
     TOWNSTEAD_SPIRIT,
     /** A registered building has appeared, been upgraded, or been lost. */
-    TOWNSTEAD_BUILDING
+    TOWNSTEAD_BUILDING,
+
+    // 1.4.1. Appended for the same reason as the block above: the ordinal seeds the per-village draw,
+    // so inserting rather than appending would reshuffle which situation an existing village opens.
+    /** The Townstead calendar has turned over a week, a season or a year. */
+    TOWNSTEAD_CALENDAR_TRANSITION,
+    /** A villager has crossed a life threshold: come of age, or become a senior. */
+    TOWNSTEAD_LIFE_TRANSITION,
+    /** Enough of a village has been off its own schedule for long enough to be worth noticing. */
+    TOWNSTEAD_SCHEDULE_DISRUPTION,
+    /** A resident is far outside their home village after dark and has not moved on. MCA only. */
+    VILLAGER_STRANDED,
+    /** Hostile mobs have gathered at a resident's bed or the village centre. MCA only. */
+    HOSTILES_NEAR_HOME
 }

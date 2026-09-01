@@ -33,6 +33,13 @@ import java.util.OptionalInt;
  * <p>Only loaded residents can be read, so this counts what can actually be seen. That makes it a
  * "come and look at your village" objective rather than a bookkeeping one, which is the honest
  * behaviour given the same limitation applies to every other resident-wide check.
+ *
+ * <p><b>A resident counts only when their trade can really reach {@code minimum_tier}</b> (spec 9.1).
+ * Townstead answers a progression query for every profession, including ones it has no track for, so
+ * before 1.4.1 a village whose only candidates were fishermen could be asked for three tier-2 workers
+ * it was never going to produce. The {@code professions} list is now the guaranteed baseline rather
+ * than the whole answer: a datapack that supplies a real fisherman track gets fishermen counted here
+ * with no change to the JSON, and one that removes a track stops them counting again.
  */
 public record TownsteadWorkforceProjectObjective(List<String> professions, int minimumTier, int count)
         implements PollingProjectObjective {
@@ -66,14 +73,18 @@ public record TownsteadWorkforceProjectObjective(List<String> professions, int m
                         ProjectState state, SharedObjectiveProgress progress) {
         OptionalInt village = state.villageId();
         TownsteadBridge bridge = TownsteadBridge.Holder.get();
-        if (village.isEmpty() || !bridge.has(TownsteadCapability.READ_PROFESSION)) {
+        if (village.isEmpty() || !bridge.has(TownsteadCapability.READ_PROFESSION)
+                || !bridge.has(TownsteadCapability.READ_PROFESSION_SPEC)) {
+            // Without the track registry we cannot tell a real tier from an unreachable one, so the
+            // phase waits rather than counting residents it may be lying about.
             return false;
         }
         TownsteadEvaluation evaluation = new TownsteadEvaluation();
         int qualified = 0;
         for (Entity resident : McaCompat.loadedVillageResidents(level, village.getAsInt())) {
             TownsteadVillagerView view = evaluation.villager(resident).orElse(null);
-            if (view != null && matches(view) && view.professionLevel() >= minimumTier) {
+            if (view != null && matches(view) && view.professionLevel() >= minimumTier
+                    && evaluation.professionTrack(view.professionId()).supportsTier(minimumTier)) {
                 qualified++;
             }
         }

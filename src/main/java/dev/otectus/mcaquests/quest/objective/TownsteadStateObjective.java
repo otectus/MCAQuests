@@ -7,6 +7,7 @@ import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadQuery;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.quest.TownsteadNames;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
@@ -117,10 +118,20 @@ public record TownsteadStateObjective(TownsteadQuery query, int holdTicks,
         return false;
     }
 
+    /**
+     * "Keep them working for 30 seconds", not "Keep villager.schedule.currentActivity eq work for 30".
+     *
+     * <p>A one-second hold gets its own wording. It is not really a hold at all -- it is "finish in this
+     * state" -- and "for 1 seconds" is both wrong and the sort of thing nobody fixes because it is only
+     * ever slightly wrong.
+     */
     @Override
     public Component describe() {
-        return Component.translatable("mcaquests.objective.townstead_state",
-                query.describe(), required());
+        return required() <= 1
+                ? Component.translatable("mcaquests.objective.townstead_state.now",
+                        TownsteadNames.clause(query))
+                : Component.translatable("mcaquests.objective.townstead_state",
+                        TownsteadNames.clause(query), required());
     }
 
     @Override

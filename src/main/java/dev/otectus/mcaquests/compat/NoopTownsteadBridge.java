@@ -91,6 +91,21 @@ final class NoopTownsteadBridge implements TownsteadBridge {
     }
 
     @Override
+    public TownsteadProfessionTrackView professionTrack(String professionId) {
+        return TownsteadProfessionTrackView.none(professionId == null ? "" : professionId);
+    }
+
+    @Override
+    public boolean isKnownSkill(ResourceLocation skillId) {
+        return false;
+    }
+
+    @Override
+    public Set<ResourceLocation> knownSkillIds() {
+        return Set.of();
+    }
+
+    @Override
     public TownsteadMutationResult changeNeeds(Entity villager, NeedMutation mutation) {
         return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.MOD_ABSENT);
     }

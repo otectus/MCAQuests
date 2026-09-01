@@ -25,12 +25,16 @@ import java.util.OptionalInt;
 public record GiverDistanceFromVillageCondition(double minDistance, boolean requireOutsideBorder)
         implements QuestCondition {
 
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // See DispatchedCodecInlinesTest.
     public static final Codec<GiverDistanceFromVillageCondition> CODEC =
-            RecordCodecBuilder.<GiverDistanceFromVillageCondition>create(instance -> instance.group(
+            RecordCodecBuilder.<GiverDistanceFromVillageCondition>mapCodec(instance -> instance.group(
                     Codec.DOUBLE.optionalFieldOf("min_distance", 0.0D).forGetter(GiverDistanceFromVillageCondition::minDistance),
                     Codec.BOOL.optionalFieldOf("require_outside_border", false).forGetter(GiverDistanceFromVillageCondition::requireOutsideBorder)
             ).apply(instance, GiverDistanceFromVillageCondition::new))
-            .flatXmap(GiverDistanceFromVillageCondition::validate, GiverDistanceFromVillageCondition::validate);
+            .flatXmap(GiverDistanceFromVillageCondition::validate, GiverDistanceFromVillageCondition::validate).codec();
 
     private static DataResult<GiverDistanceFromVillageCondition> validate(GiverDistanceFromVillageCondition condition) {
         if (condition.minDistance < 0.0D) {

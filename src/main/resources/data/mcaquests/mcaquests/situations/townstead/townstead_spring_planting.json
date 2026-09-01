@@ -1,0 +1,119 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_spring_planting",
+  "scope": "village",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:townstead_calendar_transition",
+    "transition": "season",
+    "to": "spring"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -4
+    }
+  },
+  "offer": {
+    "weight": 11,
+    "priority": 8,
+    "offer_group": "townstead_season",
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "minecraft:farmer"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.townstead_spring_planting.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.townstead_spring_planting.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.townstead_spring_planting.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.townstead_spring_planting.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.townstead_spring_planting.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.townstead_spring_planting.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.townstead_spring_planting.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.townstead_spring_planting.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:wheat_seeds",
+        "count": 48,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:carrot",
+        "count": 24,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "minecraft:potato",
+        "count": 24,
+        "destination": {
+          "type": "townstead_villager_inventory",
+          "target": "giver"
+        }
+      },
+      {
+        "type": "mcaquests:townstead_schedule_streak",
+        "activity": "work",
+        "required_shifts": 1,
+        "minimum_coverage": 0.55,
+        "require_on_schedule": true
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 34
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:townstead_available",
+          "capabilities": [
+            "READ_VILLAGER",
+            "READ_SCHEDULE",
+            "READ_CALENDAR"
+          ]
+        }
+      ]
+    }
+  }
+}

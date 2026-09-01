@@ -1,0 +1,101 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:caravan_stranded_at_night",
+  "scope": "villager",
+  "duration_ticks": 18000,
+  "cooldown_ticks": 72000,
+  "trigger": {
+    "type": "mcaquests:villager_stranded",
+    "minimum_distance": 96,
+    "hold_ticks": 600,
+    "require_night": true
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 12
+    },
+    "failure": {
+      "reputation": -6
+    }
+  },
+  "offer": {
+    "weight": 12,
+    "priority": 10,
+    "offer_group": "core_relationship",
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "mca:guard",
+        "minecraft:none",
+        "minecraft:nitwit"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.caravan_stranded_at_night.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.caravan_stranded_at_night.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.caravan_stranded_at_night.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.caravan_stranded_at_night.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.caravan_stranded_at_night.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.caravan_stranded_at_night.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.caravan_stranded_at_night.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.caravan_stranded_at_night.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:escort_entity",
+        "villager": {
+          "mode": "self"
+        },
+        "destination": {
+          "anchor": "home_village"
+        },
+        "radius": 8,
+        "wait_distance": 8,
+        "min_journey": 64
+      },
+      {
+        "type": "mcaquests:protect_entity",
+        "villager": {
+          "mode": "self"
+        },
+        "duration_ticks": 1200,
+        "require_near_player": true,
+        "near_radius": 16,
+        "fail_on_death": true
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 55
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ],
+    "failure": {
+      "fail_on_giver_death": true
+    }
+  }
+}

@@ -21,10 +21,14 @@ import java.util.Locale;
  */
 public record IsFamilyMemberCondition(String relation) implements QuestCondition {
 
-    public static final Codec<IsFamilyMemberCondition> CODEC = RecordCodecBuilder.<IsFamilyMemberCondition>create(
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // See DispatchedCodecInlinesTest.
+    public static final Codec<IsFamilyMemberCondition> CODEC = RecordCodecBuilder.<IsFamilyMemberCondition>mapCodec(
             instance -> instance.group(
                     Codec.STRING.optionalFieldOf("relation", "any").forGetter(IsFamilyMemberCondition::relation)
-            ).apply(instance, IsFamilyMemberCondition::new)).flatXmap(IsFamilyMemberCondition::validate, IsFamilyMemberCondition::validate);
+            ).apply(instance, IsFamilyMemberCondition::new)).flatXmap(IsFamilyMemberCondition::validate, IsFamilyMemberCondition::validate).codec();
 
     private static DataResult<IsFamilyMemberCondition> validate(IsFamilyMemberCondition condition) {
         String value = condition.relation.toLowerCase(Locale.ROOT);

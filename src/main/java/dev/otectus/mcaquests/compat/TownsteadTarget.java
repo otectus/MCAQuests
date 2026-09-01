@@ -25,6 +25,18 @@ public enum TownsteadTarget {
     /** The UUID this objective already bound, if it has one; otherwise the giver. */
     BOUND("bound"),
 
+    /**
+     * The villager an objective is handing something <em>to</em>, as distinct from the giver who asked
+     * for it (spec §5.5).
+     *
+     * <p>Resolves exactly as {@link #BOUND} does — an objective with a recipient binds that recipient's
+     * UUID, and that binding is the answer. It exists as its own spelling because writing
+     * {@code "target": "bound"} on a delivery destination reads like an implementation detail, while
+     * {@code "recipient"} says what the pack author means. Only meaningful on an objective that has a
+     * recipient; the validator rejects it elsewhere rather than letting it silently mean "the giver".
+     */
+    RECIPIENT("recipient"),
+
     /** The MCA family relative the quest is about, resolved once and then frozen. */
     RELATED("related"),
 

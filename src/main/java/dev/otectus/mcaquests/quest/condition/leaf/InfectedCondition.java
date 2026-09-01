@@ -14,10 +14,14 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
  */
 public record InfectedCondition(double minProgress) implements QuestCondition {
 
-    public static final Codec<InfectedCondition> CODEC = RecordCodecBuilder.<InfectedCondition>create(
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // See DispatchedCodecInlinesTest.
+    public static final Codec<InfectedCondition> CODEC = RecordCodecBuilder.<InfectedCondition>mapCodec(
             instance -> instance.group(
                     Codec.DOUBLE.optionalFieldOf("min_progress", 0.0D).forGetter(InfectedCondition::minProgress)
-            ).apply(instance, InfectedCondition::new)).flatXmap(InfectedCondition::validate, InfectedCondition::validate);
+            ).apply(instance, InfectedCondition::new)).flatXmap(InfectedCondition::validate, InfectedCondition::validate).codec();
 
     private static DataResult<InfectedCondition> validate(InfectedCondition condition) {
         if (condition.minProgress < 0.0D || condition.minProgress > 1.0D) {

@@ -1,0 +1,85 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:remedy_gold_against_ash",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "core_adventure",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.remedy_gold_against_ash.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:craft_item",
+      "item": "minecraft:golden_apple",
+      "count": 1
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:fermented_spider_eye",
+      "count": 2
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:gunpowder",
+      "count": 2
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "chain": {
+    "chain": "the_ashen_remedy",
+    "stage": 3,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:remedy_embers_and_wart"
+    ],
+    "unlocks": [
+      "mcaquests:remedy_the_returning_voice"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.remedy_gold_against_ash.chain.chapter"
+    }
+  }
+}

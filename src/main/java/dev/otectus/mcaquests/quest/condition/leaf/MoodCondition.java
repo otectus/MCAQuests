@@ -21,11 +21,15 @@ import java.util.OptionalInt;
 public record MoodCondition(Optional<Integer> min, Optional<Integer> max, Optional<List<String>> moods)
         implements QuestCondition {
 
-    public static final Codec<MoodCondition> CODEC = RecordCodecBuilder.<MoodCondition>create(instance -> instance.group(
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // See DispatchedCodecInlinesTest.
+    public static final Codec<MoodCondition> CODEC = RecordCodecBuilder.<MoodCondition>mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("min").forGetter(MoodCondition::min),
             Codec.INT.optionalFieldOf("max").forGetter(MoodCondition::max),
             McaConditionCodecs.lowercaseNonEmptyList("mood").optionalFieldOf("moods").forGetter(MoodCondition::moods)
-    ).apply(instance, MoodCondition::new)).flatXmap(MoodCondition::validate, MoodCondition::validate);
+    ).apply(instance, MoodCondition::new)).flatXmap(MoodCondition::validate, MoodCondition::validate).codec();
 
     private static DataResult<MoodCondition> validate(MoodCondition condition) {
         if (condition.min.isEmpty() && condition.max.isEmpty() && condition.moods.isEmpty()) {

@@ -22,10 +22,8 @@
     "giver": {
       "professions": [
         "minecraft:farmer",
-        "minecraft:fisherman",
         "minecraft:shepherd",
-        "minecraft:butcher",
-        "minecraft:leatherworker"
+        "minecraft:butcher"
       ],
       "adult_only": true
     },
@@ -90,10 +88,18 @@
           "type": "mcaquests:townstead_available",
           "capabilities": [
             "READ_VILLAGER",
-            "READ_PROFESSION"
+            "READ_PROFESSION",
+            "READ_PROFESSION_SPEC"
           ]
+        },
+        {
+          "type": "mcaquests:townstead_profession_track",
+          "target": "giver",
+          "minimum_max_tier": 3,
+          "missing": false
         }
       ]
-    }
+    },
+    "offer_group": "townstead_work"
   }
 }

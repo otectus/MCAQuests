@@ -14,10 +14,14 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
  */
 public record HealthBelowCondition(double threshold) implements QuestCondition {
 
-    public static final Codec<HealthBelowCondition> CODEC = RecordCodecBuilder.<HealthBelowCondition>create(
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // See DispatchedCodecInlinesTest.
+    public static final Codec<HealthBelowCondition> CODEC = RecordCodecBuilder.<HealthBelowCondition>mapCodec(
             instance -> instance.group(
                     Codec.DOUBLE.fieldOf("threshold").forGetter(HealthBelowCondition::threshold)
-            ).apply(instance, HealthBelowCondition::new)).flatXmap(HealthBelowCondition::validate, HealthBelowCondition::validate);
+            ).apply(instance, HealthBelowCondition::new)).flatXmap(HealthBelowCondition::validate, HealthBelowCondition::validate).codec();
 
     private static DataResult<HealthBelowCondition> validate(HealthBelowCondition condition) {
         if (condition.threshold <= 0.0D || condition.threshold > 1.0D) {

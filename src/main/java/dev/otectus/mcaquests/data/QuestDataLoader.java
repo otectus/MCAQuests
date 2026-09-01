@@ -62,11 +62,17 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
                     });
         }
 
+        // Everything above this point reported through recordError, which logs as it goes. The
+        // validators below append straight to the list, so their findings were counted in the summary
+        // line and never printed — a real error reading as an unexplained "with 1 error(s)".
+        int alreadyLogged = errors.size();
         QuestChainValidator.validate(loaded, errors, warnings);
         TemplateValidator.validate(loaded, errors);
         FailureValidator.validate(loaded, errors);
         ObjectiveValidator.validate(loaded, errors);
         AgeEligibilityValidator.validate(loaded, warnings);
+        errors.subList(alreadyLogged, errors.size())
+                .forEach(e -> McaQuests.LOGGER.error("[MCA: Quests] {}", e));
         if (strict && !errors.isEmpty()) {
             throw new QuestValidationException(errors.get(errors.size() - 1));
         }

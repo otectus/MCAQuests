@@ -73,10 +73,8 @@
           "type": "mcaquests:townstead_workforce_project",
           "professions": [
             "minecraft:farmer",
-            "minecraft:fisherman",
             "minecraft:shepherd",
-            "minecraft:butcher",
-            "minecraft:leatherworker"
+            "minecraft:butcher"
           ],
           "minimum_tier": 2,
           "count": 3

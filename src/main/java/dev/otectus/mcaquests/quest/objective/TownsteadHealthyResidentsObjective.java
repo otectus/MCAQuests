@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.objective;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
+import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
@@ -17,6 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.Entity;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -44,11 +46,16 @@ import java.util.Set;
  * amount of work per second and still gets seen in full over a few passes.
  */
 public record TownsteadHealthyResidentsObjective(int minimumObserved, double minimumFraction,
-                                                 OptionalInt hungerMin, OptionalInt energyMin,
-                                                 boolean requireNotCollapsed, int holdTicks)
+                                                 OptionalInt hungerMin, OptionalInt thirstMin,
+                                                 OptionalInt energyMin,
+                                                 boolean requireNotCollapsed,
+                                                 double minimumLoadedFraction, int holdTicks)
         implements PollingObjective, TownsteadObjective {
 
     private static final int TICKS_PER_SECOND = 20;
+
+    /** The share of the village that must be observable before the hold timer may run (spec 5.7). */
+    private static final double DEFAULT_LOADED_FRACTION = 0.50D;
 
     public static final Codec<TownsteadHealthyResidentsObjective> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
@@ -58,15 +65,20 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
                             .forGetter(TownsteadHealthyResidentsObjective::minimumFraction),
                     StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "hunger_min")
                             .forGetter((TownsteadHealthyResidentsObjective o) -> box(o.hungerMin())),
+                    StrictCodecs.strictOptional(Codec.intRange(0, 20), "thirst_min")
+                            .forGetter((TownsteadHealthyResidentsObjective o) -> box(o.thirstMin())),
                     StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "energy_min")
                             .forGetter((TownsteadHealthyResidentsObjective o) -> box(o.energyMin())),
                     StrictCodecs.strictOptional(Codec.BOOL, "require_not_collapsed", true)
                             .forGetter(TownsteadHealthyResidentsObjective::requireNotCollapsed),
+                    StrictCodecs.strictOptional(Codec.doubleRange(0.0D, 1.0D), "minimum_loaded_fraction",
+                                    DEFAULT_LOADED_FRACTION)
+                            .forGetter(TownsteadHealthyResidentsObjective::minimumLoadedFraction),
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "hold_ticks", TICKS_PER_SECOND)
                             .forGetter(TownsteadHealthyResidentsObjective::holdTicks)
-            ).apply(instance, (observed, fraction, hunger, energy, collapsed, hold) ->
-                    new TownsteadHealthyResidentsObjective(observed, fraction, unbox(hunger),
-                            unbox(energy), collapsed, hold)));
+            ).apply(instance, (observed, fraction, hunger, thirst, energy, collapsed, loaded, hold) ->
+                    new TownsteadHealthyResidentsObjective(observed, fraction, unbox(hunger), unbox(thirst),
+                            unbox(energy), collapsed, loaded, hold)));
 
     private static Optional<Integer> box(OptionalInt value) {
         return value.isPresent() ? Optional.of(value.getAsInt()) : Optional.empty();
@@ -109,7 +121,7 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
         ServerLevel level = (ServerLevel) player.level();
         Entity giver = level.getEntity(quest.villagerUuid());
         List<Entity> residents = TownsteadTargetResolver.residents(level, giver, level.getGameTime());
-        if (residents.size() < minimumObserved) {
+        if (residents.size() < minimumObserved || !enoughOfTheVillageIsLoaded(level, giver, residents)) {
             // Too few visible to make a claim about the village. Not a failure -- come back with more
             // of the village loaded -- but not evidence of health either, so the timer does not run.
             return resetIfRunning(progress);
@@ -139,11 +151,45 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
         return true;
     }
 
+    /**
+     * True when enough of the village's <em>roll</em> is observable to make a claim about it (spec 5.7).
+     *
+     * <p>{@code minimum_observed} alone is not enough. In a village of forty, seeing three contented
+     * residents is not evidence that the village is fed -- it is evidence about three people. This
+     * measures the loaded residents against MCA's full resident roll, so an unloaded population is
+     * never counted as healthy; the hold simply waits.
+     *
+     * <p>An unreadable roll is treated as satisfied rather than as a permanent block: without MCA's
+     * resident list there is no denominator, and refusing to ever run would strand the quest.
+     */
+    private boolean enoughOfTheVillageIsLoaded(ServerLevel level, @Nullable Entity giver,
+                                               List<Entity> observed) {
+        if (minimumLoadedFraction <= 0.0D || giver == null) {
+            return true;
+        }
+        OptionalInt villageId = McaCompat.getHomeVillageId(giver);
+        if (villageId.isEmpty()) {
+            return true;
+        }
+        int roll = McaCompat.villageResidentUuids(level, villageId.getAsInt()).size();
+        if (roll <= 0) {
+            return true;
+        }
+        // The resident window is capped per pass, so compare against the true loaded count rather than
+        // against the sample this pass happened to draw.
+        int loaded = Math.max(observed.size(),
+                McaCompat.loadedVillageResidents(level, villageId.getAsInt()).size());
+        return (double) loaded / roll >= minimumLoadedFraction;
+    }
+
     private boolean isHealthy(TownsteadNeedsView needs) {
         if (requireNotCollapsed && needs.collapsed()) {
             return false;
         }
         if (hungerMin.isPresent() && needs.hunger() < hungerMin.getAsInt()) {
+            return false;
+        }
+        if (thirstMin.isPresent() && needs.thirst() < thirstMin.getAsInt()) {
             return false;
         }
         return energyMin.isEmpty() || needs.energy() >= energyMin.getAsInt();

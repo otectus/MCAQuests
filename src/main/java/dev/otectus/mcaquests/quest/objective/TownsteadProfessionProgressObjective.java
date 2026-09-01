@@ -2,13 +2,16 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
+import dev.otectus.mcaquests.compat.TownsteadProfessionTrackView;
 import dev.otectus.mcaquests.compat.TownsteadTarget;
 import dev.otectus.mcaquests.compat.TownsteadVillagerView;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.quest.TownsteadNames;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.target.TownsteadTargetResolver;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -62,7 +65,7 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target,
      * Split from {@link #CODEC} so the record type can be inferred: chaining flatXmap straight
      * onto RecordCodecBuilder.create leaves it with no target type to infer from.
      */
-    private static final Codec<TownsteadProfessionProgressObjective> BASE = RecordCodecBuilder.create(
+    private static final MapCodec<TownsteadProfessionProgressObjective> BASE = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadProfessionProgressObjective::target),
@@ -81,8 +84,11 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target,
                             unbox(tier), requireCurrent)));
 
     /** Validated at parse time, so a contradictory goal fails the reload rather than a quest. */
+    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
+    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
+    // beside "type". See DispatchedCodecInlinesTest.
     public static final Codec<TownsteadProfessionProgressObjective> CODEC =
-            BASE.flatXmap(TownsteadProfessionProgressObjective::validateGoal, DataResult::success);
+            BASE.flatXmap(TownsteadProfessionProgressObjective::validateGoal, DataResult::success).codec();
 
     private static DataResult<TownsteadProfessionProgressObjective> validateGoal(
             TownsteadProfessionProgressObjective objective) {
@@ -115,7 +121,47 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target,
 
     @Override
     public Set<TownsteadCapability> requiredCapabilities() {
-        return Set.of(TownsteadCapability.READ_VILLAGER, TownsteadCapability.READ_PROFESSION);
+        // READ_PROFESSION_SPEC joined this set in 1.4.1. Without it we can read where a villager
+        // stands but not whether their trade goes anywhere, and an objective that cannot tell the
+        // difference is exactly what made 1.4.0's fisherman quests unwinnable.
+        return Set.of(TownsteadCapability.READ_VILLAGER, TownsteadCapability.READ_PROFESSION,
+                TownsteadCapability.READ_PROFESSION_SPEC);
+    }
+
+    /**
+     * Suspends when the goal has become unreachable in the loaded registry — a datapack reload that
+     * removed a profession track, most plainly. Progress and the frozen baseline are kept and the
+     * deadline stops, exactly as for an absent capability, because the quest may become possible
+     * again the moment the pack comes back.
+     */
+    @Override
+    public Optional<Component> unavailableReason(ServerPlayer player, ActiveQuest active,
+                                                 ObjectiveProgress progress, ServerLevel level) {
+        Optional<Component> capability =
+                TownsteadObjective.super.unavailableReason(player, active, progress, level);
+        if (capability.isPresent()) {
+            return capability;
+        }
+        Entity villager = resolve(player, active, progress, level);
+        TownsteadVillagerView view = read(villager);
+        if (view == null) {
+            return Optional.empty(); // unloaded: the ordinary polling pause, not a track problem
+        }
+        String trade = wantedProfession(progress).orElseGet(view::professionId);
+        if (trade.isEmpty()) {
+            return Optional.empty();
+        }
+        TownsteadProfessionTrackView track = new TownsteadEvaluation().professionTrack(trade);
+        if (!track.progressive()) {
+            return Optional.of(Component.translatable(
+                    "mcaquests.objective.townstead.track_missing", TownsteadNames.profession(trade)));
+        }
+        if (targetTier.isPresent() && !track.supportsTier(targetTier.getAsInt())) {
+            return Optional.of(Component.translatable(
+                    "mcaquests.objective.townstead.track_tier_unreachable",
+                    TownsteadNames.profession(trade), targetTier.getAsInt()));
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -230,14 +276,40 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target,
         return villager == null ? null : new TownsteadEvaluation().villager(villager).orElse(null);
     }
 
+    /**
+     * Withholds the offer when it would be free money — and, since 1.4.1, when it would be a trap.
+     *
+     * <p>An unreachable goal is filtered here rather than by a condition alone so that a datapack
+     * which forgets the {@code townstead_profession_track} gate still cannot ship an unwinnable quest.
+     * The two failure modes are opposite in spirit but identical in effect: the quest must not be
+     * offered, and the player must never find out by waiting.
+     */
     @Override
     public boolean isTriviallySatisfied(QuestContext context) {
+        TownsteadEvaluation evaluation = context.mca().townstead();
+        TownsteadVillagerView view = read(context.villager());
+        String trade = profession.orElseGet(() -> view == null ? "" : view.professionId());
+        if (!trade.isEmpty() && TownsteadEvaluation.has(TownsteadCapability.READ_PROFESSION_SPEC)) {
+            TownsteadProfessionTrackView track = evaluation.professionTrack(trade);
+            if (!track.progressive()) {
+                return true;
+            }
+            if (targetTier.isPresent() && !track.supportsTier(targetTier.getAsInt())) {
+                return true;
+            }
+            if (targetXp.isPresent() && targetXp.getAsInt() > track.maxXp()) {
+                return true;
+            }
+            if (xpDelta.isPresent() && view != null
+                    && !track.supportsXpDelta(view.professionXp(), xpDelta.getAsInt())) {
+                return true;
+            }
+        }
         // An absolute goal a villager already meets really is free money, so withhold the offer. A
         // relative goal cannot be, because its baseline has not been taken yet.
         if (xpDelta.isPresent()) {
             return false;
         }
-        TownsteadVillagerView view = read(context.villager());
         if (view == null || !view.hasProfession()) {
             return false;
         }
@@ -250,18 +322,23 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target,
                 : view.professionXp() >= targetXp.orElse(Integer.MAX_VALUE);
     }
 
+    /**
+     * The "_any" wordings take no trade argument at all. They used to be handed an empty string, which
+     * a translator reading the file could only guess at and which showed as a trailing space.
+     */
     @Override
     public Component describe() {
         String trade = profession.orElse("");
         if (targetTier.isPresent()) {
-            return Component.translatable(trade.isEmpty()
-                            ? "mcaquests.objective.townstead_profession_tier_any"
-                            : "mcaquests.objective.townstead_profession_tier",
-                    targetTier.getAsInt(), trade);
+            return trade.isEmpty()
+                    ? Component.translatable("mcaquests.objective.townstead_profession_tier_any",
+                            targetTier.getAsInt())
+                    : Component.translatable("mcaquests.objective.townstead_profession_tier",
+                            targetTier.getAsInt(), TownsteadNames.profession(trade));
         }
-        return Component.translatable(trade.isEmpty()
-                        ? "mcaquests.objective.townstead_profession_xp_any"
-                        : "mcaquests.objective.townstead_profession_xp",
-                required(), trade);
+        return trade.isEmpty()
+                ? Component.translatable("mcaquests.objective.townstead_profession_xp_any", required())
+                : Component.translatable("mcaquests.objective.townstead_profession_xp",
+                        required(), TownsteadNames.profession(trade));
     }
 }

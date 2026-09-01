@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_commission_breadth_of_the_fields",
+  "enabled": true,
+  "weight": 6,
+  "priority": 2,
+  "offer_group": "townstead_spirit",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "period",
+    "period": "season",
+    "scope": "giver",
+    "fallback_cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:shepherd"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_commission_breadth_of_the_fields.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_commission_breadth_of_the_fields.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_commission_breadth_of_the_fields.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_commission_breadth_of_the_fields.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_commission_breadth_of_the_fields.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_commission_breadth_of_the_fields.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_commission_breadth_of_the_fields.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:breed_animals",
+      "animal": "minecraft:sheep",
+      "near": {
+        "anchor": "townstead_building",
+        "building_type": "pen"
+      },
+      "radius": 24,
+      "count": 6
+    },
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:hay_block",
+      "location": {
+        "anchor": "townstead_building",
+        "building_type": "pen"
+      },
+      "radius": 24,
+      "count": 12
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_BUILDING",
+          "READ_SPIRIT",
+          "READ_CALENDAR"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_spirit",
+        "primary": "pastoral",
+        "minimum_tier": 1
+      }
+    ]
+  }
+}

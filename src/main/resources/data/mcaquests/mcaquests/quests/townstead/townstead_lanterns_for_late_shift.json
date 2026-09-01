@@ -1,0 +1,104 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_lanterns_for_late_shift",
+  "enabled": true,
+  "weight": 7,
+  "priority": 2,
+  "offer_group": "townstead_schedule",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:fisherman",
+      "minecraft:butcher",
+      "minecraft:toolsmith",
+      "mca:guard"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_lanterns_for_late_shift.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_lanterns_for_late_shift.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_lanterns_for_late_shift.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_lanterns_for_late_shift.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_lanterns_for_late_shift.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_lanterns_for_late_shift.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_lanterns_for_late_shift.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:lantern",
+      "count": 6,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:townstead_state",
+      "source": "villager",
+      "target": "giver",
+      "path": "schedule.currentActivity",
+      "operator": "eq",
+      "value": "work",
+      "hold_ticks": 600,
+      "reset_on_false": false
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_SCHEDULE",
+          "READ_CALENDAR"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "schedule.plannedActivity",
+        "operator": "eq",
+        "value": "work"
+      },
+      {
+        "type": "mcaquests:time",
+        "period": "night"
+      }
+    ]
+  }
+}

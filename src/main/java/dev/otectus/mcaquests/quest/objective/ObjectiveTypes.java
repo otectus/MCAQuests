@@ -38,6 +38,14 @@ public final class ObjectiveTypes {
     public static final QuestObjectiveType<TownsteadHealthyResidentsObjective> TOWNSTEAD_HEALTHY_RESIDENTS =
             register(new ResourceLocation(McaQuests.MOD_ID, "townstead_healthy_residents"),
                     TownsteadHealthyResidentsObjective.CODEC);
+    /**
+     * Spec §5.3. Counts whole shifts the villager completed, which is what a multi-day work story
+     * actually means -- and what a long {@code hold_ticks} could only fake by asking the player to
+     * stand and watch.
+     */
+    public static final QuestObjectiveType<TownsteadScheduleStreakObjective> TOWNSTEAD_SCHEDULE_STREAK =
+            register(new ResourceLocation(McaQuests.MOD_ID, "townstead_schedule_streak"),
+                    TownsteadScheduleStreakObjective.CODEC);
     public static final QuestObjectiveType<ObtainItemObjective> OBTAIN_ITEM =
             register(new ResourceLocation(McaQuests.MOD_ID, "obtain_item"), ObtainItemObjective.CODEC);
     public static final QuestObjectiveType<KillEntityObjective> KILL_ENTITY =

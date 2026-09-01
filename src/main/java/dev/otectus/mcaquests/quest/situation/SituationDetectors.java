@@ -2,10 +2,14 @@ package dev.otectus.mcaquests.quest.situation;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.quest.objective.ObjectiveSupport;
+import dev.otectus.mcaquests.quest.situation.state.TownsteadSignalStateSavedData;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 
 import java.util.HashSet;
 import java.util.OptionalInt;
@@ -30,6 +34,17 @@ public final class SituationDetectors {
 
     /** How far from a player to look for a village to scan. */
     private static final int DETECTION_RADIUS = 128;
+
+    /**
+     * Thresholds for the two MCA-only detectors (spec 10.3). The holds are counted in <em>sweeps</em>
+     * rather than ticks because that is the unit this scan actually has; two sightings is enough to
+     * tell a villager who is stranded from one who was walking past.
+     */
+    private static final int STRANDED_DISTANCE = 96;
+    private static final int STRANDED_HOLD_SCANS = 2;
+    private static final int HOSTILE_COUNT = 3;
+    private static final int HOSTILE_RADIUS = 16;
+    private static final int HOSTILE_HOLD_SCANS = 2;
 
     private SituationDetectors() {
     }
@@ -109,6 +124,96 @@ public final class SituationDetectors {
         }
         if (missingKinRoot != null) {
             SituationManager.onSignal(server, TriggerSignal.missingKin(level, villageId, missingKinRoot));
+        }
+        if (wants(SituationSignalType.VILLAGER_STRANDED)) {
+            scanStranded(server, level, villageId);
+        }
+        if (wants(SituationSignalType.HOSTILES_NEAR_HOME)) {
+            scanHostilesNearHome(server, level, villageId);
+        }
+    }
+
+    /** True when some loaded definition actually consumes this signal; nothing else costs anything. */
+    private static boolean wants(SituationSignalType type) {
+        return SituationRegistry.all().stream()
+                .filter(SituationDefinition::enabled)
+                .anyMatch(def -> def.trigger().signalType() == type);
+    }
+
+    /**
+     * Finds a resident who is a long way outside their own village after dark and has stayed there
+     * (spec 5.8).
+     *
+     * <p>Uses MCA's village border and residency only, so this works — and its situations play —
+     * on an install that has never had Townstead.
+     *
+     * <p>Two consecutive sightings are required before it fires, held in
+     * {@link TownsteadSignalStateSavedData} under a per-villager key. A villager who stepped past the
+     * border for a moment is not stranded, and without the hold every evening would produce a stream
+     * of rescues nobody needs. The hold is cleared the moment they are home again, so coming back is
+     * not remembered as a near-miss.
+     */
+    private static void scanStranded(MinecraftServer server, ServerLevel level, int villageId) {
+        boolean night = isNight(level);
+        BlockPos centre = McaCompat.villageCenter(level, villageId).orElse(null);
+        if (centre == null) {
+            return;
+        }
+        TownsteadSignalStateSavedData state = TownsteadSignalStateSavedData.get(server);
+        for (Entity resident : McaCompat.loadedVillageResidents(level, villageId)) {
+            String key = resident.getUUID() + "|stranded";
+            boolean outside = !McaCompat.isWithinVillage(level, villageId, resident.blockPosition());
+            int distance = outside ? (int) Math.sqrt(centre.distSqr(resident.blockPosition())) : 0;
+            if (!outside || !night || distance < STRANDED_DISTANCE) {
+                state.observeChanged(key, 0);
+                continue;
+            }
+            int held = state.lastReading(key, 0) + 1;
+            state.observeChanged(key, held);
+            if (held < STRANDED_HOLD_SCANS) {
+                continue;
+            }
+            state.observeChanged(key, 0); // fired: start counting again rather than firing every scan
+            SituationManager.onSignal(server,
+                    TriggerSignal.villagerStranded(level, villageId, resident.getUUID(), distance, true));
+            return; // one rescue at a time; the next scan finds the next one
+        }
+    }
+
+    /**
+     * Counts hostile mobs gathered around a resident's bed, falling back to the village centre for a
+     * resident with no home (spec 5.8).
+     *
+     * <p><b>Bounded on purpose.</b> The obvious implementation — sweep the dimension for hostiles — is
+     * the single most expensive thing this mod could do, and it would do it on every server forever.
+     * Querying a small box around a place that already matters costs almost nothing and finds exactly
+     * the mobs a player would care about.
+     */
+    private static void scanHostilesNearHome(MinecraftServer server, ServerLevel level, int villageId) {
+        TownsteadSignalStateSavedData state = TownsteadSignalStateSavedData.get(server);
+        for (Entity resident : McaCompat.loadedVillageResidents(level, villageId)) {
+            BlockPos home = McaCompat.getHomePos(resident).orElse(resident.blockPosition());
+            AABB box = new AABB(home).inflate(HOSTILE_RADIUS);
+            int hostiles = 0;
+            for (Entity nearby : level.getEntities((Entity) null, box, ObjectiveSupport::isHostile)) {
+                if (nearby.isAlive()) {
+                    hostiles++;
+                }
+            }
+            String key = resident.getUUID() + "|hostiles";
+            if (hostiles < HOSTILE_COUNT) {
+                state.observeChanged(key, 0);
+                continue;
+            }
+            int held = state.lastReading(key, 0) + 1;
+            state.observeChanged(key, held);
+            if (held < HOSTILE_HOLD_SCANS) {
+                continue;
+            }
+            state.observeChanged(key, 0);
+            SituationManager.onSignal(server,
+                    TriggerSignal.hostilesNearHome(level, villageId, resident.getUUID(), hostiles));
+            return; // one alarm per sweep, so a bad night does not open six situations at once
         }
     }
 

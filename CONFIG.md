@@ -128,7 +128,7 @@ See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
 | Option | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | Master switch for the [Townstead integration](TOWNSTEAD.md) (1.4.0). When off (or Townstead isn't installed): no Townstead class is loaded and no Townstead state is read, `townstead_*` conditions answer false so the bundled content never becomes eligible, `townstead_*` rewards no-op, and an already-accepted Townstead quest **suspends** rather than failing — it keeps its progress and frozen baselines and resumes if Townstead comes back. Datapack **types stay registered** either way, so a pack always parses. Takes effect on restart. |
-| `contentEnabled` | `true` | Offer the quests, projects and situations MCA: Quests ships for Townstead. Turn off to keep the mechanics available to your own datapacks without the built-in content competing for menu slots. |
+| `contentEnabled` | `true` | Offer the quests, projects and situations MCA: Quests ships for Townstead. Turn off to keep the mechanics available to your own datapacks without the built-in content competing for menu slots. **Before 1.4.1 this only hid the situations**, despite the description; it now does what it says. Only affects *bundled* content — a third-party pack's Townstead quests are its author's to switch off, not this option's. |
 | `reactionsEnabled` | `true` | Let quest, project and situation transitions play Townstead reactions, and gate the `mcaquests:townstead_reaction` reward. Purely cosmetic: a reaction never affects quest state, and one that fails never blocks a completion. |
 | `needRewardsEnabled` | `true` | Gates `mcaquests:townstead_needs`. Values are always clamped to Townstead's own range for that need, which differ (hunger `100`, thirst/quenched/energy `20`). |
 | `professionXpRewardsEnabled` | `true` | Gates `mcaquests:townstead_profession_xp`. |
@@ -141,6 +141,26 @@ See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
 | `maxVillagesPerPass` | `8` | Cap on villages inspected per situation scan, also round-robin. Clamp `1`–`64`. |
 | `needCrisisHysteresis` | `10` | Gap in percentage points between the share of a village that opens a need crisis and the share that closes it. A village sitting exactly on one threshold would otherwise flap the same emergency on and off every scan. Clamp `0`–`100`. |
 | `debugBindingLogs` | `false` | Log every binding decision at startup, and add a counters line to `/mcaquests compat townstead status` — reads, cache hits, villages and residents observed, signals fired, capability misses, mutation failures, and average/max scan time. For diagnosing a problem or checking the performance budget, not for normal play. |
+
+### `[compat.townstead.content]`
+
+Per-theme switches for the bundled Townstead content (1.4.1). "Townstead content" is not one thing, and a
+server that wants the needs and schedule quests but not the civic-identity ones previously had to take all
+of it or none.
+
+All default `true`, and all are **subordinate to `contentEnabled`** above: turning the master off hides
+everything regardless, so an owner who wants none of it still only has one switch to find. Changes affect
+future offers only — a quest already accepted is never taken away from a player because a server owner
+changed their mind about a theme.
+
+| Option | Default | Covers |
+|---|---|---|
+| `needsAndSchedules` | `true` | Hunger, thirst, energy, collapse, shifts and work routine. Offer groups `townstead_need` and `townstead_schedule`. |
+| `professions` | `true` | Profession progression, workplaces and apprenticeships. Offer group `townstead_work`. |
+| `calendarAndLife` | `true` | Seasons, the Townstead calendar, coming of age and later life. Offer groups `townstead_life` and `townstead_season`. |
+| `spiritAndBuildings` | `true` | Village character, registered buildings and the identity commissions. Offer group `townstead_spirit`. |
+| `projects` | `true` | The eleven village projects that read Townstead state. |
+| `situations` | `true` | The fourteen situations Townstead state can trigger. |
 
 See [TOWNSTEAD.md](TOWNSTEAD.md) for the full condition/objective/reward reference.
 

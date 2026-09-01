@@ -1,0 +1,106 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_spring_in_the_furrows",
+  "enabled": true,
+  "weight": 3,
+  "priority": 3,
+  "offer_group": "townstead_season",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_spring_in_the_furrows.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:wheat_seeds",
+      "count": 32,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:townstead_schedule_streak",
+      "activity": "work",
+      "required_shifts": 1,
+      "minimum_coverage": 0.6,
+      "require_on_schedule": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_SCHEDULE",
+          "READ_CALENDAR"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "calendar",
+        "path": "season",
+        "operator": "eq",
+        "value": "spring"
+      }
+    ]
+  },
+  "chain": {
+    "chain": "seasons_of_the_soil",
+    "stage": 1,
+    "stage_total": 4,
+    "unlocks": [
+      "mcaquests:townstead_heat_over_the_fields"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.townstead_spring_in_the_furrows.chain.chapter"
+    }
+  }
+}

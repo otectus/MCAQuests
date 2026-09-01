@@ -89,17 +89,26 @@ public class QuestMenuScreen extends Screen {
         return true;
     }
 
+    /**
+     * Must agree exactly with {@link #renderCard}: the buttons are positioned from this, so a line
+     * that wraps to three rows and is counted as one puts the Accept button on top of the text.
+     */
     private int cardHeight(QuestCard card) {
-        int height = 12; // title
+        int height = CardText.height(this.font, card.title(), wrapWidth()) + 2;
         if (hasChainLabel(card)) {
             height += 10; // arc / "Part 2 of 4" line
         }
         height += dialogueLineCount(card) * 10;
-        height += card.objectives().size() * 10;
-        height += 12; // joined rewards line
+        for (Component objective : card.objectives()) {
+            height += CardText.heightBulleted(this.font, BULLET, objective, wrapWidth());
+        }
+        height += CardText.height(this.font, joinRewards(card.rewards()), wrapWidth()) + 2;
         height += 24; // buttons + padding
         return height;
     }
+
+    /** The objective marker, shared by the height calculation and the draw so the indents match. */
+    private static final String BULLET = " - ";
 
     private int dialogueLineCount(QuestCard card) {
         return this.font.split(card.dialogue(), wrapWidth()).size();
@@ -194,8 +203,8 @@ public class QuestMenuScreen extends Screen {
 
     private void renderCard(GuiGraphics graphics, QuestCard card, int left, int top, boolean ready) {
         int y = top;
-        graphics.drawString(this.font, card.title(), left, y, ready ? 0x5CFF5C : 0xFFE08A);
-        y += 12;
+        y = CardText.draw(graphics, this.font, card.title(), left, y, wrapWidth(),
+                ready ? 0x5CFF5C : 0xFFE08A) + 2;
         if (hasChainLabel(card)) {
             graphics.drawString(this.font, card.chainLabel(), left, y, 0x9A9A9A);
             y += 10;
@@ -205,10 +214,10 @@ public class QuestMenuScreen extends Screen {
             y += 10;
         }
         for (Component objective : card.objectives()) {
-            graphics.drawString(this.font, Component.literal(" - ").append(objective), left, y, 0xBFBFBF);
-            y += 10;
+            y = CardText.drawBulleted(graphics, this.font, BULLET, objective, left, y,
+                    wrapWidth(), 0xBFBFBF);
         }
-        graphics.drawString(this.font, joinRewards(card.rewards()), left, y, 0x88CC88);
+        CardText.draw(graphics, this.font, joinRewards(card.rewards()), left, y, wrapWidth(), 0x88CC88);
     }
 
     private static Component joinRewards(List<Component> rewards) {

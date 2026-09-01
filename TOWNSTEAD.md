@@ -23,7 +23,7 @@ MCA: Quests changes.
    the most common cause and has nothing to do with this integration.
 2. Start the server. That is all — no configuration is needed.
 
-Confirm it took with `/mcaquests compat townstead status`. You want to see all thirteen capabilities.
+Confirm it took with `/mcaquests compat townstead status`. You want to see all fifteen capabilities.
 
 ---
 
@@ -40,6 +40,8 @@ quests that declared it suspend.
 | `READ_NEEDS` | Hunger, thirst, energy, collapse |
 | `READ_SCHEDULE` | Shift mode and template, what they are doing versus what was planned |
 | `READ_PROFESSION` | Profession id, tier and experience |
+| `READ_PROFESSION_SPEC` | The progression **track** behind a profession: how many tiers exist, the XP ceiling, and whether it advances at all |
+| `READ_SKILL_REGISTRY` | Proving a skill id exists before a condition tests it or a reward teaches it |
 | `READ_CALENDAR` | World day, season, weekday, calendar profile |
 | `READ_BUILDING` | Registered buildings and their tiers |
 | `READ_ROOT` | Species, ancestry and lineage |
@@ -52,6 +54,25 @@ quests that declared it suspend.
 
 **Every bundled definition names the exact capabilities it uses**, and you should do the same. That is
 what makes content degrade precisely instead of all at once.
+
+### Why `READ_PROFESSION_SPEC` is separate from `READ_PROFESSION`
+
+They answer different questions, and 1.4.0 shipped a bug because it only had the first.
+`READ_PROFESSION` says where a villager currently stands. `READ_PROFESSION_SPEC` says whether their trade
+goes anywhere at all — and Townstead answers a progression query for *every* profession, handing back a
+zero/default track for the ones it has no progression for. A villager reports profession XP of 0 whether
+their trade has a hundred tiers or none.
+
+So MCA: Quests 1.4.0 offered a fisherman 120 profession XP that no Townstead 0.7.6 work task ever awards.
+The quest parsed, validated, was offered, was accepted, and then waited forever. See
+[`townstead_profession_track`](#townstead_profession_track--is-this-trade-actually-going-anywhere) for
+how to write content that cannot do that.
+
+**In Townstead 0.7.6, only farmer, butcher, cook and shepherd have progression.** Fisherman and
+leatherworker have work tasks that award no XP at all. That is a fact about the bundled content of one
+Townstead version, not a rule: a datapack that supplies a real fisherman track makes fisherman content
+eligible again with no change to this mod. Never write a hard-coded profession whitelist — ask the
+loaded registry.
 
 ---
 
@@ -133,10 +154,41 @@ so its output pastes straight into a condition.
 | `mcaquests:townstead_building` | `building_type` (required), `minimum_level`, `count`, `minimum_size` |
 | `mcaquests:townstead_spirit` | `spirit`, `minimum_points`, `minimum_tier`, `classification`, `primary`, `minimum_share` |
 | `mcaquests:townstead_skill` | `target`, `skill` (required), `has` |
+| `mcaquests:townstead_profession_track` | `target`, `profession`, `minimum_max_tier`, `minimum_remaining_xp`, `missing` |
 
 `building_type` matches a **family**, so `dock` covers `dock_l1` through `dock_l3` and `minimum_level`
 picks the tier. On `townstead_spirit`, points and share are per-spirit when `spirit` names one and
 village-wide when it does not.
+
+### `townstead_profession_track` — is this trade actually going anywhere?
+
+Townstead answers "what is this profession's progression?" for **every** profession, handing back a
+zero/default track for the ones it has none for. That is the trap this condition exists to close: MCA:
+Quests 1.4.0 shipped quests asking a fisherman for 120 profession XP, and no fisherman work task in
+Townstead 0.7.6 awards a single point. The quest parsed, validated, was offered, was accepted — and then
+waited forever.
+
+So a profession goal must prove itself against the **loaded** registry before it is offered:
+
+```json
+{
+  "type": "mcaquests:townstead_profession_track",
+  "target": "giver",
+  "minimum_max_tier": 3,
+  "missing": false
+}
+```
+
+With no `profession`, it asks about whatever the target currently practises, which is what pairs it with
+`townstead_profession_progress`'s own "the trade they were doing when you accepted" rule.
+`minimum_remaining_xp` additionally requires that much XP to still be *reachable*, so a villager already
+at the ceiling is not asked to earn more.
+
+This is deliberately **not** a whitelist of professions. Townstead supports datapack-provided progression
+definitions, so a pack that supplies a real fisherman track makes fisherman content eligible with no
+code change here — and removing one makes it ineligible again. It needs the `READ_PROFESSION_SPEC`
+capability; without it the condition takes its `missing` answer, which defaults to `false` so unproven
+content hides rather than misleads.
 
 ---
 
@@ -149,7 +201,37 @@ village-wide when it does not.
 | `mcaquests:townstead_profession_progress` | `target`, `profession`, one of `xp_delta` / `target_xp` / `target_tier`, `require_current_profession` | Advance a trade |
 | `mcaquests:townstead_building_registered` | `building_type` (required), `minimum_level`, `count`, `minimum_size`, `require_new_or_upgraded` | Get something built |
 | `mcaquests:townstead_spirit_progress` | `spirit`, one of `points_delta` / `target_tier` | Grow a village's character |
-| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `energy_min`, `require_not_collapsed`, `hold_ticks` | Keep a village well |
+| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `thirst_min`, `energy_min`, `require_not_collapsed`, `minimum_loaded_fraction`, `hold_ticks` | Keep a village well |
+| `mcaquests:townstead_schedule_streak` | `target`, `activity`, `required_shifts` (required), `minimum_coverage`, `require_on_schedule`, `reset_on_miss` | Work whole shifts, across days |
+
+### `townstead_schedule_streak` — whole shifts, not one long stare
+
+`townstead_state` with a large `hold_ticks` is the wrong tool for "help them through a few days at the
+forge". A hold demands one unbroken stretch, which in practice demands the player stand and watch. A
+streak counts **shifts the villager completed**, which is a thing the world does whether or not anyone
+is looking:
+
+```json
+{
+  "type": "mcaquests:townstead_schedule_streak",
+  "activity": "work",
+  "required_shifts": 3,
+  "minimum_coverage": 0.65
+}
+```
+
+A shift is identified by calendar profile, year, day, schedule template and shift ordinal, and credited
+keys are persisted — so the same shift survives a logout, a restart, a dimension change and a `/reload`,
+and a clock running backwards cannot mint a second one.
+
+A finished shift ends **credited**, **missed**, or **unknown**. Unknown is what makes this honest: if the
+villager was unloaded for most of the shift there is no evidence either way, so it neither counts nor
+breaks a streak. Without it, walking away for a night would silently break a streak the player had no way
+to see coming — and the opposite mistake would credit shifts nobody observed. `reset_on_miss` is off by
+default for the same reason: an accumulating count is kinder than a fragile one, and the fragile version
+is available to authors who want it.
+
+Requires `READ_VILLAGER`, `READ_SCHEDULE` and `READ_CALENDAR`.
 
 **Baselines are frozen once, when the quest is accepted, and never re-taken.** "Raise their hunger by
 45" means nothing without a record of how hungry they were when you were asked, and re-reading it on a
@@ -186,7 +268,19 @@ event, it is a condition that becomes true quietly, usually with nobody nearby.
 | `mcaquests:townstead_building_project` | `building_type` (required), `minimum_level`, `count` | The village has the buildings |
 | `mcaquests:townstead_spirit_project` | `spirit`, `points_delta`, `target_tier` | The village has grown into something |
 | `mcaquests:townstead_workforce_project` | `professions` (required), `minimum_tier`, `count` | Enough people can do the job |
-| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `energy_min`, `hold_ticks` | The village has been well for a while |
+| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `thirst_min`, `energy_min`, `require_not_collapsed`, `minimum_loaded_fraction`, `hold_ticks` | The village has been well for a while |
+
+**`townstead_workforce_project` counts only trades that can really get there.** The `professions` list is
+the guaranteed baseline, not the whole answer: a resident is counted when their profession has a real
+progressive track whose maximum tier reaches `minimum_tier`. A pack that adds a fisherman track gets
+fishermen counted with no change to the JSON, and one that removes a track stops them counting again.
+Before 1.4.1 a village whose only candidates were fishermen could be asked for three tier-2 workers it
+was never going to produce.
+
+**`minimum_loaded_fraction` (default `0.50`) is why an empty village no longer reads as a healthy one.**
+`minimum_observed` alone was not enough: in a village of forty, seeing three contented residents is
+evidence about three people, not about the village. The hold now waits until that share of MCA's resident
+roll is actually observable.
 
 **A phase finished by watching the world records no contributions**, because nobody handed anything
 over. The `contributors` and `top_contributor` reward targets therefore have nobody to pay on such a
@@ -264,6 +358,53 @@ The gap is `needCrisisHysteresis`.
 
 **Nothing is replayed after a restart**, and a first sighting is never news: installing this on an
 existing world will not open a situation for every villager in it.
+
+---
+
+### Transition triggers (1.4.1)
+
+The five triggers above answer "what is true now". These three answer "what just changed", which is
+what a festival, a coming-of-age or an emergency actually needs:
+
+| `type` | Fields | Fires when |
+|---|---|---|
+| `mcaquests:townstead_calendar_transition` | `transition` (`week`/`season`/`year`), `from`, `to` | The calendar turns over |
+| `mcaquests:townstead_life_transition` | `transition` (`canonical_stage`/`life_stage`/`senior`), `from`, `to` | A villager crosses a life threshold |
+| `mcaquests:townstead_schedule_disruption` | `minimum_observed`, `minimum_fraction`, `hold_ticks` | A village stops keeping to its routine |
+
+```json
+{ "type": "mcaquests:townstead_calendar_transition", "transition": "season", "to": "winter" }
+```
+
+**Nothing here assumes four seasons or a seven-day week.** Every value comes from the loaded calendar
+profile, so a datapack that defines two seasons or a thirty-day year works untouched — and a definition
+naming a season the profile does not contain is reported by `/mcaquests validate` rather than waiting
+forever for a winter that will never come.
+
+**Prefer `canonical_stage` over `life_stage`.** Townstead roots may name their stages anything; the
+canonical axis resolves the stage through the root's own `presentsAs` value, so a custom root whose
+adult stage is called "butterfly" still produces the semantic `child → adult` crossing. The raw
+`life_stage` axis is there for a pack that knows exactly which root it is writing for.
+
+`townstead_spirit` also gained `from_classification`, `to_classification` and `transition_only`, so a
+definition can ask "has this village become a **blend**" rather than only "which spirit went up".
+Without those fields it behaves exactly as it did before.
+
+**A first sighting never fires.** Baselines are seeded silently, so installing this update on an
+existing world does not greet the player with a backlog of seasons that already happened, and neither
+a restart, a chunk reload nor a `/reload` replays one. Changing calendar profile seeds a fresh baseline
+rather than synthesising a season change out of two incomparable calendars.
+
+Two more triggers are **not** Townstead at all and work on a plain MCA install:
+
+| `type` | Fields | Fires when |
+|---|---|---|
+| `mcaquests:villager_stranded` | `minimum_distance`, `hold_ticks`, `require_night` | A resident is far outside their village after dark |
+| `mcaquests:hostiles_near_home` | `count`, `radius`, `hold_ticks` | Hostiles gather at a resident's bed |
+
+Both search a small box around a bed or village centre rather than sweeping the world, and both require
+the condition to persist across sweeps — a villager who stepped past the border for a moment is not
+stranded, and a zombie passing through is not a siege.
 
 ---
 

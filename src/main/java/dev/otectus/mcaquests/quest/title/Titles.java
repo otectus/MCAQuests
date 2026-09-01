@@ -37,14 +37,20 @@ public final class Titles {
     }
 
     /**
-     * Display name for a title id: the datapack name when defined, else the lang key
-     * {@code mcaquests.title.<path>} (which itself falls back to a humanised id at the client).
+     * Display name for a title id: the translation {@code mcaquests.title.<path>} when the client has
+     * one, falling back to the datapack's own {@code name}, and to the key itself when there is neither.
+     *
+     * <p>The fallback order used to be reversed -- a defined title returned its {@code name} as a
+     * literal, which meant every bundled title was pinned to English and the Portuguese entries for
+     * them were dead weight nobody could ever see. Going through {@code translatableWithFallback} keeps
+     * a third-party pack that ships a name and no lang file working exactly as before, while letting a
+     * translated title actually be translated.
      */
     public static Component displayName(ResourceLocation id) {
+        String key = "mcaquests.title." + id.getPath();
         TitleDefinition def = definitions.get(id);
-        if (def != null) {
-            return Component.literal(def.name());
-        }
-        return Component.translatable("mcaquests.title." + id.getPath());
+        return def != null
+                ? Component.translatableWithFallback(key, def.name())
+                : Component.translatable(key);
     }
 }

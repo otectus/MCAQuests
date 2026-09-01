@@ -1,0 +1,151 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_civic_quarter",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:cleric",
+      "minecraft:librarian",
+      "minecraft:mason"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.townstead_civic_quarter.title"
+  },
+  "category": "infrastructure",
+  "reputation": {
+    "on_project_complete": 24
+  },
+  "phases": [
+    {
+      "key": "public_fund",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_civic_quarter.public_fund.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_civic_quarter.public_fund.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:stone_bricks",
+          "count": 128
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:glass",
+          "count": 48
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:book",
+          "count": 24
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:golden_carrot",
+          "count": 24
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 36
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "care_and_record",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_civic_quarter.care_and_record.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_civic_quarter.care_and_record.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_building_project",
+          "building_type": "infirmary",
+          "count": 1
+        },
+        {
+          "type": "mcaquests:townstead_building_project",
+          "building_type": "bookkeeper",
+          "count": 1
+        },
+        {
+          "type": "mcaquests:townstead_spirit_project",
+          "spirit": "scholar",
+          "target_tier": 1
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 12
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    },
+    {
+      "key": "civic_identity",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.townstead_civic_quarter.civic_identity.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.townstead_civic_quarter.civic_identity.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:townstead_spirit_project",
+          "spirit": "scholar",
+          "points_delta": 10
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 12
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

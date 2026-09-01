@@ -1,0 +1,89 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:monster_in_the_cellar",
+  "scope": "family",
+  "duration_ticks": 12000,
+  "cooldown_ticks": 48000,
+  "trigger": {
+    "type": "mcaquests:hostiles_near_home",
+    "count": 3,
+    "radius": 16,
+    "hold_ticks": 200
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 10
+    },
+    "failure": {
+      "reputation": -5
+    }
+  },
+  "offer": {
+    "weight": 12,
+    "priority": 10,
+    "offer_group": "core_relationship",
+    "difficulty": "medium",
+    "giver": {
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.monster_in_the_cellar.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.monster_in_the_cellar.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.monster_in_the_cellar.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.monster_in_the_cellar.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.monster_in_the_cellar.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.monster_in_the_cellar.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.monster_in_the_cellar.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.monster_in_the_cellar.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:defend_location",
+        "location": {
+          "anchor": "bed"
+        },
+        "tag": "mcaquests:common_undead",
+        "radius": 24,
+        "count": 6
+      },
+      {
+        "type": "mcaquests:protect_entity",
+        "villager": {
+          "mode": "self"
+        },
+        "duration_ticks": 600,
+        "require_near_player": true,
+        "near_radius": 16
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 34
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 8
+      }
+    ]
+  }
+}

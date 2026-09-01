@@ -4,10 +4,14 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
+import dev.otectus.mcaquests.compat.TownsteadBuildings;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
+import dev.otectus.mcaquests.compat.TownsteadProfessionTrackView;
 import dev.otectus.mcaquests.compat.TownsteadVillagerView;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.objective.TownsteadObjective;
+import dev.otectus.mcaquests.quest.objective.TownsteadScheduleStreakObjective;
+import dev.otectus.mcaquests.quest.target.FrozenLocation;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -69,22 +73,34 @@ public final class TownsteadContextLines {
 
         if (view != null && relevant.contains(TownsteadCapability.READ_PROFESSION) && view.hasProfession()) {
             lines.add(Component.translatable("mcaquests.context.townstead.profession",
-                    view.professionId(), view.professionLevel()));
+                    TownsteadNames.profession(view.professionId()), view.professionLevel()));
+        }
+        if (view != null && relevant.contains(TownsteadCapability.READ_PROFESSION_SPEC)
+                && view.hasProfession()) {
+            // How far this trade can go, next to where they are in it. Without the ceiling, "tier 2"
+            // tells a player nothing about whether the quest is nearly done or barely started.
+            TownsteadProfessionTrackView track = evaluation.professionTrack(view.professionId());
+            if (track.progressive()) {
+                lines.add(Component.translatable("mcaquests.context.townstead.track",
+                        view.professionLevel(), track.maxTier(),
+                        track.remainingXp(view.professionXp())));
+            }
         }
         if (view != null && relevant.contains(TownsteadCapability.READ_NEEDS)) {
             lines.add(Component.translatable("mcaquests.context.townstead.needs",
-                    view.needs().hunger(), view.needs().energy()));
+                    view.needs().hunger(), view.needs().thirst(), view.needs().energy()));
         }
         if (view != null && relevant.contains(TownsteadCapability.READ_SCHEDULE)) {
             lines.add(Component.translatable("mcaquests.context.townstead.schedule",
-                    view.schedule().currentActivity(), view.schedule().plannedActivity()));
+                    TownsteadNames.activity(view.schedule().currentActivity()),
+                    TownsteadNames.activity(view.schedule().plannedActivity())));
         }
         if (relevant.contains(TownsteadCapability.READ_SPIRIT)) {
             OptionalInt village = McaCompat.getHomeVillageId(giver);
             if (village.isPresent()) {
                 evaluation.spirit(level, village.getAsInt()).ifPresent(spirit ->
                         lines.add(Component.translatable("mcaquests.context.townstead.spirit",
-                                spirit.primaryId(), spirit.tier())));
+                                TownsteadNames.spirit(spirit.primaryId()), spirit.tier())));
             }
         }
         if (relevant.contains(TownsteadCapability.READ_BUILDING)) {
@@ -93,8 +109,52 @@ public final class TownsteadContextLines {
                 lines.add(Component.translatable("mcaquests.context.townstead.buildings",
                         evaluation.buildingsIn(level, village.getAsInt()).size()));
             }
+            frozenBuilding(active).ifPresent(lines::add);
         }
+        if (relevant.contains(TownsteadCapability.READ_CALENDAR)) {
+            evaluation.calendar(player.getServer()).ifPresent(calendar -> {
+                if (!calendar.season().isEmpty()) {
+                    lines.add(Component.translatable("mcaquests.context.townstead.season",
+                            calendar.season(), calendar.dayOfYear(), calendar.year()));
+                }
+            });
+        }
+        shiftProgress(def, active).ifPresent(lines::add);
         return List.copyOf(lines);
+    }
+
+    /**
+     * "Shifts worked: 2 of 3", when the quest is about shifts at all.
+     *
+     * <p>Read off the objective's own progress rather than recomputed, so the card and the objective
+     * line can never disagree about how far along a streak is.
+     */
+    private static java.util.Optional<Component> shiftProgress(QuestDefinition def, ActiveQuest active) {
+        List<QuestObjective> objectives = def.objectives();
+        for (int i = 0; i < objectives.size(); i++) {
+            if (objectives.get(i) instanceof TownsteadScheduleStreakObjective streak) {
+                return java.util.Optional.of(Component.translatable(
+                        "mcaquests.context.townstead.shifts",
+                        active.progress(i).count(), streak.requiredShifts(),
+                        TownsteadNames.activity(streak.activity())));
+            }
+        }
+        return java.util.Optional.empty();
+    }
+
+    /**
+     * The building a frozen anchor settled on, so the card names the dock the quest actually means
+     * rather than leaving the player to guess which of three it is.
+     */
+    private static java.util.Optional<Component> frozenBuilding(ActiveQuest active) {
+        FrozenLocation location = active.anyFrozenBuilding();
+        if (location == null || location.family().isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(Component.translatable("mcaquests.context.townstead.building_target",
+                TownsteadNames.building(location.family().get()),
+                location.tier().orElse(1),
+                location.pos().getX(), location.pos().getZ()));
     }
 
     /** Everything this quest's Townstead objectives read, and nothing else. */

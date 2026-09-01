@@ -43,7 +43,7 @@ public final class TownsteadTargetResolver {
     public static Optional<Entity> resolveForOffer(TownsteadTarget target, ServerPlayer player,
                                                    @Nullable Entity giver, ServerLevel level) {
         return switch (target) {
-            case GIVER, BOUND -> Optional.ofNullable(giver);
+            case GIVER, BOUND, RECIPIENT -> Optional.ofNullable(giver);
             case RELATED -> Optional.ofNullable(giver)
                     .flatMap(g -> McaCompat.findGiverRelative(level, g, "any"))
                     .map(level::getEntity);

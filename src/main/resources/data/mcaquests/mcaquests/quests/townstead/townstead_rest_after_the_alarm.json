@@ -1,0 +1,105 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_rest_after_the_alarm",
+  "enabled": true,
+  "weight": 8,
+  "priority": 2,
+  "offer_group": "townstead_need",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "mca:guard",
+      "minecraft:cleric",
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_rest_after_the_alarm.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_rest_after_the_alarm.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_rest_after_the_alarm.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_rest_after_the_alarm.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_rest_after_the_alarm.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_rest_after_the_alarm.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_rest_after_the_alarm.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:townstead_change",
+      "source": "villager",
+      "target": "giver",
+      "path": "needs.energy",
+      "direction": "increase",
+      "amount": 8,
+      "minimum_final": 12
+    },
+    {
+      "type": "mcaquests:protect_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "duration_ticks": 1200,
+      "require_near_player": true,
+      "near_radius": 16
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_NEEDS"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "needs.energy",
+        "operator": "lte",
+        "value": 6
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "needs.collapsed",
+        "operator": "eq",
+        "value": false
+      }
+    ]
+  }
+}

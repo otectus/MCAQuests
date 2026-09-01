@@ -1,0 +1,80 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:honey_for_the_healer",
+  "enabled": true,
+  "weight": 7,
+  "priority": 2,
+  "offer_group": "core_relationship",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cleric",
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.honey_for_the_healer.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.honey_for_the_healer.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.honey_for_the_healer.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.honey_for_the_healer.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.honey_for_the_healer.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.honey_for_the_healer.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.honey_for_the_healer.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:breed_animals",
+      "animal": "minecraft:bee",
+      "near": {
+        "anchor": "home_village"
+      },
+      "radius": 48,
+      "count": 2
+    },
+    {
+      "type": "mcaquests:craft_item",
+      "item": "minecraft:honey_block",
+      "count": 4
+    },
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "self"
+      },
+      "item": "minecraft:honey_bottle",
+      "count": 8
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ]
+}

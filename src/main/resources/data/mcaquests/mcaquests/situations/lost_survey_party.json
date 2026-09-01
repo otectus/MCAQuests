@@ -1,0 +1,90 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:lost_survey_party",
+  "scope": "family",
+  "duration_ticks": 48000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:missing_kin",
+    "relation": "any"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 14
+    },
+    "failure": {
+      "reputation": -6
+    }
+  },
+  "offer": {
+    "weight": 11,
+    "priority": 9,
+    "offer_group": "core_relationship",
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "minecraft:cartographer",
+        "mca:adventurer"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.lost_survey_party.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.lost_survey_party.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.lost_survey_party.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.lost_survey_party.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.lost_survey_party.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.lost_survey_party.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.lost_survey_party.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.lost_survey_party.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:find_missing_relative",
+        "relative": {
+          "mode": "family",
+          "relation": "any"
+        },
+        "structure": {
+          "structure_tag": "mcaquests:trail_ruins"
+        },
+        "min_distance": 128,
+        "discover_radius": 24
+      },
+      {
+        "type": "mcaquests:talk_to_profession",
+        "profession": "minecraft:cartographer",
+        "count": 1
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 55
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 14
+      }
+    ]
+  }
+}

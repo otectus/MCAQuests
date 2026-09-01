@@ -1,0 +1,126 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_first_workday_as_an_adult",
+  "enabled": true,
+  "weight": 7,
+  "priority": 5,
+  "offer_group": "townstead_life",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_first_workday_as_an_adult.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_first_workday_as_an_adult.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_first_workday_as_an_adult.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_first_workday_as_an_adult.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_first_workday_as_an_adult.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_first_workday_as_an_adult.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_first_workday_as_an_adult.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:compass",
+      "count": 1,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:book",
+      "count": 1,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:reach_location",
+      "location": {
+        "anchor": "workstation"
+      },
+      "radius": 6
+    },
+    {
+      "type": "mcaquests:townstead_state",
+      "source": "villager",
+      "target": "giver",
+      "path": "schedule.currentActivity",
+      "operator": "eq",
+      "value": "work",
+      "hold_ticks": 600,
+      "reset_on_false": false
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_SCHEDULE",
+          "READ_PROFESSION",
+          "READ_ROOT"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "senior",
+        "operator": "eq",
+        "value": false
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "professionLevel",
+        "operator": "lte",
+        "value": 1
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "schedule.plannedActivity",
+        "operator": "eq",
+        "value": "work"
+      }
+    ]
+  }
+}

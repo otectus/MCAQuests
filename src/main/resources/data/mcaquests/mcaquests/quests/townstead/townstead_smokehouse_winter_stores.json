@@ -1,0 +1,143 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_smokehouse_winter_stores",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "townstead_season",
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_beef",
+      "count": 16,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_porkchop",
+      "count": 16,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:cooked_mutton",
+      "count": 16,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:townstead_healthy_residents",
+      "minimum_observed": 5,
+      "minimum_fraction": 0.7,
+      "hunger_min": 60,
+      "thirst_min": 10,
+      "energy_min": 8,
+      "require_not_collapsed": true,
+      "minimum_loaded_fraction": 0.5,
+      "hold_ticks": 1200
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_NEEDS",
+          "READ_CALENDAR",
+          "READ_BUILDING"
+        ]
+      },
+      {
+        "any_of": [
+          {
+            "type": "mcaquests:townstead_value",
+            "source": "calendar",
+            "path": "season",
+            "operator": "eq",
+            "value": "autumn"
+          },
+          {
+            "type": "mcaquests:townstead_value",
+            "source": "calendar",
+            "path": "season",
+            "operator": "eq",
+            "value": "winter"
+          }
+        ]
+      }
+    ]
+  },
+  "chain": {
+    "chain": "smokehouse_legacy",
+    "stage": 3,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:townstead_smokehouse_honest_shift"
+    ],
+    "unlocks": [
+      "mcaquests:townstead_smokehouse_legacy"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.townstead_smokehouse_winter_stores.chain.chapter"
+    }
+  }
+}

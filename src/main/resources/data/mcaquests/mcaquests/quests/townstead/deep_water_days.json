@@ -39,10 +39,16 @@
   },
   "objectives": [
     {
-      "type": "mcaquests:townstead_profession_progress",
-      "profession": "minecraft:fisherman",
-      "xp_delta": 120,
-      "require_current_profession": true
+      "type": "mcaquests:fish_item",
+      "tag": "mcaquests:harbor_catch",
+      "count": 12
+    },
+    {
+      "type": "mcaquests:townstead_schedule_streak",
+      "activity": "work",
+      "required_shifts": 2,
+      "minimum_coverage": 0.6,
+      "require_on_schedule": true
     }
   ],
   "rewards": [
@@ -65,7 +71,8 @@
         "capabilities": [
           "READ_VILLAGER",
           "READ_BUILDING",
-          "READ_PROFESSION"
+          "READ_SCHEDULE",
+          "READ_CALENDAR"
         ]
       },
       {
@@ -83,5 +90,6 @@
         "count": 1
       }
     ]
-  }
+  },
+  "offer_group": "townstead_work"
 }

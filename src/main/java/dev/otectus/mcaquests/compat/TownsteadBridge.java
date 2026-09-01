@@ -75,6 +75,25 @@ public interface TownsteadBridge {
      */
     boolean isKnownSpirit(String spiritId);
 
+    /**
+     * What this profession's progression can actually reach (spec §5.1). Never null: a profession
+     * Townstead has no track for answers with a
+     * {@link TownsteadProfessionTrackView#progressive() non-progressive} view, which is the whole
+     * point — Townstead's registry returns a zero/default spec rather than nothing, and 1.4.0 could
+     * not tell that apart from a real track.
+     *
+     * <p>Callers must check {@link TownsteadCapability#READ_PROFESSION_SPEC} before treating a
+     * non-progressive answer as proof: with the capability unbound this returns the same shape, and
+     * "we cannot tell" must hide content rather than condemn a track that is really there.
+     */
+    TownsteadProfessionTrackView professionTrack(String professionId);
+
+    /** True when Townstead's skill registry knows this id. False when the registry is unreadable. */
+    boolean isKnownSkill(ResourceLocation skillId);
+
+    /** Every registered skill id, for diagnostics and validation. Empty when unreadable. */
+    Set<ResourceLocation> knownSkillIds();
+
     // ------------------------------------------------------------ mutations
 
     TownsteadMutationResult changeNeeds(Entity villager, NeedMutation mutation);

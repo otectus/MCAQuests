@@ -7,6 +7,7 @@ import dev.otectus.mcaquests.compat.TownsteadCalendarView;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadGeneView;
 import dev.otectus.mcaquests.compat.TownsteadMutationResult;
+import dev.otectus.mcaquests.compat.TownsteadProfessionTrackView;
 import dev.otectus.mcaquests.compat.TownsteadRootView;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
 import dev.otectus.mcaquests.compat.TownsteadStatus;
@@ -120,6 +121,21 @@ public final class ReflectiveTownsteadBridge implements TownsteadBridge {
     @Override
     public boolean isKnownSpirit(String spiritId) {
         return TownsteadHandles.isKnownSpirit(spiritId);
+    }
+
+    @Override
+    public TownsteadProfessionTrackView professionTrack(String professionId) {
+        return TownsteadHandles.professionTrack(professionId);
+    }
+
+    @Override
+    public boolean isKnownSkill(ResourceLocation skillId) {
+        return TownsteadHandles.isKnownSkill(skillId);
+    }
+
+    @Override
+    public Set<ResourceLocation> knownSkillIds() {
+        return TownsteadHandles.knownSkillIds();
     }
 
     // --- mutations -------------------------------------------------------------------------------

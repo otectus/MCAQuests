@@ -109,6 +109,9 @@ public record TownsteadNeedsReward(TownsteadTarget target, NeedMutation.Need nee
     @Override
     public Component describe() {
         return Component.translatable("mcaquests.reward.townstead_needs",
-                (int) Math.round(amount), need.name().toLowerCase(Locale.ROOT));
+                (int) Math.round(amount),
+                Component.translatableWithFallback(
+                        "mcaquests.townstead.need." + need.name().toLowerCase(Locale.ROOT),
+                        need.name().toLowerCase(Locale.ROOT)));
     }
 }

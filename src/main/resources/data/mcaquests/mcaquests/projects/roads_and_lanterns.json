@@ -1,0 +1,145 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:roads_and_lanterns",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "minecraft:cartographer",
+      "minecraft:mason"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.roads_and_lanterns.title"
+  },
+  "category": "infrastructure",
+  "reputation": {
+    "on_project_complete": 18
+  },
+  "phases": [
+    {
+      "key": "road_fund",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.roads_and_lanterns.road_fund.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.roads_and_lanterns.road_fund.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:gravel",
+          "count": 256
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:stone_bricks",
+          "count": 128
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:lantern",
+          "count": 32
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 34
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "light_the_roads",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.roads_and_lanterns.light_the_roads.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.roads_and_lanterns.light_the_roads.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:project_place_block",
+          "block": "minecraft:gravel",
+          "count": 192
+        },
+        {
+          "type": "mcaquests:project_place_block",
+          "block": "minecraft:lantern",
+          "count": 24
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 10
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 10
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    },
+    {
+      "key": "road_opening",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.roads_and_lanterns.road_opening.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.roads_and_lanterns.road_opening.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:project_talk_to_profession",
+          "profession": "minecraft:cartographer",
+          "count": 6
+        },
+        {
+          "type": "mcaquests:project_talk_to_profession",
+          "profession": "minecraft:farmer",
+          "count": 6
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 8
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 8
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

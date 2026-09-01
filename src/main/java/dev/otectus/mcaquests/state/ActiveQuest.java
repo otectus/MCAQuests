@@ -4,6 +4,7 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
+import dev.otectus.mcaquests.quest.target.FrozenLocation;
 import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -51,6 +52,16 @@ public final class ActiveQuest {
      * Absent on pre-1.1.0 saves and on quests with no randomized reward, in which case nothing is written.
      */
     private final Map<Integer, Integer> frozenRewards = new HashMap<>();
+
+    /**
+     * Destinations this quest has committed to, keyed by {@link LocationAnchor#fingerprint()}.
+     *
+     * <p>Held on the quest rather than on each objective's progress for one reason: two objectives
+     * that ask for the same thing must get the same answer. "Place six lanterns at the dock" and
+     * "place twelve chains at the dock" are one instruction about one dock, and per-objective storage
+     * would let them bind to different docks the moment a second one qualified.
+     */
+    private final Map<String, FrozenLocation> frozenLocations = new HashMap<>();
     private boolean rewardClaimed;
     private boolean readyNotified;
     /**
@@ -240,6 +251,36 @@ public final class ActiveQuest {
         return gameTime - suspendedTicks;
     }
 
+    /** The destination already chosen for this anchor fingerprint, or null if none has been. */
+    @Nullable
+    public FrozenLocation frozenLocation(String fingerprint) {
+        return frozenLocations.get(fingerprint);
+    }
+
+    /**
+     * Records a chosen destination, the first time only. Later calls are ignored rather than
+     * overwriting: a frozen anchor that could be re-frozen would move the map marker under a player
+     * mid-journey, which is the whole thing freezing exists to prevent.
+     */
+    public void freezeLocation(String fingerprint, FrozenLocation location) {
+        frozenLocations.putIfAbsent(fingerprint, location);
+    }
+
+    /**
+     * Any frozen destination that named a registered building, for the context line. Returns the first
+     * because a single quest that froze two different building families is a shape no bundled content
+     * uses and one the card has no room to show twice.
+     */
+    @Nullable
+    public FrozenLocation anyFrozenBuilding() {
+        for (FrozenLocation location : frozenLocations.values()) {
+            if (location.family().isPresent()) {
+                return location;
+            }
+        }
+        return null;
+    }
+
     public boolean readyNotified() {
         return readyNotified;
     }
@@ -282,6 +323,11 @@ public final class ActiveQuest {
             frozenRewards.forEach((index, amount) -> frozen.putInt(String.valueOf(index), amount));
             tag.put("frozen_rewards", frozen);
         }
+        if (!frozenLocations.isEmpty()) {
+            CompoundTag locations = new CompoundTag();
+            frozenLocations.forEach((fingerprint, location) -> locations.put(fingerprint, location.save()));
+            tag.put("frozen_locations", locations);
+        }
         return tag;
     }
 
@@ -312,6 +358,15 @@ public final class ActiveQuest {
         quest.suspendedTicks = tag.getLong("suspended_ticks"); // 0 when absent
         if (tag.contains("townstead_phases", Tag.TAG_BYTE_ARRAY)) {
             quest.dispatchedPhases.or(java.util.BitSet.valueOf(tag.getByteArray("townstead_phases")));
+        }
+        if (tag.contains("frozen_locations", Tag.TAG_COMPOUND)) {
+            CompoundTag locations = tag.getCompound("frozen_locations");
+            for (String fingerprint : locations.getAllKeys()) {
+                FrozenLocation location = FrozenLocation.load(locations.getCompound(fingerprint));
+                if (location != null) {
+                    quest.frozenLocations.put(fingerprint, location);
+                }
+            }
         }
         if (tag.contains("frozen_rewards", Tag.TAG_COMPOUND)) {
             CompoundTag frozen = tag.getCompound("frozen_rewards");

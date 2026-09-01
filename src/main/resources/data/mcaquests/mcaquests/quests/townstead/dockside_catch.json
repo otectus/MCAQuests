@@ -59,9 +59,13 @@
       "amount": 14
     },
     {
-      "type": "mcaquests:townstead_profession_xp",
-      "profession": "minecraft:fisherman",
-      "amount": 60
+      "type": "mcaquests:xp",
+      "amount": 6
+    },
+    {
+      "type": "mcaquests:townstead_reaction",
+      "task": "mcaquests:townstead_dockside_catch",
+      "phase": "completed"
     }
   ],
   "conditions": {
@@ -83,5 +87,6 @@
         "value": "minecraft:fisherman"
       }
     ]
-  }
+  },
+  "offer_group": "townstead_work"
 }

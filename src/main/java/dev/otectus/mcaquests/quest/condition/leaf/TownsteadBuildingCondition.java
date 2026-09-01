@@ -80,6 +80,7 @@ public record TownsteadBuildingCondition(String buildingType, int minimumLevel, 
 
     @Override
     public Component describe() {
-        return Component.translatable("mcaquests.condition.townstead_building", count, buildingType);
+        return Component.translatable("mcaquests.condition.townstead_building", count,
+                dev.otectus.mcaquests.quest.TownsteadNames.building(buildingType));
     }
 }

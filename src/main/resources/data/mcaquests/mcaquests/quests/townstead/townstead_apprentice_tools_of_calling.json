@@ -1,0 +1,126 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_apprentice_tools_of_calling",
+  "enabled": true,
+  "weight": 3,
+  "priority": 3,
+  "offer_group": "townstead_work",
+  "category": "townstead",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:shepherd",
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:clock",
+      "count": 1,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:book",
+      "count": 1,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    },
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:bread",
+      "count": 6,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "giver"
+      }
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 20
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 4
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_PROFESSION",
+          "READ_PROFESSION_SPEC"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_profession_track",
+        "target": "giver",
+        "minimum_max_tier": 3,
+        "missing": false
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "professionLevel",
+        "operator": "lte",
+        "value": 1
+      }
+    ]
+  },
+  "chain": {
+    "chain": "apprenticeship_pact",
+    "stage": 1,
+    "stage_total": 4,
+    "unlocks": [
+      "mcaquests:townstead_apprentice_first_full_shift"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.townstead_apprentice_tools_of_calling.chain.chapter"
+    }
+  }
+}

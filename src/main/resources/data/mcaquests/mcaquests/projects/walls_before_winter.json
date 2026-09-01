@@ -1,0 +1,152 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:walls_before_winter",
+  "scope": {
+    "scope": "village",
+    "fallback_radius": 64
+  },
+  "sponsor": {
+    "professions": [
+      "mca:guard",
+      "minecraft:mason",
+      "minecraft:armorer",
+      "minecraft:weaponsmith"
+    ],
+    "on_death": "transfer"
+  },
+  "title": {
+    "translate": "mcaquests.project.walls_before_winter.title"
+  },
+  "category": "defense",
+  "reputation": {
+    "on_project_complete": 20
+  },
+  "phases": [
+    {
+      "key": "stone_and_iron",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.walls_before_winter.stone_and_iron.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.walls_before_winter.stone_and_iron.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:cobblestone",
+          "count": 256
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:iron_ingot",
+          "count": 64
+        },
+        {
+          "type": "mcaquests:donate_item",
+          "item": "minecraft:lantern",
+          "count": 24
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:xp",
+            "amount": 36
+          },
+          "target": "contributors"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:currency"
+          },
+          "target": "top_contributor"
+        }
+      ]
+    },
+    {
+      "key": "raise_the_wall",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.walls_before_winter.raise_the_wall.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.walls_before_winter.raise_the_wall.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:project_place_block",
+          "block": "minecraft:cobblestone_wall",
+          "count": 128
+        },
+        {
+          "type": "mcaquests:project_place_block",
+          "block": "minecraft:lantern",
+          "count": 16
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 10
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 10
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    },
+    {
+      "key": "prove_the_watch",
+      "dialogue": {
+        "offer": {
+          "translate": "mcaquests.project.walls_before_winter.prove_the_watch.offer"
+        },
+        "in_progress": {
+          "translate": "mcaquests.project.walls_before_winter.prove_the_watch.in_progress"
+        }
+      },
+      "objectives": [
+        {
+          "type": "mcaquests:project_kill_entity",
+          "entity": "minecraft:pillager",
+          "count": 24
+        },
+        {
+          "type": "mcaquests:project_kill_entity",
+          "entity": "minecraft:zombie",
+          "count": 24
+        },
+        {
+          "type": "mcaquests:project_kill_entity",
+          "entity": "minecraft:skeleton",
+          "count": 16
+        }
+      ],
+      "rewards": [
+        {
+          "reward": {
+            "type": "mcaquests:hearts_with_participants",
+            "amount": 14
+          },
+          "target": "all_participants"
+        },
+        {
+          "reward": {
+            "type": "mcaquests:village_reputation",
+            "amount": 12
+          },
+          "target": "sponsor_village"
+        }
+      ]
+    }
+  ]
+}

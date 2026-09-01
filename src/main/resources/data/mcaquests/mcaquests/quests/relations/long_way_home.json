@@ -1,0 +1,86 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:long_way_home",
+  "enabled": true,
+  "weight": 6,
+  "priority": 2,
+  "offer_group": "core_relationship",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 120000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:cartographer",
+      "mca:adventurer",
+      "minecraft:none",
+      "minecraft:nitwit"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.long_way_home.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.long_way_home.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.long_way_home.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.long_way_home.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.long_way_home.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.long_way_home.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.long_way_home.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "nearest_other_village",
+        "radius": 2048
+      },
+      "radius": 8,
+      "wait_distance": 8,
+      "min_journey": 128
+    },
+    {
+      "type": "mcaquests:protect_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "duration_ticks": 2400,
+      "require_near_player": true,
+      "near_radius": 16,
+      "fail_on_death": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "failure": {
+    "fail_on_giver_death": true
+  }
+}

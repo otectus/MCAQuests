@@ -37,6 +37,19 @@ public enum TownsteadCapability {
     /** Profession id, tier and XP, plus the progression spec behind them. */
     READ_PROFESSION,
     /**
+     * The progression <em>track</em> behind a profession: how many tiers exist, what the XP ceiling
+     * is, and whether the profession advances at all. Independent of {@link #READ_PROFESSION}, which
+     * only says where a villager currently stands — a villager can report profession XP of 0 whether
+     * their trade has a hundred tiers or none, and 1.4.0 shipped quests that could not tell.
+     */
+    READ_PROFESSION_SPEC,
+    /**
+     * Townstead's data-driven skill registry, used to prove a skill id exists before a condition
+     * tests it or a reward tries to teach it. Bundled content declares no skills; this exists so a
+     * datapack's typo fails loudly instead of silently mutating nothing.
+     */
+    READ_SKILL_REGISTRY,
+    /**
      * Village spirit totals, tier and classification. The one read that has to reach past
      * Townstead's public facade, so it is also the one most likely to report missing.
      */

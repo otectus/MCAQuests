@@ -1,0 +1,107 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_the_elders_old_route",
+  "enabled": true,
+  "weight": 6,
+  "priority": 5,
+  "offer_group": "core_relationship",
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_the_elders_old_route.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_the_elders_old_route.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_the_elders_old_route.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_the_elders_old_route.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_the_elders_old_route.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_the_elders_old_route.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_the_elders_old_route.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "workstation"
+      },
+      "radius": 8,
+      "min_journey": 48
+    },
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "destination": {
+        "anchor": "bed"
+      },
+      "radius": 8,
+      "min_journey": 32
+    },
+    {
+      "type": "mcaquests:protect_entity",
+      "villager": {
+        "mode": "self"
+      },
+      "duration_ticks": 1200,
+      "require_near_player": true,
+      "near_radius": 16,
+      "fail_on_death": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "senior",
+        "operator": "eq",
+        "value": true
+      }
+    ]
+  },
+  "failure": {
+    "fail_on_giver_death": true
+  }
+}

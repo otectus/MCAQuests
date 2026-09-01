@@ -19,6 +19,7 @@ import dev.otectus.mcaquests.compat.TownsteadNeedsView;
 import dev.otectus.mcaquests.compat.TownsteadVillagerView;
 import net.minecraft.world.entity.Entity;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 
@@ -34,11 +35,17 @@ import java.util.OptionalInt;
  * are online, so a busy server does not finish this five times faster than a quiet one.
  */
 public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, double minimumFraction,
-                                                         OptionalInt hungerMin, OptionalInt energyMin,
+                                                         OptionalInt hungerMin, OptionalInt thirstMin,
+                                                         OptionalInt energyMin,
+                                                         boolean requireNotCollapsed,
+                                                         double minimumLoadedFraction,
                                                          int holdTicks)
         implements PollingProjectObjective {
 
     private static final String K_HELD = "townstead_held_ticks";
+
+    /** Spec 5.7. Matches the personal objective, so the two cannot disagree about the same village. */
+    private static final double DEFAULT_LOADED_FRACTION = 0.50D;
 
     public static final Codec<TownsteadResidentWellbeingProjectObjective> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
@@ -48,13 +55,20 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
                             .forGetter(TownsteadResidentWellbeingProjectObjective::minimumFraction),
                     StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "hunger_min")
                             .forGetter((TownsteadResidentWellbeingProjectObjective o) -> box(o.hungerMin())),
+                    StrictCodecs.strictOptional(Codec.intRange(0, 20), "thirst_min")
+                            .forGetter((TownsteadResidentWellbeingProjectObjective o) -> box(o.thirstMin())),
                     StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "energy_min")
                             .forGetter((TownsteadResidentWellbeingProjectObjective o) -> box(o.energyMin())),
+                    StrictCodecs.strictOptional(Codec.BOOL, "require_not_collapsed", true)
+                            .forGetter(TownsteadResidentWellbeingProjectObjective::requireNotCollapsed),
+                    StrictCodecs.strictOptional(Codec.doubleRange(0.0D, 1.0D), "minimum_loaded_fraction",
+                                    DEFAULT_LOADED_FRACTION)
+                            .forGetter(TownsteadResidentWellbeingProjectObjective::minimumLoadedFraction),
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "hold_ticks", 1200)
                             .forGetter(TownsteadResidentWellbeingProjectObjective::holdTicks)
-            ).apply(instance, (observed, fraction, hunger, energy, hold) ->
+            ).apply(instance, (observed, fraction, hunger, thirst, energy, collapsed, loaded, hold) ->
                     new TownsteadResidentWellbeingProjectObjective(observed, fraction, unbox(hunger),
-                            unbox(energy), hold)));
+                            unbox(thirst), unbox(energy), collapsed, loaded, hold)));
 
     private static Optional<Integer> box(OptionalInt value) {
         return value.isPresent() ? Optional.of(value.getAsInt()) : Optional.empty();
@@ -85,7 +99,13 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
         TownsteadEvaluation evaluation = new TownsteadEvaluation();
         int observed = 0;
         int well = 0;
-        for (Entity resident : McaCompat.loadedVillageResidents(level, village.getAsInt())) {
+        List<Entity> residents = McaCompat.loadedVillageResidents(level, village.getAsInt());
+        if (!enoughOfTheVillageIsLoaded(level, village.getAsInt(), residents.size())) {
+            // An unloaded population is not a well one. The hold waits rather than banking a phase on
+            // the handful of residents who happened to be in render distance.
+            return reset(progress);
+        }
+        for (Entity resident : residents) {
             TownsteadVillagerView view = evaluation.villager(resident).orElse(null);
             if (view == null) {
                 continue;
@@ -110,11 +130,27 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
         return true;
     }
 
+    /**
+     * True when enough of the village's roll is observable to make a claim about it (spec 5.7).
+     * An unreadable roll counts as satisfied: with no denominator there is nothing to compare, and
+     * refusing to ever run would strand the phase.
+     */
+    private boolean enoughOfTheVillageIsLoaded(ServerLevel level, int villageId, int loaded) {
+        if (minimumLoadedFraction <= 0.0D) {
+            return true;
+        }
+        int roll = McaCompat.villageResidentUuids(level, villageId).size();
+        return roll <= 0 || (double) loaded / roll >= minimumLoadedFraction;
+    }
+
     private boolean isWell(TownsteadNeedsView needs) {
-        if (needs.collapsed()) {
+        if (requireNotCollapsed && needs.collapsed()) {
             return false;
         }
         if (hungerMin.isPresent() && needs.hunger() < hungerMin.getAsInt()) {
+            return false;
+        }
+        if (thirstMin.isPresent() && needs.thirst() < thirstMin.getAsInt()) {
             return false;
         }
         return energyMin.isEmpty() || needs.energy() >= energyMin.getAsInt();

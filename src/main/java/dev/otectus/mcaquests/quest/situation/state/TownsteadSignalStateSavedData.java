@@ -42,6 +42,7 @@ public final class TownsteadSignalStateSavedData extends SavedData {
 
     private static final String K_SCHEMA = "schema";
     private static final String K_READINGS = "readings";
+    private static final String K_LABELS = "labels";
 
     /**
      * Key to last observed value. Keys are composed by the detector and are deliberately plain strings
@@ -49,6 +50,17 @@ public final class TownsteadSignalStateSavedData extends SavedData {
      * Townstead-shaped is persisted — only numbers whose meaning this mod owns.
      */
     private final Map<String, Integer> readings = new LinkedHashMap<>();
+
+    /**
+     * The same idea for readings that are <em>names</em> rather than numbers: which season the calendar
+     * was in, which life stage a villager presented as, which classification a village had.
+     *
+     * <p>These could have been stored as hash codes in {@link #readings}, and detecting a change would
+     * have worked. But a transition signal has to report what it changed <b>from</b> — "child to adult",
+     * "autumn to winter" — and a hash cannot be turned back into a season. Storing the name is the only
+     * way for a definition to gate on {@code "from"} at all.
+     */
+    private final Map<String, String> labels = new LinkedHashMap<>();
 
     public TownsteadSignalStateSavedData() {
     }
@@ -106,6 +118,38 @@ public final class TownsteadSignalStateSavedData extends SavedData {
         return observeIncrease(key, value ? 1 : 0);
     }
 
+    /**
+     * Records a named observation and reports the value it replaced.
+     *
+     * <p>Empty on a first sighting, which callers must treat as "seed, do not fire" — installing this
+     * mod on an existing world would otherwise announce a season change for the season it was already
+     * in. Empty is also returned when nothing changed, so a caller that fires on any present value is
+     * correct by construction.
+     *
+     * <p>An empty {@code value} is not recorded at all: it means the reading could not be taken, and
+     * storing it would make the next real reading look like a transition out of nowhere.
+     */
+    public java.util.Optional<String> observeLabel(String key, String value) {
+        if (value == null || value.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        String previous = labels.put(key, value);
+        if (previous == null) {
+            setDirty();
+            return java.util.Optional.empty(); // first sighting: remember it, announce nothing
+        }
+        if (previous.equals(value)) {
+            return java.util.Optional.empty();
+        }
+        setDirty();
+        return java.util.Optional.of(previous);
+    }
+
+    /** The previous named reading, or an empty string when this key has never been seen. */
+    public String lastLabel(String key) {
+        return labels.getOrDefault(key, "");
+    }
+
     /** The previous reading, or {@code fallback} when this key has never been seen. */
     public int lastReading(String key, int fallback) {
         return readings.getOrDefault(key, fallback);
@@ -113,13 +157,15 @@ public final class TownsteadSignalStateSavedData extends SavedData {
 
     /** Forgets a key, for a village or villager that no longer exists. */
     public void forget(String key) {
-        if (readings.remove(key) != null) {
+        boolean removed = readings.remove(key) != null;
+        removed |= labels.remove(key) != null;
+        if (removed) {
             setDirty();
         }
     }
 
     public int size() {
-        return readings.size();
+        return readings.size() + labels.size();
     }
 
     @Override
@@ -128,6 +174,11 @@ public final class TownsteadSignalStateSavedData extends SavedData {
         CompoundTag stored = new CompoundTag();
         readings.forEach(stored::putInt);
         tag.put(K_READINGS, stored);
+        if (!labels.isEmpty()) {
+            CompoundTag names = new CompoundTag();
+            labels.forEach(names::putString);
+            tag.put(K_LABELS, names);
+        }
         return tag;
     }
 
@@ -147,6 +198,12 @@ public final class TownsteadSignalStateSavedData extends SavedData {
         CompoundTag stored = tag.getCompound(K_READINGS);
         for (String key : stored.getAllKeys()) {
             data.readings.put(key, stored.getInt(key));
+        }
+        // Absent on every pre-1.4.1 save. An empty label map reads as "never seen", so the first scan
+        // after an update seeds the named baselines and stays quiet -- the same as a fresh world.
+        CompoundTag names = tag.getCompound(K_LABELS);
+        for (String key : names.getAllKeys()) {
+            data.labels.put(key, names.getString(key));
         }
         return data;
     }

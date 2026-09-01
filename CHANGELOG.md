@@ -4,6 +4,289 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-08-28
+
+Three ways a quest could go quiet without saying why.
+
+### Fixed
+
+- **Ten periodic Townstead quests declared no `READ_CALENDAR` gate.** Every `townstead_commission_*`
+  quest plus `townstead_day_off_means_day_off` and `townstead_lanterns_for_the_departed` repeats on a
+  Townstead calendar period, but their `townstead_available` conditions never asked for the
+  capability that reads the calendar. On any install without it they fell back to a raw tick cooldown
+  — a silently different quest, which is the exact case `checkPeriodRepeat` was written to catch and
+  had been reporting on every load. The capability is now declared where it is used.
+
+- **A profession track that read as non-progressive was cached for the rest of the run.** Townstead
+  resolves a profession against its data-driven registry *before* its built-in enum, so a query that
+  lands before that registry is populated reports "no progression" for a trade that has one.
+  `TownsteadHandles.TRACKS` had no eviction and no invalidation, so one unlucky lookup became
+  permanent and the quests gated on it stayed hidden with nothing further in the log. Only
+  progressive tracks are cached now; a negative answer is re-derived, which costs a single reflective
+  call because the threshold bisection only ever runs on the progressive path.
+
+- **Template tag validation could not tell an unknown tag from an unbound one.** `RegistryKind`
+  treated `BuiltInRegistries` as fully known at datapack-load time, which is true of ids and false of
+  tags — tags are datapack content and are bound only when a reload finishes. Until then every tag
+  reads empty, which is how `minecraft:fishes`, a vanilla tag with six items in it, was reported as
+  "empty or unknown" on `template_fisherman_catch`. `RegistryKind.tagsBound()` now gates the check,
+  so it reports only when it can actually tell.
+
+## [1.4.1] - 2026-08-27
+
+### Fixed — three Townstead quests could never be finished
+
+**MCA: Quests 1.4.0 shipped quests that were impossible.** Townstead answers a progression query for
+*every* profession, handing back a zero/default track for the ones it has no progression for. This mod
+could not tell that apart from a real track, so it offered a fisherman 120 profession XP that no
+Townstead 0.7.6 work task ever awards. The quest parsed, validated, was offered, was accepted — and
+then waited forever. Nothing in the JSON was wrong; only the running world could have said so.
+
+Three quests were affected, and four more paid a reward that silently did nothing:
+
+- **`townstead_deep_water_days`** now asks for a real day's fishing — 12 cod or salmon, two observed
+  work shifts, and a level-2 dock — instead of fisherman XP. Title and hard reward band unchanged.
+- **`townstead_the_master_tanner`** now asks for three completed work shifts, 32 leather delivered into
+  the giver's inventory, and a registered leatherworker workplace. It is still a once-only capstone, but
+  it no longer calls a numerical Townstead tier "master".
+- **`townstead_master_of_the_trade`** is gated on the new progression-track condition and offered only
+  by farmers, shepherds and butchers — the three trades Townstead 0.7.6 actually has progression for.
+  A datapack that supplies a real fisherman track makes fisherman content eligible again with no code
+  change here.
+- **`dockside_catch`, `mend_the_nets`, `leatherworkers_order`, `tanned_and_ready`** no longer pay
+  profession XP that could not be awarded. They pay +6 ordinary XP and a Townstead reaction instead.
+- **`townstead_master_artisan`** (situation) requires a provably reachable tier-3 track and is offered
+  only by those same three trades.
+- **`townstead_a_working_village`** (project) lists the three supported trades as its guaranteed
+  workforce baseline. The objective itself now counts *any* resident whose loaded track can really reach
+  the tier, so a pack that adds one gets it counted without editing the JSON.
+
+The dialogue for the three rebuilt quests was rewritten to match what they now ask for. Their titles are
+unchanged, so a quest already in a journal is still recognisable.
+
+### Fixed — other gates that were not gating
+
+- **A situation's `conditions` block did nothing.** `SituationOffer` accepted one in the JSON and threw
+  it away, so every `townstead_available` gate written into a shipped situation read like a gate and was
+  not one. Offer conditions are now parsed, carried onto the derived quest, and tested against the
+  candidate giver. A situation still *opens* on its signal; conditions decide who is allowed to ask.
+- **`compat.townstead.contentEnabled` only ever hid situations**, despite promising to hide the quests
+  and projects too. It now does what it says.
+- **A datapack-defined title was pinned to English.** `Titles.displayName` returned the definition's
+  `name` as a literal, so the Portuguese entry for every bundled title was unreachable. It now resolves
+  the translation with the definition's name as the fallback, which leaves a pack that ships a name and
+  no lang file working exactly as before.
+- **Dispatched codecs built with `RecordCodecBuilder.create(...).flatXmap(...)`** are not
+  `MapCodecCodec`s, so DataFixerUpper looked for their fields under a nested `value` key instead of
+  inline beside `type` — and `optionalFieldOf` swallowed the mismatch without a word. `mood`,
+  `townstead_value`, `townstead_profession_progress`, `townstead_spirit_progress`,
+  `giver_distance_from_village`, `health_below`, `infected` and `is_family_member` were all affected.
+- **Validator findings were counted but never printed.** Everything `QuestDataLoader` reported before the
+  cross-reference validators logged as it went; the validators appended straight to the list, so their
+  errors were summarised as "with 1 error(s)" and never shown.
+
+### Fixed — quest cards showed internal ids instead of sentences
+
+**A quest asking a villager to stay at work read "Keep villager.schedule.currentActivity eq work for
+30 seconds".** A query path, an operator id and an enum constant, in a line meant for someone playing
+the game — and because the result was long it also overflowed the offer card and was cut off mid-word,
+so the objective was not merely ugly but partly unreadable.
+
+Every Townstead description had the same shape. The rest of the mod had used a display-name helper for
+this since 0.5.0; the Townstead surface simply never did. All of them now go through one vocabulary:
+
+- **Objectives** — `townstead_state`, `townstead_change`, `townstead_schedule_streak`,
+  `townstead_building_registered`, `townstead_spirit_progress`, `townstead_profession_progress`.
+- **Conditions** — `townstead_value`, `townstead_building`, `townstead_spirit`, `townstead_skill`,
+  `townstead_profession_track`.
+- **Rewards** — `townstead_needs`, `townstead_profession_xp`, `townstead_skill`.
+- **Project objectives** — building and spirit goals.
+- **Context lines** — trade, schedule, village character, shifts and the anchored building.
+- **Suspension reasons** — the trade a paused profession objective names.
+
+"Keep them working for 30 seconds". "End with their hunger at least 55". "Get 1 dock built (tier 2 or
+better)". "Requires: the season is winter".
+
+An id nobody has curated — a spirit from a third-party pack, a building family this mod has never heard
+of — falls back to a humanised form of its own name rather than the raw id, so nothing is ever shown
+raw even where nobody has written a translation.
+
+Three sentences were also wrong independently of the ids: a spirit goal with no named spirit rendered a
+trailing space where the spirit should have been, a one-second hold read "for 1 seconds", and a boolean
+comparison read "whether they are on schedule at yes" — now "Keep them on schedule".
+
+### Fixed — long lines were cut off on every card screen
+
+The quest menu, the quest log and the project menu all wrapped their **dialogue** and drew their
+**objective and reward lines unwrapped**, straight into a scissor rectangle exactly one card wide.
+Anything longer than the card was silently cut off mid-word. It surfaced through the raw-id bug above,
+but the length was the trigger and not the cause: any datapack whose objective ran a little long had
+always been unreadable, with no ellipsis and no way to see the rest.
+
+All three now wrap, with continuation lines indented under the bullet so a wrapped objective still
+reads as one item. The two scrolling screens **count the wrapped rows** when sizing a card, because
+they position their buttons from that height and a line counted as one row while drawn as three would
+have put the Accept button on top of the text.
+
+### Added — the display vocabulary
+
+The display vocabulary above: needs, shift activities, seasons, life stages, village spirits and
+classifications, building families, comparison words, and — for the first time — **profession names**.
+Those had never had curated entries at all, so `talk to a farmer` fell back to the humanised English
+path on every locale; a fully translated Portuguese quest still said "Farmer".
+
+### Added — Life of the Town: 90 new definitions
+
+**The town is now the protagonist.** With Townstead installed, a quest observes or affects a real need,
+shift, season, workplace, life stage, profession track or village character rather than hiding an
+ordinary fetch quest behind a condition. Without it, the release is still substantial on its own.
+
+- **72 new personal quests** — 262 total, of which 73 are Townstead. Nine four-stage arcs and 36
+  standalones.
+- **8 new village projects** — 21 total.
+- **10 new living-village situations** — 25 total.
+- **7 new titles**, granted by the major arc finales.
+
+**Six Townstead arcs.** *Seasons of the Soil* is a year with one farmer, gated on the loaded calendar's
+own seasons. *Harbor of Hands* takes a dock from wet stones to deep water. *Wool and Winter* runs a
+pasture from its first fence to a shepherd who has earned the word. *Smokehouse Legacy* builds a
+workplace and a trade in it. *The Apprenticeship Pact* names no profession at all — it binds whichever
+supported trade the giver actually practises. *A Village with a Name* grows an anonymous settlement into
+a civic identity.
+
+**Three core arcs, with no Townstead anywhere.** *The Broken Road* surveys, clears, builds and finally
+walks a route between two real MCA villages. *The Ashen Remedy* turns curing into an expedition and a
+relationship. *The Bell at Dawn* prepares a village for a raid nobody can promise will come.
+
+**Eight identity commissions**, one per Townstead spirit with a demonstrable building contributor in
+0.7.6. Nothing bundled asks for `magical`, `spiritual`, `mining` or `natural`, because no loaded building
+contributes to them and a goal nothing can reach is a quest that waits forever.
+
+### Added — new mechanics
+
+- **`mcaquests:townstead_schedule_streak`** counts *whole shifts a villager completed*, across days,
+  logouts and restarts. This is what "help them through a week at the forge" should mean; a long
+  `hold_ticks` could only fake it by asking the player to stand and watch. A finished shift ends
+  **credited, missed, or unknown** — unknown being the one that makes it honest, because a villager who
+  was unloaded for most of a shift is evidence of nothing either way.
+- **`mcaquests:townstead_profession_track`** proves a profession goal is reachable in the *loaded*
+  registry before the quest is offered. Deliberately not a whitelist: Townstead supports datapack-provided
+  progression, so a pack that supplies a real fisherman track makes fisherman content eligible.
+- **Two new location anchors.** `townstead_building` anchors at a registered building of a named family
+  and tier; `nearest_other_village` finds the next MCA village along, never the giver's own. Both are
+  **frozen at acceptance** — they are choices among several valid answers, and a choice re-made every
+  second is not a destination. Two objectives in one quest that ask for the same thing are guaranteed the
+  same building.
+- **`deliver_to_villager` takes a `destination`.** Set it to `townstead_villager_inventory` and the goods
+  go into the recipient's own inventory instead of vanishing. All-or-nothing: capacity is simulated before
+  a single item leaves the player, a full recipient refuses rather than swallowing half a stack, and a
+  replayed packet cannot pay twice.
+- **Calendar-relative repeats.** `"repeat": {"type": "period", "period": "season"}` means once a season
+  *on this server*: a fixed tick cooldown cannot, because a Townstead season may be three days or thirty.
+  Custom calendar profiles are authoritative — nothing assumes four seasons, seven-day weeks or a fixed
+  year length. When the calendar cannot be read, `fallback_cooldown_ticks` holds the quest instead.
+- **Resident wellbeing gained `thirst_min` and `minimum_loaded_fraction`**, on both the personal objective
+  and the project one. An unloaded population is no longer counted as a healthy one.
+- **Offer groups.** `offer_group` on a quest names a *kind* — a need, a shift, a season, an adventure —
+  and the offer menu takes at most one from each group before allowing seconds. With three slots and a
+  catalogue this size, plain weighted selection regularly filled all three with variations of "someone is
+  hungry". Priority still wins, and an ungrouped quest behaves exactly as it always did.
+
+### Added — five new situation triggers
+
+- **`townstead_calendar_transition`** (`week` / `season` / `year`) and **`townstead_life_transition`**
+  (`canonical_stage` / `life_stage` / `senior`) fire on a crossing rather than a state. Prefer
+  `canonical_stage`: it resolves the stage through the root's own `presentsAs` value, so a custom root
+  whose adult stage is called "butterfly" still produces a coming-of-age signal.
+- **`townstead_schedule_disruption`** fires when enough of a village has been off its own routine for
+  long enough, with a recovery threshold well below the one that opened it so a village on the boundary
+  cannot flicker a situation in and out.
+- **`villager_stranded`** and **`hostiles_near_home`** contain no Townstead at all and work on a plain
+  MCA install. Both search a small box around a bed or village centre rather than sweeping the world.
+- **`townstead_spirit`** gained `from_classification`, `to_classification` and `transition_only`, so a
+  definition can ask "has this village become a **blend**" rather than only "which spirit went up".
+  Without those fields it behaves exactly as before.
+
+**A first sighting never fires.** Baselines are seeded silently, so installing this update on an existing
+world does not greet the player with a backlog of seasons that already happened, and neither a restart,
+a chunk reload nor a `/reload` replays one.
+
+### Added — two new Townstead capabilities
+
+`READ_PROFESSION_SPEC` reads the progression *track* behind a profession — how many tiers exist, what the
+XP ceiling is, whether it advances at all. `READ_SKILL_REGISTRY` proves a skill id exists before a
+condition tests it or a reward tries to teach it. Both degrade independently of everything else: a
+Townstead that can no longer be written to still answers "can this trade advance?", which is what decides
+whether content is *offered*.
+
+Bundled content declares **zero** skill ids — Townstead 0.7.6 has a skill registry and bundles no skill
+definitions. The validation exists so a third-party pack's typo fails loudly instead of silently mutating
+nothing.
+
+### Added — achievability validation
+
+`/mcaquests validate` now reports what the *running* Townstead cannot deliver: profession tiers and XP the
+loaded track cannot reach, spirit ids the registry does not know, skill ids that do not exist, objectives
+that read a capability their quest never declared, calendar-period repeats with no calendar gate, hard
+quests whose every objective is carrying something, and objectives within one quest that read identically.
+Findings are warnings, because a registry can change under a running server. They are also logged once at
+server start and after a reload, so an operator hears about it without running a command.
+
+Bundled content is held to a stricter standard at build time: a player cannot fix a broken built-in, so it
+must never ship.
+
+### Added — four content tags
+
+`mcaquests:trail_ruins` and `mcaquests:ocean_ruins` (structures), `mcaquests:pottery_sherds` (items, all
+twenty vanilla sherds), and `mcaquests:common_undead` (entity types — the zombie- and skeleton-family
+enemies that actually spawn around a village, with no Nether-only mobs and no bosses).
+
+### Changed
+
+- **Config: `compat.townstead.content` sub-toggles.** `needsAndSchedules`, `professions`,
+  `calendarAndLife`, `spiritAndBuildings`, `projects` and `situations`, all default `true` and all
+  subordinate to `contentEnabled`. "Townstead content" is not one thing, and a server that wants the needs
+  quests but not the civic identity ones previously had to take all of it or none. See **[CONFIG.md](CONFIG.md)**.
+- **Quest cards say more, and only about what the quest reads.** New context lines cover the season and
+  day, shifts worked out of shifts required, the frozen building a quest is anchored at, and how far a
+  trade can actually go next to where the villager is in it. The needs line gained thirst — a Townstead
+  villager can be perfectly fed and still going down from it.
+- **`TownsteadTarget` gained `recipient`**, which resolves exactly as `bound` does. It exists because
+  writing `"target": "bound"` on a delivery destination reads like an implementation detail while
+  `"recipient"` says what the author means.
+- **Building family names are normalised in one place.** MCA: Quests has shipped `butcher_shop` since
+  1.4.0 while Townstead 0.7.6 contributes spirit under `butcher`; a condition normalising one way and an
+  anchor the other would disagree about the same building, and the symptom — a quest insisting the village
+  has no butcher while you stand in front of one — would be almost impossible to diagnose.
+- **914 new translation keys** in each of English and Brazilian Portuguese (2,824 per locale in total),
+  plus 34 reworded, covering every new quest, project phase, situation, title, objective description,
+  context line, unavailable reason and display name.
+
+### Compatibility
+
+- **No save migration.** Every new NBT key is optional on read, frozen building anchors carry a schema
+  version so a later release can add fields, and a period-history entry sits alongside the existing
+  completion counters rather than replacing them.
+- **No `format_version` bump.** Every new datapack field has a default, old repeat rules decode
+  unchanged, old `deliver_to_villager` definitions keep consuming on hand-over, and a quest without an
+  `offer_group` selects exactly as it always did.
+- **Source-breaking for add-ons that implement `TownsteadBridge` directly.** The interface gained
+  `professionTrack(String)`, `isKnownSkill(ResourceLocation)` and `knownSkillIds()`. An implementation
+  can return `TownsteadProfessionTrackView.none(id)`, `false` and `Set.of()` to keep compiling.
+  `SignalContext`, `LocationAnchor`, `OfferShaping`, `RepeatRule`, `SituationOffer`,
+  `DeliverToVillagerObjective`, `TownsteadHealthyResidentsObjective` and
+  `TownsteadResidentWellbeingProjectObjective` all gained record components; each keeps a constructor at
+  its previous arity, so calling code compiles unchanged.
+- **`townstead_healthy_residents` and `townstead_resident_wellbeing_project` complete less often than
+  before** in one specific case: a village whose residents are mostly unloaded no longer counts as
+  healthy. That is the bug being fixed, but it is a behaviour change for a datapack that relied on the
+  old reading.
+- **`townstead_profession_progress` now needs `READ_PROFESSION_SPEC`** and suspends without it. On a
+  Townstead too old to expose the progression spec, these objectives pause with their progress intact
+  rather than waiting on a goal nothing can verify.
+- **No network protocol bump.** `offer_group` is server-only and the new context lines travel as the
+  existing component list.
+
 ## [1.4.0] - 2026-08-25
 
 ### Added — Townstead integration (optional)

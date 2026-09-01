@@ -108,7 +108,19 @@ public record TownsteadSpiritCondition(Optional<String> spirit, OptionalInt mini
 
     @Override
     public Component describe() {
-        return Component.translatable("mcaquests.condition.townstead_spirit",
-                spirit.orElse(classification.orElse("")));
+        // A spirit id and a classification are different vocabularies -- "nautical" and "blend" are
+        // not the same kind of word -- so they get different sentences rather than one with whichever
+        // happened to be set dropped into it.
+        if (spirit.isPresent()) {
+            return Component.translatable("mcaquests.condition.townstead_spirit",
+                    dev.otectus.mcaquests.quest.TownsteadNames.spirit(spirit.get()));
+        }
+        if (classification.isPresent()) {
+            return Component.translatable("mcaquests.condition.townstead_classification",
+                    Component.translatableWithFallback(
+                            "mcaquests.townstead.classification." + classification.get(),
+                            classification.get()));
+        }
+        return Component.translatable("mcaquests.condition.townstead_spirit_any");
     }
 }

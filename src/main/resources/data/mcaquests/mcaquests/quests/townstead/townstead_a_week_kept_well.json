@@ -1,0 +1,112 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_a_week_kept_well",
+  "enabled": true,
+  "weight": 6,
+  "priority": 2,
+  "offer_group": "townstead_schedule",
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "period",
+    "period": "townstead_week",
+    "scope": "giver",
+    "fallback_cooldown_ticks": 96000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer",
+      "minecraft:shepherd",
+      "minecraft:butcher"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_a_week_kept_well.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_a_week_kept_well.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_a_week_kept_well.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_a_week_kept_well.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_a_week_kept_well.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_a_week_kept_well.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_a_week_kept_well.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:townstead_schedule_streak",
+      "activity": "work",
+      "required_shifts": 5,
+      "minimum_coverage": 0.65,
+      "require_on_schedule": true
+    },
+    {
+      "type": "mcaquests:townstead_state",
+      "source": "villager",
+      "target": "giver",
+      "path": "needs.hunger",
+      "operator": "gte",
+      "value": 55,
+      "hold_ticks": 20,
+      "reset_on_false": true
+    },
+    {
+      "type": "mcaquests:townstead_state",
+      "source": "villager",
+      "target": "giver",
+      "path": "needs.thirst",
+      "operator": "gte",
+      "value": 10,
+      "hold_ticks": 20,
+      "reset_on_false": true
+    },
+    {
+      "type": "mcaquests:townstead_state",
+      "source": "villager",
+      "target": "giver",
+      "path": "needs.energy",
+      "operator": "gte",
+      "value": 8,
+      "hold_ticks": 20,
+      "reset_on_false": true
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_NEEDS",
+          "READ_SCHEDULE",
+          "READ_CALENDAR"
+        ]
+      }
+    ]
+  }
+}

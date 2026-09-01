@@ -6,6 +6,7 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.GiverSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.state.PlayerQuestData;
@@ -33,6 +34,20 @@ import java.util.UUID;
 public final class DynamicOfferSource {
 
     private DynamicOfferSource() {
+    }
+
+    /**
+     * Whether this offer's own condition gate lets this villager be the one who asks.
+     *
+     * <p>Evaluated against the candidate giver, under the situation's synthetic quest id so a condition
+     * that asks about quest history means the situation rather than nothing.
+     */
+    private static boolean offerConditionsPass(SituationDefinition def, ServerPlayer player,
+                                               Entity villager, PlayerQuestData data) {
+        return def.offer().conditions()
+                .map(condition -> condition.test(new QuestContext(player, villager, data,
+                        SituationIds.syntheticId(def.id()))))
+                .orElse(true);
     }
 
     public static List<QuestDefinition> collect(ServerPlayer player, Entity villager, PlayerQuestData data,
@@ -73,6 +88,11 @@ public final class DynamicOfferSource {
                 continue;
             }
             if (!giverEligible(def.offer().giver(), profession, adult, hearts, mode)) {
+                continue;
+            }
+            // Situation offers are added to the pool after the static filter chain has run, so their
+            // conditions have to be tested here or they would never be tested at all.
+            if (!offerConditionsPass(def, player, villager, data)) {
                 continue;
             }
             // Don't re-offer one this player already accepted from this villager.

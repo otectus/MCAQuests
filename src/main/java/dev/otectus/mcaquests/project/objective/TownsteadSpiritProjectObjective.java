@@ -97,9 +97,15 @@ public record TownsteadSpiritProjectObjective(Optional<String> spirit, OptionalI
 
     @Override
     public Component describe() {
-        return Component.translatable(targetTier.isPresent()
+        boolean tier = targetTier.isPresent();
+        if (spirit.isEmpty()) {
+            return Component.translatable(tier
+                    ? "mcaquests.project.objective.townstead_spirit_tier_any"
+                    : "mcaquests.project.objective.townstead_spirit_points_any", required());
+        }
+        return Component.translatable(tier
                         ? "mcaquests.project.objective.townstead_spirit_tier"
                         : "mcaquests.project.objective.townstead_spirit_points",
-                required(), spirit.orElse(""));
+                required(), dev.otectus.mcaquests.quest.TownsteadNames.spirit(spirit.get()));
     }
 }

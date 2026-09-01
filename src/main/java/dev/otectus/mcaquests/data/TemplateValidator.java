@@ -109,7 +109,8 @@ public final class TemplateValidator {
                         + registry.kind().key() + " id '" + rid + "'.");
             }
         }
-        for (ResourceLocation tag : registry.tags()) {
+        // Only meaningful once tags are actually bound; before that every tag reads empty.
+        for (ResourceLocation tag : registry.kind().tagsBound() ? registry.tags() : List.<ResourceLocation>of()) {
             if (registry.kind().staticMembers(tag).isEmpty()) {
                 errors.add("Quest '" + questId + "': template variable '" + name + "' uses "
                         + registry.kind().key() + " tag '" + tag + "' which is empty or unknown.");

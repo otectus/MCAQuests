@@ -1,0 +1,116 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_winter_at_the_table",
+  "enabled": true,
+  "weight": 6,
+  "priority": 6,
+  "offer_group": "townstead_season",
+  "category": "townstead",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "professions": [
+      "minecraft:farmer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_winter_at_the_table.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:townstead_healthy_residents",
+      "minimum_observed": 6,
+      "minimum_fraction": 0.75,
+      "hunger_min": 65,
+      "thirst_min": 12,
+      "energy_min": 10,
+      "require_not_collapsed": true,
+      "minimum_loaded_fraction": 0.5,
+      "hold_ticks": 2400
+    },
+    {
+      "type": "mcaquests:townstead_spirit_progress",
+      "spirit": "pastoral",
+      "target_tier": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    },
+    {
+      "type": "mcaquests:village_reputation",
+      "amount": 8
+    },
+    {
+      "type": "mcaquests:grant_title",
+      "title": "mcaquests:keeper_of_seasons",
+      "scope": "village"
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_NEEDS",
+          "READ_CALENDAR",
+          "READ_SPIRIT"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "calendar",
+        "path": "season",
+        "operator": "eq",
+        "value": "winter"
+      }
+    ]
+  },
+  "chain": {
+    "chain": "seasons_of_the_soil",
+    "stage": 4,
+    "stage_total": 4,
+    "prerequisites": [
+      "mcaquests:townstead_harvest_under_gold"
+    ],
+    "relationship_arc": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.chain.arc"
+    },
+    "chapter": {
+      "translate": "mcaquests.quest.townstead_winter_at_the_table.chain.chapter"
+    }
+  }
+}

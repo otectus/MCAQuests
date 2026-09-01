@@ -111,6 +111,22 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue townsteadNeedCrisisHysteresis;
         public final ForgeConfigSpec.BooleanValue townsteadDebugBindingLogs;
 
+        /**
+         * Per-theme switches for the bundled Townstead content (spec 5.10). All default true and all
+         * are subordinate to {@link #townsteadContentEnabled}: turning the master off hides everything
+         * regardless of these, so a server owner who wants none of it still only has one switch to find.
+         *
+         * <p>They exist because "Townstead content" is not one thing. A server that loves the needs and
+         * schedule quests may have no interest in the spirit and building ones, and before this the only
+         * way to express that was to disable the lot.
+         */
+        public final ForgeConfigSpec.BooleanValue townsteadContentNeedsAndSchedules;
+        public final ForgeConfigSpec.BooleanValue townsteadContentProfessions;
+        public final ForgeConfigSpec.BooleanValue townsteadContentCalendarAndLife;
+        public final ForgeConfigSpec.BooleanValue townsteadContentSpiritAndBuildings;
+        public final ForgeConfigSpec.BooleanValue townsteadContentProjects;
+        public final ForgeConfigSpec.BooleanValue townsteadContentSituations;
+
         Common(ForgeConfigSpec.Builder b) {
             b.push("quests");
             enableDefaultQuestPack = b.comment("Ship and enable the built-in default quest pack.")
@@ -381,6 +397,33 @@ public final class McaQuestsConfig {
                     "Log every Townstead binding decision at startup and each capability miss at runtime.",
                     "Verbose; for diagnosing an integration problem, not for normal play.")
                     .define("debugBindingLogs", false);
+
+            b.push("content");
+            b.comment(
+                    "Which themes of the built-in Townstead content are offered. All of these are",
+                    "subordinate to contentEnabled above: turning that off hides everything regardless.",
+                    "Changing any of them affects future offers only -- a quest already accepted is never",
+                    "taken away from a player because a server owner changed their mind about a theme.");
+            townsteadContentNeedsAndSchedules = b.comment(
+                    "Hunger, thirst, energy, collapse, shifts and work routine.")
+                    .define("needsAndSchedules", true);
+            townsteadContentProfessions = b.comment(
+                    "Profession progression, workplaces and apprenticeships.")
+                    .define("professions", true);
+            townsteadContentCalendarAndLife = b.comment(
+                    "Seasons, the Townstead calendar, coming of age and later life.")
+                    .define("calendarAndLife", true);
+            townsteadContentSpiritAndBuildings = b.comment(
+                    "Village character, registered buildings and the identity commissions.")
+                    .define("spiritAndBuildings", true);
+            townsteadContentProjects = b.comment(
+                    "The village projects that read Townstead state.")
+                    .define("projects", true);
+            townsteadContentSituations = b.comment(
+                    "The situations that Townstead state can trigger.")
+                    .define("situations", true);
+            b.pop();
+
             b.pop();
         }
     }

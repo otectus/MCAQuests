@@ -105,13 +105,66 @@ public record TriggerSignal(
 
     public static TriggerSignal townsteadSpirit(@Nullable ServerLevel level, int villageId,
                                                 String identity, int oldTier, int newTier) {
+        return townsteadSpirit(level, villageId, identity, oldTier, newTier, null, null);
+    }
+
+    /**
+     * As above, additionally carrying the classification either side of the change, so a definition can
+     * ask "has this village become a blend" rather than only "which spirit went up".
+     */
+    public static TriggerSignal townsteadSpirit(@Nullable ServerLevel level, int villageId,
+                                                String identity, int oldTier, int newTier,
+                                                @Nullable String fromClassification,
+                                                @Nullable String toClassification) {
         return new TriggerSignal(SituationSignalType.TOWNSTEAD_SPIRIT, level, villageId, null, null,
-                0f, newTier, false, SignalContext.tierChange(identity, oldTier, newTier));
+                0f, newTier, false, SignalContext.spiritChange(identity, oldTier, newTier,
+                        fromClassification, toClassification));
     }
 
     public static TriggerSignal townsteadBuilding(@Nullable ServerLevel level, int villageId,
                                                   String buildingType, int level0) {
         return new TriggerSignal(SituationSignalType.TOWNSTEAD_BUILDING, level, villageId, null, null,
                 0f, level0, false, SignalContext.identity(null, buildingType));
+    }
+
+    // --- 1.4.1 transitions (spec 5.8) ------------------------------------------------------------
+
+    /** The calendar has crossed into a new week, season or year. */
+    public static TriggerSignal townsteadCalendarTransition(@Nullable ServerLevel level, int villageId,
+                                                            String period, String from, String to) {
+        return new TriggerSignal(SituationSignalType.TOWNSTEAD_CALENDAR_TRANSITION, level, villageId,
+                null, null, 0f, 0, false, SignalContext.transition(period, from, to));
+    }
+
+    /**
+     * A villager has crossed a life threshold. The subject travels with the signal so the offer can
+     * prefer and bind the person it is about, rather than whichever neighbour was nearest.
+     */
+    public static TriggerSignal townsteadLifeTransition(@Nullable ServerLevel level, int villageId,
+                                                        @Nullable UUID villagerUuid, String axis,
+                                                        String from, String to) {
+        return new TriggerSignal(SituationSignalType.TOWNSTEAD_LIFE_TRANSITION, level, villageId,
+                villagerUuid, null, 0f, 0, false, SignalContext.transition(axis, from, to));
+    }
+
+    /** Enough of a village has been off its own schedule for long enough to be news. */
+    public static TriggerSignal townsteadScheduleDisruption(@Nullable ServerLevel level, int villageId,
+                                                            float fraction, int observed) {
+        return new TriggerSignal(SituationSignalType.TOWNSTEAD_SCHEDULE_DISRUPTION, level, villageId,
+                null, null, fraction, observed, false, null);
+    }
+
+    /** A resident is {@code distance} blocks outside their home village and has stayed there. */
+    public static TriggerSignal villagerStranded(@Nullable ServerLevel level, int villageId,
+                                                 @Nullable UUID villagerUuid, int distance, boolean night) {
+        return new TriggerSignal(SituationSignalType.VILLAGER_STRANDED, level, villageId, villagerUuid,
+                null, 0f, distance, night, null);
+    }
+
+    /** {@code count} hostiles are gathered around this resident's bed or the village centre. */
+    public static TriggerSignal hostilesNearHome(@Nullable ServerLevel level, int villageId,
+                                                 @Nullable UUID villagerUuid, int count) {
+        return new TriggerSignal(SituationSignalType.HOSTILES_NEAR_HOME, level, villageId, villagerUuid,
+                null, 0f, count, false, null);
     }
 }

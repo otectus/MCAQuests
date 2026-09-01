@@ -1,0 +1,95 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:townstead_names_in_the_family_book",
+  "enabled": true,
+  "weight": 6,
+  "priority": 5,
+  "offer_group": "townstead_life",
+  "category": "townstead",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "once"
+  },
+  "giver": {
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.townstead_names_in_the_family_book.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.townstead_names_in_the_family_book.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.townstead_names_in_the_family_book.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.townstead_names_in_the_family_book.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.townstead_names_in_the_family_book.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.townstead_names_in_the_family_book.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.townstead_names_in_the_family_book.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "family",
+        "relation": "any"
+      },
+      "item": "minecraft:book",
+      "count": 1,
+      "destination": {
+        "type": "townstead_villager_inventory",
+        "target": "recipient"
+      }
+    },
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:librarian",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 34
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": [
+          "READ_VILLAGER",
+          "READ_ROOT"
+        ]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "rootId",
+        "operator": "exists",
+        "value": true
+      },
+      {
+        "type": "mcaquests:is_family_member",
+        "relation": "any"
+      }
+    ]
+  }
+}

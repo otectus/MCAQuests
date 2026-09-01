@@ -147,6 +147,14 @@ public record QuestDefinition(
         return offerShaping.difficulty();
     }
 
+    /**
+     * The offer group this quest belongs to, if any (see {@link OfferShaping}). Used only by offer
+     * selection, so it never crosses the wire.
+     */
+    public Optional<String> offerGroup() {
+        return offerShaping.offerGroup();
+    }
+
     /** Conditional selection-weight bonuses (see {@link OfferShaping}). */
     public List<WeightBonus> weightBonus() {
         return offerShaping.weightBonus();
