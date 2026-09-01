@@ -506,6 +506,14 @@ public final class QuestProgressEvents {
                         if (QuestManager.isComplete(player, def, active)) {
                             return; // ready to turn in — never failed by a time/weather trigger
                         }
+                        // Checked BEFORE the suspension guard, and it is the only trigger that is: a
+                        // lost target is itself a suspension, so guarding first would make the opt-in
+                        // unreachable and the quest would wait forever for someone who is never coming.
+                        if (failure.failOnTargetLost()
+                                && QuestManager.hasLostBoundTarget(player, def, active)) {
+                            toFail.add(new FailedTrigger(active, def, QuestFailedEvent.Reason.TARGET_LOST));
+                            return;
+                        }
                         if (QuestManager.isSuspended(player, def, active)) {
                             return; // unplayable right now — its clock is frozen, so nothing can expire
                         }

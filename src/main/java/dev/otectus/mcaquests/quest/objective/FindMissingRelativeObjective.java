@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.RelativeCandidate;
 import dev.otectus.mcaquests.quest.target.BiomeTarget;
 import dev.otectus.mcaquests.quest.target.StructureTarget;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
@@ -160,7 +161,12 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
             }
             return false; // already in the world, but not found yet — the highlight leads the way
         }
-        if (McaCompat.isVillageResidentAnywhere(level, bound)) {
+        // "Is this person actually missing?" is asked once, in one place. This used to be an inline
+        // getEntity/roll pair that omitted the deceased and probablyGenerated checks and leaned on
+        // materializeRelative to refuse — which worked, but meant two definitions of missing that could
+        // drift. Empty means MCA could not be read: pause, never spawn.
+        if (!McaCompat.describeVillager(level, level.getEntity(quest.villagerUuid()), bound)
+                .map(RelativeCandidate::isMissing).orElse(false)) {
             // Alive and on a village roll, just not loaded — they are not missing, so never spawn a second
             // copy. The player has to travel to them; the HUD hint points the way.
             return false;

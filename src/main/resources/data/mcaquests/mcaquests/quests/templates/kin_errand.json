@@ -72,7 +72,8 @@
         "type": "mcaquests:deliver_to_villager",
         "recipient": {
           "mode": "family",
-          "relation": "any"
+          "relation": "any",
+          "require": "same_village"
         },
         "item": "{gift}",
         "count": "{count}",

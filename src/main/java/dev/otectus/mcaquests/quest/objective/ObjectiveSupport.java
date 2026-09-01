@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.RelativeCandidate;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
 import dev.otectus.mcaquests.quest.target.LocationAnchor;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
@@ -76,6 +77,48 @@ public final class ObjectiveSupport {
             resolved.ifPresent(entity -> progress.setTargetUuid(entity.getUUID()));
         }
         return resolved;
+    }
+
+    /**
+     * Why the villager this objective bound can no longer be found, if they cannot.
+     *
+     * <p>A quest that has bound a target and then lost them used to sit in the log forever at 0/1 with no
+     * explanation: the objective simply never resolved, so it never progressed and never failed. This
+     * turns that silence into a sentence, routed through the existing {@code unavailableReason} channel so
+     * it renders as a reason line instead of a counter and inherits 1.4.0's suspend-do-not-fail semantics
+     * — the deadline stops running down, the quest stays abandonable, and it resumes if they come back.
+     *
+     * <p>Two states count as lost, and only two:
+     * <ul>
+     *   <li><b>Deceased.</b> Definite, and never reversible.</li>
+     *   <li><b>No body anywhere and on no village roll</b>, for a target that asserted they could be
+     *   found. Being merely unloaded is <em>not</em> lost — that is the whole reason the roll is
+     *   consulted, and a {@code require: missing} target is supposed to be in exactly this state.</li>
+     * </ul>
+     *
+     * <p>Anything else, including "MCA could not be read", answers empty. A quest is never accused of
+     * losing its target on the strength of an unreadable answer.
+     */
+    public static Optional<Component> boundTargetLost(VillagerTarget target, ActiveQuest active,
+                                                      ObjectiveProgress progress, ServerLevel level) {
+        UUID bound = progress.targetUuid();
+        if (bound == null || level.getEntity(bound) != null) {
+            return Optional.empty();
+        }
+        Optional<RelativeCandidate> who =
+                McaCompat.describeVillager(level, level.getEntity(active.villagerUuid()), bound);
+        if (who.isEmpty()) {
+            return Optional.empty();
+        }
+        RelativeCandidate villager = who.get();
+        Component name = Component.literal(villager.name() == null ? "" : villager.name());
+        if (villager.deceased()) {
+            return Optional.of(Component.translatable("mcaquests.status.target_died", name));
+        }
+        if (target.requiresExistence() && !villager.residentAnywhere()) {
+            return Optional.of(Component.translatable("mcaquests.status.target_lost", name));
+        }
+        return Optional.empty();
     }
 
     /** True when {@code candidate} is the villager {@code target} means, honouring an already-locked binding. */

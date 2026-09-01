@@ -7,6 +7,7 @@ import net.minecraft.world.entity.Entity;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -52,7 +53,15 @@ public final class McaVillagerSnapshot {
     private TownsteadEvaluation townstead;
 
     private final Map<String, Boolean> familyMemo = new HashMap<>();
-    private final Map<String, Boolean> relativeStatusMemo = new HashMap<>();
+    /**
+     * One candidate list per relation for the whole pass.
+     *
+     * <p>This is what keeps the new offer-time resolvability check affordable. Every villager-targeted
+     * quest in the pool asks about the giver's family, and building a candidate list walks the family
+     * tree and reads the village rolls; without this the cost would be multiplied by the size of the
+     * catalogue on every single villager interaction.
+     */
+    private final Map<String, List<RelativeCandidate>> candidateMemo = new HashMap<>();
 
     public McaVillagerSnapshot(ServerPlayer player, Entity villager) {
         this.player = player;
@@ -120,7 +129,6 @@ public final class McaVillagerSnapshot {
         return infectionProgress;
     }
 
-    /** Lazily resolves + memoizes whether the villager is {@code relation} to the player. */
     /** The pass's Townstead reads. Empty of everything until the first Townstead condition asks. */
     public TownsteadEvaluation townstead() {
         if (townstead == null) {
@@ -129,16 +137,35 @@ public final class McaVillagerSnapshot {
         return townstead;
     }
 
+    /**
+     * Lazily resolves + memoizes whether the villager is {@code relation} <em>to the player</em>. Not the
+     * same question as {@link #relativeCandidates}, which asks who the villager's own relatives are.
+     */
     public boolean isFamilyOfPlayer(String relation) {
         return familyMemo.computeIfAbsent(relation, r -> McaCompat.isFamilyOfPlayer(player, villager, r));
     }
 
-    /** Lazily resolves + memoizes whether a relative of {@code relation} matches {@code status}. */
-    public boolean relativesWithStatus(String relation, String status) {
+    /**
+     * Lazily resolves + memoizes the villager's relatives of {@code relation}.
+     *
+     * <p>The one list the gate, the offer-time resolvability check and the display name all filter, so
+     * within a pass they are guaranteed to be reasoning about exactly the same people.
+     */
+    public List<RelativeCandidate> relativeCandidates(String relation) {
         if (!(villager.level() instanceof ServerLevel level)) {
-            return false;
+            return List.of();
         }
-        return relativeStatusMemo.computeIfAbsent(relation + '/' + status,
-                key -> McaCompat.relativesWithStatus(level, villager, relation, status));
+        return candidateMemo.computeIfAbsent(relation,
+                r -> McaCompat.relativeCandidates(level, villager, r));
+    }
+
+    /** Whether any relative of {@code relation} matches {@code status} — a filter over the memoized list. */
+    public boolean relativesWithStatus(String relation, String status) {
+        for (RelativeCandidate candidate : relativeCandidates(relation)) {
+            if (candidate.matches(status)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

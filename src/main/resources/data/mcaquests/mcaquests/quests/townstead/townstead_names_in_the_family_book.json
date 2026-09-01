@@ -41,7 +41,8 @@
       "type": "mcaquests:deliver_to_villager",
       "recipient": {
         "mode": "family",
-        "relation": "any"
+        "relation": "any",
+        "require": "reachable"
       },
       "item": "minecraft:book",
       "count": 1,
@@ -89,6 +90,11 @@
       {
         "type": "mcaquests:is_family_member",
         "relation": "any"
+      },
+      {
+        "type": "mcaquests:related_villager_status",
+        "relation": "any",
+        "status": "reachable"
       }
     ]
   }

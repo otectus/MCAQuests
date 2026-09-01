@@ -22,7 +22,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -319,8 +322,13 @@ public final class McaCompat {
 
     /**
      * True when the villager is the given {@code relation} <em>to the player</em> in MCA's family
-     * tree. {@code relation} is one of {@code any}/{@code parent}/{@code child}/{@code sibling}/
-     * {@code grandparent}. Safe default: {@code false}.
+     * tree. {@code relation} is one of {@code any}/{@code spouse}/{@code parent}/{@code child}/
+     * {@code sibling}/{@code grandparent}. Safe default: {@code false}.
+     *
+     * <p><b>Not the same question as {@link #relativeCandidates}.</b> That one asks who the giver's
+     * relatives are; this one asks how the giver is related to the <em>player</em>, and the relation runs
+     * in the opposite direction. They must never be folded together, and a quest gated on this one has
+     * said nothing at all about whether the giver has a findable relative.
      *
      * <p>Direction note (verified against MCA bytecode): a node's {@code isParent(uuid)} means
      * "{@code uuid} is one of this node's parents". So the giver being the player's <em>child</em>
@@ -336,6 +344,10 @@ public final class McaCompat {
             UUID p = player.getUUID();
             return switch (relation) {
                 case "any" -> McaHandles.nodeIsRelative(node, p);
+                // Marriage is not a family-tree edge in MCA, so it needs the relationship, not the node.
+                // Without this branch "spouse" fell through to false, which is why the vocabulary this
+                // condition accepts had to omit it while related_villager_status accepted it.
+                case "spouse" -> McaHandles.isMarriedTo(relationship, p);
                 case "child" -> McaHandles.nodeIsParent(node, p);            // player is giver's parent
                 case "parent" -> McaHandles.nodeChildren(node).contains(p);  // player is giver's child
                 case "sibling" -> McaHandles.nodeSiblings(node).contains(p);
@@ -455,86 +467,245 @@ public final class McaCompat {
     }
 
     /**
-     * True when the giver has at least one relative of {@code relation} ({@code any}/{@code spouse}/
-     * {@code parent}/{@code child}/{@code sibling}/{@code grandparent}) whose {@code status}
-     * ({@code alive}/{@code nearby}/{@code missing}/{@code dead}/{@code same_village}) matches.
-     * Touches MCA's persistent family tree, so it resolves relatives even when they are not
-     * currently loaded. Safe default: {@code false}.
+     * Every relative of {@code giver} of the given {@code relation}, described richly enough that any
+     * caller can decide whether they are a person a quest may be about.
      *
-     * <p>The relation sets are shared with {@link #giverRelativeUuids} so a quest gated on
-     * "{@code relation} exists with {@code status}" and a target selecting that same {@code relation}
-     * can never disagree about who is in scope.
+     * <p><b>This is the single family predicate.</b> The condition gate, the offer-time resolvability
+     * check, the accept-time binder, {@code VillagerTarget.matches} and the display name all filter this
+     * one list. They used to walk the tree three different ways: the gate asked "is there a sibling in
+     * this village?" while the target asked for "the first sibling in list order" with no status filter
+     * at all, so one sibling could satisfy the gate while a different one — dead, invented, or nowhere in
+     * the world — was handed to the objective. They can no longer disagree, because there is only one
+     * question being asked.
+     *
+     * <p>The village rolls are read <em>once for the whole list</em> rather than once per candidate, so
+     * asking about a giver's four siblings no longer walks every village in the level four times.
+     *
+     * <p>Safe default: an empty list — which makes the content that named this relative ineligible
+     * rather than accidentally satisfied.
      */
-    public static boolean relativesWithStatus(ServerLevel level, Entity giver, String relation, String status) {
+    public static List<RelativeCandidate> relativeCandidates(ServerLevel level, Entity giver, String relation) {
         try {
             Object relationship = McaHandles.relationshipOf(giver);
             Object node = McaHandles.familyEntry(relationship);
             if (node == null) {
-                return false;
+                return List.of();
+            }
+            List<UUID> ids = relativeIds(node, relation, giver.getUUID());
+            if (ids.isEmpty()) {
+                return List.of();
             }
             Object tree = McaHandles.familyTree(relationship);
-            List<UUID> relatives = relation.equals("any") || relation.equals("grandparent")
-                    ? giverRelativeUuids(level, giver, relation)
-                    : switch (relation) {
-                case "spouse" -> {
-                    UUID partner = McaHandles.nodePartner(node);
-                    yield (partner == null || partner.equals(Util.NIL_UUID)) ? List.of() : List.of(partner);
+            Set<UUID> homeVillage = homeVillageResidents(giver);
+            Set<UUID> anywhere = residentsAnywhere(level, ids);
+            List<RelativeCandidate> candidates = new ArrayList<>(ids.size());
+            for (UUID uuid : ids) {
+                candidates.add(describeRelative(level, giver, tree, uuid, relation, homeVillage, anywhere));
+            }
+            return List.copyOf(candidates);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA relativeCandidates(relation={}) failed; defaulting empty", relation, t);
+            return List.of();
+        }
+    }
+
+    /** Reads one relative's node into the JDK-only shape the rest of the mod reasons about. */
+    private static RelativeCandidate describeRelative(ServerLevel level, Entity giver, Object tree, UUID uuid,
+                                                      String relation, Set<UUID> homeVillage, Set<UUID> anywhere) {
+        Object entry = McaHandles.node(tree, uuid);
+        Entity entity = level.getEntity(uuid);
+        boolean embodied = entity != null;
+        boolean loaded = embodied && entity.isAlive();
+        return new RelativeCandidate(
+                uuid,
+                relation,
+                McaHandles.nodeName(entry),
+                entry != null,
+                McaHandles.nodeDeceased(entry),
+                McaHandles.nodeProbablyGenerated(entry),
+                McaHandles.nodeIsPlayer(entry),
+                embodied,
+                loaded,
+                loaded && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR,
+                homeVillage.contains(uuid),
+                anywhere.contains(uuid),
+                canMaterialise(level, entry, uuid));
+    }
+
+    /** The giver's own village roll, or an empty set when they have no home village / on any error. */
+    private static Set<UUID> homeVillageResidents(Entity giver) {
+        Object village = McaHandles.homeVillage(giver);
+        // Copied into a set because every candidate asks it a membership question and a village roll is
+        // a list; on a large village that is the difference between one hash lookup and a linear scan.
+        return village == null ? Set.of() : new HashSet<>(McaHandles.villageResidentUuids(village));
+    }
+
+    /**
+     * Which of {@code ids} appear on any village's resident roll, in one pass over the level's villages.
+     *
+     * <p>The per-candidate form of this ({@link #isVillageResidentAnywhere}) is what made the old
+     * {@code missing} check quadratic: every relative of every relation of every candidate quest walked
+     * every village. Answering for the whole set at once costs one walk.
+     */
+    private static Set<UUID> residentsAnywhere(ServerLevel level, List<UUID> ids) {
+        Set<UUID> found = new HashSet<>();
+        try {
+            for (Object village : McaHandles.allVillages(level)) {
+                List<UUID> residents = McaHandles.villageResidentUuids(village);
+                for (UUID uuid : ids) {
+                    if (residents.contains(uuid)) {
+                        found.add(uuid);
+                    }
                 }
-                case "parent" -> McaHandles.nodeParents(node);
-                case "child" -> McaHandles.nodeChildren(node);
-                case "sibling" -> List.copyOf(McaHandles.nodeSiblings(node));
-                default -> List.<UUID>of();
-            };
-            for (UUID uuid : relatives) {
-                if (matchesRelativeStatus(level, giver, tree, uuid, status)) {
-                    return true;
+                if (found.size() == ids.size()) {
+                    break;
                 }
             }
-            return false;
         } catch (Throwable t) {
-            McaQuests.LOGGER.debug("MCA relativesWithStatus(relation={}, status={}) failed; defaulting false",
-                    relation, status, t);
-            return false;
+            McaQuests.LOGGER.debug("MCA residentsAnywhere failed; defaulting to none on a roll", t);
         }
+        return found;
+    }
+
+    /**
+     * Whether {@link #materializeRelative} would agree to bring this relative into the world: a known
+     * node, not deceased, not a player, not a filler ancestor MCA invented, and with no body anywhere
+     * already.
+     *
+     * <p>Shared with {@code materializeRelative} itself rather than restated, so "the mod says they can
+     * be found" and "the mod can actually produce them" cannot drift apart. They were previously two
+     * hand-maintained copies of the same list.
+     */
+    private static boolean canMaterialise(ServerLevel level, Object node, UUID uuid) {
+        return node != null
+                && !McaHandles.nodeDeceased(node)
+                && !McaHandles.nodeIsPlayer(node)
+                && !McaHandles.nodeProbablyGenerated(node)
+                && level.getEntity(uuid) == null;
+    }
+
+    /**
+     * The raw relation walk: every relative id of {@code relation}, self / nil / duplicates removed.
+     *
+     * <p>{@code grandparent} is a two-hop walk (each parent's parents). {@code any} deliberately does
+     * <em>not</em> include grandparents: it means "immediate family", and widening it would change which
+     * villager every existing {@code "relation": "any"} quest resolves to.
+     *
+     * <p>Order is spouse, then parents, then children, then siblings — the order every existing
+     * {@code any} quest already resolves in, and so one that must not change. Siblings alone are sorted
+     * by id, because MCA hands them back as a {@link Set} whose iteration order was never specified, so
+     * which sibling a quest picked could differ between two passes over identical data.
+     */
+    private static List<UUID> relativeIds(Object node, String relation, UUID self) {
+        List<UUID> relatives = new ArrayList<>();
+        if (relation.equals("spouse") || relation.equals("any")) {
+            UUID partner = McaHandles.nodePartner(node);
+            if (partner != null && !partner.equals(Util.NIL_UUID)) {
+                relatives.add(partner);
+            }
+        }
+        if (relation.equals("parent") || relation.equals("any")) {
+            relatives.addAll(McaHandles.nodeParents(node));
+        }
+        if (relation.equals("child") || relation.equals("any")) {
+            relatives.addAll(McaHandles.nodeChildren(node));
+        }
+        if (relation.equals("sibling") || relation.equals("any")) {
+            List<UUID> siblings = new ArrayList<>(McaHandles.nodeSiblings(node));
+            siblings.sort(Comparator.nullsLast(Comparator.naturalOrder()));
+            relatives.addAll(siblings);
+        }
+        if (relation.equals("grandparent")) {
+            for (Object parentNode : McaHandles.nodeParentNodes(node)) {
+                relatives.addAll(McaHandles.nodeParents(parentNode));
+            }
+        }
+        List<UUID> cleaned = new ArrayList<>();
+        for (UUID uuid : relatives) {
+            if (uuid != null && !uuid.equals(Util.NIL_UUID) && !uuid.equals(self) && !cleaned.contains(uuid)) {
+                cleaned.add(uuid);
+            }
+        }
+        return cleaned;
+    }
+
+    /**
+     * One named villager, described the same way a relative is, without needing to know how (or whether)
+     * they are related to anybody.
+     *
+     * <p>This is the read behind "the person this quest bound has been lost". An accepted quest stores a
+     * target UUID; months later the giver may be unloaded, the relation may be irrelevant, and the only
+     * question worth asking is "is this villager still someone the player can go and find?". Reads the
+     * <em>level's</em> family tree rather than the giver's, so it answers even when nobody is loaded.
+     *
+     * <p>Safe default: {@code empty}, meaning "cannot tell" — which callers must treat as "say nothing",
+     * never as "they are gone". Accusing a quest of losing its target because MCA was briefly unreadable
+     * would be worse than staying quiet.
+     */
+    public static Optional<RelativeCandidate> describeVillager(ServerLevel level, @Nullable Entity giver,
+                                                               UUID uuid) {
+        try {
+            Object tree = McaHandles.familyTree(level);
+            Object node = McaHandles.node(tree, uuid);
+            if (node == null) {
+                return Optional.empty();
+            }
+            Entity entity = level.getEntity(uuid);
+            boolean embodied = entity != null;
+            boolean loaded = embodied && entity.isAlive();
+            Set<UUID> homeVillage = giver == null ? Set.of() : homeVillageResidents(giver);
+            boolean anywhere = isVillageResidentAnywhere(level, uuid);
+            return Optional.of(new RelativeCandidate(
+                    uuid,
+                    "bound",
+                    McaHandles.nodeName(node),
+                    true,
+                    McaHandles.nodeDeceased(node),
+                    McaHandles.nodeProbablyGenerated(node),
+                    McaHandles.nodeIsPlayer(node),
+                    embodied,
+                    loaded,
+                    loaded && giver != null && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR,
+                    homeVillage.contains(uuid),
+                    anywhere,
+                    canMaterialise(level, node, uuid)));
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA describeVillager failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * True when the giver has at least one relative of {@code relation} ({@code any}/{@code spouse}/
+     * {@code parent}/{@code child}/{@code sibling}/{@code grandparent}) whose {@code status}
+     * ({@code alive}/{@code reachable}/{@code nearby}/{@code missing}/{@code dead}/{@code same_village}/
+     * {@code any_known}) matches. Touches MCA's persistent family tree, so it resolves relatives even
+     * when they are not currently loaded. Safe default: {@code false}.
+     *
+     * <p>This is a filter over {@link #relativeCandidates}, which is also what an objective's target
+     * selects from — so a quest gated on "{@code relation} exists with {@code status}" and a target
+     * requiring that same status genuinely cannot disagree about who is in scope. The previous version of
+     * this javadoc claimed that guarantee while the code re-derived its own list inline, skipping even
+     * the self/nil/duplicate cleaning; {@code GateTargetAgreementTest} now holds it to the claim.
+     */
+    public static boolean relativesWithStatus(ServerLevel level, Entity giver, String relation, String status) {
+        for (RelativeCandidate candidate : relativeCandidates(level, giver, relation)) {
+            if (candidate.matches(status)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * True when {@code villager} has at least one missing relative of any tracked relation
      * (spouse/parent/child/sibling) — the village-scoped signal for the {@code missing_kin} situation
      * trigger (0.8.0). Safe default: {@code false}.
+     *
+     * <p>{@code any} is exactly that set, so this is now one tree walk rather than the four it used to be.
      */
     public static boolean hasMissingRelative(ServerLevel level, Entity villager) {
-        return relativesWithStatus(level, villager, "spouse", "missing")
-                || relativesWithStatus(level, villager, "parent", "missing")
-                || relativesWithStatus(level, villager, "child", "missing")
-                || relativesWithStatus(level, villager, "sibling", "missing");
-    }
-
-    private static boolean matchesRelativeStatus(ServerLevel level, Entity giver, Object tree,
-                                                 UUID uuid, String status) {
-        Object entry = McaHandles.node(tree, uuid);
-        boolean deceased = McaHandles.nodeDeceased(entry);
-        Entity entity = level.getEntity(uuid);
-        boolean loaded = entity != null && entity.isAlive();
-        return switch (status) {
-            case "dead" -> deceased;
-            case "alive" -> !deceased && (loaded || entry != null);
-            case "nearby" -> loaded && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR;
-            // "Missing" has to mean genuinely vanished, not merely out of render distance: getEntity only
-            // sees LOADED entities, so without the residency check a villager standing in an unloaded
-            // village reads as missing — and a quest that materialises missing kin would then spawn a
-            // second copy of someone who is alive and well. A probablyGenerated() node is a filler
-            // ancestor MCA invented to pad a family tree, never a person who can be found.
-            case "missing" -> !deceased && entry != null
-                    && !McaHandles.nodeProbablyGenerated(entry)
-                    && entity == null
-                    && !isVillageResidentAnywhere(level, uuid);
-            case "same_village" -> {
-                Object village = McaHandles.homeVillage(giver);
-                yield village != null && McaHandles.villageResidentUuids(village).contains(uuid);
-            }
-            default -> false;
-        };
+        return relativesWithStatus(level, villager, "any", "missing");
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -882,45 +1053,15 @@ public final class McaCompat {
      * persistent family tree, so it lists relatives even when they are unloaded. Self and the MCA nil
      * UUID are filtered out. Safe default: empty list.
      *
-     * <p>{@code grandparent} is a two-hop walk (each parent's parents). {@code any} deliberately does
-     * <em>not</em> include grandparents: it means "immediate family", and widening it would change which
-     * villager every existing {@code "relation": "any"} quest resolves to.
+     * <p>Unfiltered by design — this is "who is related", not "who may a quest be about". Anything
+     * deciding the latter must go through {@link #relativeCandidates} and a status, or it will bind a
+     * dead relative, a player, or one of the two deceased parents MCA invents for every villager it
+     * spawns. Kept public because add-ons use it.
      */
     public static List<UUID> giverRelativeUuids(ServerLevel level, Entity giver, String relation) {
         try {
             Object node = McaHandles.familyEntry(McaHandles.relationshipOf(giver));
-            if (node == null) {
-                return List.of();
-            }
-            List<UUID> relatives = new ArrayList<>();
-            if (relation.equals("spouse") || relation.equals("any")) {
-                UUID partner = McaHandles.nodePartner(node);
-                if (partner != null && !partner.equals(Util.NIL_UUID)) {
-                    relatives.add(partner);
-                }
-            }
-            if (relation.equals("parent") || relation.equals("any")) {
-                relatives.addAll(McaHandles.nodeParents(node));
-            }
-            if (relation.equals("child") || relation.equals("any")) {
-                relatives.addAll(McaHandles.nodeChildren(node));
-            }
-            if (relation.equals("sibling") || relation.equals("any")) {
-                relatives.addAll(McaHandles.nodeSiblings(node));
-            }
-            if (relation.equals("grandparent")) {
-                for (Object parentNode : McaHandles.nodeParentNodes(node)) {
-                    relatives.addAll(McaHandles.nodeParents(parentNode));
-                }
-            }
-            UUID self = giver.getUUID();
-            List<UUID> cleaned = new ArrayList<>();
-            for (UUID uuid : relatives) {
-                if (uuid != null && !uuid.equals(Util.NIL_UUID) && !uuid.equals(self) && !cleaned.contains(uuid)) {
-                    cleaned.add(uuid);
-                }
-            }
-            return cleaned;
+            return node == null ? List.of() : List.copyOf(relativeIds(node, relation, giver.getUUID()));
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA giverRelativeUuids(relation={}) failed; defaulting empty", relation, t);
             return List.of();
@@ -929,17 +1070,38 @@ public final class McaCompat {
 
     /**
      * A concrete relative of {@code giver} of the given {@code relation}, preferring one that is
-     * currently loaded so the caller can act on the entity. Safe default: {@code empty}.
+     * currently loaded so the caller can act on the entity. Applies no filter at all, so it can return a
+     * relative who is dead, invented or nowhere in the world; prefer
+     * {@link #findGiverRelative(ServerLevel, Entity, String, String)}. Safe default: {@code empty}.
      */
     public static Optional<UUID> findGiverRelative(ServerLevel level, Entity giver, String relation) {
+        return findGiverRelative(level, giver, relation, "any_known");
+    }
+
+    /**
+     * A concrete relative of {@code giver} of the given {@code relation} who satisfies {@code require},
+     * preferring one that is currently loaded so the caller can act on the entity.
+     *
+     * <p>This is the selection every villager target, the accept-time binder and the display name share.
+     * The {@code require} filter is the difference between "a sibling" and "a sibling this quest can
+     * honestly name": without it, the first entry in the walk wins even when they died last week and MCA
+     * merely never took them off the village roll.
+     *
+     * <p>Safe default: {@code empty}, which makes the content that named this relative unofferable rather
+     * than bound to a phantom.
+     */
+    public static Optional<UUID> findGiverRelative(ServerLevel level, Entity giver, String relation,
+                                                   String require) {
         UUID firstKnown = null;
-        for (UUID uuid : giverRelativeUuids(level, giver, relation)) {
-            Entity entity = level.getEntity(uuid);
-            if (entity != null && entity.isAlive()) {
-                return Optional.of(uuid); // prefer a loaded relative
+        for (RelativeCandidate candidate : relativeCandidates(level, giver, relation)) {
+            if (!candidate.matches(require)) {
+                continue;
+            }
+            if (candidate.loaded()) {
+                return Optional.of(candidate.uuid()); // prefer a loaded relative
             }
             if (firstKnown == null) {
-                firstKnown = uuid;
+                firstKnown = candidate.uuid();
             }
         }
         return Optional.ofNullable(firstKnown);
@@ -979,10 +1141,9 @@ public final class McaCompat {
             }
             Object tree = McaHandles.familyTree(level);
             Object node = McaHandles.node(tree, relativeUuid);
-            if (node == null
-                    || McaHandles.nodeDeceased(node)
-                    || McaHandles.nodeIsPlayer(node)
-                    || McaHandles.nodeProbablyGenerated(node)) {
+            // The same predicate RelativeCandidate.materialisable() reports, so what the mod tells a
+            // datapack it can find and what it will actually produce can never drift apart.
+            if (!canMaterialise(level, node, relativeUuid)) {
                 return Optional.empty();
             }
             Object gender = McaHandles.nodeBinaryGender(node);

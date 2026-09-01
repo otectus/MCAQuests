@@ -39,7 +39,8 @@
       "type": "mcaquests:deliver_to_villager",
       "recipient": {
         "mode": "family",
-        "relation": "sibling"
+        "relation": "sibling",
+        "require": "same_village"
       },
       "item": "minecraft:poppy",
       "count": 1,

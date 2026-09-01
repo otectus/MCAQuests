@@ -38,7 +38,8 @@
       "type": "mcaquests:find_missing_relative",
       "relative": {
         "mode": "family",
-        "relation": "child"
+        "relation": "child",
+        "require": "missing"
       },
       "biome": {
         "tag": "minecraft:is_forest"

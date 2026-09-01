@@ -2822,5 +2822,11 @@
   "mcaquests.townstead.predicate.villager.needs.gated.not": "their needs out of the way",
   "mcaquests.townstead.predicate.villager.senior.not": "them not yet a senior",
   "mcaquests.townstead.predicate.villager.ageless.not": "them ageing normally",
-  "mcaquests.townstead.predicate.villager.immortal.not": "them mortal"
+  "mcaquests.townstead.predicate.villager.immortal.not": "them mortal",
+  "mcaquests.target.villager.situation_focus": "the villager who needs help",
+  "mcaquests.unofferable.no_relative": "%s cannot be found",
+  "mcaquests.unofferable.no_situation_focus": "the villager this is about is no longer here",
+  "mcaquests.message.target_gone": "Never mind - %s.",
+  "mcaquests.status.target_died": "%s has died",
+  "mcaquests.status.target_lost": "%s can no longer be found anywhere"
 }

@@ -42,7 +42,16 @@ public record FailureSpec(Optional<Integer> deadlineTicks,
                           boolean failOnGiverDeath,
                           int failureHearts,
                           Optional<Integer> retryAfterTicks,
-                          boolean blockRetry) {
+                          boolean blockRetry,
+                          boolean failOnTargetLost) {
+
+    /** The pre-{@code fail_on_target_lost} shape, so code that builds a spec directly keeps compiling. */
+    public FailureSpec(Optional<Integer> deadlineTicks, Optional<Integer> deadlineTimeOfDay,
+                       Optional<WeatherCondition.Weather> requireWeather, boolean failOnGiverDeath,
+                       int failureHearts, Optional<Integer> retryAfterTicks, boolean blockRetry) {
+        this(deadlineTicks, deadlineTimeOfDay, requireWeather, failOnGiverDeath, failureHearts,
+                retryAfterTicks, blockRetry, false);
+    }
 
     private static final long DAY_LENGTH = 24000L;
 
@@ -53,13 +62,16 @@ public record FailureSpec(Optional<Integer> deadlineTicks,
             Codec.BOOL.optionalFieldOf("fail_on_giver_death", false).forGetter(FailureSpec::failOnGiverDeath),
             Codec.INT.optionalFieldOf("failure_hearts", 0).forGetter(FailureSpec::failureHearts),
             ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("retry_after").forGetter(FailureSpec::retryAfterTicks),
-            Codec.BOOL.optionalFieldOf("block_retry", false).forGetter(FailureSpec::blockRetry)
+            Codec.BOOL.optionalFieldOf("block_retry", false).forGetter(FailureSpec::blockRetry),
+            // Default false: 1.4.0's contract is that a quest you cannot currently play is suspended, not
+            // taken away. A pack that would rather close the story than leave it open says so here.
+            Codec.BOOL.optionalFieldOf("fail_on_target_lost", false).forGetter(FailureSpec::failOnTargetLost)
     ).apply(instance, FailureSpec::new));
 
     /** Whether this spec declares at least one trigger; a spec with none can never fire (a datapack error). */
     public boolean hasTrigger() {
         return deadlineTicks.isPresent() || deadlineTimeOfDay.isPresent()
-                || requireWeather.isPresent() || failOnGiverDeath;
+                || requireWeather.isPresent() || failOnGiverDeath || failOnTargetLost;
     }
 
     /** Whether a time-based deadline ({@code deadline_ticks} or {@code deadline_time}) is configured. */

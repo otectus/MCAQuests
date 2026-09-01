@@ -81,6 +81,34 @@ public interface QuestObjective {
     }
 
     /**
+     * Why this objective cannot be <em>offered</em> right now, if it cannot — because the thing it names
+     * does not exist, or cannot be found.
+     *
+     * <p>Three questions, deliberately kept apart. {@link #isTriviallySatisfied} asks "would this already
+     * be done?" and stops a quest being handed back for the reward the second it is accepted.
+     * {@link #unavailableReason} asks "can I read the state this is about right now?" and suspends an
+     * <em>accepted</em> quest without failing it. This one asks "is there anybody, or anywhere, for this
+     * to be about at all?" — and its answer decides whether the quest is ever shown.
+     *
+     * <p>It exists because there was no such check. A quest could be gated on "does this villager have a
+     * sibling in this village?" and then hand its objective a completely different sibling, chosen with no
+     * status filter at all; and because MCA leaves the dead on a village's resident roll forever, the gate
+     * counted them. Players were asked to deliver letters to brothers who had died. Checked by
+     * {@code OfferFilters} for every objective of every otherwise-eligible quest, and again at accept
+     * time, because the world can change between the menu opening and the button being clicked.
+     *
+     * <p>Implementations must be cheap and side-effect free, and must read through the pass's shared
+     * {@code McaVillagerSnapshot} rather than querying MCA per quest — this runs last in the filter chain
+     * precisely because it is the most expensive question asked.
+     *
+     * <p>Defaults to empty (offerable), so existing objective types — including those registered by
+     * add-ons — are unaffected and keep compiling.
+     */
+    default java.util.Optional<Component> unofferableReason(QuestContext context) {
+        return java.util.Optional.empty();
+    }
+
+    /**
      * Why this objective cannot be evaluated <em>right now</em>, if it cannot — the reason shown to the
      * player in place of its progress line.
      *

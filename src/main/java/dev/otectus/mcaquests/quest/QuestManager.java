@@ -27,12 +27,14 @@ import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ItemDeliveryObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
+import dev.otectus.mcaquests.quest.objective.ObjectiveSupport;
 import dev.otectus.mcaquests.quest.objective.TownsteadObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.objective.VillagerTargeted;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.quest.situation.DynamicOfferSource;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
+import dev.otectus.mcaquests.quest.situation.SituationFocus;
 import dev.otectus.mcaquests.quest.situation.SituationIds;
 import dev.otectus.mcaquests.quest.situation.SituationManager;
 import dev.otectus.mcaquests.quest.situation.SituationOffer;
@@ -277,6 +279,19 @@ public final class QuestManager {
         if (!eligibleOffers(player, villager, data).contains(def)) {
             return false;
         }
+        // ...and re-ask, at this exact moment, whether the villager this quest names still exists. The
+        // offer gate answered that when the menu was built; a relative can die, or the situation's focal
+        // villager can be cured, between the menu opening and the button being clicked. Refusing here is
+        // what stops a phantom being bound into the objective's progress permanently.
+        Optional<Component> unresolvable = OfferFilters.unofferableComponent(
+                new QuestContext(player, villager, data, def.id()), def);
+        if (unresolvable.isPresent()) {
+            if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+                player.sendSystemMessage(Component.translatable("mcaquests.message.target_gone",
+                        unresolvable.get()));
+            }
+            return false;
+        }
         if (data.activeCount() >= McaQuestsConfig.COMMON.maxActiveQuestsPerPlayer.get()
                 || data.byVillager(villagerUuid).size() >= McaQuestsConfig.COMMON.maxActiveQuestsPerVillager.get()) {
             return false;
@@ -420,11 +435,20 @@ public final class QuestManager {
                 continue;
             }
             VillagerTarget selector = targeted.targetSelector();
-            if (selector.mode() != VillagerTarget.Mode.FAMILY) {
-                continue;
+            switch (selector.mode()) {
+                // Binds the relative who satisfies the target's own require, not merely the first entry
+                // in MCA's walk. Without the filter this wrote whatever came back — including a UUID with
+                // no body anywhere in the world — into the objective's progress, permanently.
+                case FAMILY -> selector.selectRelative(villager, level)
+                        .ifPresent(active.progress(i)::setTargetUuid);
+                // A situation offer's focal villager is fixed the moment the quest is accepted, so a
+                // second infection opening later cannot silently re-point a quest already in progress.
+                case SITUATION_FOCUS -> SituationFocus
+                        .focalVillager(level.getServer(), active.situationInstance().orElse(null))
+                        .ifPresent(active.progress(i)::setTargetUuid);
+                default -> {
+                }
             }
-            McaCompat.findGiverRelative(level, villager, selector.relation().orElse("any"))
-                    .ifPresent(active.progress(i)::setTargetUuid);
         }
         freezeTownsteadBaselines(player, def, active, level);
     }
@@ -824,6 +848,28 @@ public final class QuestManager {
     }
 
     /** True when any objective of this quest currently reports itself unavailable. */
+    /**
+     * True when an objective of this quest had bound a villager and that villager is now gone for good.
+     *
+     * <p>Distinct from {@link #isSuspended}: every lost target is also a suspension, but most suspensions
+     * are temporary (a mod uninstalled, a chunk unloaded) and recover on their own. Only a pack that set
+     * {@code failure.fail_on_target_lost} asks for this to end the quest instead of pausing it.
+     */
+    public static boolean hasLostBoundTarget(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        List<QuestObjective> objectives = def.objectives();
+        for (int i = 0; i < objectives.size(); i++) {
+            if (objectives.get(i) instanceof VillagerTargeted targeted
+                    && ObjectiveSupport.boundTargetLost(targeted.targetSelector(), active,
+                            active.progress(i), level).isPresent()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static boolean isSuspended(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
         return suspensionReason(player, def, active).isPresent();
     }
@@ -1000,47 +1046,18 @@ public final class QuestManager {
     }
 
     static List<QuestDefinition> eligibleOffers(ServerPlayer player, Entity villager, PlayerQuestData data) {
-        long now = ((ServerLevel) player.level()).getGameTime();
-        ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
-        boolean adult = McaCompat.isAdult(villager);
-        int hearts = McaCompat.getHearts(player, villager);
-        UUID villagerUuid = villager.getUUID();
-        ProfessionMatchingMode mode = McaQuestsConfig.COMMON.professionMatchingMode.get();
-        // One MCA snapshot for the whole pass: villager state is read once and reused by every
-        // MCA-aware condition across all candidate quests (Phase 1 §3).
-        McaVillagerSnapshot mcaSnapshot = new McaVillagerSnapshot(player, villager);
+        // One pass object for the whole sweep: the giver's profession, age, hearts and MCA snapshot are
+        // read once and reused by every filter across every candidate quest (Phase 1 section 3).
+        OfferFilters.Pass pass = OfferFilters.Pass.of(player, villager, data);
         List<QuestDefinition> filtered = QuestRegistry.all().stream()
-                .filter(QuestDefinition::enabled)
-                .filter(def -> def.giver().isGeneric()
-                        || ProfessionMatcher.matchesAny(def.giver().professions(), profession, mode))
-                .filter(def -> !def.giver().adultOnly() || adult)
-                .filter(def -> def.giver().acceptsHearts(hearts))
-                .filter(def -> !data.hasActive(def.id(), villagerUuid))
-                .filter(def -> !data.history().onCooldown(def.id(), villagerUuid, now))
-                .filter(def -> def.repeat().type() != RepeatRule.RepeatType.ONCE
-                        || onceCompletionCount(data, def, villagerUuid) == 0)
-                .filter(def -> !completedThisPeriod(player, data, def, villagerUuid))
-                .filter(def -> TownsteadContentGate.allowsQuest(def.id(), def.category(),
-                        def.offerGroup()))
-                // effectiveConditions() folds chain prerequisites into the condition gate, so a later
-                // stage can never be offered before its prerequisites are completed.
-                .filter(def -> def.effectiveConditions()
-                        .map(condition -> condition.test(
-                                new QuestContext(player, villager, data, def.id(), mcaSnapshot)))
-                        .orElse(true))
-                // Never offer a quest that is already done. An escort whose villager is standing at the
-                // destination, or a reach_location the player is already inside, would otherwise be
-                // accepted and handed straight back for the full reward. Deliberately last in the chain:
-                // it is the most expensive filter (it resolves anchors and villager targets), so it only
-                // runs on quests that are eligible in every other respect.
-                .filter(def -> def.objectives().stream().noneMatch(objective -> objective.isTriviallySatisfied(
-                        new QuestContext(player, villager, data, def.id(), mcaSnapshot))))
+                .filter(def -> OfferFilters.passes(pass, def))
                 .sorted(Comparator.comparing(def -> def.id().toString()))
                 .toList();
         // Static quests first, then any open situations this villager can surface (0.8.0). Situation
-        // offers compete in the same selection/shaping pipeline below.
+        // offers compete in the same selection/shaping pipeline below, and since 1.4.3 they pass through
+        // the same filter chain rather than being appended past it.
         List<QuestDefinition> eligible = new ArrayList<>(collapseChainsToFurthestStage(filtered));
-        eligible.addAll(DynamicOfferSource.collect(player, villager, data, profession, adult, hearts));
+        eligible.addAll(DynamicOfferSource.collect(pass));
         return eligible;
     }
 
@@ -1188,7 +1205,7 @@ public final class QuestManager {
      * instead of by a token, and the player is never permanently locked out of a seasonal quest because
      * Townstead was uninstalled for an evening.
      */
-    private static boolean completedThisPeriod(ServerPlayer player, PlayerQuestData data,
+    static boolean completedThisPeriod(ServerPlayer player, PlayerQuestData data,
                                                QuestDefinition def, UUID villagerUuid) {
         if (!def.repeat().isPeriodic()) {
             return false;
@@ -1199,7 +1216,7 @@ public final class QuestManager {
     }
 
     /** ONCE-quest completion count: per-villager for chain stages (1:1 arcs), global for standalone quests. */
-    private static int onceCompletionCount(PlayerQuestData data, QuestDefinition def, UUID villagerUuid) {
+    static int onceCompletionCount(PlayerQuestData data, QuestDefinition def, UUID villagerUuid) {
         return def.chain().isPresent()
                 ? data.history().completionCountByGiver(def.id(), villagerUuid)
                 : data.history().completionCount(def.id());
@@ -1481,11 +1498,17 @@ public final class QuestManager {
     }
 
     /** Compact offer status for one quest at one villager (shared by both debug commands). */
+    /**
+     * Why a quest is or is not on this villager's menu, for {@code /mcaquests debug quest}.
+     *
+     * <p>Everything past the pool membership checks is answered by {@link OfferFilters#explain}, the same
+     * chain the menu itself runs. It used to be answered by a private copy of that chain, which is exactly
+     * the kind of duplication that drifts: the copy never learned about the trivially-satisfied check, so
+     * the debug command would report a quest as eligible that the menu was quietly withholding.
+     */
     private static String offerStatus(ServerPlayer player, Entity villager, PlayerQuestData data, QuestDefinition def,
                                       List<QuestDefinition> eligible, List<QuestDefinition> chosen) {
-        UUID villagerUuid = villager.getUUID();
-        long now = ((ServerLevel) player.level()).getGameTime();
-        if (data.hasActive(def.id(), villagerUuid)) {
+        if (data.hasActive(def.id(), villager.getUUID())) {
             return "ACTIVE (accepted from this villager)";
         }
         if (chosen.contains(def)) {
@@ -1494,50 +1517,16 @@ public final class QuestManager {
         if (eligible.contains(def)) {
             return "ELIGIBLE (in the pool, not drawn this slot/day)";
         }
-        if (!def.enabled()) {
-            return "DISABLED";
-        }
-        if (def.repeat().type() == RepeatRule.RepeatType.ONCE && onceCompletionCount(data, def, villagerUuid) > 0) {
-            return "COMPLETED (with this villager)";
-        }
-        if (data.history().onCooldown(def.id(), villagerUuid, now)) {
-            return "ON_COOLDOWN";
-        }
-        if (completedThisPeriod(player, data, def, villagerUuid)) {
-            return "COMPLETED (this " + def.repeat().period().map(p -> p.id()).orElse("period") + ")";
-        }
-        if (passesIndividualFilters(player, villager, data, def)) {
+        OfferFilters.Result result = OfferFilters.explain(OfferFilters.Pass.of(player, villager, data), def);
+        if (result.passes()) {
+            // It passed every per-quest filter yet is not in the pool, so the chain collapse dropped it.
             String by = def.chain().flatMap(c -> eligible.stream()
                     .filter(e -> e.chain()
                             .map(ec -> ec.chain().equals(c.chain()) && ec.stage() > c.stage()).orElse(false))
                     .map(e -> e.id().getPath()).findFirst()).orElse("a later stage");
             return "HIDDEN/SUPERSEDED (by " + by + ")";
         }
-        return "LOCKED (prerequisite or condition unmet)";
-    }
-
-    /** Whether a quest passes every per-quest offer filter — everything {@link #eligibleOffers} checks bar the chain collapse. */
-    private static boolean passesIndividualFilters(ServerPlayer player, Entity villager, PlayerQuestData data,
-                                                   QuestDefinition def) {
-        UUID villagerUuid = villager.getUUID();
-        long now = ((ServerLevel) player.level()).getGameTime();
-        ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
-        if (!def.enabled()
-                || !(def.giver().isGeneric()
-                        || ProfessionMatcher.matchesAny(def.giver().professions(), profession, profMode()))
-                || (def.giver().adultOnly() && !McaCompat.isAdult(villager))
-                || !def.giver().acceptsHearts(McaCompat.getHearts(player, villager))
-                || data.hasActive(def.id(), villagerUuid)
-                || data.history().onCooldown(def.id(), villagerUuid, now)
-                || (def.repeat().type() == RepeatRule.RepeatType.ONCE
-                        && onceCompletionCount(data, def, villagerUuid) != 0)
-                || completedThisPeriod(player, data, def, villagerUuid)
-                || !TownsteadContentGate.allowsQuest(def.id(), def.category(), def.offerGroup())) {
-            return false;
-        }
-        McaVillagerSnapshot snapshot = new McaVillagerSnapshot(player, villager);
-        return def.effectiveConditions()
-                .map(c -> c.test(new QuestContext(player, villager, data, def.id(), snapshot))).orElse(true);
+        return result.reason();
     }
 
     private static Component line(String label, boolean ok) {

@@ -47,7 +47,8 @@
       "type": "mcaquests:escort_entity",
       "villager": {
         "mode": "family",
-        "relation": "child"
+        "relation": "child",
+        "require": "nearby"
       },
       "destination": {
         "anchor": "home_village"

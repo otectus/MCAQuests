@@ -42,7 +42,8 @@
       "type": "mcaquests:protect_entity",
       "villager": {
         "mode": "family",
-        "relation": "child"
+        "relation": "child",
+        "require": "nearby"
       },
       "duration_ticks": 2400,
       "require_near_player": true,

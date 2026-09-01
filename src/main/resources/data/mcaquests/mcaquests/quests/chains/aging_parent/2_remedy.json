@@ -38,7 +38,8 @@
       "type": "mcaquests:heal_entity",
       "villager": {
         "mode": "family",
-        "relation": "parent"
+        "relation": "parent",
+        "require": "nearby"
       },
       "item": "minecraft:golden_carrot",
       "below_health_fraction": 0.8,

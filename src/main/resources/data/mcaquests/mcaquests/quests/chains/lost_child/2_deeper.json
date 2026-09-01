@@ -43,7 +43,8 @@
       "type": "mcaquests:find_missing_relative",
       "relative": {
         "mode": "family",
-        "relation": "child"
+        "relation": "child",
+        "require": "missing"
       },
       "structure": {
         "structure_tag": "minecraft:mineshaft"
@@ -81,5 +82,10 @@
       "mcaquests:lost_child_3_homecoming",
       "mcaquests:lost_child_2b_cold_trail"
     ]
+  },
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "child",
+    "status": "missing"
   }
 }

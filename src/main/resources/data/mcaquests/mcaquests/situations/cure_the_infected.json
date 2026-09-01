@@ -52,8 +52,7 @@
       {
         "type": "mcaquests:cure_villager",
         "villager": {
-          "mode": "family",
-          "relation": "any"
+          "mode": "situation_focus"
         },
         "cure_item": {
           "item": "minecraft:golden_apple"

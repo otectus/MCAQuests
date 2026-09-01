@@ -43,7 +43,8 @@
       "type": "mcaquests:escort_entity",
       "villager": {
         "mode": "family",
-        "relation": "parent"
+        "relation": "parent",
+        "require": "nearby"
       },
       "destination": {
         "anchor": "bed"

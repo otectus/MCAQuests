@@ -18,6 +18,11 @@ public class QuestFailedEvent extends QuestEvent {
         TIME_WINDOW,
         /** A {@code failure.require_weather} weather condition stopped holding. */
         WEATHER,
+        /**
+         * The villager an objective had bound died or left the world for good, and the quest opted in with
+         * {@code failure.fail_on_target_lost}. Without that opt-in the quest suspends instead.
+         */
+        TARGET_LOST,
         /** A {@code protect_entity} objective's target died before the protection window elapsed. */
         PROTECT_TARGET_DIED,
         /** A staged {@code escort_entity} objective's escortee died after the escort began (player engaged). */

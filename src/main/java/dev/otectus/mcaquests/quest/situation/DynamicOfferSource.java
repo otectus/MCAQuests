@@ -5,15 +5,13 @@ import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.GiverSpec;
+import dev.otectus.mcaquests.quest.OfferFilters;
 import dev.otectus.mcaquests.quest.QuestDefinition;
-import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
-import dev.otectus.mcaquests.state.PlayerQuestData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -26,8 +24,19 @@ import java.util.UUID;
  * Feeds open situations into the quest offer pipeline as dynamic, time-limited offers (the "Living
  * Village" phase, 0.8.0). Called from {@code QuestManager.eligibleOffers}, it returns the synthetic
  * offer {@link QuestDefinition}s for every open {@link SituationInstance} in the interacted villager's
- * village that this villager is eligible to surface (scope + giver match). The offers then compete with
- * static quests through the existing selection/shaping pipeline.
+ * village that this villager is eligible to surface. The offers then compete with static quests through
+ * the existing selection/shaping pipeline.
+ *
+ * <p><b>Two gates, and they are different questions.</b> Whether this <em>instance</em> concerns this
+ * villager at all — scope, and that the player has not already taken it — is answered here, because it is
+ * about the situation. Everything else is answered by {@link OfferFilters}, exactly as it is for a static
+ * quest.
+ *
+ * <p>That split is new in 1.4.3 and it closes a real hole. Situation offers were appended to the pool
+ * <em>after</em> the static filter chain had run, so they skipped cooldowns, repeat rules, the
+ * trivially-satisfied check, the Townstead content gate and — once it existed — the check that the
+ * villager an objective names actually exists. {@code cure_the_infected} and {@code lost_survey_party}
+ * both reached players asking about a relative of the giver, with no gate of any kind.
  *
  * <p>The scope/giver predicates are split out as pure helpers so they are unit-testable without a server.
  */
@@ -37,28 +46,18 @@ public final class DynamicOfferSource {
     }
 
     /**
-     * Whether this offer's own condition gate lets this villager be the one who asks.
-     *
-     * <p>Evaluated against the candidate giver, under the situation's synthetic quest id so a condition
-     * that asks about quest history means the situation rather than nothing.
+     * The situation offers {@code pass}'s villager can currently surface, each already through the same
+     * filter chain a static quest passes.
      */
-    private static boolean offerConditionsPass(SituationDefinition def, ServerPlayer player,
-                                               Entity villager, PlayerQuestData data) {
-        return def.offer().conditions()
-                .map(condition -> condition.test(new QuestContext(player, villager, data,
-                        SituationIds.syntheticId(def.id()))))
-                .orElse(true);
-    }
-
-    public static List<QuestDefinition> collect(ServerPlayer player, Entity villager, PlayerQuestData data,
-                                                @Nullable ResourceLocation profession, boolean adult, int hearts) {
+    public static List<QuestDefinition> collect(OfferFilters.Pass pass) {
         if (!McaQuestsConfig.COMMON.enableSituations.get()) {
             return List.of();
         }
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = pass.player().getServer();
         if (server == null) {
             return List.of();
         }
+        Entity villager = pass.villager();
         OptionalInt villageId = McaCompat.getHomeVillageId(villager);
         if (villageId.isEmpty()) {
             return List.of();
@@ -68,9 +67,8 @@ public final class DynamicOfferSource {
             return List.of();
         }
 
-        UUID villagerUuid = villager.getUUID();
+        UUID villagerUuid = pass.villagerUuid();
         UUID villagerFamily = McaCompat.getFamilyRootId(villager).orElse(null);
-        ProfessionMatchingMode mode = McaQuestsConfig.COMMON.professionMatchingMode.get();
         int cap = McaQuestsConfig.COMMON.maxSituationOffersPerMenu.get();
 
         List<QuestDefinition> offers = new ArrayList<>();
@@ -79,27 +77,22 @@ public final class DynamicOfferSource {
                 break;
             }
             Optional<SituationDefinition> defOpt = SituationRegistry.get(instance.defId());
-            if (defOpt.isEmpty() || !defOpt.get().enabled()) {
+            if (defOpt.isEmpty()) {
                 continue;
             }
             SituationDefinition def = defOpt.get();
-            if (!scopeMatches(def.scope(), instance.villagerUuid().orElse(null), instance.familyRootUuid().orElse(null),
-                    villagerUuid, villagerFamily)) {
+            if (!scopeMatches(def.scope(), instance.villagerUuid().orElse(null),
+                    instance.familyRootUuid().orElse(null), villagerUuid, villagerFamily)) {
                 continue;
             }
-            if (!giverEligible(def.offer().giver(), profession, adult, hearts, mode)) {
+            // Every other question — enabled, giver, hearts, cooldown, repeat rule, conditions, already
+            // satisfied, and whether the villager it names exists — is the same question a static quest
+            // is asked, so it is asked by the same code.
+            QuestDefinition offer = def.toOfferQuestDefinition();
+            if (!OfferFilters.passes(pass, offer)) {
                 continue;
             }
-            // Situation offers are added to the pool after the static filter chain has run, so their
-            // conditions have to be tested here or they would never be tested at all.
-            if (!offerConditionsPass(def, player, villager, data)) {
-                continue;
-            }
-            // Don't re-offer one this player already accepted from this villager.
-            if (data.hasActive(def.syntheticId(), villagerUuid)) {
-                continue;
-            }
-            offers.add(def.toOfferQuestDefinition());
+            offers.add(offer);
         }
         return offers;
     }

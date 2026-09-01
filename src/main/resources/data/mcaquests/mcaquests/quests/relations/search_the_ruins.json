@@ -38,7 +38,8 @@
       "type": "mcaquests:find_missing_relative",
       "relative": {
         "mode": "family",
-        "relation": "sibling"
+        "relation": "sibling",
+        "require": "missing"
       },
       "structure": {
         "structure_tag": "minecraft:mineshaft"

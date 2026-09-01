@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.target;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.RelativeCandidate;
 import dev.otectus.mcaquests.compat.TownsteadTarget;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -44,9 +45,15 @@ public final class TownsteadTargetResolver {
                                                    @Nullable Entity giver, ServerLevel level) {
         return switch (target) {
             case GIVER, BOUND, RECIPIENT -> Optional.ofNullable(giver);
+            // "reachable", not the unfiltered walk: a Townstead reading taken from one of the two
+            // deceased parents MCA invents for every villager it spawns is not a reading of anybody.
+            // level.getEntity can still answer null for someone merely unloaded, and Optional.map on a
+            // null result is empty, which is the pause this caller already expects.
             case RELATED -> Optional.ofNullable(giver)
-                    .flatMap(g -> McaCompat.findGiverRelative(level, g, "any"))
-                    .map(level::getEntity);
+                    .flatMap(g -> McaCompat.findGiverRelative(level, g, "any",
+                            RelativeCandidate.DEFAULT_FAMILY_REQUIRE))
+                    .map(level::getEntity)
+                    .filter(McaCompat::isMcaVillager);
             case NEAREST -> McaCompat.nearestVillagerWithin(player, NEAREST_RADIUS);
             case VILLAGE_ANY -> Optional.empty();
         };

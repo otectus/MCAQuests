@@ -39,7 +39,8 @@
       "type": "mcaquests:deliver_to_villager",
       "recipient": {
         "mode": "family",
-        "relation": "parent"
+        "relation": "parent",
+        "require": "nearby"
       },
       "item": "minecraft:bread",
       "count": 6,
