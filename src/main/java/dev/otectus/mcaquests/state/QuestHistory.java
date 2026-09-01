@@ -20,9 +20,16 @@ import java.util.UUID;
  */
 public final class QuestHistory {
 
-    /** Terminal states a quest can reach, recorded so chain conditions can branch on them. */
+    /**
+     * States a quest can reach, recorded so chain conditions can branch on them.
+     *
+     * <p>{@code DECLINED} is not terminal in the way the others are — nothing was ever started, and the
+     * quest can be offered again — but it is recorded the same way so a pack can ask "did they turn this
+     * down?". It flows through the existing {@code outcomes} / {@code outcomes_by_giver} maps, whose keys
+     * already carry the outcome name, so the save format does not change.
+     */
     public enum Outcome {
-        COMPLETED, FAILED, ABANDONED
+        COMPLETED, FAILED, ABANDONED, DECLINED
     }
 
     private final Map<String, Long> cooldownUntil = new HashMap<>();

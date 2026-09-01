@@ -35,6 +35,8 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue offersPerVillager;
         public final ForgeConfigSpec.IntValue offerRefreshTicks;
         public final ForgeConfigSpec.IntValue defaultQuestCooldownTicks;
+        public final ForgeConfigSpec.IntValue declineCooldownTicks;
+        public final ForgeConfigSpec.BooleanValue declineRefillsSlot;
         public final ForgeConfigSpec.BooleanValue requireOriginalVillagerForTurnIn;
         public final ForgeConfigSpec.BooleanValue allowTurnInToSameProfessionIfOriginalMissing;
         public final ForgeConfigSpec.BooleanValue failQuestIfGiverDies;
@@ -137,10 +139,25 @@ public final class McaQuestsConfig {
                     .defineInRange("maxActiveQuestsPerVillager", 1, 1, 100);
             offersPerVillager = b.comment("How many quest offers a villager presents at once.")
                     .defineInRange("offersPerVillager", 3, 1, 10);
-            offerRefreshTicks = b.comment("Ticks before a villager's cached offers reroll (24000 = 1 MC day).")
+            offerRefreshTicks = b.comment(
+                    "Ticks a villager keeps the same set of offers before drawing a fresh one",
+                    "(24000 = 1 MC day). Counted on the monotonic game clock, so sleeping through a night",
+                    "does not reroll a villager's offers -- time has to actually pass.",
+                    "Reopening the menu inside this window shows exactly what it showed before: the same",
+                    "quests, the same numbers, the same dialogue.")
                     .defineInRange("offerRefreshTicks", 24000, 1, Integer.MAX_VALUE);
             defaultQuestCooldownTicks = b.comment("Default cooldown applied to quests that do not specify one.")
                     .defineInRange("defaultQuestCooldownTicks", 24000, 0, Integer.MAX_VALUE);
+            declineCooldownTicks = b.comment(
+                    "Ticks a quest stays out of a villager's offers after you decline it.",
+                    "0 (default) means the refusal lasts until that villager's offers next refresh, which",
+                    "is the gentler behaviour: turning something down should not lock it away for a week.",
+                    "Declining is never punitive -- no hearts, no reputation, no failure is recorded.")
+                    .defineInRange("declineCooldownTicks", 0, 0, Integer.MAX_VALUE);
+            declineRefillsSlot = b.comment(
+                    "Whether declining an offer immediately draws a replacement into that slot.",
+                    "The other offers never change either way; only the card you turned down is replaced.")
+                    .define("declineRefillsSlot", true);
             b.pop();
 
             b.push("turn_in");

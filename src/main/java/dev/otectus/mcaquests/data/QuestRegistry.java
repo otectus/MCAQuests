@@ -19,14 +19,27 @@ public final class QuestRegistry {
     private static volatile Map<ResourceLocation, QuestDefinition> quests = Map.of();
     private static volatile List<String> lastErrors = List.of();
     private static volatile List<String> lastWarnings = List.of();
+    /**
+     * Bumped on every reload, so anything holding a decision derived from the catalogue can tell whether
+     * that catalogue has changed underneath it. A remembered offer set is the first such thing: a quest it
+     * names may not exist any more, and re-checking every slot against the registry on every menu open
+     * would be the very per-open recomputation the offer session exists to avoid.
+     */
+    private static volatile int generation;
 
     private QuestRegistry() {
     }
 
     static void replaceAll(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors, List<String> warnings) {
         quests = Map.copyOf(loaded);
+        generation++;
         lastErrors = List.copyOf(errors);
         lastWarnings = List.copyOf(warnings);
+    }
+
+    /** How many times the catalogue has been replaced. Never reset; wraps harmlessly. */
+    public static int generation() {
+        return generation;
     }
 
     public static Collection<QuestDefinition> all() {

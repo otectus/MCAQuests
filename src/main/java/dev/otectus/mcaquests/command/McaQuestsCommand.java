@@ -27,6 +27,8 @@ import dev.otectus.mcaquests.quest.situation.SituationManager;
 import dev.otectus.mcaquests.quest.situation.SituationRegistry;
 import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.title.TitleService;
+import dev.otectus.mcaquests.quest.OfferSessionService;
+import dev.otectus.mcaquests.state.OfferSession;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.PlayerTitles;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -92,7 +94,11 @@ public final class McaQuestsCommand {
                                 .executes(McaQuestsCommand::debugMca))
                         .then(Commands.literal("quest")
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
-                                        .executes(McaQuestsCommand::debugQuest))))
+                                        .executes(McaQuestsCommand::debugQuest)))
+                        .then(Commands.literal("offers")
+                                .executes(McaQuestsCommand::debugOffers)
+                                .then(Commands.literal("reroll")
+                                        .executes(McaQuestsCommand::debugOffersReroll))))
                 .then(Commands.literal("project")
                         .then(Commands.literal("list")
                                 .requires(src -> src.hasPermission(2))
@@ -744,6 +750,82 @@ public final class McaQuestsCommand {
     private static int debugMca(CommandContext<CommandSourceStack> ctx) {
         String report = "MCA binding: " + McaBinding.describe();
         ctx.getSource().sendSuccess(() -> Component.literal(report), false);
+        return 1;
+    }
+
+    /**
+     * Prints the offer set the villager in front of you is currently holding for you.
+     *
+     * <p>The observability that would have made the decline bug a five-minute diagnosis instead of a
+     * report about "the story changing": it shows what was drawn, when, how long until it rerolls, and
+     * what you have already turned down.
+     */
+    private static int debugOffers(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Entity target = nearestMcaVillager(player, 10.0D);
+        if (target == null) {
+            ctx.getSource().sendFailure(Component.literal("No MCA villager within 10 blocks."));
+            return 0;
+        }
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null) {
+            ctx.getSource().sendFailure(Component.literal("No quest data for this player."));
+            return 0;
+        }
+        long now = player.level().getGameTime();
+        int refreshTicks = McaQuestsConfig.COMMON.offerRefreshTicks.get();
+        // Asking for the offers is what draws or revalidates them, so this reports the real menu rather
+        // than a snapshot that could differ from what the player would see.
+        List<OfferSessionService.Offer> offers = OfferSessionService.currentOffers(player, target, data);
+        OfferSession session = data.offers().get(target.getUUID());
+
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.literal("Offer session for "
+                + McaCompat.getVillagerDisplayName(target).getString() + ":"));
+        lines.add(Component.literal("  drawn at " + session.refreshedAtGameTime()
+                + " (game time now " + now + ")"));
+        lines.add(Component.literal("  rerolls in "
+                + Math.max(0L, session.refreshedAtGameTime() + refreshTicks - now)
+                + " ticks (offerRefreshTicks=" + refreshTicks + ")"));
+        lines.add(Component.literal("  pack generation " + session.packGeneration()
+                + ", seed " + session.seed()));
+        if (offers.isEmpty()) {
+            lines.add(Component.literal("  slots: (none)"));
+        } else {
+            for (int i = 0; i < offers.size(); i++) {
+                OfferSessionService.Offer offer = offers.get(i);
+                lines.add(Component.literal("  slot " + i + ": " + offer.slot().questId()
+                        + (offer.slot().frozenValues() == null ? "" : " [template values frozen]")
+                        + (offer.slot().voicedOffer() == null ? "" : " [dialogue voiced]")));
+            }
+        }
+        if (session.declinedView().isEmpty()) {
+            lines.add(Component.literal("  declined: (none)"));
+        } else {
+            session.declinedView().forEach((quest, until) -> lines.add(Component.literal(
+                    "  declined: " + quest + (until == 0L ? " (until this set rerolls)"
+                            : until <= now ? " (lapsed)" : " (" + (until - now) + " ticks left)"))));
+        }
+        lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+        return 1;
+    }
+
+    /** Throws away this villager's remembered offers so the next menu open draws a fresh set. */
+    private static int debugOffersReroll(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Entity target = nearestMcaVillager(player, 10.0D);
+        if (target == null) {
+            ctx.getSource().sendFailure(Component.literal("No MCA villager within 10 blocks."));
+            return 0;
+        }
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null) {
+            ctx.getSource().sendFailure(Component.literal("No quest data for this player."));
+            return 0;
+        }
+        OfferSessionService.forceReroll(data, target.getUUID());
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "Discarded this villager's offer set; it will be redrawn on the next open."), false);
         return 1;
     }
 

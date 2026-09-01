@@ -7,6 +7,7 @@ import dev.otectus.mcaquests.api.ExternalSignalObjective;
 import dev.otectus.mcaquests.api.QuestDialogueHooks;
 import dev.otectus.mcaquests.api.event.QuestAbandonedEvent;
 import dev.otectus.mcaquests.api.event.QuestAcceptedEvent;
+import dev.otectus.mcaquests.api.event.QuestDeclinedEvent;
 import dev.otectus.mcaquests.api.event.QuestCompletedEvent;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.api.event.QuestReadyEvent;
@@ -48,6 +49,7 @@ import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
 import dev.otectus.mcaquests.quest.template.TemplateSpec;
 import dev.otectus.mcaquests.state.ActiveQuest;
+import dev.otectus.mcaquests.state.OfferSession;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcaquests.state.QuestHistory;
@@ -108,8 +110,9 @@ public final class QuestManager {
         }
         if (accept) {
             accept(player, villager, questId);
+        } else {
+            decline(player, villager, questId);
         }
-        // decline is a no-op for now (it simply does not create state); both refresh the menu.
         sendMenu(player, villager);
         syncLog(player);
     }
@@ -199,57 +202,47 @@ public final class QuestManager {
             send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
         }
-        List<QuestDefinition> eligible = eligibleOffers(player, villager, data);
-        if (eligible.isEmpty()) {
+        // The offers this villager is currently showing this player. Drawn once and remembered, so
+        // reopening the menu shows the same quests, the same numbers and the same words — and so a
+        // decline has somewhere to be recorded (0.8.0 recomputed all of it on every open, which is why
+        // declining an offer brought the very same three straight back).
+        List<OfferSessionService.Offer> offers = OfferSessionService.currentOffers(player, villager, data);
+        if (offers.isEmpty()) {
             send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
         }
-        // Deterministic, server-authoritative selection: priority tiers (datapack-controlled; chain
-        // continuations default above standalone) fill slots in turn, each tier weighted by the quest's
-        // context-sensitive effective weight. Same player/villager/day yields the same offers.
-        List<QuestDefinition> chosen = selectOffers(player, villager, data, eligible);
         List<QuestCard> cards = new ArrayList<>();
-        for (QuestDefinition def : chosen) {
-            buildOfferCard(player, villager, data, def).ifPresent(cards::add);
+        for (OfferSessionService.Offer offer : offers) {
+            cards.add(buildCard(player, villager, offer.definition(), offer.resolver(), null,
+                    QuestDefinition.OFFER, offer.dialogue(player, villager)));
         }
         send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, QuestMenuStatus.OFFER, cards));
-    }
-
-    /**
-     * Builds the offer card for {@code def}, concretizing a template quest from a fresh resolution (the
-     * values are deterministic per villager/day, so the accepted quest reproduces what was shown). A
-     * template that cannot resolve right now (empty pool, unparsable substitution) is skipped.
-     */
-    private static Optional<QuestCard> buildOfferCard(ServerPlayer player, Entity villager, PlayerQuestData data,
-                                                      QuestDefinition def) {
-        if (!def.isTemplate()) {
-            return Optional.of(buildCard(player, villager, def,
-                    PlaceholderResolver.forPlayer(player), null, QuestDefinition.OFFER));
-        }
-        TemplateSpec spec = def.template().get();
-        QuestContext context = new QuestContext(player, villager, data, def.id());
-        Optional<ResolvedTemplate> values = spec.resolveValues(context);
-        Optional<TemplateSpec.Concrete> concrete = values.flatMap(spec::toConcrete);
-        if (values.isEmpty() || concrete.isEmpty()) {
-            McaQuests.LOGGER.debug("[MCA: Quests] Skipping template offer '{}' — could not resolve its variables.", def.id());
-            return Optional.empty();
-        }
-        QuestDefinition resolved = def.withConcrete(concrete.get());
-        return Optional.of(buildCard(player, villager, resolved,
-                new PlaceholderResolver(values.get(), McaCompat.getPlayerName(player)), null, QuestDefinition.OFFER));
     }
 
     private static QuestCard buildCard(ServerPlayer player, @Nullable Entity villager, QuestDefinition def,
                                        PlaceholderResolver resolver, @Nullable ActiveQuest active,
                                        String dialogueState) {
+        // An add-on (e.g. MCA: Conversations) may voice this line in the villager's personality; falls back to
+        // the quest's own static dialogue text when none is registered (QuestDialogueHooks).
+        return buildCard(player, villager, def, resolver, active, dialogueState,
+                QuestDialogueHooks.resolve(player, villager, def, dialogueState,
+                        def.dialogueOr(dialogueState, def.title(resolver), resolver)));
+    }
+
+    /**
+     * As above, with the dialogue line already decided.
+     *
+     * <p>Offer cards take this path, because their line was voiced once when the offer was drawn. Resolving
+     * it per render is what made a villager re-tell all three of their offers every time the menu was
+     * reopened — the "the story changes but the quests do not" half of the reported decline bug.
+     */
+    private static QuestCard buildCard(ServerPlayer player, @Nullable Entity villager, QuestDefinition def,
+                                       PlaceholderResolver resolver, @Nullable ActiveQuest active,
+                                       String dialogueState, Component dialogue) {
         // Situation offers reuse the chain-label slot for a "village needs help" tag so the player can tell
         // an emergent, time-limited request from a standing offer (0.8.0).
         boolean situation = def.category().map(SituationOffer.CATEGORY::equals).orElse(false);
         Component label = situation ? Component.translatable("mcaquests.situation.card_tag") : chainLabel(def, resolver);
-        // An add-on (e.g. MCA: Conversations) may voice this line in the villager's personality; falls back to
-        // the quest's own static dialogue text when none is registered (QuestDialogueHooks).
-        Component dialogue = QuestDialogueHooks.resolve(player, villager, def, dialogueState,
-                def.dialogueOr(dialogueState, def.title(resolver), resolver));
         return new QuestCard(def.id(), def.title(resolver), label, dialogue,
                 objectiveLines(player, def, active), rewardLines(def, active));
     }
@@ -305,8 +298,15 @@ public final class QuestManager {
         PlaceholderResolver resolver = PlaceholderResolver.forPlayerName(mcaName);
         if (def.isTemplate()) {
             TemplateSpec spec = def.template().get();
-            QuestContext context = new QuestContext(player, villager, data, def.id());
-            Optional<ResolvedTemplate> values = spec.resolveValues(context);
+            // Prefer the values the player was actually shown. This used to re-resolve from scratch and
+            // rely on the resolution being deterministic per world day — which stops being true the moment
+            // the day ticks over between the menu opening and Accept being clicked, at which point the
+            // quest quietly became a different quest with different numbers.
+            Optional<ResolvedTemplate> values = OfferSessionService
+                    .slotFor(data, villagerUuid, questId)
+                    .map(OfferSession.Slot::frozenValues)
+                    .filter(java.util.Objects::nonNull)
+                    .or(() -> spec.resolveValues(new QuestContext(player, villager, data, def.id())));
             Optional<TemplateSpec.Concrete> concrete = values.flatMap(spec::toConcrete);
             if (values.isEmpty() || concrete.isEmpty()) {
                 return false; // pool empty or substitution failed — cannot accept this template now
@@ -354,6 +354,54 @@ public final class QuestManager {
             player.sendSystemMessage(QuestDialogueHooks.resolve(player, villager, accepted, QuestDefinition.ACCEPT,
                     acceptLine));
         }
+        return true;
+    }
+
+    /**
+     * Turns an offer down.
+     *
+     * <p>Until 1.4.3 this did nothing at all. The client sent a real decision and the server dropped it,
+     * then re-rendered a menu that was recomputed from a seed nothing about the refusal had changed — so
+     * the same three quests came straight back, and the reporter watched a villager re-voice all three
+     * offers while refusing to withdraw any of them.
+     *
+     * <p>What it does now, in order:
+     *
+     * <ol>
+     *   <li>Checks the quest is actually in this villager's offer set for this player. A client can only
+     *   decline something it was genuinely offered, exactly as {@code accept} re-validates its id.</li>
+     *   <li>Records the refusal and refills that one slot — never the others.</li>
+     *   <li>Records {@link QuestHistory.Outcome#DECLINED}, so a pack can offer the gentler version next
+     *   time through the {@code mcaquests:quest_declined} condition.</li>
+     *   <li>Says the {@code decline} line the quest's author wrote, which had been parsed and thrown away
+     *   since the dialogue format was introduced.</li>
+     *   <li>Posts {@link QuestDeclinedEvent}.</li>
+     * </ol>
+     *
+     * <p><b>Declining is free.</b> No hearts, no reputation, no failure, no effect on completion counts.
+     * The complaint was that it did nothing, not that it should hurt. Declining a situation offer refuses
+     * it for this player only and never resolves, fails or cancels the situation for anyone else.
+     */
+    public static boolean decline(ServerPlayer player, Entity villager, ResourceLocation questId) {
+        Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
+        Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(questId);
+        if (dataOpt.isEmpty() || defOpt.isEmpty()) {
+            return false;
+        }
+        PlayerQuestData data = dataOpt.get();
+        if (!OfferSessionService.decline(player, villager, data, questId)) {
+            return false; // not on this villager's menu — idempotent, and never trusts the client
+        }
+        QuestDefinition def = defOpt.get();
+        data.history().recordOutcome(def.id(), villager.getUUID(), QuestHistory.Outcome.DECLINED);
+        if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+            PlaceholderResolver resolver = PlaceholderResolver.forPlayer(player);
+            Component declineLine = def.dialogueOr(QuestDefinition.DECLINE,
+                    Component.translatable("mcaquests.message.quest_declined", def.title(resolver)), resolver);
+            player.sendSystemMessage(QuestDialogueHooks.resolve(player, villager, def,
+                    QuestDefinition.DECLINE, declineLine));
+        }
+        MinecraftForge.EVENT_BUS.post(new QuestDeclinedEvent(player, villager, def));
         return true;
     }
 
@@ -1048,7 +1096,11 @@ public final class QuestManager {
     static List<QuestDefinition> eligibleOffers(ServerPlayer player, Entity villager, PlayerQuestData data) {
         // One pass object for the whole sweep: the giver's profession, age, hearts and MCA snapshot are
         // read once and reused by every filter across every candidate quest (Phase 1 section 3).
-        OfferFilters.Pass pass = OfferFilters.Pass.of(player, villager, data);
+        return eligibleOffers(OfferFilters.Pass.of(player, villager, data));
+    }
+
+    /** As above, reusing a {@link OfferFilters.Pass} the caller has already built. */
+    static List<QuestDefinition> eligibleOffers(OfferFilters.Pass pass) {
         List<QuestDefinition> filtered = QuestRegistry.all().stream()
                 .filter(def -> OfferFilters.passes(pass, def))
                 .sorted(Comparator.comparing(def -> def.id().toString()))
@@ -1083,17 +1135,15 @@ public final class QuestManager {
      * into priority tiers ({@link #effectivePriority}: a chain continuation defaults above standalone, and a
      * datapack can override with {@code priority}); the highest tiers fill slots first, and within a tier
      * each quest is weighted by its context-sensitive {@link QuestDefinition#effectiveWeight}. One
-     * {@link McaVillagerSnapshot} is shared across the weight evaluations. Same player/villager/day → same
-     * offers.
+     * {@link McaVillagerSnapshot} is shared across the weight evaluations.
+     *
+     * <p>The seed is supplied rather than derived here, because <em>when</em> a villager's offers change is
+     * now {@link OfferSessionService}'s decision and not a side effect of the world day rolling over.
      */
-    private static List<QuestDefinition> selectOffers(ServerPlayer player, Entity villager, PlayerQuestData data,
-                                                      List<QuestDefinition> eligible) {
-        long worldDay = ((ServerLevel) player.level()).getDayTime() / 24000L;
+    static List<QuestDefinition> selectOffers(OfferFilters.Pass pass, List<QuestDefinition> eligible,
+                                              long seed) {
         int slots = McaQuestsConfig.COMMON.offersPerVillager.get();
-        long seed = offerSeed(player, villager.getUUID(), worldDay);
-        McaVillagerSnapshot snapshot = new McaVillagerSnapshot(player, villager);
-        ToIntFunction<QuestDefinition> weightFn = def ->
-                def.effectiveWeight(new QuestContext(player, villager, data, def.id(), snapshot));
+        ToIntFunction<QuestDefinition> weightFn = weightFn(pass);
         List<QuestDefinition> chosen = new ArrayList<>();
         List<Integer> tiers = eligible.stream().map(QuestManager::effectivePriority).distinct()
                 .sorted(Comparator.reverseOrder()).toList();
@@ -1106,6 +1156,11 @@ public final class QuestManager {
             chosen.addAll(pickDiverse(bucket, weightFn, seed, slots - chosen.size(), usedGroups));
         }
         return chosen;
+    }
+
+    /** A quest's context-sensitive weight in this pass, sharing the pass's one MCA snapshot. */
+    static ToIntFunction<QuestDefinition> weightFn(OfferFilters.Pass pass) {
+        return def -> def.effectiveWeight(pass.contextFor(def));
     }
 
     /**
@@ -1274,9 +1329,6 @@ public final class QuestManager {
         return lines;
     }
 
-    private static long offerSeed(ServerPlayer player, UUID villagerUuid, long worldDay) {
-        return player.getUUID().hashCode() * 31L + villagerUuid.hashCode() * 17L + worldDay * 1000003L;
-    }
 
     private static void send(ServerPlayer player, QuestMenuDataS2CPacket packet) {
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
@@ -1451,9 +1503,22 @@ public final class QuestManager {
                 + " (base " + def.weight() + ")"));
 
         List<QuestDefinition> eligible = eligibleOffers(player, villager, data);
-        List<QuestDefinition> chosen = selectOffers(player, villager, data, eligible);
+        List<QuestDefinition> chosen = offeredNow(player, villager, data);
         out.add(status(offerStatus(player, villager, data, def, eligible, chosen)));
         return out;
+    }
+
+    /**
+     * What this villager is offering the player right now, as definitions.
+     *
+     * <p>Reads the remembered offer set rather than re-running the draw. The debug command must answer
+     * about the menu the player can actually see; re-drawing would produce a different, hypothetical
+     * answer and quietly disagree with the game.
+     */
+    private static List<QuestDefinition> offeredNow(ServerPlayer player, Entity villager, PlayerQuestData data) {
+        return OfferSessionService.currentOffers(player, villager, data).stream()
+                .map(OfferSessionService.Offer::definition)
+                .toList();
     }
 
     /**
@@ -1482,7 +1547,7 @@ public final class QuestManager {
             return out;
         }
         List<QuestDefinition> eligible = eligibleOffers(player, villager, data);
-        List<QuestDefinition> chosen = selectOffers(player, villager, data, eligible);
+        List<QuestDefinition> chosen = offeredNow(player, villager, data);
         out.add(Component.literal("chains:"));
         String current = null;
         for (QuestDefinition def : chainQuests) {

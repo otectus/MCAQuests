@@ -34,6 +34,7 @@ import dev.otectus.mcaquests.quest.condition.leaf.PersonalityCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.PlayerLevelCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ProfessionCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestAbandonedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.QuestDeclinedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestFailedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.QuestNotCompletedCondition;
@@ -108,6 +109,7 @@ public final class ConditionTypes {
     public static final QuestConditionType<QuestNotCompletedCondition> QUEST_NOT_COMPLETED = register("quest_not_completed", QuestNotCompletedCondition.CODEC);
     public static final QuestConditionType<QuestFailedCondition> QUEST_FAILED = register("quest_failed", QuestFailedCondition.CODEC);
     public static final QuestConditionType<QuestAbandonedCondition> QUEST_ABANDONED = register("quest_abandoned", QuestAbandonedCondition.CODEC);
+    public static final QuestConditionType<QuestDeclinedCondition> QUEST_DECLINED = register("quest_declined", QuestDeclinedCondition.CODEC);
 
     // v0.3.0 — MCA-aware conditions (see docs/0.3.0-design.md). All read MCA state via the per-pass
     // McaVillagerSnapshot and fail safe to "not met" when MCA data is unavailable.

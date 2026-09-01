@@ -11,8 +11,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * All of a player's MCA quest state — active quests + history — held in a Forge capability and
- * serialised to the player's NBT (spec section 16). Server-authoritative; never trust a client copy.
+ * All of a player's MCA quest state — active quests, history, titles, progression stats and the offers
+ * each villager is currently showing them — held in a Forge capability and serialised to the player's NBT
+ * (spec section 16). Server-authoritative; never trust a client copy.
  */
 public final class PlayerQuestData {
 
@@ -20,6 +21,7 @@ public final class PlayerQuestData {
     private final QuestHistory history = new QuestHistory();
     private final PlayerTitles titles = new PlayerTitles();
     private final ProgressionStats stats = new ProgressionStats();
+    private final OfferSessions offers = new OfferSessions();
 
     public List<ActiveQuest> active() {
         return active;
@@ -35,6 +37,16 @@ public final class PlayerQuestData {
 
     public ProgressionStats stats() {
         return stats;
+    }
+
+    /**
+     * What each villager is currently offering this player, and what they have already turned down.
+     *
+     * <p>Lives with the player rather than the villager because an offer set is a fact about a pair: two
+     * players talking to the same villager see, and refuse, different things.
+     */
+    public OfferSessions offers() {
+        return offers;
     }
 
     public int activeCount() {
@@ -69,6 +81,7 @@ public final class PlayerQuestData {
         history.copyFrom(other.history);
         titles.copyFrom(other.titles);
         stats.copyFrom(other.stats);
+        offers.copyFrom(other.offers);
     }
 
     public CompoundTag save() {
@@ -81,6 +94,7 @@ public final class PlayerQuestData {
         tag.put("history", history.save());
         tag.put("titles", titles.save());
         tag.put("stats", stats.save());
+        tag.put("offers", offers.save());
         return tag;
     }
 
@@ -93,5 +107,6 @@ public final class PlayerQuestData {
         history.load(tag.getCompound("history"));
         titles.load(tag.getCompound("titles")); // absent on pre-0.7.0 saves -> empty
         stats.load(tag.getCompound("stats")); // absent on pre-1.0.0 saves -> empty
+        offers.load(tag.getCompound("offers")); // absent on pre-1.4.3 saves -> empty, so offers redraw
     }
 }
