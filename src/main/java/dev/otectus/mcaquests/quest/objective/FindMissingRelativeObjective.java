@@ -251,5 +251,6 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
                     + " one who is missing.");
         }
         structure.ifPresent(s -> s.validate(prefix, errors));
+        biome.ifPresent(b -> b.validate(prefix + " biome", errors));
     }
 }

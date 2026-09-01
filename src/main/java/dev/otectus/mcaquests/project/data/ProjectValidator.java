@@ -86,6 +86,13 @@ public final class ProjectValidator {
             errors.add(warn(id, "phase '" + key + "' has no objectives, so it completes instantly and is skipped"));
         }
 
+        // Project objectives are held to the same standard as quest objectives now. They had no
+        // validation hook at all, which mattered more here than on the quest side: an unfinishable quest
+        // strands one player, an unfinishable project phase strands a whole village.
+        for (int i = 0; i < phase.objectives().size(); i++) {
+            phase.objectives().get(i).validate(id, key, i, errors);
+        }
+
         for (SharedReward reward : phase.rewards()) {
             if (!allowCommands && reward.reward() instanceof CommandReward) {
                 errors.add(warn(id, "phase '" + key

@@ -2,7 +2,10 @@ package dev.otectus.mcaquests.project.objective;
 
 import dev.otectus.mcaquests.project.state.SharedObjectiveProgress;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.List;
 
 /**
  * A single shared requirement of a project phase (spec 0.4.0) — the community analogue of
@@ -58,5 +61,19 @@ public interface ProjectObjective {
      */
     default int contribute(ServerPlayer player, SharedObjectiveProgress progress, int effectiveCap) {
         return 0;
+    }
+
+    /**
+     * Datapack-load validation hook, mirroring {@code QuestObjective#validate}.
+     *
+     * <p>Project objectives had none, which made them strictly weaker than the quest objectives they sit
+     * beside: the same mistyped structure or empty item target that a quest catches at reload passed
+     * silently into a project, where it becomes a phase that can never complete and so a project that can
+     * never finish — for every player in the village at once, not just the one who accepted it.
+     *
+     * <p>Messages should be prefixed {@code "Project '<id>': phase '<key>' objective[<index>] "}. No-op by
+     * default, so existing objective types, including add-on ones, are unaffected.
+     */
+    default void validate(ResourceLocation projectId, String phaseKey, int index, List<String> errors) {
     }
 }

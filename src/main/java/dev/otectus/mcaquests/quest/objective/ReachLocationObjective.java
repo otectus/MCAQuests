@@ -44,6 +44,12 @@ public record ReachLocationObjective(LocationAnchor location, int radius,
                 .orElse(false);
     }
 
+    /** Never offered when this objective's destination is a place the giver does not have. */
+    @Override
+    public Optional<Component> unofferableReason(QuestContext context) {
+        return location.unofferableReason(context);
+    }
+
     @Override
     public QuestObjectiveType<?> type() {
         return ObjectiveTypes.REACH_LOCATION;

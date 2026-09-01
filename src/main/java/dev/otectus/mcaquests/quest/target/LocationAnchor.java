@@ -5,6 +5,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.compat.TownsteadBuildings;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
@@ -298,6 +299,23 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
                     dev.otectus.mcaquests.quest.TownsteadNames.building(buildingType.orElse("")),
                     effectiveMinimumLevel());
         };
+    }
+
+    /**
+     * Why an objective anchored here cannot be offered, if it cannot.
+     *
+     * <p>Deliberately narrow. Most anchors that fail to resolve fail <em>temporarily</em> — a chunk is
+     * unloaded, a building has not been surveyed yet — and withholding a quest for that would be worse
+     * than offering one the player has to travel to. The one case this reports is structural: a
+     * {@code home_village} anchor on a giver who has no home village is not a place that might turn up
+     * later, it is a place that does not exist, and "escort them to the village centre" from a villager
+     * who lives nowhere can never be finished.
+     */
+    public Optional<Component> unofferableReason(QuestContext context) {
+        if (type == Type.HOME_VILLAGE && !McaCompat.hasHomeVillage(context.villager())) {
+            return Optional.of(Component.translatable("mcaquests.unofferable.no_home_village"));
+        }
+        return Optional.empty();
     }
 
     /** Cross-field validation surfaced by the owning objective's validator. */

@@ -80,6 +80,12 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
                 .orElse(false);
     }
 
+    /** Never offered when this objective's destination is a place the giver does not have. */
+    @Override
+    public Optional<Component> unofferableReason(QuestContext context) {
+        return destination.unofferableReason(context);
+    }
+
     @Override
     public QuestObjectiveType<?> type() {
         return ObjectiveTypes.ESCORT_ENTITY;

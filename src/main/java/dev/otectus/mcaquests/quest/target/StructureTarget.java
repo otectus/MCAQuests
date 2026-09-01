@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -45,6 +46,31 @@ public record StructureTarget(Optional<ResourceLocation> structure, Optional<Tag
             // Unknown structure id in a dynamic registry — treat as "not inside" rather than crashing.
         }
         return false;
+    }
+
+    /**
+     * Whether this level's registries know the structure or tag this names.
+     *
+     * <p>An unknown id is not a runtime hiccup, it is a typo: {@code matches} answers "not inside" for it
+     * forever, so a quest built on one is permanently uncompletable and says nothing about why. The codec
+     * cannot catch it, because structures live in a datapack-driven dynamic registry that does not exist
+     * at parse time — the earliest anyone can ask is against a running level, which is what this is for.
+     *
+     * <p>Answers {@code true} when the registry cannot be read at all. "I could not check" must not be
+     * reported as "this is broken".
+     */
+    public boolean isKnown(ServerLevel level) {
+        try {
+            Registry<Structure> registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
+            if (structure.isPresent()
+                    && !registry.containsKey(ResourceKey.create(Registries.STRUCTURE, structure.get()))) {
+                return false;
+            }
+            // A tag with nothing in it is the same dead end as an unknown id, and is the likelier typo.
+            return tag.isEmpty() || registry.getTag(tag.get()).map(named -> named.size() > 0).orElse(false);
+        } catch (Throwable t) {
+            return true;
+        }
     }
 
     public Component describe() {

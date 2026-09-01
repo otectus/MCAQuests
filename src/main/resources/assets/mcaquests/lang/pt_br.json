@@ -2830,5 +2830,7 @@
   "mcaquests.status.target_died": "%s morreu",
   "mcaquests.status.target_lost": "%s nao pode mais ser encontrado em lugar nenhum",
   "mcaquests.message.quest_declined": "Talvez outra hora: %s",
-  "mcaquests.label.project.sponsors_of": "%s - %s de %s patrocinadores"
+  "mcaquests.label.project.sponsors_of": "%s - %s de %s patrocinadores",
+  "mcaquests.unofferable.unknown_place": "nao existe %s neste mundo",
+  "mcaquests.unofferable.no_home_village": "eles nao tem uma aldeia para voltar"
 }

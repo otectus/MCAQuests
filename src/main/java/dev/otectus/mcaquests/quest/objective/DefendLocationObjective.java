@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.objective;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.target.LocationAnchor;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.core.BlockPos;
@@ -31,6 +32,12 @@ public record DefendLocationObjective(LocationAnchor location, EntityTarget thre
             Codec.intRange(1, 64).optionalFieldOf("radius", 16).forGetter(DefendLocationObjective::radius),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 5).forGetter(DefendLocationObjective::count)
     ).apply(instance, DefendLocationObjective::new));
+
+    /** Never offered when this objective's destination is a place the giver does not have. */
+    @Override
+    public Optional<Component> unofferableReason(QuestContext context) {
+        return location.unofferableReason(context);
+    }
 
     @Override
     public QuestObjectiveType<?> type() {

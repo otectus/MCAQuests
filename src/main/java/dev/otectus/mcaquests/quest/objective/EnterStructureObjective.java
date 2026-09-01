@@ -3,7 +3,9 @@ package dev.otectus.mcaquests.quest.objective;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.StructureTarget;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import net.minecraft.network.chat.Component;
+import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,6 +22,20 @@ public record EnterStructureObjective(StructureTarget structure) implements Ques
     public static final Codec<EnterStructureObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             StructureTarget.MAP_CODEC.forGetter(EnterStructureObjective::structure)
     ).apply(instance, EnterStructureObjective::new));
+
+    /**
+     * Refuses the offer when this world's registries have never heard of the structure named.
+     *
+     * <p>{@code StructureTarget.matches} deliberately swallows an unknown id and answers "not inside",
+     * which is right at runtime and fatal at offer time: the quest can never be finished and says nothing
+     * about it. See {@code VisitBiomeObjective} for the same reasoning.
+     */
+    @Override
+    public Optional<Component> unofferableReason(QuestContext context) {
+        return structure.isKnown(context.level()) ? Optional.empty()
+                : Optional.of(Component.translatable("mcaquests.unofferable.unknown_place",
+                        structure.describe()));
+    }
 
     @Override
     public QuestObjectiveType<?> type() {

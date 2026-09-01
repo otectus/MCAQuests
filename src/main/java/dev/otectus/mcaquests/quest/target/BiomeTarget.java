@@ -4,13 +4,16 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -30,6 +33,36 @@ public record BiomeTarget(Optional<ResourceLocation> biome, Optional<TagKey<Biom
             return true;
         }
         return tag.isPresent() && holder.is(tag.get());
+    }
+
+    /**
+     * Whether this level's registries know the biome or tag this names. See
+     * {@code StructureTarget.isKnown}: an unknown id makes {@code matches} answer "no" forever, and
+     * "I could not check" is reported as fine rather than as broken.
+     */
+    public boolean isKnown(ServerLevel level) {
+        try {
+            Registry<Biome> registry = level.registryAccess().registryOrThrow(Registries.BIOME);
+            if (biome.isPresent()
+                    && !registry.containsKey(ResourceKey.create(Registries.BIOME, biome.get()))) {
+                return false;
+            }
+            return tag.isEmpty() || registry.getTag(tag.get()).map(named -> named.size() > 0).orElse(false);
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
+    /**
+     * Cross-field validation surfaced by the owning objective's validator.
+     *
+     * <p>{@code BiomeTarget} had none at all, so {@code {"biome": {}}} — neither field set — parsed
+     * cleanly into a target that can never match anything.
+     */
+    public void validate(String prefix, List<String> errors) {
+        if (biome.isEmpty() && tag.isEmpty()) {
+            errors.add(prefix + " must set either 'biome' or 'tag'.");
+        }
     }
 
     public Component describe() {

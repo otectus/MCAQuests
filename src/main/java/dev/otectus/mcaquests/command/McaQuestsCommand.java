@@ -630,6 +630,11 @@ public final class McaQuestsCommand {
                 QuestRegistry.all(),
                 dev.otectus.mcaquests.project.data.ProjectRegistry.all(),
                 dev.otectus.mcaquests.quest.situation.SituationRegistry.all()));
+        // Also here rather than at reload: a translation key can only be checked against a loaded
+        // language, which a dedicated server does not have.
+        warnings.addAll(dev.otectus.mcaquests.data.TranslationKeyValidator.collectWarnings(
+                QuestRegistry.all(),
+                dev.otectus.mcaquests.quest.situation.SituationRegistry.all()));
         if (errors.isEmpty() && warnings.isEmpty()) {
             ctx.getSource().sendSuccess(
                     () -> Component.literal("All " + QuestRegistry.size() + " loaded quest(s) are valid."), false);
