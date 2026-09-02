@@ -41,4 +41,15 @@ public final class ClientJournalData {
     public static List<JournalArchiveEntry> archive() {
         return archive;
     }
+
+    /**
+     * Drops the cached journal on logout, so the next world's journal is empty until its own reply
+     * arrives rather than briefly showing another world's reputations and titles.
+     */
+    public static void clear() {
+        globalTitles = List.of();
+        villages = List.of();
+        archive = List.of();
+        reputationPresent = false;
+    }
 }

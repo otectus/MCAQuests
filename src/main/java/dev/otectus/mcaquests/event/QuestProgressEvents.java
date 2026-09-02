@@ -317,6 +317,10 @@ public final class QuestProgressEvents {
     public static void onLoggedOutClearHighlights(PlayerEvent.PlayerLoggedOutEvent event) {
         HighlightService.forget(event.getEntity().getUUID());
         GuidanceService.forget(event.getEntity().getUUID());
+        // The two throttle stamps below are per player and were never cleared, so a long-running server
+        // kept one entry per player who had ever logged in.
+        lastTownsteadPoll.remove(event.getEntity().getUUID());
+        lastBankedRetryDay.remove(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
@@ -340,6 +344,10 @@ public final class QuestProgressEvents {
 
     @SubscribeEvent
     public static void onBlockBroken(BlockEvent.BreakEvent event) {
+        // A canceled interaction never happened, so it never counts (QuestEventHandlers.onEntityInteract).
+        if (event.isCanceled()) {
+            return;
+        }
         if (event.getPlayer() instanceof ServerPlayer player) {
             forActiveObjectives(player, BreakBlockObjective.class,
                     (objective, progress) -> {
@@ -590,7 +598,9 @@ public final class QuestProgressEvents {
     @Nullable
     private static QuestFailedEvent.Reason firedReason(ServerPlayer player, ActiveQuest active,
                                                        FailureSpec failure, long now) {
-        OptionalLong deadline = failure.deadlineGameTime(active.startGameTime());
+        ServerLevel level = (ServerLevel) player.level();
+        OptionalLong deadline = failure.deadlineGameTime(active.startGameTime(), active.startDayTime(),
+                now, level.getDayTime());
         // Time spent suspended does not count against the deadline (Townstead spec 10.1). The offset is
         // applied to "now" rather than to the start, because a deadline_time_of_day is anchored on the
         // time of day the quest was accepted -- moving the start would retarget it to a different hour
@@ -598,8 +608,7 @@ public final class QuestProgressEvents {
         if (deadline.isPresent() && active.effectiveNow(now) >= deadline.getAsLong()) {
             return failure.timeDeadlineReason();
         }
-        if (failure.requireWeather().isPresent()
-                && !failure.requireWeather().get().matches((ServerLevel) player.level())) {
+        if (failure.requireWeather().isPresent() && !failure.requireWeather().get().matches(level)) {
             return QuestFailedEvent.Reason.WEATHER;
         }
         return null;
@@ -683,6 +692,10 @@ public final class QuestProgressEvents {
 
     @SubscribeEvent
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+        // A canceled interaction never happened, so it never counts (QuestEventHandlers.onEntityInteract).
+        if (event.isCanceled()) {
+            return;
+        }
         if (event.getEntity() instanceof ServerPlayer player) {
             BlockState placed = event.getPlacedBlock();
             BlockPos pos = event.getPos();
@@ -778,6 +791,10 @@ public final class QuestProgressEvents {
      */
     @SubscribeEvent
     public static void onTalkToVillager(PlayerInteractEvent.EntityInteract event) {
+        // A canceled interaction never happened, so it never counts (QuestEventHandlers.onEntityInteract).
+        if (event.isCanceled()) {
+            return;
+        }
         if (event.getLevel().isClientSide() || event.getHand() != InteractionHand.MAIN_HAND) {
             return;
         }

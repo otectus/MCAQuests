@@ -38,9 +38,11 @@ import java.util.List;
  */
 public class QuestHudOverlay implements IGuiOverlay {
 
-    private static final int LINE_HEIGHT = 10;
+    private static final int LINE_HEIGHT = 12;
     /** A section heading's row, which is taller because it carries a 16px glyph. */
-    private static final int HEADING_HEIGHT = 12;
+    private static final int HEADING_HEIGHT = 15;
+    /** Blank space above the first row of a quest or project, so the tracker reads as blocks. */
+    private static final int GROUP_GAP = 4;
     private static final int PADDING = 2;
     /** The glyph gutter on a heading row. */
     private static final int ICON_GUTTER = 18;
@@ -73,17 +75,27 @@ public class QuestHudOverlay implements IGuiOverlay {
                 MutableComponent title = entry.title().copy()
                         .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
                         .append(entry.giverName().copy().withStyle(ChatFormatting.GRAY));
+                // "Ready" in words as well as in colour. The row was green and nothing else, which is
+                // no information at all to a player who cannot tell it from the objective green above
+                // it, and none whatsoever to one who is colour-blind.
+                if (entry.ready()) {
+                    title.append(Component.translatable("mcaquests.hud.ready_suffix")
+                            .withStyle(ChatFormatting.GRAY));
+                }
                 // A dot marks the quest the marker and the outline are about. Drawn rather than
                 // implied by position, because the tracker lists several and the followed one is not
                 // necessarily first.
+                int color = entry.ready() ? Palette.Hud.READY : Palette.Hud.TEXT;
+                // Every quest after the first opens with a gap, so its title, objective, guidance and
+                // deadline rows read as one block rather than as more of the quest above.
+                int gap = i == 0 ? 0 : GROUP_GAP;
                 lines.add(entry.tracked()
-                        ? Line.icon(title, entry.ready() ? Palette.Hud.READY : Palette.Hud.TEXT, 2,
-                                GuiTextures.ICON_DOT)
-                        : Line.of(title, entry.ready() ? Palette.Hud.READY : Palette.Hud.TEXT, 2));
+                        ? Line.icon(title, color, 2, GuiTextures.ICON_DOT, gap)
+                        : Line.of(title, color, 2, gap));
                 if (!entry.objectives().isEmpty()) {
                     // The counts used to be inside the sentence; now they are numbers, so the tracker
                     // adds them back as text and draws the bar the numbers were always describing.
-                    CardObjective first = entry.objectives().get(0);
+                    CardObjective first = firstIncomplete(entry.objectives());
                     if (first.unavailable() || first.required() <= 0) {
                         lines.add(Line.of(first.text(), Palette.Hud.OBJECTIVE, 6));
                     } else {
@@ -117,7 +129,7 @@ public class QuestHudOverlay implements IGuiOverlay {
                 MutableComponent header = project.title().copy()
                         .append(Component.literal(" · ").withStyle(ChatFormatting.GRAY))
                         .append(project.phaseLabel().copy().withStyle(ChatFormatting.GRAY));
-                lines.add(Line.of(header, Palette.Hud.TEXT, 2));
+                lines.add(Line.of(header, Palette.Hud.TEXT, 2, i == 0 ? 0 : GROUP_GAP));
                 ProjectObjectiveLine first = firstIncomplete(project);
                 if (first != null) {
                     // The counts were already here; the bar under them is what makes "nearly there"
@@ -162,6 +174,7 @@ public class QuestHudOverlay implements IGuiOverlay {
             // Right-anchored lines are mirrored rather than flattened: the indent is measured from the
             // right edge, so the heading/quest/objective hierarchy survives in all four corners.
             int textWidth = font.width(line.text());
+            int rowY = y + line.gapAbove();
             int x = right
                     ? rightEdge - line.indent() - textWidth
                     : originX + line.leftGutter() + line.indent();
@@ -171,14 +184,14 @@ public class QuestHudOverlay implements IGuiOverlay {
                 // ordinary row shares a 10px line with the text, so it is drawn at half scale and
                 // centred on the baseline rather than overlapping the row above.
                 if (line.heading()) {
-                    Panel.icon(graphics, line.icon(), iconX, y - 4);
+                    Panel.icon(graphics, line.icon(), iconX, rowY - 4);
                 } else {
-                    Panel.iconScaled(graphics, line.icon(), iconX + 4, y - 1, 0.5F);
+                    Panel.iconScaled(graphics, line.icon(), iconX + 4, rowY - 1, 0.5F);
                 }
             }
-            graphics.drawString(font, line.text(), x, y, line.color());
+            graphics.drawString(font, line.text(), x, rowY, line.color());
             if (line.barMax() > 0) {
-                Panel.bar(graphics, x, y + 9, Math.max(8, textWidth), line.barCurrent(), line.barMax(),
+                Panel.bar(graphics, x, rowY + LINE_HEIGHT - 1, Math.max(8, textWidth), line.barCurrent(), line.barMax(),
                         GuiTextures.BAR_GREEN);
             }
             y += line.height();
@@ -205,6 +218,22 @@ public class QuestHudOverlay implements IGuiOverlay {
                 .map(guidance -> GuidanceText.line(guidance.target(), player, minecraft.level));
     }
 
+    /**
+     * The first not-yet-satisfied objective of a quest, or the first one when they are all done.
+     *
+     * <p>The tracker showed objective zero whatever its state, so a three-part quest reported the part
+     * that was finished for as long as it was held — the projects below have always shown the next
+     * thing to do, and this is the same rule.
+     */
+    private static CardObjective firstIncomplete(List<CardObjective> objectives) {
+        for (CardObjective objective : objectives) {
+            if (!objective.satisfied()) {
+                return objective;
+            }
+        }
+        return objectives.get(0);
+    }
+
     /** The first not-yet-complete objective of a project (or the first objective if all are done). */
     private static ProjectObjectiveLine firstIncomplete(ProjectLogEntry project) {
         for (ProjectObjectiveLine line : project.objectives()) {
@@ -228,26 +257,31 @@ public class QuestHudOverlay implements IGuiOverlay {
      * @param heading whether this row is a section heading. Separate from {@code icon} because a row
      *                can now carry a glyph without being one — the followed quest is marked with a dot
      *                beside its title, and it is a quest, not a section
-     * @param barMax  a denominator to draw a progress bar under the row, or 0 for no bar
+     * @param barMax   a denominator to draw a progress bar under the row, or 0 for no bar
+     * @param gapAbove blank space reserved above the row, used to separate one quest from the next
      */
     private record Line(Component text, int color, int indent, GuiTextures.Sprite icon, boolean heading,
-                        int barCurrent, int barMax) {
+                        int barCurrent, int barMax, int gapAbove) {
 
         static Line of(Component text, int color, int indent) {
-            return new Line(text, color, indent, null, false, 0, 0);
+            return of(text, color, indent, 0);
+        }
+
+        static Line of(Component text, int color, int indent, int gapAbove) {
+            return new Line(text, color, indent, null, false, 0, 0, gapAbove);
         }
 
         static Line heading(Component text, int color, GuiTextures.Sprite icon) {
-            return new Line(text, color, 0, icon, true, 0, 0);
+            return new Line(text, color, 0, icon, true, 0, 0, 0);
         }
 
         /** A row with a glyph in the gutter that is not a section heading. */
-        static Line icon(Component text, int color, int indent, GuiTextures.Sprite icon) {
-            return new Line(text, color, indent, icon, false, 0, 0);
+        static Line icon(Component text, int color, int indent, GuiTextures.Sprite icon, int gapAbove) {
+            return new Line(text, color, indent, icon, false, 0, 0, gapAbove);
         }
 
         static Line withBar(Component text, int color, int indent, int current, int max) {
-            return new Line(text, color, indent, null, false, current, max);
+            return new Line(text, color, indent, null, false, current, max, 0);
         }
 
         /** Any row with a glyph reserves the gutter, so its text lines up with every other glyphed row. */
@@ -257,9 +291,11 @@ public class QuestHudOverlay implements IGuiOverlay {
 
         int height() {
             if (heading) {
-                return HEADING_HEIGHT;
+                return gapAbove + HEADING_HEIGHT;
             }
-            return barMax > 0 ? LINE_HEIGHT + 4 : LINE_HEIGHT;
+            // A bar row reserves the bar's own height as well as the text's, so the bar sits inside
+            // its row instead of running into the line below it.
+            return gapAbove + (barMax > 0 ? LINE_HEIGHT + Panel.barHeight() + 2 : LINE_HEIGHT);
         }
     }
 }

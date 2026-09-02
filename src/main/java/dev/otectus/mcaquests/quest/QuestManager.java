@@ -58,6 +58,7 @@ import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcaquests.state.QuestHistory;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -78,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToIntFunction;
@@ -216,17 +218,34 @@ public final class QuestManager {
                 return;
             }
             QuestDefinition def = active.resolve(defOpt.get());
-            boolean ready = isComplete(player, def, active) && canTurnInAt(active, def, villager);
+            boolean complete = isComplete(player, def, active);
+            boolean ready = complete && canTurnInAt(active, def, villager);
             QuestMenuStatus status = ready ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
-            QuestCard card = buildCard(player, villager, def, active.textResolver(player), active,
-                    ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS);
+            String state = ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS;
+            PlaceholderResolver resolver = active.textResolver(player);
+            Component dialogue = QuestDialogueHooks.resolve(player, villager, def, state,
+                    def.dialogueOr(state, def.title(resolver), resolver));
+            // A finished quest brought to a villager who cannot take it showed nothing but Abandon, and
+            // said nothing about where it should go. The status stays IN_PROGRESS — it genuinely is not
+            // turn-in-able here — and the card carries the answer.
+            if (complete && !ready) {
+                Optional<Component> hint = turnInHint(active, def);
+                if (hint.isPresent()) {
+                    dialogue = Component.empty().append(dialogue).append("\n").append(hint.get());
+                }
+            }
+            QuestCard card = buildCard(player, villager, def, resolver, active, state, dialogue);
             send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, status, List.of(card)));
             return;
         }
 
         // 2) Otherwise offer an eligible quest (if any and the player is under the active cap).
         if (data.activeCount() >= McaQuestsConfig.COMMON.maxActiveQuestsPerPlayer.get()) {
-            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
+            // Being full is the player's own doing, not the villager having nothing: the bare NO_QUESTS
+            // line read as "I do not need anything right now" and sent players round the village looking
+            // for a quest none of them could have given.
+            send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts,
+                    QuestMenuStatus.NO_QUESTS, statusCard("mcaquests.status.at_cap")));
             return;
         }
         // The offers this villager is currently showing this player. Drawn once and remembered, so
@@ -282,6 +301,11 @@ public final class QuestManager {
      */
     private static List<QuestCard> whyNothingIsOffered(ServerPlayer player, Entity villager,
                                                        PlayerQuestData data) {
+        // Everything this villager had was turned down. Said first, because the cooldown/locked search
+        // below would otherwise blame some unrelated quest for a menu the player emptied themselves.
+        if (data.offers().find(villager.getUUID()).map(OfferSession::hasUntilRefreshRefusals).orElse(false)) {
+            return statusCard("mcaquests.status.all_declined");
+        }
         OfferFilters.Pass pass = OfferFilters.Pass.of(player, villager, data);
         PlaceholderResolver resolver = PlaceholderResolver.forPlayer(player);
         QuestDefinition soonest = null;
@@ -339,6 +363,50 @@ public final class QuestManager {
                 .map(line -> List.of(new QuestCard(NO_QUESTS_CARD, Component.empty(), Component.empty(),
                         line, List.of(), List.of(), List.of(), "")))
                 .orElseGet(List::of);
+    }
+
+    /**
+     * A card carrying one flat explanatory line, for a state the villager is not really speaking about.
+     *
+     * <p>Same shape as {@link #sharedVoiceCard}: a synthetic id, no objectives and no rewards, rendered
+     * under NO_QUESTS, which adds no buttons.
+     */
+    private static List<QuestCard> statusCard(String translationKey) {
+        return List.of(new QuestCard(NO_QUESTS_CARD, Component.empty(), Component.empty(),
+                Component.translatable(translationKey), List.of(), List.of(), List.of(), ""));
+    }
+
+    /**
+     * Where a finished quest may be handed in, for a villager who cannot take it.
+     *
+     * <p>Empty for the two modes that can never reach this card: {@code any_villager} is turn-in-able
+     * wherever the player is standing, and {@code self_complete} never goes through a menu at all. Empty
+     * too for a {@code specified_profession} quest that names no profession — a datapack the validator
+     * now rejects, but one an existing save may still be holding.
+     */
+    private static Optional<Component> turnInHint(ActiveQuest active, QuestDefinition def) {
+        return switch (def.turnIn().mode()) {
+            case ORIGINAL_GIVER -> Optional.of(Component.translatable("mcaquests.hint.turn_in.original_giver",
+                    active.villagerName()));
+            case SAME_PROFESSION -> Optional.of(Component.translatable("mcaquests.hint.turn_in.same_profession"));
+            case SPECIFIED_PROFESSION -> def.turnIn().professions().isEmpty()
+                    ? Optional.empty()
+                    : Optional.of(Component.translatable("mcaquests.hint.turn_in.specified_profession",
+                            professionList(def.turnIn().professions())));
+            case ANY_VILLAGER, SELF_COMPLETE -> Optional.empty();
+        };
+    }
+
+    /** The professions of a {@code specified_profession} turn-in, named and comma-separated. */
+    private static Component professionList(List<ResourceLocation> professions) {
+        MutableComponent list = Component.empty();
+        for (int i = 0; i < professions.size(); i++) {
+            if (i > 0) {
+                list.append(", ");
+            }
+            list.append(DisplayNames.name(professions.get(i)));
+        }
+        return list;
     }
 
     /** Whether this villager is one of the givers {@code def} names — the cheap half of the gate. */
@@ -399,8 +467,21 @@ public final class QuestManager {
         PlayerQuestData data = dataOpt.get();
         UUID villagerUuid = villager.getUUID();
 
-        // Re-validate eligibility server-side; never trust the client's offered id.
-        if (!eligibleOffers(player, villager, data).contains(def)) {
+        // Re-validate server-side; never trust the client's offered id. Against this villager's actual
+        // offer set, not the eligible pool: a crafted packet could otherwise accept a quest that was
+        // declined, or that this villager never drew, simply because it would have been offerable.
+        if (OfferSessionService.slotFor(data, villagerUuid, questId).isEmpty()) {
+            return false;
+        }
+        // ...and re-run the offer gate at this exact moment. A session remembers its cards for up to
+        // offerRefreshTicks, and the world moves under them: a situation closes, a cooldown starts. An
+        // offer that has gone says so rather than leaving a button that silently does nothing.
+        OfferFilters.Result offerable = OfferFilters.explain(OfferFilters.Pass.of(player, villager, data), def);
+        if (!offerable.passes()) {
+            if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+                player.sendSystemMessage(Component.translatable("mcaquests.message.offer_gone",
+                        def.title(PlaceholderResolver.forPlayer(player))));
+            }
             return false;
         }
         // ...and re-ask, at this exact moment, whether the villager this quest names still exists. The
@@ -451,7 +532,11 @@ public final class QuestManager {
         // the quest's deadline lands on the situation's master deadline, and the link lets completion /
         // expiry resolve the shared situation (0.8.0). A situation that closed between offer and accept
         // can no longer be accepted.
-        long startTime = ((ServerLevel) player.level()).getGameTime();
+        long now = ((ServerLevel) player.level()).getGameTime();
+        long startTime = now;
+        // The world clock as well as game time: deadline_time is a time of day, so it has to be measured
+        // on the clock sleeping and /time set move (1.5.1).
+        long startDayTime = ((ServerLevel) player.level()).getDayTime();
         UUID situationLink = null;
         if (SituationIds.isSyntheticId(questId)) {
             MinecraftServer server = player.getServer();
@@ -461,14 +546,23 @@ public final class QuestManager {
                 return false;
             }
             startTime = instanceOpt.get().openGameTime();
+            // Wind the world clock back by the same amount, so an anchored quest's time-of-day deadline
+            // is the one the situation opened on rather than the one this player happened to accept on.
+            startDayTime -= now - startTime;
             situationLink = instanceOpt.get().instanceId();
         }
+
+        // Freeze the giver's village too: hearts, reputation and village-scoped titles must still land
+        // when the quest is finished somewhere the giver's chunk is not loaded.
+        OptionalInt villageId = dev.otectus.mcaquests.quest.reputation.QuestReputation.resolve(villager)
+                .map(community -> OptionalInt.of(community.villageId()))
+                .orElseGet(OptionalInt::empty);
 
         ActiveQuest active = ActiveQuest.create(questId, villagerUuid,
                 McaCompat.getVillagerDisplayName(villager),
                 McaCompat.getProfessionId(villager).orElse(null),
                 player.level().dimension().location(),
-                startTime,
+                startTime, OptionalLong.of(startDayTime), villageId,
                 accepted.objectives().size(), frozen, situationLink);
         freezeRandomizedRewards(player, accepted, active);
         bindVillagerTargets(player, villager, accepted, active);
@@ -709,6 +803,26 @@ public final class QuestManager {
         return true;
     }
 
+    /** What the quest knew about its giver, for the rewards that can still be granted without it. */
+    private static QuestReward.RewardContext rewardContext(ActiveQuest active, QuestDefinition def) {
+        return new QuestReward.RewardContext(active.villagerUuid(), active.villagerName(),
+                active.dimension(), active.villageId(), def.id());
+    }
+
+    /**
+     * Runs one reward's grant with its failures contained. The objective items are already consumed and
+     * {@code rewardClaimed} is already set by the time rewards run, so a reward that throws — an add-on's,
+     * most plausibly — used to strand the quest claimed but un-completable. The rest are still paid.
+     */
+    private static void grantSafely(QuestReward reward, QuestDefinition def, Runnable grant) {
+        try {
+            grant.run();
+        } catch (Throwable t) {
+            McaQuests.LOGGER.error("[MCA: Quests] reward {} of '{}' threw; continuing with the rest",
+                    reward.type().id(), def.id(), t);
+        }
+    }
+
     /** {@code currency} with the quest's difficulty band filled in when it declares none of its own. */
     private static CurrencyReward inheritDifficulty(CurrencyReward currency, QuestDefinition def) {
         return currency.difficulty().isPresent()
@@ -747,6 +861,7 @@ public final class QuestManager {
             }
             objective.consumeOnTurnIn(player, active.progress(i));
         }
+        QuestReward.RewardContext context = rewardContext(active, def);
         List<QuestReward> rewards = def.rewards();
         for (int i = 0; i < rewards.size(); i++) {
             QuestReward reward = rewards.get(i);
@@ -758,15 +873,15 @@ public final class QuestManager {
                 // guarded by the rewardClaimed flag above, so a retried turn-in packet pays nothing twice.
                 OptionalInt frozenAmount = active.frozenReward(i);
                 if (frozenAmount.isPresent()) {
-                    currency.grantAmount(player, frozenAmount.getAsInt());
+                    grantSafely(reward, def, () -> currency.grantAmount(player, frozenAmount.getAsInt()));
                     continue;
                 }
             }
-            reward.grant(player, grantVillager);
+            grantSafely(reward, def, () -> reward.grant(player, grantVillager, context));
         }
         for (QuestReward reward : def.rewards()) {
             if (reward instanceof HeartsReward) {
-                reward.grant(player, grantVillager);
+                grantSafely(reward, def, () -> reward.grant(player, grantVillager, context));
             }
         }
         grantQuestReputation(player, grantVillager, def, active, "complete");
@@ -837,12 +952,17 @@ public final class QuestManager {
     private static void grantQuestReputation(ServerPlayer player, @Nullable Entity grantVillager,
                                              QuestDefinition def, ActiveQuest active, String outcomeKey) {
         MinecraftServer server = player.getServer();
-        if (grantVillager == null || server == null || !(player.level() instanceof ServerLevel)) {
-            debugNoReputation(def, outcomeKey, "no giver entity or not a server level");
+        if (server == null || !(player.level() instanceof ServerLevel)) {
+            debugNoReputation(def, outcomeKey, "not a server level");
             return;
         }
+        // The giver is routinely unloaded when a quest completes in the field, which used to mean no
+        // reputation at all. Fall back to the village frozen at accept time, and to a resident scan for
+        // quests accepted before 1.5.1 froze one.
         java.util.Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community> community =
-                dev.otectus.mcaquests.quest.reputation.QuestReputation.resolve(grantVillager);
+                grantVillager != null
+                        ? dev.otectus.mcaquests.quest.reputation.QuestReputation.resolve(grantVillager)
+                        : active.community().or(() -> scanForCommunity(server, active));
         if (community.isEmpty()) {
             // No village resolves: nobody to have an opinion (§12.2). Worth a line, because from the
             // outside it is indistinguishable from the award simply not working.
@@ -897,9 +1017,11 @@ public final class QuestManager {
                                 def.id(), active.villagerUuid(), active.startGameTime(), outcomeKey))
                         .context("source_title", def.id().getPath())
                         .context("quest", def.id().toString())
-                        .subject(grantVillager.getUUID(),
-                                dev.otectus.mcaquests.compat.McaCompat.getVillagerDisplayName(grantVillager)
-                                        .getString(), "giver")
+                        .subject(active.villagerUuid(),
+                                grantVillager != null
+                                        ? dev.otectus.mcaquests.compat.McaCompat
+                                                .getVillagerDisplayName(grantVillager).getString()
+                                        : active.villagerName().getString(), "giver")
                         .build());
     }
 
@@ -1006,6 +1128,9 @@ public final class QuestManager {
         });
         releaseEscortMovement(player, def, active);
         data.remove(active);
+        // Tell the client now. The per-tick resync only runs for a player who still has active quests, so
+        // failing the last one left it sitting in the log and on the tracker until the next relog.
+        syncLog(player);
 
         TownsteadLifecycle.dispatch(player, active, resolvedGiver, TownsteadLifecycle.Phase.FAILED);
         MinecraftForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
@@ -1180,6 +1305,24 @@ public final class QuestManager {
         }
         ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, active.dimension()));
         return level != null ? level.getEntity(active.villagerUuid()) : null;
+    }
+
+    /**
+     * The community of a giver that is not loaded and whose quest predates the frozen village id: the
+     * only way left to find it is to ask which village lists that UUID as a resident. Reached once per
+     * such turn-in, never on a tick path.
+     */
+    private static Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community>
+            scanForCommunity(MinecraftServer server, ActiveQuest active) {
+        ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, active.dimension()));
+        if (level == null) {
+            return Optional.empty();
+        }
+        OptionalInt villageId = McaCompat.findVillageOfResident(level, active.villagerUuid());
+        return villageId.isPresent()
+                ? Optional.of(dev.otectus.mcaquests.quest.reputation.QuestReputation
+                        .inLevel(level, villageId.getAsInt()))
+                : Optional.empty();
     }
 
     /** The open situation instance behind a synthetic offer id, scoped to the villager's village (0.8.0). */
@@ -1615,6 +1758,9 @@ public final class QuestManager {
 
     /** Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker. */
     public static void syncLog(ServerPlayer player) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
         QuestCapabilities.get(player).ifPresent(data -> {
             List<QuestLogEntry> entries = new ArrayList<>();
             // Resolve the MCA name once, and only when there is at least one quest to render.
@@ -1623,7 +1769,8 @@ public final class QuestManager {
                 QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base -> {
                     QuestDefinition def = active.resolve(base);
                     java.util.OptionalLong deadline = def.failure()
-                            .map(failure -> failure.deadlineGameTime(active.startGameTime()))
+                            .map(failure -> failure.deadlineGameTime(active.startGameTime(),
+                                    active.startDayTime(), level.getGameTime(), level.getDayTime()))
                             .orElse(java.util.OptionalLong.empty());
                     PlaceholderResolver resolver = active.textResolver(mcaName);
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), def.title(resolver),

@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.title;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.event.TitleGrantedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.quest.reputation.QuestReputation;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.resources.ResourceLocation;
@@ -27,9 +28,26 @@ public final class TitleService {
     }
 
     public static boolean grant(ServerPlayer player, TitleScope scope, ResourceLocation title, @Nullable Entity giver) {
-        return scope == TitleScope.GLOBAL
-                ? grantGlobal(player, title)
-                : resolveVillage(player, giver).stream().anyMatch(id -> grantVillage(player, id, title));
+        return grant(player, scope, title, giver, Optional.empty());
+    }
+
+    /**
+     * As {@link #grant(ServerPlayer, TitleScope, ResourceLocation, Entity)}, falling back to
+     * {@code frozen} when the giver entity is not loaded — the normal case for a quest completed in the
+     * field, which used to drop the title silently.
+     */
+    public static boolean grant(ServerPlayer player, TitleScope scope, ResourceLocation title,
+                                @Nullable Entity giver, Optional<QuestReputation.Community> frozen) {
+        if (scope == TitleScope.GLOBAL) {
+            return grantGlobal(player, title);
+        }
+        OptionalInt resolved = resolveVillage(player, giver);
+        if (resolved.isPresent()) {
+            return grantVillage(player, resolved.getAsInt(), title);
+        }
+        return frozen
+                .map(community -> grantVillage(player, community.dimension(), community.villageId(), title))
+                .orElse(false);
     }
 
     public static boolean grantGlobal(ServerPlayer player, ResourceLocation title) {
@@ -42,11 +60,19 @@ public final class TitleService {
     }
 
     public static boolean grantVillage(ServerPlayer player, int villageId, ResourceLocation title) {
-        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
         // The village is keyed with the dimension the player is standing in — the only level a
         // Quests-resolved village id can refer to (ids are per-level in MCA).
-        boolean granted = data.map(d -> d.titles()
-                .grantVillage(player.level().dimension().location(), villageId, title)).orElse(false);
+        return grantVillage(player, player.level().dimension().location(), villageId, title);
+    }
+
+    /**
+     * Grants in a named dimension rather than the one the player happens to be standing in, for a quest
+     * whose village was frozen at accept time and completed somewhere else.
+     */
+    public static boolean grantVillage(ServerPlayer player, ResourceLocation dimension, int villageId,
+                                       ResourceLocation title) {
+        Optional<PlayerQuestData> data = QuestCapabilities.get(player);
+        boolean granted = data.map(d -> d.titles().grantVillage(dimension, villageId, title)).orElse(false);
         if (granted) {
             postGranted(player, title, TitleScope.VILLAGE, OptionalInt.of(villageId));
         }

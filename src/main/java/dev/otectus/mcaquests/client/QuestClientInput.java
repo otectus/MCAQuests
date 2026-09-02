@@ -20,11 +20,21 @@ public final class QuestClientInput {
     private QuestClientInput() {
     }
 
-    /** Drops the outlines and the marker so neither can survive into the next world we join. */
+    /**
+     * Drops every client-side cache so none of it can survive into the next world we join.
+     *
+     * <p>The outlines and the marker were already cleared here; the quest log, the project log and its
+     * per-villager menus, the journal and the FTB Quests editor ids were not, and each is keyed by
+     * something — a quest id, a villager UUID — that means something different on another server.
+     */
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientHighlightData.clear();
         ClientGuidanceData.clear();
+        ClientQuestData.clear();
+        ClientProjectData.clear();
+        ClientJournalData.clear();
+        ClientKnownIds.clear();
     }
 
     /**

@@ -12,7 +12,6 @@ import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.RequestJournalC2SPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
 import javax.annotation.Nullable;
@@ -70,16 +69,11 @@ public class JournalScreen extends McaQuestsScreen {
     }
 
     private final List<Row> rows = new ArrayList<>();
-    private final List<ScrolledButton> deedsButtons = new ArrayList<>();
 
     /** The data the current layout was built from, so {@link #tick} can notice the server's reply. */
     private List<JournalVillageEntry> renderedVillages = List.of();
     private List<Component> renderedTitles = List.of();
     private List<JournalArchiveEntry> renderedArchive = List.of();
-
-    /** A deeds link, remembered with its content-space y so scrolling can reposition it. */
-    private record ScrolledButton(Button button, int contentY) {
-    }
 
     public JournalScreen() {
         super(Component.translatable("mcaquests.screen.journal.title"));
@@ -121,7 +115,6 @@ public class JournalScreen extends McaQuestsScreen {
     /** Lays the whole page out in content space, and places the deeds links while doing it. */
     private void buildRows() {
         rows.clear();
-        deedsButtons.clear();
         renderedVillages = ClientJournalData.villages();
         renderedTitles = ClientJournalData.globalTitles();
         renderedArchive = ClientJournalData.archive();
@@ -190,8 +183,7 @@ public class JournalScreen extends McaQuestsScreen {
                         b -> openDeeds(row.deeds()));
                 link.setWidth(DEEDS_W);
                 link.setHeight(12);
-                addRenderableWidget(link);
-                deedsButtons.add(new ScrolledButton(link, y));
+                addScrolledWidget(link, y, 12);
             }
             y += row.height();
         }
@@ -222,12 +214,7 @@ public class JournalScreen extends McaQuestsScreen {
             return;
         }
 
-        // Hidden rather than clipped, like every other scrolled widget in this package: super.render
-        // draws widgets outside the scissor and an invisible one is also unclickable.
-        for (ScrolledButton scrolled : deedsButtons) {
-            scrolled.button().setY(view.screenY(scrolled.contentY()));
-            scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 12);
-        }
+        applyScrolledVisibility();
 
         beginContentClip(graphics);
         int y = 0;

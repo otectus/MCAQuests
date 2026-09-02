@@ -6,11 +6,14 @@ import dev.otectus.mcaquests.client.gui.Palette;
 import dev.otectus.mcaquests.client.gui.Panel;
 import dev.otectus.mcaquests.client.gui.Scrollbar;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,8 +53,26 @@ abstract class McaQuestsScreen extends Screen {
     /** Height of a tab above the window frame, for screens that have tabs. */
     protected static final int TAB_H = 22;
 
+    /** Content pixels one arrow-key press scrolls; the same step the mouse wheel takes. */
+    private static final int LINE_SCROLL = 12;
+
     protected final ScrollView view = new ScrollView();
     protected final Scrollbar scrollbar = new Scrollbar();
+
+    /**
+     * The widgets that live inside the scrolled content, each with the content-space y and height it
+     * was laid out at.
+     *
+     * <p>All four screens kept their own private list of exactly this shape and their own copy of the
+     * reposition-and-hide loop. Hoisting it is what lets the keyboard work here rather than four
+     * times: {@link #keyPressed} has to be able to unhide a widget below the fold before Tab can
+     * reach it, and put it back afterwards.
+     */
+    protected final List<ScrolledWidget> scrolledWidgets = new ArrayList<>();
+
+    /** A widget in the scrolled content, remembered with its content-space y so scrolling can move it. */
+    protected record ScrolledWidget(AbstractWidget widget, int contentY, int height) {
+    }
 
     /** Rebuilt on every {@code init}, so a resize recomputes rather than patches. */
     private PanelGeometry geometry = new PanelGeometry(0, 0, 0, 0);
@@ -72,6 +93,31 @@ abstract class McaQuestsScreen extends Screen {
     protected void init() {
         geometry = new PanelGeometry(this.width, this.height, tabStripHeight(), extraHeaderHeight());
         view.setViewport(contentTop(), contentBottom());
+        scrolledWidgets.clear();
+    }
+
+    /**
+     * Adds a widget that scrolls with the content. Positioning and hiding are then
+     * {@link #applyScrolledVisibility}'s job, so no screen has to remember to do both.
+     */
+    protected void addScrolledWidget(AbstractWidget widget, int contentY, int height) {
+        addRenderableWidget(widget);
+        scrolledWidgets.add(new ScrolledWidget(widget, contentY, height));
+    }
+
+    /**
+     * Moves every scrolled widget to where the current scroll puts it, and hides the ones that are
+     * not wholly inside the well.
+     *
+     * <p>Hidden rather than clipped: {@code super.render()} draws widgets outside our scissor and so
+     * cannot clip them, and {@code AbstractWidget.clicked} tests {@code visible}, so hiding doubles
+     * as blocking the click. Call it from {@code render} before {@code super.render}.
+     */
+    protected void applyScrolledVisibility() {
+        for (ScrolledWidget scrolled : scrolledWidgets) {
+            scrolled.widget().setY(view.screenY(scrolled.contentY()));
+            scrolled.widget().visible = view.isFullyVisible(scrolled.contentY(), scrolled.height());
+        }
     }
 
     // --- geometry ---------------------------------------------------------------------------
@@ -355,6 +401,58 @@ abstract class McaQuestsScreen extends Screen {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    /**
+     * The keyboard's half of scrolling, which the screens did not have at all: arrows, PageUp/PageDown
+     * and Home/End move the view, and Tab reaches the widgets below the fold.
+     *
+     * <p>Tab needs the two extra steps because a scrolled-away widget is {@code visible = false}, and
+     * vanilla's focus search skips those — so every screen's last Abandon button was unreachable
+     * without a mouse. The widgets are shown, vanilla is asked to move focus as it normally would, the
+     * view is scrolled to wherever focus landed, and the visibility rule is applied again.
+     *
+     * <p>Anything not handled here goes to {@code super}, so Escape still closes the screen and a
+     * focused widget still gets its own keys.
+     */
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        switch (keyCode) {
+            case GLFW.GLFW_KEY_UP -> view.scrollBy(-LINE_SCROLL);
+            case GLFW.GLFW_KEY_DOWN -> view.scrollBy(LINE_SCROLL);
+            case GLFW.GLFW_KEY_PAGE_UP -> view.scrollBy(-view.viewportHeight());
+            case GLFW.GLFW_KEY_PAGE_DOWN -> view.scrollBy(view.viewportHeight());
+            case GLFW.GLFW_KEY_HOME -> view.scrollBy(-view.maxScroll());
+            case GLFW.GLFW_KEY_END -> view.scrollBy(view.maxScroll());
+            case GLFW.GLFW_KEY_TAB -> {
+                return tabThroughScrolledWidgets(keyCode, scanCode, modifiers);
+            }
+            default -> {
+                return super.keyPressed(keyCode, scanCode, modifiers);
+            }
+        }
+        return true;
+    }
+
+    private boolean tabThroughScrolledWidgets(int keyCode, int scanCode, int modifiers) {
+        for (ScrolledWidget scrolled : scrolledWidgets) {
+            scrolled.widget().visible = true;
+        }
+        boolean handled = super.keyPressed(keyCode, scanCode, modifiers);
+        scrollFocusIntoView();
+        applyScrolledVisibility();
+        return handled;
+    }
+
+    /** Brings whatever now has focus into the well, when it is one of the scrolled widgets. */
+    private void scrollFocusIntoView() {
+        GuiEventListener focused = getFocused();
+        for (ScrolledWidget scrolled : scrolledWidgets) {
+            if (scrolled.widget() == focused) {
+                view.scrollIntoView(scrolled.contentY(), scrolled.height());
+                return;
+            }
+        }
     }
 
     private void applyScrollDrag(double mouseY) {

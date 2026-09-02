@@ -849,6 +849,29 @@ public final class McaCompat {
     }
 
     /**
+     * The village {@code uuid} is a resident of, by scanning every village in {@code level}.
+     *
+     * <p>The fallback for a reward that needs the giver's village on a quest accepted before 1.5.1 froze
+     * one, when the giver itself is not loaded: {@link #getHomeVillageId} needs the entity, and a quest
+     * completed in the field routinely has none. Only ever reached on that path, so the scan runs once
+     * per such turn-in rather than per tick. Safe default: {@code empty} (no village, no award).
+     */
+    public static OptionalInt findVillageOfResident(ServerLevel level, UUID uuid) {
+        try {
+            for (Object village : McaHandles.allVillages(level)) {
+                OptionalInt id = villageIdOf(village);
+                if (id.isPresent() && McaHandles.villageHasResident(village, uuid)) {
+                    return id;
+                }
+            }
+            return OptionalInt.empty();
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA findVillageOfResident failed; defaulting empty", t);
+            return OptionalInt.empty();
+        }
+    }
+
+    /**
      * The count of edible items currently banked in the village's MCA storage buffer — the famine
      * measure for the {@code low_food} situation trigger (0.8.0). Empty when the village does not
      * resolve or MCA storage is unavailable (the trigger then never fires). Safe-fail.

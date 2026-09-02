@@ -1,12 +1,15 @@
 package dev.otectus.mcaquests.state;
 
+import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -43,6 +46,13 @@ public final class VillageStanding {
     /** Bounded so a long-lived world cannot grow this without limit. */
     private static final int MAX_COMMUNITIES_PER_PLAYER = 256;
     private static final int MAX_TITLES_PER_COMMUNITY = 64;
+    /**
+     * How many award dedupe keys are remembered per player. Every turn-in, situation, project phase and
+     * FTB claim produces one on an install without MCA: Reputation, and until 1.5.1 they were kept
+     * forever in the migration-marker map — a save file that grew with every quest anybody finished. A
+     * ring this size covers far more than the window in which a duplicated award could plausibly arrive.
+     */
+    private static final int MAX_RECENT_AWARDS_PER_PLAYER = 128;
 
     /** Per player: community key → score. */
     private final Map<UUID, Map<String, Integer>> scores = new LinkedHashMap<>();
@@ -52,6 +62,8 @@ public final class VillageStanding {
     private final Map<UUID, Map<String, Set<ResourceLocation>>> titles = new LinkedHashMap<>();
     /** Per player: source id → version, so a legacy import can never run twice. */
     private final Map<UUID, Map<String, String>> migrations = new LinkedHashMap<>();
+    /** Per player: the most recent award dedupe keys, oldest first. Bounded; see the cap's javadoc. */
+    private final Map<UUID, Deque<String>> recentAwards = new LinkedHashMap<>();
 
     /** The canonical string form of a community, matching MCA: Reputation's own. */
     public static String communityKey(ResourceLocation dimension, int villageId) {
@@ -174,6 +186,28 @@ public final class VillageStanding {
         migrations.computeIfAbsent(player, id -> new LinkedHashMap<>()).put(sourceId, version);
     }
 
+    // ------------------------------------------------------------------
+    // Award dedupe
+    // ------------------------------------------------------------------
+
+    /**
+     * Records that an award with this dedupe key has been applied for this player.
+     *
+     * @return {@code true} when the key is new (the award should be applied), {@code false} when it has
+     *         already been seen. The oldest key is evicted once the per-player cap is reached.
+     */
+    public boolean recordAward(UUID player, String key) {
+        Deque<String> recent = recentAwards.computeIfAbsent(player, id -> new ArrayDeque<>());
+        if (recent.contains(key)) {
+            return false;
+        }
+        while (recent.size() >= MAX_RECENT_AWARDS_PER_PLAYER) {
+            recent.removeFirst();
+        }
+        recent.addLast(key);
+        return true;
+    }
+
     /**
      * Copies the shared v1 values into this player's v2 record, exactly once.
      *
@@ -228,6 +262,7 @@ public final class VillageStanding {
         all.addAll(highWater.keySet());
         all.addAll(titles.keySet());
         all.addAll(migrations.keySet());
+        all.addAll(recentAwards.keySet());
 
         for (UUID player : all) {
             CompoundTag entry = new CompoundTag();
@@ -258,6 +293,13 @@ public final class VillageStanding {
             migrations.getOrDefault(player, Map.of()).forEach(migrationTag::putString);
             if (!migrationTag.isEmpty()) {
                 entry.put("migrations", migrationTag);
+            }
+
+            Deque<String> recent = recentAwards.getOrDefault(player, new ArrayDeque<>());
+            if (!recent.isEmpty()) {
+                ListTag dedupeTag = new ListTag();
+                recent.forEach(key -> dedupeTag.add(StringTag.valueOf(key)));
+                entry.put("dedupe", dedupeTag);
             }
 
             if (!entry.isEmpty()) {
@@ -313,15 +355,34 @@ public final class VillageStanding {
             }
 
             CompoundTag migrationTag = entry.getCompound("migrations");
+            int strippedDedupe = 0;
             for (String key : migrationTag.getAllKeys()) {
+                // Award dedupe used to be written here, one permanent marker per award. They are dropped
+                // on first load: the ring below replaces them, and keeping them would preserve exactly
+                // the unbounded growth this fixes. Every other migration marker is kept — those are the
+                // "this import has run" flags that must never be lost.
+                if (key.startsWith("dedupe:")) {
+                    strippedDedupe++;
+                    continue;
+                }
                 standing.migrations.computeIfAbsent(player, id -> new LinkedHashMap<>())
                         .put(key, migrationTag.getString(key));
+            }
+            if (strippedDedupe > 0) {
+                McaQuests.LOGGER.debug("[MCA: Quests] dropped {} legacy award dedupe markers for {}",
+                        strippedDedupe, player);
+            }
+
+            ListTag dedupeTag = entry.getList("dedupe", Tag.TAG_STRING);
+            for (int i = 0; i < dedupeTag.size(); i++) {
+                standing.recordAward(player, dedupeTag.getString(i));
             }
         }
         return standing;
     }
 
     public boolean isEmpty() {
-        return scores.isEmpty() && highWater.isEmpty() && titles.isEmpty() && migrations.isEmpty();
+        return scores.isEmpty() && highWater.isEmpty() && titles.isEmpty() && migrations.isEmpty()
+                && recentAwards.isEmpty();
     }
 }

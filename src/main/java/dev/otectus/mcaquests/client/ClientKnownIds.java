@@ -15,13 +15,8 @@ import java.util.Map;
  * null check. Zero FTB imports — everything here is plain strings, so this class classloads
  * unconditionally with no {@code NoFtbqClassloadTest} exemption needed.
  *
- * <p>No disconnect hook clears this today — a scan of the client package found no existing
- * "clear client state on logout" precedent to follow (the other {@code Client*Data} holders, e.g.
- * {@code ClientJournalData}/{@code ClientQuestData}, are likewise never explicitly cleared; they're
- * simply overwritten by the next sync). Stale ids surviving a reconnect to a *different* server are
- * therefore possible until the next sync overwrites them — cosmetic only (dropdown suggestions), not
- * used for any validation — but {@link #clear()} is provided so a disconnect hook can be wired up later
- * without touching this class again.
+ * <p>Cleared on logout by {@code QuestClientInput.onLoggingOut}, along with every other client cache,
+ * so ids from one server cannot be suggested on the next.
  */
 public final class ClientKnownIds {
 
@@ -61,7 +56,7 @@ public final class ClientKnownIds {
         return names;
     }
 
-    /** Resets every list to empty. Not currently hooked to a disconnect event — see the class javadoc. */
+    /** Resets every list to empty; called on logout. */
     public static void clear() {
         questIds = List.of();
         chainIds = List.of();

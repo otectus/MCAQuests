@@ -93,10 +93,10 @@ public final class LegacyReputationBackend implements ReputationBackend {
     /**
      * Applies a delta and runs the tier-up consequences exactly once.
      *
-     * <p>Dedupe is honoured by recording applied keys in the standing store's migration-marker map
-     * under a {@code dedupe:} prefix. That reuses an already-persisted, already-bounded structure
-     * rather than adding a second one, and it means the guarantee survives save/load just as the
-     * canonical backend's does.
+     * <p>Dedupe is honoured by recording applied keys in the standing store's bounded per-player award
+     * ring, which survives save/load just as the canonical backend's guarantee does. Until 1.5.1 the
+     * keys went into the migration-marker map instead, where nothing ever removed them: one permanent
+     * entry per turn-in, situation, project phase and FTB claim, in the world save, forever.
      */
     @Override
     public int award(ReputationAward award) {
@@ -105,12 +105,11 @@ public final class LegacyReputationBackend implements ReputationBackend {
         VillageStanding standing = data.standing();
 
         if (award.dedupeKey() != null && !award.dedupeKey().isBlank()) {
-            String marker = "dedupe:" + VillageStanding.communityKey(award.dimension(), award.villageId())
+            String marker = VillageStanding.communityKey(award.dimension(), award.villageId())
                     + ":" + award.dedupeKey();
-            if (standing.hasMigrated(award.player(), marker)) {
+            if (!standing.recordAward(award.player(), marker)) {
                 return standing.score(award.player(), award.dimension(), award.villageId());
             }
-            standing.markMigrated(award.player(), marker, "1");
         }
 
         int oldScore = standing.score(award.player(), award.dimension(), award.villageId());

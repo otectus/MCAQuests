@@ -105,6 +105,44 @@ public record FailureSpec(Optional<Integer> deadlineTicks,
         return any ? OptionalLong.of(target) : OptionalLong.empty();
     }
 
+    /**
+     * The absolute game-time this quest expires at, measuring {@code deadline_time} on the world clock.
+     *
+     * <p>{@code deadline_time} is a time of day, so it has to be read from the clock the player can see:
+     * sleeping through a night and {@code /time set} both move the world clock without moving game time,
+     * and computing "before sunrise" in game time made it land at an arbitrary hour afterwards. The
+     * answer is still an absolute game time -- the deadline is compared against, and sent to the client
+     * as, game time -- so this only converts the remaining day-ticks at the moment it is asked.
+     *
+     * <p>{@code startDayTime} is empty on a quest accepted before 1.5.1; that quest keeps the old
+     * game-time behaviour rather than having its deadline retargeted while it is held.
+     */
+    public OptionalLong deadlineGameTime(long startGameTime, OptionalLong startDayTime,
+                                         long nowGameTime, long nowDayTime) {
+        long target = Long.MAX_VALUE;
+        boolean any = false;
+        if (deadlineTicks.isPresent()) {
+            target = Math.min(target, startGameTime + deadlineTicks.get());
+            any = true;
+        }
+        if (deadlineTimeOfDay.isPresent()) {
+            long anchor = startDayTime.isPresent() ? startDayTime.getAsLong() : startGameTime;
+            long deadline = startDayTime.isPresent()
+                    ? nowGameTime + (anchor + timeOfDayDelta(anchor) - nowDayTime)
+                    : startGameTime + timeOfDayDelta(anchor);
+            target = Math.min(target, deadline);
+            any = true;
+        }
+        return any ? OptionalLong.of(target) : OptionalLong.empty();
+    }
+
+    /** Ticks from {@code start} to the next occurrence of {@code deadline_time}; a full day on the boundary. */
+    private long timeOfDayDelta(long start) {
+        long startTod = Math.floorMod(start, DAY_LENGTH);
+        long delta = Math.floorMod(deadlineTimeOfDay.get() - startTod, DAY_LENGTH);
+        return delta == 0L ? DAY_LENGTH : delta; // accepted exactly at the boundary -> give a full day
+    }
+
     /** The failure reason reported for a fired time deadline ({@code TIME_WINDOW} if any time-of-day is set). */
     public QuestFailedEvent.Reason timeDeadlineReason() {
         return deadlineTimeOfDay.isPresent() ? QuestFailedEvent.Reason.TIME_WINDOW

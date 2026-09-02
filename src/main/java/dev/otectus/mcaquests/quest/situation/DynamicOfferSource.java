@@ -103,6 +103,27 @@ public final class DynamicOfferSource {
     }
 
     /**
+     * Whether the situation behind a synthetic offer id is still open in this villager's village.
+     *
+     * <p>Since 1.4.3 a villager's offers are drawn once and remembered, and nothing re-asked this: a
+     * situation offer could sit on the menu for a whole {@code offerRefreshTicks} after its situation had
+     * been resolved, with Accept quietly refusing it. Asked from {@link OfferFilters#explain}, so the
+     * menu drops the card and the accept path answers with a message rather than nothing.
+     *
+     * <p>Fails closed — an unanswerable question withholds the offer, exactly as the scope filters do.
+     */
+    public static boolean isStillOpen(OfferFilters.Pass pass, ResourceLocation syntheticId) {
+        Optional<ResourceLocation> defId = SituationIds.sourceIdOf(syntheticId);
+        MinecraftServer server = pass.player().getServer();
+        if (defId.isEmpty() || server == null || !McaQuestsConfig.COMMON.enableSituations.get()) {
+            return false;
+        }
+        OptionalInt villageId = McaCompat.getHomeVillageId(pass.villager());
+        return villageId.isPresent()
+                && SituationSavedData.get(server).hasOpenOfDef(villageId.getAsInt(), defId.get());
+    }
+
+    /**
      * Whether this villager is close enough to the death for the situation to be theirs to raise.
      *
      * <p>{@code VillagerDeathTrigger}'s {@code relation} promised in its own javadoc to be "applied at

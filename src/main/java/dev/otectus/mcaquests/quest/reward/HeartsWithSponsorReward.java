@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -38,6 +39,19 @@ public record HeartsWithSponsorReward(int amount) implements QuestReward {
             return;
         }
         McaCompat.addHearts(player, villager, effectiveAmount());
+    }
+
+    /** As {@code HeartsReward}: bank the hearts when the sponsor is not loaded instead of dropping them. */
+    @Override
+    public void grant(ServerPlayer player, @Nullable Entity villager, RewardContext context) {
+        if (villager != null) {
+            grant(player, villager);
+            return;
+        }
+        ServerLevel level = context.level(player);
+        if (level != null) {
+            McaCompat.awardHearts(level, context.giverUuid(), player, effectiveAmount());
+        }
     }
 
     public int effectiveAmount() {

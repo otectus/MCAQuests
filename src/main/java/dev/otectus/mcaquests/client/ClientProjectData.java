@@ -44,4 +44,14 @@ public final class ClientProjectData {
     public static boolean hasMenuFor(UUID villager) {
         return !menuFor(villager).isEmpty();
     }
+
+    /**
+     * Drops both caches on logout. The per-villager menus matter most: they are keyed by UUID, and a
+     * villager on another server sharing one would have been offered a "View Project" button for a
+     * project nobody here has ever heard of.
+     */
+    public static void clear() {
+        projects = List.of();
+        menus.clear();
+    }
 }

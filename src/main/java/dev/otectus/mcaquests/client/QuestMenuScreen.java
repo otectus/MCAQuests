@@ -15,7 +15,6 @@ import dev.otectus.mcaquests.quest.QuestMenuStatus;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -72,16 +71,11 @@ public class QuestMenuScreen extends McaQuestsScreen {
     private final QuestMenuDataS2CPacket data;
     /** Card tops in content space (0 = first card), turned into screen y through {@link #view}. */
     private final List<Integer> cardTops = new ArrayList<>();
-    private final List<ScrolledButton> scrolledButtons = new ArrayList<>();
 
     /** Resolved once on open; null when the villager is not a loaded living entity on this client. */
     @Nullable
     private LivingEntity portrait;
     private boolean portraitResolved;
-
-    /** A card button, remembered with its content-space y so scrolling can reposition it. */
-    private record ScrolledButton(Button button, int contentY) {
-    }
 
     public QuestMenuScreen(QuestMenuDataS2CPacket data) {
         super(Component.translatable("mcaquests.screen.quests.title"));
@@ -103,11 +97,21 @@ public class QuestMenuScreen extends McaQuestsScreen {
         return Math.max(1, contentWidth() - CARD_PAD * 2);
     }
 
+    /**
+     * The title's own width, which stops short of the difficulty pips rather than running under them.
+     *
+     * <p>The pips are drawn in the card's top-right corner, over the first line of the title; a quest
+     * with a long name and a difficulty had the two overlapping. Quests that declare no difficulty get
+     * the whole width, so nothing is narrowed for a badge that is not there.
+     */
+    private int titleWidth(QuestCard card) {
+        return Math.max(1, wrapWidth() - (difficultyPips(card.difficulty()) != null ? 20 : 0));
+    }
+
     @Override
     protected void init() {
         super.init();
         cardTops.clear();
-        scrolledButtons.clear();
 
         // Cards are laid out in their own space starting at 0 and clipped into the well, so any
         // number of offers (offersPerVillager allows up to 10) stays inside the panel instead of
@@ -147,7 +151,7 @@ public class QuestMenuScreen extends McaQuestsScreen {
      */
     private int cardHeight(QuestCard card) {
         int height = CARD_PAD * 2;
-        height += CardText.height(this.font, card.title(), wrapWidth()) + 2;
+        height += CardText.height(this.font, card.title(), titleWidth(card)) + 2;
         if (hasChainLabel(card)) {
             height += 10; // arc / "Part 2 of 4" line
         }
@@ -263,8 +267,7 @@ public class QuestMenuScreen extends McaQuestsScreen {
         int x = centerX() - total / 2;
         for (McaButton.Builder builder : builders) {
             McaButton built = builder.bounds(x, view.screenY(contentY), width, 20).build();
-            addRenderableWidget(built);
-            scrolledButtons.add(new ScrolledButton(built, contentY));
+            addScrolledWidget(built, contentY, 20);
             x += width + gap;
         }
     }
@@ -278,13 +281,7 @@ public class QuestMenuScreen extends McaQuestsScreen {
         if (data.cards().isEmpty()) {
             renderEmptyState(graphics, Component.translatable("mcaquests.status.no_quests"));
         } else {
-            // super.render draws widgets outside our scissor and cannot clip them, so a button that is
-            // not wholly inside the viewport is hidden instead — which also makes it unclickable
-            // (AbstractWidget.clicked tests visible), so it can no longer swallow a footer click.
-            for (ScrolledButton scrolled : scrolledButtons) {
-                scrolled.button().setY(view.screenY(scrolled.contentY()));
-                scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 20);
-            }
+            applyScrolledVisibility();
             boolean ready = data.status() == QuestMenuStatus.READY;
             beginContentClip(graphics);
             for (int i = 0; i < data.cards().size(); i++) {
@@ -387,7 +384,7 @@ public class QuestMenuScreen extends McaQuestsScreen {
 
         int left = contentLeft() + CARD_PAD;
         int y = top + CARD_PAD;
-        y = CardText.draw(graphics, this.font, card.title(), left, y, wrapWidth(),
+        y = CardText.draw(graphics, this.font, card.title(), left, y, titleWidth(card),
                 ready ? Palette.READY : Palette.TITLE) + 2;
         renderDifficulty(graphics, card, top, mouseX, mouseY);
         if (hasChainLabel(card)) {

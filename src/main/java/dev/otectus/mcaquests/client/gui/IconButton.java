@@ -58,11 +58,20 @@ public class IconButton extends Button {
         RenderSystem.enableDepthTest();
         background().nineSlice(graphics, getX(), getY(), getWidth(), getHeight());
 
+        // Scaled down when the button is too short for the sprite: the quest log's 12x12 controls
+        // carry 16px glyphs, which were centred on a box four pixels smaller than themselves and so
+        // spilled over the frame on all four sides.
+        float scale = Math.min(1.0F, (getHeight() - 4) / (float) icon.height());
         // Centred, and rounded the same way in both axes so a glyph never lands half a pixel off in
         // one direction and dead centre in the other.
-        int iconX = getX() + (getWidth() - icon.width()) / 2;
-        int iconY = getY() + (getHeight() - icon.height()) / 2;
-        icon.blit(graphics, iconX, iconY);
+        int drawn = Math.round(icon.height() * scale);
+        int iconX = getX() + (getWidth() - Math.round(icon.width() * scale)) / 2;
+        int iconY = getY() + (getHeight() - drawn) / 2;
+        if (scale < 1.0F) {
+            Panel.iconScaled(graphics, icon, iconX, iconY, scale);
+        } else {
+            icon.blit(graphics, iconX, iconY);
+        }
         RenderSystem.disableBlend();
         graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
     }

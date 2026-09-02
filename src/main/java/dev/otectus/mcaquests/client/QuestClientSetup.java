@@ -11,7 +11,14 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
-/** Client mod-bus setup: the Quest Log keybind and the HUD tracker overlay (spec section 21). */
+/**
+ * Client mod-bus setup: the keybinds and the HUD tracker overlay (spec section 21).
+ *
+ * <p>Only the tracker toggle is bound out of the box. A mod that claims letters on a player's keyboard
+ * takes them from whatever else wanted them, and the log and the journal are both reachable from the
+ * villager menu and from each other's tab strip — so they are registered unbound, and a player who
+ * wants a key for them says so in Controls.
+ */
 @Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class QuestClientSetup {
 

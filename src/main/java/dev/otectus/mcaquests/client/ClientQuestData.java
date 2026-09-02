@@ -29,4 +29,13 @@ public final class ClientQuestData {
     public static void toggleHud() {
         hudVisible = !hudVisible;
     }
+
+    /**
+     * Drops the cached log on logout, so no quest of the world just left can show on the next one's
+     * tracker. The HUD toggle is deliberately kept: it is this player's display preference, not
+     * anything the server told us.
+     */
+    public static void clear() {
+        active = List.of();
+    }
 }

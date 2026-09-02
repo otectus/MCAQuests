@@ -4,6 +4,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.network.ProjectCard;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -20,8 +21,22 @@ public final class QuestClientHandlers {
     private QuestClientHandlers() {
     }
 
+    /**
+     * Opens the villager menu — but only over a screen it is allowed to replace.
+     *
+     * <p>This used to be an unconditional {@code setScreen}. The packet arrives whenever the server
+     * decides to show a menu, and a player who had opened their inventory, a chest or another mod's
+     * screen in the meantime was pulled straight out of it. The three cases below are the ones where
+     * the menu is what the player asked for: nothing open, one of our own screens, or MCA's interact
+     * screen, whose Quests button is what sent the request.
+     */
     public static void openMenu(QuestMenuDataS2CPacket data) {
-        Minecraft.getInstance().setScreen(new QuestMenuScreen(data));
+        Minecraft minecraft = Minecraft.getInstance();
+        Screen screen = minecraft.screen;
+        if (screen == null || screen instanceof McaQuestsScreen
+                || McaScreenButtons.isMcaInteractScreen(screen)) {
+            minecraft.setScreen(new QuestMenuScreen(data));
+        }
     }
 
     /**
@@ -38,11 +53,17 @@ public final class QuestClientHandlers {
         }
     }
 
-    /** Opens the project screen for a villager from the cached menu (the "View Project" button). */
+    /**
+     * Opens the project screen for a villager from the cached menu (the "View Project" button).
+     *
+     * <p>The screen it opens over becomes its parent, so Back returns to the conversation the player
+     * left rather than closing everything.
+     */
     public static void openProjectMenu(UUID villagerUuid) {
         List<ProjectCard> cards = ClientProjectData.menuFor(villagerUuid);
         if (!cards.isEmpty()) {
-            Minecraft.getInstance().setScreen(new ProjectMenuScreen(villagerUuid, cards));
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.setScreen(new ProjectMenuScreen(villagerUuid, cards, minecraft.screen));
         }
     }
 

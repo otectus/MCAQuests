@@ -791,13 +791,15 @@ Declare one or more. The first to fire wins. (A `failure` block with no trigger 
 | Field | Type | Meaning |
 |---|---|---|
 | `deadline_ticks` | int (>0) | Fail this many ticks after acceptance. 24000 = 1 MC day. Best for "before it worsens" urgency. |
-| `deadline_time` | int (0–24000) | Fail when the world clock next reaches this **time-of-day** after acceptance, e.g. `23000` for "before sunrise". Accepting exactly on the boundary grants a full day. |
+| `deadline_time` | int (0–24000) | Fail when the world clock next reaches this **time-of-day** after acceptance, e.g. `23000` for "before sunrise". Accepting exactly on the boundary grants a full day. Measured on the world clock, so sleeping through a night and `/time set` both advance it; `deadline_ticks` is elapsed time and neither affects it. |
 | `require_weather` | `clear` / `rain` / `thunder` | The quest demands this weather; it fails the instant the weather stops matching. Pair with a `conditions` weather gate so it's only offered when the weather is right. |
 | `fail_on_giver_death` | bool | Fail if the quest giver dies, regardless of the global `failQuestIfGiverDies` config. |
 | `fail_on_target_lost` | bool (default `false`) | Fail if the villager an objective **bound** dies or leaves the world for good. Off by default: the standing contract is that a quest you cannot currently play is *suspended*, not taken away, so by default the objective shows a reason line instead of a counter, the deadline stops running down, the quest stays abandonable, and it resumes if they come back. Turn it on for a story that should close rather than wait. |
 
 When both `deadline_ticks` and `deadline_time` are set, whichever runs out first wins. Time deadlines
 drive the live countdown shown in the HUD tracker; weather/giver-death failures show no countdown.
+Quests accepted before 1.5.1 keep the game-time `deadline_time` they were given until they are
+re-accepted; only quests accepted from 1.5.1 on follow the world clock.
 
 > **Grace window:** a quest whose objectives are already met (it's "ready to turn in") is **not**
 > failed by a deadline or weather trigger — you keep your reward as long as you finish in time. Giver

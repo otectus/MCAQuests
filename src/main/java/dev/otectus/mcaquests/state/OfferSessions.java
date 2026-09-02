@@ -70,7 +70,10 @@ public final class OfferSessions {
             return;
         }
         long horizon = (long) refreshTicks * STALE_WINDOWS;
-        byVillager.entrySet().removeIf(entry -> now - entry.getValue().refreshedAtGameTime() > horizon);
+        // A refusal given a declineCooldownTicks longer than the horizon outlives the session it was
+        // recorded in; dropping the session would quietly cut the cooldown short.
+        byVillager.entrySet().removeIf(entry -> now - entry.getValue().refreshedAtGameTime() > horizon
+                && !entry.getValue().hasTimedRefusalAfter(now));
     }
 
     public CompoundTag save() {

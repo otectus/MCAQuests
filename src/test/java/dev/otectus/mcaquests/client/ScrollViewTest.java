@@ -150,6 +150,50 @@ class ScrollViewTest {
     }
 
     /**
+     * Tab moves focus to a widget that may be anywhere in the content, so the view has to follow it —
+     * downward and upward — and must not move at all for one that is already visible.
+     */
+    @Test
+    void scrollIntoViewMovesTheLeastItCan() {
+        ScrollView view = view();
+
+        view.scrollIntoView(20, 20);
+        assertEquals(0, view.scroll(), "a band already inside the window does not move the view");
+
+        // Below the fold: its bottom edge settles on the window's bottom edge.
+        view.scrollIntoView(180, 20);
+        assertEquals(100, view.scroll());
+        assertTrue(view.isFullyVisible(180, 20));
+
+        // Above it: its top edge settles on the window's top edge.
+        view.scrollIntoView(40, 20);
+        assertEquals(40, view.scroll());
+        assertTrue(view.isFullyVisible(40, 20));
+    }
+
+    /** A band taller than the window cannot fit; it settles at its top, which is the half to read first. */
+    @Test
+    void scrollIntoViewPrefersTheTopOfAnOversizedBand() {
+        ScrollView view = view();
+
+        view.scrollIntoView(60, 150);
+        assertEquals(60, view.scroll());
+        assertEquals(50, view.screenY(60), "the band's top sits at the window's top");
+    }
+
+    /** Whatever it is asked for, it can never strand the view past the end of the content. */
+    @Test
+    void scrollIntoViewStaysInsideTheContent() {
+        ScrollView view = view();
+
+        view.scrollIntoView(280, 20);
+        assertEquals(200, view.scroll(), "the very last band still leaves the view at maxScroll");
+
+        view.scrollIntoView(-40, 20);
+        assertEquals(0, view.scroll());
+    }
+
+    /**
      * A tiny window (as at GUI scale 4 on a small screen) leaves a very short viewport. Scrolling must
      * still be able to bring any card fully into view rather than leaving some permanently clipped.
      */

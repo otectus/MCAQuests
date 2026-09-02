@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
@@ -119,6 +120,10 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
             return false;
         }
         ServerLevel level = (ServerLevel) player.level();
+        // Real time since the last poll rather than one flat second per poll -- see
+        // TownsteadObjectives.elapsedSincePoll; polls run every townsteadPollIntervalTicks.
+        long elapsed = TownsteadObjectives.elapsedSincePoll(progress, level.getGameTime(),
+                McaQuestsConfig.COMMON.townsteadPollIntervalTicks.get());
         Entity giver = level.getEntity(quest.villagerUuid());
         List<Entity> residents = TownsteadTargetResolver.residents(level, giver, level.getGameTime());
         if (residents.size() < minimumObserved || !enoughOfTheVillageIsLoaded(level, giver, residents)) {
@@ -147,7 +152,7 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
             return resetIfRunning(progress);
         }
 
-        progress.addElapsed(TICKS_PER_SECOND);
+        progress.addElapsed(elapsed);
         return true;
     }
 

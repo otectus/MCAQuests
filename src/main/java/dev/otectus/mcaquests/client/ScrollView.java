@@ -54,6 +54,23 @@ final class ScrollView {
         return bottom - top;
     }
 
+    /**
+     * Scrolls the least amount that brings a content-space band wholly inside the window.
+     *
+     * <p>What the keyboard needs: Tab moves focus to a widget that may be anywhere in the content,
+     * and a focused button the player cannot see is worse than no focus at all. A band taller than
+     * the window settles with its top edge at the top, which is the half a reader wants first.
+     */
+    void scrollIntoView(int contentY, int height) {
+        if (contentY + height > scroll + viewportHeight()) {
+            scroll = contentY + height - viewportHeight();
+        }
+        if (contentY < scroll) {
+            scroll = contentY;
+        }
+        clampScroll();
+    }
+
     int scroll() {
         return scroll;
     }

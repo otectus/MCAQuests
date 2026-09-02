@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
@@ -96,6 +97,11 @@ public record TownsteadStateObjective(TownsteadQuery query, int holdTicks,
             return false; // latched: a satisfied hold is never un-satisfied by a later reading
         }
         ServerLevel level = (ServerLevel) player.level();
+        // Real time since the last poll, not one flat second per poll: polls run every
+        // townsteadPollIntervalTicks, and crediting twenty ticks regardless made a thirty-second hold
+        // take thirty minutes at the top of that range.
+        long elapsed = TownsteadObjectives.elapsedSincePoll(progress, level.getGameTime(),
+                McaQuestsConfig.COMMON.townsteadPollIntervalTicks.get());
         TownsteadEvaluation evaluation = new TownsteadEvaluation();
         Entity target = TownsteadObjectives.subjectEntity(query, player, quest, progress, level);
         if (target == null && !query.source().isGlobal()) {
@@ -106,7 +112,7 @@ public record TownsteadStateObjective(TownsteadQuery query, int holdTicks,
         if (!holds) {
             return handleFalse(progress);
         }
-        progress.addElapsed(TICKS_PER_SECOND);
+        progress.addElapsed(elapsed);
         return true;
     }
 

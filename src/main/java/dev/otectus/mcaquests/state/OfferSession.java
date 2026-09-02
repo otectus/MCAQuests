@@ -169,6 +169,28 @@ public final class OfferSession {
         return Map.copyOf(declinedUntil);
     }
 
+    /**
+     * Whether any refusal here is tied to this offer set rather than to the clock.
+     *
+     * <p>Read by {@link #isStale}: a set the player has emptied by turning everything down is not an
+     * absent set, it is an answered one, and drawing it again would bring back the very quests they just
+     * refused — the 1.4.3 decline fix, undone by the empty list.
+     */
+    public boolean hasUntilRefreshRefusals() {
+        return declinedUntil.containsValue(UNTIL_REFRESH);
+    }
+
+    /**
+     * Whether a refusal here still has time left on an explicit {@code declineCooldownTicks}.
+     *
+     * <p>Session pruning asks this before discarding a set nobody has looked at: a cooldown configured
+     * longer than the pruning horizon is a statement about time, and dropping the session that holds it
+     * would cut it short.
+     */
+    public boolean hasTimedRefusalAfter(long now) {
+        return declinedUntil.values().stream().anyMatch(until -> until != UNTIL_REFRESH && now < until);
+    }
+
     /** Drops timed refusals whose time has passed, so the map cannot grow without bound. */
     public void pruneDeclines(long now) {
         declinedUntil.entrySet().removeIf(entry -> entry.getValue() != UNTIL_REFRESH
@@ -177,7 +199,9 @@ public final class OfferSession {
 
     /** True when this set is old enough, or stale enough, that it must be drawn again. */
     public boolean isStale(long now, int refreshTicks, int generation) {
-        return slots.isEmpty()
+        // An empty set is normally one that was never drawn — but it is also what is left when the player
+        // declines every card, and that emptiness must not read as "draw the same three again".
+        return (slots.isEmpty() && !hasUntilRefreshRefusals())
                 || packGeneration != generation
                 // Guards a backwards clock as well as an elapsed one: a world restored from a backup can
                 // put "now" behind the stamp, and a session that could never expire would be worse than

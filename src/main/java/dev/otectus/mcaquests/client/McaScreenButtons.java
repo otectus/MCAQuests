@@ -86,6 +86,17 @@ public final class McaScreenButtons {
         tryPlace(event.getScreen());
     }
 
+    /**
+     * Whether this is MCA's interaction screen — the one whose Quests button opens our menu.
+     *
+     * <p>Shared with {@link QuestClientHandlers#openMenu}, which has to know whether the screen it is
+     * about to replace is the one that asked for the menu. Uncached, unlike {@link #tryPlace}: it is
+     * called once per menu packet, not once per frame.
+     */
+    static boolean isMcaInteractScreen(@Nullable Screen screen) {
+        return screen != null && screen.getClass().getName().endsWith(INTERACT_SCREEN_SUFFIX);
+    }
+
     /** Places the Quests button if this is MCA's main menu and the button is not already on it. */
     private static void tryPlace(Screen screen) {
         try {

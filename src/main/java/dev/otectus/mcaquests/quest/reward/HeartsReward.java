@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -38,6 +39,22 @@ public record HeartsReward(int amount) implements QuestReward {
             return; // hearts need a giver; nothing to do if it has gone missing
         }
         McaCompat.addHearts(player, villager, effectiveAmount());
+    }
+
+    /**
+     * An unloaded giver is the normal case for a quest finished away from the village, so the hearts are
+     * banked against its UUID and paid when it next loads rather than being dropped.
+     */
+    @Override
+    public void grant(ServerPlayer player, @Nullable Entity villager, RewardContext context) {
+        if (villager != null) {
+            grant(player, villager);
+            return;
+        }
+        ServerLevel level = context.level(player);
+        if (level != null) {
+            McaCompat.awardHearts(level, context.giverUuid(), player, effectiveAmount());
+        }
     }
 
     /** Amount after the configured multiplier and min/max clamp. */

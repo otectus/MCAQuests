@@ -8,6 +8,8 @@ import dev.otectus.mcaquests.compat.TownsteadContentGate;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
+import dev.otectus.mcaquests.quest.situation.DynamicOfferSource;
+import dev.otectus.mcaquests.quest.situation.SituationIds;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -101,6 +103,12 @@ public final class OfferFilters {
         UUID villagerUuid = pass.villagerUuid();
         if (!def.enabled()) {
             return Result.fail("DISABLED");
+        }
+        // A situation offer is only ever as live as its situation. Sessions remember a drawn card for up
+        // to offerRefreshTicks, so without this a resolved situation stayed on the menu and Accept did
+        // nothing at all (1.5.1).
+        if (SituationIds.isSyntheticId(def.id()) && !DynamicOfferSource.isStillOpen(pass, def.id())) {
+            return Result.fail("SITUATION_CLOSED (the situation this offer came from is over)");
         }
         if (!def.giver().isGeneric()
                 && !ProfessionMatcher.matchesAny(def.giver().professions(), pass.profession(), pass.matching())) {

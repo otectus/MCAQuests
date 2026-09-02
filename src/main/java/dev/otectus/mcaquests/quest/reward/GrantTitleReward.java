@@ -38,4 +38,10 @@ public record GrantTitleReward(ResourceLocation title, TitleScope scope) impleme
     public void grant(ServerPlayer player, @Nullable Entity villager) {
         TitleService.grant(player, scope, title, villager);
     }
+
+    /** A village-scoped title falls back to the village the quest froze when the giver is not loaded. */
+    @Override
+    public void grant(ServerPlayer player, @Nullable Entity villager, RewardContext context) {
+        TitleService.grant(player, scope, title, villager, context.community());
+    }
 }

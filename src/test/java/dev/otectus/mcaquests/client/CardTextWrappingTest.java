@@ -43,12 +43,16 @@ class CardTextWrappingTest {
             List.of("QuestMenuScreen.java", "ProjectMenuScreen.java", "QuestLogScreen.java");
 
     /**
-     * A {@code drawString} whose argument list builds a line out of an objective, a reward or a
-     * project label. Those are the variable-length ones; a fixed label like "Ready" cannot overflow.
+     * A {@code drawString} whose argument list builds a line out of an objective, a reward, a project
+     * label or a title. Those are the variable-length ones; a fixed label like "Ready" cannot overflow.
+     *
+     * <p>Titles were the omission, and both project lists drew theirs raw. A project or a quest is
+     * named by a datapack and is as long as its author made it, so it ran off the card exactly as the
+     * objective lines used to.
      */
     private static final Pattern UNWRAPPED = Pattern.compile(
             "graphics\\.drawString\\([^;]*?(?:objective|joinRewards|line\\.label\\(\\)|"
-                    + "townsteadContext)[^;]*?;", Pattern.DOTALL);
+                    + "townsteadContext|title\\(\\))[^;]*?;", Pattern.DOTALL);
 
     @Test
     @DisplayName("no card screen draws a variable-length line without wrapping it")

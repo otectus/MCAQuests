@@ -2,8 +2,10 @@ package dev.otectus.mcaquests.state;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
+import dev.otectus.mcaquests.quest.reputation.QuestReputation;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.quest.target.FrozenLocation;
 import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
@@ -19,7 +21,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +41,22 @@ public final class ActiveQuest {
     private final ResourceLocation villagerProfession;
     private final ResourceLocation dimension;
     private final long startGameTime;
+    /**
+     * The world clock ({@code level.getDayTime()}) this quest was accepted at, for the
+     * {@code deadline_time} trigger, which is documented as a time of day and so has to be measured on
+     * the clock the player can see -- sleeping and {@code /time set} move it, game time never does.
+     *
+     * <p>Empty on quests accepted before 1.5.1, which keep their game-time deadline rather than having
+     * it silently retargeted underneath a player who is already holding them.
+     */
+    private final OptionalLong startDayTime;
+    /**
+     * The giver's village, frozen at accept time, so hearts, reputation and village-scoped titles can
+     * still be granted when the giver's chunk is not loaded -- the normal case for a quest that
+     * completes in the field. Empty on quests accepted before 1.5.1 and on a giver who belonged to no
+     * resolvable village; the reward path then falls back to a resident scan.
+     */
+    private final OptionalInt villageId;
     private final List<ObjectiveProgress> progress;
     /** Frozen template values for a quest accepted from a template (spec: chosen values must not reroll). */
     @Nullable
@@ -99,10 +119,27 @@ public final class ActiveQuest {
     /** Lazily-built concretized definition, derived from {@link #template}; not persisted. */
     @Nullable
     private transient QuestDefinition resolvedCache;
+    /**
+     * The {@link QuestRegistry#generation()} {@link #resolvedCache} was built against, so a
+     * {@code /reload} reaches a template quest a player is already holding. Compared against the
+     * generation rather than against {@code base}'s identity, because a situation offer builds a fresh
+     * definition instance every time it is asked for and would never match.
+     */
+    private transient int resolvedGeneration = -1;
 
     public ActiveQuest(ResourceLocation questId, UUID villagerUuid, Component villagerName,
                        @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
                        long startGameTime, List<ObjectiveProgress> progress, @Nullable ResolvedTemplate template,
+                       @Nullable UUID situationInstance) {
+        this(questId, villagerUuid, villagerName, villagerProfession, dimension, startGameTime,
+                OptionalLong.empty(), OptionalInt.empty(), progress, template, situationInstance);
+    }
+
+    /** The 1.5.1 shape, carrying the world-clock start time and the giver's frozen village. */
+    public ActiveQuest(ResourceLocation questId, UUID villagerUuid, Component villagerName,
+                       @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
+                       long startGameTime, OptionalLong startDayTime, OptionalInt villageId,
+                       List<ObjectiveProgress> progress, @Nullable ResolvedTemplate template,
                        @Nullable UUID situationInstance) {
         this.questId = questId;
         this.villagerUuid = villagerUuid;
@@ -110,6 +147,8 @@ public final class ActiveQuest {
         this.villagerProfession = villagerProfession;
         this.dimension = dimension;
         this.startGameTime = startGameTime;
+        this.startDayTime = startDayTime;
+        this.villageId = villageId;
         this.progress = progress;
         this.template = template;
         this.situationInstance = situationInstance;
@@ -128,19 +167,31 @@ public final class ActiveQuest {
                                      @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
                                      long startGameTime, int objectiveCount, @Nullable ResolvedTemplate template,
                                      @Nullable UUID situationInstance) {
+        return create(questId, villagerUuid, villagerName, villagerProfession, dimension, startGameTime,
+                OptionalLong.empty(), OptionalInt.empty(), objectiveCount, template, situationInstance);
+    }
+
+    /** Fresh acceptance carrying the world-clock start time and the giver's village (1.5.1). */
+    public static ActiveQuest create(ResourceLocation questId, UUID villagerUuid, Component villagerName,
+                                     @Nullable ResourceLocation villagerProfession, ResourceLocation dimension,
+                                     long startGameTime, OptionalLong startDayTime, OptionalInt villageId,
+                                     int objectiveCount, @Nullable ResolvedTemplate template,
+                                     @Nullable UUID situationInstance) {
         List<ObjectiveProgress> progress = new ArrayList<>();
         for (int i = 0; i < objectiveCount; i++) {
             progress.add(new ObjectiveProgress());
         }
         return new ActiveQuest(questId, villagerUuid, villagerName, villagerProfession, dimension,
-                startGameTime, progress, template, situationInstance);
+                startGameTime, startDayTime, villageId, progress, template, situationInstance);
     }
 
     /**
      * The definition to use for this active quest: the concretized template (objectives/rewards filled
      * from the frozen {@link #template} values) when this came from a template, otherwise {@code base}
      * unchanged. Cached so the per-second progress tick does not re-parse JSON. Falls back to
-     * {@code base} if the stored values can no longer be substituted (e.g. a datapack changed).
+     * {@code base} if the stored values can no longer be substituted (e.g. a datapack changed). The cache
+     * follows the registry generation, so a {@code /reload} that reshapes the template is picked up
+     * instead of being served from before the reload until the world restarts.
      *
      * <p>Also the point where a held quest is reconciled with a definition that has since gained
      * objectives -- see {@link #reconcile(QuestDefinition)}.
@@ -150,11 +201,13 @@ public final class ActiveQuest {
         if (template == null || base.template().isEmpty()) {
             return base;
         }
-        if (resolvedCache == null) {
+        int generation = QuestRegistry.generation();
+        if (resolvedCache == null || resolvedGeneration != generation) {
             resolvedCache = base.template()
                     .flatMap(spec -> spec.toConcrete(template))
                     .map(base::withConcrete)
                     .orElse(base);
+            resolvedGeneration = generation;
         }
         return resolvedCache;
     }
@@ -197,6 +250,23 @@ public final class ActiveQuest {
 
     public long startGameTime() {
         return startGameTime;
+    }
+
+    /** The world clock this quest was accepted at, or empty on a quest accepted before 1.5.1. */
+    public OptionalLong startDayTime() {
+        return startDayTime;
+    }
+
+    /** The giver's village id, frozen at accept time; empty when none resolved (or pre-1.5.1). */
+    public OptionalInt villageId() {
+        return villageId;
+    }
+
+    /** The giver's community, for the reward paths that must work without the giver entity. */
+    public Optional<QuestReputation.Community> community() {
+        return villageId.isPresent()
+                ? Optional.of(new QuestReputation.Community(dimension, villageId.getAsInt()))
+                : Optional.empty();
     }
 
     /** The open situation this quest was accepted from (0.8.0), or empty for an ordinary quest. */
@@ -340,6 +410,12 @@ public final class ActiveQuest {
         }
         tag.putString("dimension", dimension.toString());
         tag.putLong("start", startGameTime);
+        if (startDayTime.isPresent()) {
+            tag.putLong("start_day", startDayTime.getAsLong());
+        }
+        if (villageId.isPresent()) {
+            tag.putInt("village", villageId.getAsInt());
+        }
         tag.putBoolean("claimed", rewardClaimed);
         tag.putBoolean("ready_notified", readyNotified);
         if (suspendedTicks != 0L) {
@@ -391,6 +467,8 @@ public final class ActiveQuest {
                 profession,
                 new ResourceLocation(tag.getString("dimension")),
                 tag.getLong("start"),
+                tag.contains("start_day") ? OptionalLong.of(tag.getLong("start_day")) : OptionalLong.empty(),
+                tag.contains("village") ? OptionalInt.of(tag.getInt("village")) : OptionalInt.empty(),
                 progress,
                 template,
                 situationInstance);

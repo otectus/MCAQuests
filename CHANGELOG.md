@@ -4,6 +4,176 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-09-02
+
+A patch release from a full audit of the quest lifecycle, rewards, persistence, multiplayer sync and
+the 1.5.0 interface. Nothing here changes the network protocol or breaks a save in either direction.
+
+### Fixed — refusing everything a villager had brought it all back
+
+Decline all of a villager's offers and the next menu showed the same quests. With nothing left to
+draw, the empty menu counted as stale, the redraw threw away the refusals, and the one after that
+drew from the full pool — the 1.4.3 decline fix, undone in the one case where a player most means it.
+An exhausted menu now stays exhausted until `offerRefreshTicks` elapses, refilling as quests become
+eligible, and the villager says so (`mcaquests.status.all_declined`). Refusals given an explicit
+`declineCooldownTicks` longer than eight refresh windows are no longer cut short by session pruning.
+
+### Fixed — "before sunrise" was measured on the wrong clock
+
+`deadline_time` is documented as a world time-of-day and was computed in game time, which sleeping
+and `/time set` do not advance. After one night's sleep `guard/dawn_defense`, `guard/last_stand`,
+`mapmaker_expedition_2_expedition` and `relations/escort_me_home` expired at arbitrary hours, with a
+countdown that agreed with the wrong answer. An accepted quest now remembers the world clock at
+acceptance (`start_day`), and the deadline is derived from it on every check and every sync, so the
+tracker corrects itself within a second of a sleep or a `/time set`. `deadline_ticks` is unchanged.
+Quests accepted before this version carry no world-clock stamp and keep their game-time deadline
+until re-accepted. (`DATAPACK.md`)
+
+### Fixed — rewards that needed the villager in the room
+
+Hearts, village reputation and village-scoped titles were dropped when the giver's chunk was not
+loaded — the normal case for a quest that completes in the field, and the only case for
+`SELF_COMPLETE`. The quest completed, its cooldown armed, and the reward vanished without a line in
+the log. Every quest accepted from now on freezes its giver's village at acceptance (`village`);
+quests accepted earlier fall back to a reflective scan of MCA's villages for the giver's UUID. With
+that in hand, hearts bank into the same pending store a delivery already uses, and reputation and
+village titles resolve the village without the entity. `HeartsWithParticipantsReward` is unchanged;
+its grant was already a deliberate no-op.
+
+A reward that throws no longer strands the quest with `rewardClaimed` set and no way to hand it in
+again: each grant runs on its own, a failure is logged with the reward index and quest id, and the
+remaining rewards are still granted.
+
+### Fixed — a situation that had closed was still on the menu
+
+Since 1.4.3 a villager's offers are drawn once and kept. A situation offer kept that way outlived its
+situation for up to `offerRefreshTicks`, and Accept did nothing at all. Offers are now re-checked for
+a live situation every time the menu is drawn, a dead one is dropped and its slot refilled like a
+declined one, and an offer that is gone by the time Accept arrives says so
+(`mcaquests.message.offer_gone`, under `questChatMessages`).
+
+Accept is also validated against the offers the villager actually showed — the drawn set, refusals
+included — rather than the whole eligible pool, which is what Decline already did.
+
+### Fixed — the last quest to fail never left the log
+
+Failure did not resync the client, and the per-tick resync skips an empty list. A deadline, a dead
+giver or a lost protect target on a player's only quest left it on the tracker until relog.
+
+### Fixed — `/reload` did not reach a template quest already accepted
+
+The concretised definition of a template quest was cached on first use and never invalidated; it now
+follows the quest registry's generation, so a pack author's fix applies to quests already held.
+
+### Fixed — Townstead hold timers counted polls, not time
+
+`hold_ticks` objectives credited twenty ticks per poll while polls run every
+`townsteadPollIntervalTicks` (10–1200); at the top of that range a thirty-second hold took thirty
+minutes, and `reset_on_false` made it unfinishable. Elapsed time between polls is now measured and
+credited, capped at four intervals so a lag spike is not a free hold — the rule `schedule_streak`
+already used.
+
+### Fixed — the world save grew with every turn-in
+
+On an install without MCA: Reputation, every quest award, situation resolution, project phase, FTB
+claim and banked delivery wrote a permanent dedupe marker into `mcaquests_projects.dat`, and nothing
+ever removed one. Dedupe is now a bounded per-player ring of the last 128 award keys (`dedupe`), and
+the accumulated markers are stripped the first time the world loads; every other migration marker is
+kept.
+
+### Fixed — titles were invisible across the MCA: Reputation seam
+
+With MCA: Reputation installed, a title granted by a quest went only into this mod's own store and
+the canonical backend never saw it, while global titles were read from whichever community snapshot
+came first. `hasTitle`, `globalTitles` and `villageTitles` now union MCA: Reputation's answer with
+the online player's local titles, so quest-granted titles satisfy conditions and tier titles appear
+in the journal. Writing quest titles *into* MCA: Reputation is deferred to 1.6.
+
+### Fixed — smaller things
+- Two per-player maps in the progress tick (`lastTownsteadPoll`, `lastBankedRetryDay`) are cleared on
+  logout, alongside the highlight and guidance services that already were.
+- Block-break, block-place and talk handlers return on a cancelled event before crediting progress.
+- A datapack with two possession objectives for one item, or a `specified_profession` turn-in with
+  no professions, is rejected at load — logged, and skipped in lenient mode — instead of shipping a
+  quest that completes on one stack or can never be handed in. No bundled quest is affected.
+  (`DATAPACK.md`)
+
+### Changed — interface
+- Every screen scrolls from the keyboard: arrows, PageUp/PageDown, Home/End. Tab reaches widgets
+  below the fold — they are made visible for the focus walk, the focused one is scrolled into view,
+  and the rest are hidden again. Arrow keys scroll rather than move focus on these screens.
+- A complete quest shown to a villager who cannot take it says where it goes
+  (`mcaquests.hint.turn_in.*`) instead of offering only Abandon. A full quest log says it is full
+  (`mcaquests.status.at_cap`) instead of the villager's "nothing today".
+- The tracker shows a quest's first unfinished objective, not its first objective, and a ready quest
+  says so in words (`mcaquests.hud.ready_suffix`) as well as colour.
+- The tracker's rows are no longer packed onto a 10-pixel rhythm: every line gets a little more
+  leading, section headings a little more room, and each quest or project after the first opens with
+  a blank gap, so a title and its objective, destination and deadline read as one block instead of
+  as a wall of text. A row carrying a progress bar now reserves the bar's height as well as the
+  text's, so the bar no longer overlaps the line beneath it.
+- Titles no longer run under the difficulty pips on the offer menu, nor under the pin, copy-coordinates
+  and waypoint buttons in the log; project titles wrap inside their card on both screens.
+- Icon buttons scale their glyph to fit, so the 12-pixel pin and waypoint buttons no longer overhang.
+- The quest log rebuilds its widgets only when a quest's destination or the map integration actually
+  changes, and restores focus to the same control afterwards — a guidance update for a walking villager
+  no longer drops focus every second.
+- A villager's menu only replaces an empty screen, one of this mod's own, or MCA's interact screen;
+  it no longer pulls a player out of a chest or their inventory.
+- Back from a village project returns to the villager's menu rather than the world.
+- Every client cache — active quests, projects and their per-villager menus, the journal, and known
+  ids — is cleared on logout, so nothing from the previous world is shown before the first sync.
+- `key.mcaquests.toggle_hud` is labelled "Show/Hide Quest Tracker", which is what it does. The quest
+  log and journal keys stay unbound by design; the only route is the button on MCA's villager screen.
+
+### Compatibility — add-on API
+- `QuestReward` gains `RewardContext` (giver UUID and name, dimension, frozen village id, quest id)
+  and a default `grant(player, villager, context)` that delegates to the existing two-argument
+  method. Existing rewards compile and behave unchanged; override the three-argument form to grant
+  when the villager is absent. (`README.md`)
+
+### Added — translation keys
+`mcaquests.status.all_declined`, `mcaquests.status.at_cap`, `mcaquests.message.offer_gone`,
+`mcaquests.hint.turn_in.original_giver`, `mcaquests.hint.turn_in.same_profession`,
+`mcaquests.hint.turn_in.specified_profession`, `mcaquests.hud.ready_suffix`; `key.mcaquests.toggle_hud`
+relabelled. Both locales.
+
+### Changed — protocol
+Unchanged at 13. Deadlines are still sent as an absolute game time; the server re-derives it from
+the world clock at every sync.
+
+### Save compatibility
+**Old saves load unchanged, and a save written by this version loads on 1.5.0.** Three keys are new,
+each written only when it holds something and absent-tolerant on read:
+- `start_day` and `village` on an active quest — the world clock and the giver's village at
+  acceptance. A quest accepted before this version has neither: its `deadline_time` stays on game time
+  until re-accepted, and its offline rewards resolve the village by scanning for the giver.
+- `dedupe` on a player's village standing — the bounded award ring. The old `dedupe:` migration
+  markers are removed on first load and the save shrinks; nothing else in `standingV2` moves.
+Downgrading to 1.5.0 leaves the three as unread tags and brings back the behaviour they fix.
+
+### Tests
+- `FailureSpecDeadlineTest` — `deadline_time` on the world clock, sleep jumps fire, `deadline_ticks`
+  untouched, and a quest with no stamp reproduces the old value.
+- `ActiveQuestResolveCacheTest` — a template quest's cached definition changes with the registry
+  generation and is stable within one.
+- `RewardContextDefaultTest` — a two-argument reward is reached through the three-argument default;
+  `RewardContext.community()` resolves from dimension and village id.
+- `VillageStandingDedupeTest` — the ring caps at 128 and evicts oldest, round-trips, and loading strips
+  `dedupe:` markers while keeping other migrations.
+- `OfferSessionTest` — declining everything is not stale, becomes stale after the refresh window, is
+  cleared by a redraw, and a timed refusal survives pruning.
+- `TownsteadHoldElapsedTest` — elapsed credit per poll, first-poll and clamp rules.
+- `ObjectiveValidatorTest` — duplicate possession objectives and an empty `specified_profession` list
+  are rejected; the bundled pack still validates clean.
+- `ScrollViewTest` — `scrollIntoView` moves the least distance in both directions, pins an oversized
+  band to its top, and always clamps.
+- `CardTextWrappingTest` — now also fails on a raw `drawString` of a card title.
+
+### Documentation
+`DATAPACK.md` (`deadline_time` is on the world clock; validator rejections), `README.md`
+(`RewardContext`), `CHANGELOG.md`.
+
 ## [1.5.0] - 2026-09-02
 
 The mod shipped a complete quest system behind a placeholder interface. Every screen drew rows of

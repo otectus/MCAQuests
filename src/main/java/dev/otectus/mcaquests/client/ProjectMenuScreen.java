@@ -10,12 +10,13 @@ import dev.otectus.mcaquests.network.ProjectMenuStatus;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -46,16 +47,22 @@ public class ProjectMenuScreen extends McaQuestsScreen {
     private List<ProjectCard> cards;
     /** Card tops in content space (0 = first card), turned into screen y through {@link #view}. */
     private final List<Integer> cardTops = new ArrayList<>();
-    private final List<ScrolledButton> scrolledButtons = new ArrayList<>();
 
-    /** A Contribute button, remembered with its content-space y so scrolling can reposition it. */
-    private record ScrolledButton(Button button, int contentY) {
-    }
+    /**
+     * The screen to go back to, or null for the world.
+     *
+     * <p>This screen is only ever reached from the villager menu's View Project button, and Back used
+     * to close it outright — so leaving a project dropped the conversation you were in the middle of
+     * rather than returning to it.
+     */
+    @Nullable
+    private final Screen parent;
 
-    public ProjectMenuScreen(UUID villagerUuid, List<ProjectCard> cards) {
+    public ProjectMenuScreen(UUID villagerUuid, List<ProjectCard> cards, @Nullable Screen parent) {
         super(Component.translatable("mcaquests.screen.projects.title"));
         this.villagerUuid = villagerUuid;
         this.cards = cards;
+        this.parent = parent;
     }
 
     public UUID villagerUuid() {
@@ -80,11 +87,15 @@ public class ProjectMenuScreen extends McaQuestsScreen {
         return Math.max(1, contentWidth() - CARD_PAD * 2);
     }
 
+    /** The title sits to the right of the project glyph, so it wraps to what is left of the card. */
+    private int titleWidth() {
+        return Math.max(1, wrapWidth() - 16);
+    }
+
     @Override
     protected void init() {
         super.init();
         cardTops.clear();
-        scrolledButtons.clear();
 
         // Cards live in their own space starting at 0 and are clipped into the well, so a village with
         // several projects doesn't run off the bottom (see QuestMenuScreen).
@@ -100,8 +111,7 @@ public class ProjectMenuScreen extends McaQuestsScreen {
                         .bounds(centerX() - 60, view.screenY(contentY), 120, 20)
                         .tooltip(Component.translatable("mcaquests.tooltip.project.contribute"))
                         .build();
-                addRenderableWidget(contribute);
-                scrolledButtons.add(new ScrolledButton(contribute, contentY));
+                addScrolledWidget(contribute, contentY, 20);
             }
             y += height + CARD_GAP;
         }
@@ -112,6 +122,15 @@ public class ProjectMenuScreen extends McaQuestsScreen {
                 .build());
     }
 
+    @Override
+    public void onClose() {
+        if (this.minecraft != null && parent != null) {
+            this.minecraft.setScreen(parent);
+            return;
+        }
+        super.onClose();
+    }
+
     private void contribute(ResourceLocation projectId) {
         QuestNetwork.CHANNEL.sendToServer(new ProjectContributeC2SPacket(villagerUuid, projectId));
     }
@@ -119,7 +138,7 @@ public class ProjectMenuScreen extends McaQuestsScreen {
     /** Must agree exactly with {@link #renderCard}, or the Contribute buttons drift off their cards. */
     private int cardHeight(ProjectCard card) {
         int height = CARD_PAD * 2;
-        height += 12; // title
+        height += CardText.height(this.font, card.title(), titleWidth()) + 2; // title
         height += 10; // scope + sponsor
         height += 10; // phase
         height += this.font.split(card.dialogue(), wrapWidth()).size() * 10;
@@ -148,12 +167,7 @@ public class ProjectMenuScreen extends McaQuestsScreen {
             return;
         }
 
-        // Hidden rather than clipped: super.render draws widgets outside our scissor, and an
-        // invisible widget is also unclickable (AbstractWidget.clicked tests visible).
-        for (ScrolledButton scrolled : scrolledButtons) {
-            scrolled.button().setY(view.screenY(scrolled.contentY()));
-            scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 20);
-        }
+        applyScrolledVisibility();
         beginContentClip(graphics);
         for (int i = 0; i < cards.size(); i++) {
             renderCard(graphics, cards.get(i), view.screenY(cardTops.get(i)), mouseX, mouseY);
@@ -175,8 +189,8 @@ public class ProjectMenuScreen extends McaQuestsScreen {
         int left = contentLeft() + CARD_PAD;
         int y = top + CARD_PAD;
         Panel.icon(graphics, done ? GuiTextures.ICON_OBJ_DONE : GuiTextures.ICON_PROJECT, left - 1, y - 4);
-        graphics.drawString(this.font, card.title(), left + 16, y, done ? Palette.READY : Palette.TITLE, false);
-        y += 12;
+        y = CardText.draw(graphics, this.font, card.title(), left + 16, y, titleWidth(),
+                done ? Palette.READY : Palette.TITLE) + 2;
         graphics.drawString(this.font, Component.empty().append(card.scopeLabel())
                 .append(Component.literal("  ")).append(card.sponsorLabel()), left, y, Palette.SUBTITLE, false);
         y += 10;

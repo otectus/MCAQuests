@@ -5,6 +5,7 @@ import dev.otectus.mcaquests.compat.IncidentSelector;
 import dev.otectus.mcaquests.compat.ReputationAward;
 import dev.otectus.mcaquests.compat.ReputationBackend;
 import dev.otectus.mcaquests.compat.ReputationBridge;
+import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcareputation.api.IncidentQuery;
 import dev.otectus.mcareputation.api.McaReputationApi;
 import dev.otectus.mcareputation.api.ReputationRequest;
@@ -21,6 +22,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,30 +165,59 @@ public final class CanonicalReputationBackend implements ReputationBackend {
                 .orElse(false);
     }
 
+    /**
+     * Reads are the union of Reputation's answer and the player's own {@code PlayerTitles}.
+     *
+     * <p>Quests still writes titles into its own per-player store — the Journal, the title conditions
+     * and the tier ladder all read it — and those writes do not (yet) reach Reputation. Asking only
+     * Reputation therefore made a title a quest had just granted invisible to the condition gating the
+     * next quest, and made tier titles invisible to the Journal, on exactly the installs that have both
+     * mods. The same union is what the legacy backend has always done. Writing quest titles into
+     * Reputation is 1.6 work; this is the read half, and it cannot recurse.
+     */
     @Override
     public boolean hasTitle(MinecraftServer server, UUID player, @Nullable ResourceLocation dimension,
                             int villageId, ResourceLocation title, boolean global) {
         Optional<CommunityKey> community = global || dimension == null
                 ? Optional.empty()
                 : key(dimension, villageId);
-        return McaReputationApi.hasTitle(server, player, title, community);
+        if (McaReputationApi.hasTitle(server, player, title, community)) {
+            return true;
+        }
+        ServerPlayer online = server.getPlayerList().getPlayer(player);
+        if (online == null) {
+            return false;
+        }
+        return QuestCapabilities.get(online).map(data -> global
+                ? data.titles().hasGlobal(title)
+                : dimension != null && data.titles().hasVillage(dimension, villageId, title)).orElse(false);
     }
 
     @Override
     public Set<ResourceLocation> globalTitles(MinecraftServer server, UUID player) {
-        return McaReputationApi.getAllSnapshots(server, player).stream()
-                .findFirst()
-                .map(snapshot -> snapshot.globalTitles())
-                .orElseGet(Set::of);
+        Set<ResourceLocation> held = new LinkedHashSet<>();
+        McaReputationApi.getAllSnapshots(server, player)
+                .forEach(snapshot -> held.addAll(snapshot.globalTitles()));
+        ServerPlayer online = server.getPlayerList().getPlayer(player);
+        if (online != null) {
+            QuestCapabilities.get(online).ifPresent(data -> held.addAll(data.titles().global()));
+        }
+        return held;
     }
 
     @Override
     public Set<ResourceLocation> villageTitles(MinecraftServer server, UUID player,
                                                ResourceLocation dimension, int villageId) {
-        return key(dimension, villageId)
+        Set<ResourceLocation> held = new LinkedHashSet<>();
+        key(dimension, villageId)
                 .flatMap(community -> McaReputationApi.getSnapshot(server, player, community))
-                .map(snapshot -> snapshot.villageTitles())
-                .orElseGet(Set::of);
+                .ifPresent(snapshot -> held.addAll(snapshot.villageTitles()));
+        ServerPlayer online = server.getPlayerList().getPlayer(player);
+        if (online != null) {
+            QuestCapabilities.get(online)
+                    .ifPresent(data -> held.addAll(data.titles().forVillage(dimension, villageId)));
+        }
+        return held;
     }
 
     // ------------------------------------------------------------------

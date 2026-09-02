@@ -19,14 +19,20 @@ import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Keybind-accessible list of the player's active MCA quests (spec section 21), with a per-quest
@@ -66,18 +72,30 @@ public class QuestLogScreen extends McaQuestsScreen {
     private List<QuestLogEntry> rendered = List.of();
     private List<ProjectLogEntry> renderedProjects = List.of();
     /**
-     * The guidance the current layout was measured against.
+     * The layout the current buttons were built for, as {@link #layoutSignature} words it.
      *
      * <p>A destination line changes an entry's height, and the Abandon and follow buttons are placed
      * from that height at {@code init} time. The server pushes guidance about once a second and quite
      * independently of the quest log, so without watching it a quest that gained or lost a destination
      * while the screen was open would leave every button below it sitting off its row.
      */
-    private List<ActiveGuidance> renderedGuidance = List.of();
-    private final List<ScrolledButton> scrolledButtons = new ArrayList<>();
+    private List<String> renderedLayout = List.of();
 
-    /** An Abandon button, remembered with its content-space y so scrolling can reposition it. */
-    private record ScrolledButton(Button button, int contentY) {
+    /**
+     * Every row control, addressed by the quest it belongs to and what it does.
+     *
+     * <p>A rebuild replaces every widget on the screen, so focus cannot be held as a reference: it has
+     * to be named before the rebuild and looked up again after it.
+     */
+    private final Map<ControlKey, AbstractWidget> controls = new LinkedHashMap<>();
+
+    /** The controls one quest's row can carry. */
+    private enum Control {
+        ABANDON, TRACK, COPY, WAYPOINT
+    }
+
+    /** One control on one row, stable across a rebuild. */
+    private record ControlKey(UUID villagerUuid, ResourceLocation questId, Control control) {
     }
 
     public QuestLogScreen() {
@@ -94,9 +112,24 @@ public class QuestLogScreen extends McaQuestsScreen {
         return Math.max(1, contentWidth() - CARD_PAD * 2);
     }
 
-    /** The title line stops short of the Abandon button rather than running under it. */
-    private int titleWidth() {
-        return Math.max(1, wrapWidth() - ABANDON_W - TRACK_W - TRACK_GAP - 6);
+    /**
+     * The title line stops short of this row's controls rather than running under them.
+     *
+     * <p>Abandon and the follow pin are on every row; the copy-coordinates and add-waypoint buttons
+     * are only on a row that has somewhere to go, and they were not counted — so exactly the quests
+     * with a destination were the ones whose title ran under two more buttons.
+     */
+    private int titleWidth(QuestLogEntry entry) {
+        int side = sideButtonCount(entry) * (SIDE_W + TRACK_GAP);
+        return Math.max(1, wrapWidth() - ABANDON_W - TRACK_W - TRACK_GAP - side - 6);
+    }
+
+    /** How many optional coordinate buttons this row carries: none, copy, or copy and waypoint. */
+    private static int sideButtonCount(QuestLogEntry entry) {
+        if (destination(entry).isEmpty()) {
+            return 0;
+        }
+        return MapWaypointBridge.Holder.get().isAvailable() ? 2 : 1;
     }
 
     @Override
@@ -104,8 +137,8 @@ public class QuestLogScreen extends McaQuestsScreen {
         super.init();
         rendered = ClientQuestData.active();
         renderedProjects = ClientProjectData.projects();
-        renderedGuidance = ClientGuidanceData.all();
-        scrolledButtons.clear();
+        renderedLayout = layoutSignature();
+        controls.clear();
 
         // Entries are laid out in their own space starting at 0 and clipped into the well, so a long
         // list scrolls instead of running off the bottom.
@@ -119,8 +152,7 @@ public class QuestLogScreen extends McaQuestsScreen {
                             ABANDON_W, ABANDON_H)
                     .tooltip(Component.translatable("mcaquests.tooltip.abandon"))
                     .build();
-            addRenderableWidget(abandon);
-            scrolledButtons.add(new ScrolledButton(abandon, buttonY));
+            addControl(entry, Control.ABANDON, abandon, buttonY);
 
             // Follow this quest: the marker, the tracker's guidance line and the villager outline all
             // point at whichever one is followed. Clicking the quest already followed clears it, so
@@ -137,8 +169,7 @@ public class QuestLogScreen extends McaQuestsScreen {
                             : QuestTrackC2SPacket.of(entry.villagerUuid(), entry.questId())));
             track.setTooltip(Tooltip.create(Component.translatable(
                     tracked ? "mcaquests.tooltip.untrack" : "mcaquests.tooltip.track")));
-            addRenderableWidget(track);
-            scrolledButtons.add(new ScrolledButton(track, buttonY));
+            addControl(entry, Control.TRACK, track, buttonY);
 
             // Doing something with the coordinates, for the quests that have any. Real widgets rather
             // than a hand-rolled clickable rectangle: the journal's View Deeds link was drawn and
@@ -153,8 +184,7 @@ public class QuestLogScreen extends McaQuestsScreen {
                         GuiTextures.ICON_DISTANCE, IconButton.Look.BUTTON,
                         b -> copyCoordinates(pos));
                 copy.setTooltip(Tooltip.create(Component.translatable("mcaquests.tooltip.copy_coords")));
-                addRenderableWidget(copy);
-                scrolledButtons.add(new ScrolledButton(copy, buttonY));
+                addControl(entry, Control.COPY, copy, buttonY);
 
                 // Only where there is a map to add one to. A button that silently does nothing is
                 // worse than no button.
@@ -168,8 +198,7 @@ public class QuestLogScreen extends McaQuestsScreen {
                         b -> addWaypoint(guidance));
                 waypoint.setTooltip(
                         Tooltip.create(Component.translatable("mcaquests.tooltip.add_waypoint")));
-                addRenderableWidget(waypoint);
-                scrolledButtons.add(new ScrolledButton(waypoint, buttonY));
+                addControl(entry, Control.WAYPOINT, waypoint, buttonY);
             }
             y += entryHeight(entry) + CARD_GAP;
         }
@@ -181,15 +210,65 @@ public class QuestLogScreen extends McaQuestsScreen {
                 .build());
     }
 
+    /** Adds a row control and remembers what it is, so a rebuild can give focus back to it. */
+    private void addControl(QuestLogEntry entry, Control control, AbstractWidget widget, int contentY) {
+        addScrolledWidget(widget, contentY, ABANDON_H);
+        controls.put(new ControlKey(entry.villagerUuid(), entry.questId(), control), widget);
+    }
+
     @Override
     public void tick() {
-        // The server pushes a fresh log on every quest change (including the abandon we just sent) and
-        // fresh guidance about once a second, but our layout and buttons are fixed at init() time. All
-        // three caches swap the list reference on update, so an identity check is a cheap, sufficient
-        // "something the layout depends on changed" signal.
+        // The server pushes a fresh log on every quest change (including the abandon we just sent), and
+        // both quest caches swap their list reference on update, so an identity check is a cheap,
+        // sufficient "the list changed" signal. Guidance is compared by what the layout actually
+        // depends on instead -- see layoutSignature.
+        List<String> layout = layoutSignature();
         if (rendered != ClientQuestData.active() || renderedProjects != ClientProjectData.projects()
-                || renderedGuidance != ClientGuidanceData.all()) {
+                || !renderedLayout.equals(layout)) {
+            ControlKey focused = focusedControl();
             rebuildWidgets();
+            restoreFocus(focused);
+        }
+    }
+
+    /**
+     * What the layout depends on outside the quest list: whether each quest has a destination — which
+     * adds a line and two buttons — and whether there is a map to pin one to.
+     *
+     * <p>The guidance snapshot itself changes about once a second, because the distance in it is
+     * different every time the player takes a step. Rebuilding on that took keyboard focus away from
+     * whatever the player had just tabbed to, at that same rate.
+     */
+    private List<String> layoutSignature() {
+        List<String> signature = new ArrayList<>(rendered.size() + 1);
+        signature.add("map=" + MapWaypointBridge.Holder.get().isAvailable());
+        for (QuestLogEntry entry : rendered) {
+            signature.add(entry.villagerUuid() + "/" + entry.questId() + "="
+                    + destination(entry).isPresent());
+        }
+        return signature;
+    }
+
+    /** Which row control has focus right now, or null when focus is elsewhere. */
+    @Nullable
+    private ControlKey focusedControl() {
+        GuiEventListener focused = getFocused();
+        for (Map.Entry<ControlKey, AbstractWidget> control : controls.entrySet()) {
+            if (control.getValue() == focused) {
+                return control.getKey();
+            }
+        }
+        return null;
+    }
+
+    /** Hands focus back to the same control on the same quest, if it still exists. */
+    private void restoreFocus(@Nullable ControlKey key) {
+        if (key == null) {
+            return;
+        }
+        AbstractWidget widget = controls.get(key);
+        if (widget != null) {
+            setFocused(widget);
         }
     }
 
@@ -300,7 +379,7 @@ public class QuestLogScreen extends McaQuestsScreen {
      */
     private int entryHeight(QuestLogEntry entry) {
         int height = CARD_PAD * 2;
-        height += CardText.height(this.font, titleLine(entry), titleWidth()) + 1;
+        height += CardText.height(this.font, titleLine(entry), titleWidth(entry)) + 1;
         height += entry.chainLabel().getString().isEmpty() ? 0 : 10;
         for (CardObjective objective : entry.objectives()) {
             height += CardText.heightBulleted(this.font, BULLET, objectiveText(objective), wrapWidth());
@@ -326,7 +405,8 @@ public class QuestLogScreen extends McaQuestsScreen {
         }
         int height = 12 + 5; // section heading + divider
         for (ProjectLogEntry project : projects) {
-            height += 11 + 10 + 6; // title + scope/phase + gap
+            // title + scope/phase + gap
+            height += CardText.height(this.font, projectTitleLine(project), wrapWidth()) + 1 + 10 + 6;
             for (ProjectObjectiveLine line : project.objectives()) {
                 height += CardText.heightBulleted(this.font, BULLET, projectObjectiveLabel(line),
                         wrapWidth());
@@ -335,6 +415,13 @@ public class QuestLogScreen extends McaQuestsScreen {
             }
         }
         return height;
+    }
+
+    /** Built once so the height calculation and the draw wrap identical text. */
+    private static Component projectTitleLine(ProjectLogEntry project) {
+        return project.title().copy()
+                .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
+                .append(project.sponsorLabel().copy().withStyle(ChatFormatting.GRAY));
     }
 
     /** Built once so the height calculation and the draw wrap identical text. */
@@ -357,13 +444,7 @@ public class QuestLogScreen extends McaQuestsScreen {
             return;
         }
 
-        // Hidden rather than clipped: super.render draws widgets outside our scissor, and an
-        // invisible widget is also unclickable (AbstractWidget.clicked tests visible), so a
-        // scrolled-away Abandon can't be hit or sit over the footer.
-        for (ScrolledButton scrolled : scrolledButtons) {
-            scrolled.button().setY(view.screenY(scrolled.contentY()));
-            scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), ABANDON_H);
-        }
+        applyScrolledVisibility();
 
         beginContentClip(graphics);
         int y = 0;
@@ -390,7 +471,7 @@ public class QuestLogScreen extends McaQuestsScreen {
 
         int left = contentLeft() + CARD_PAD;
         int lineY = top + CARD_PAD;
-        lineY = CardText.draw(graphics, this.font, titleLine(entry), left, lineY, titleWidth(),
+        lineY = CardText.draw(graphics, this.font, titleLine(entry), left, lineY, titleWidth(entry),
                 entry.ready() ? Palette.READY : Palette.TITLE) + 1;
         if (!entry.chainLabel().getString().isEmpty()) {
             Panel.icon(graphics, GuiTextures.ICON_CHAIN, left - 1, lineY - 4);
@@ -448,11 +529,8 @@ public class QuestLogScreen extends McaQuestsScreen {
                 contentLeft() + 18, y, Palette.HEADING, false);
         y += 12;
         for (ProjectLogEntry project : projects) {
-            graphics.drawString(this.font, project.title().copy()
-                            .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
-                            .append(project.sponsorLabel().copy().withStyle(ChatFormatting.GRAY)),
-                    left, y, Palette.TITLE, false);
-            y += 11;
+            y = CardText.draw(graphics, this.font, projectTitleLine(project), left, y, wrapWidth(),
+                    Palette.TITLE) + 1;
             graphics.drawString(this.font, Component.empty().append(project.scopeLabel())
                     .append(Component.literal("  ")).append(project.phaseLabel()), left + 2, y,
                     Palette.SUBTITLE, false);

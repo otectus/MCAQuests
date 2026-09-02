@@ -181,6 +181,17 @@ public final class OfferSessionService {
                 slots.remove(i--);
             }
         }
+        // Refill anything the loop could not replace in place. A set that has lost cards — to a situation
+        // that closed, to a cooldown that started, to a refusal that could not be refilled at the time —
+        // is not a set the villager should keep showing short, and drawOne already excludes the refusals.
+        int wanted = McaQuestsConfig.COMMON.offersPerVillager.get();
+        while (slots.size() < wanted) {
+            Optional<OfferSession.Slot> extra = drawOne(pass, session, now);
+            if (extra.isEmpty()) {
+                break;
+            }
+            slots.add(extra.get());
+        }
     }
 
     private static boolean stillOfferable(OfferFilters.Pass pass, OfferSession.Slot slot, long now,
