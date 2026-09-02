@@ -1,13 +1,12 @@
 package dev.otectus.mcaquests.quest;
 
-import net.minecraft.core.BlockPos;
+import dev.otectus.mcaquests.network.CardObjective;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 
@@ -23,32 +22,22 @@ import java.util.UUID;
  * active quest to drop — the same {@code questId} may be active from two different villagers. It
  * is the giver's stored identity, not a live entity, so it stays valid once the giver is gone.
  *
- * <p>{@code target} is the villager the quest wants the player to find, with the position the HUD turns
- * into a live distance and compass bearing. Empty when nothing is findable (the target is unloaded and has
- * no known home, or is in another dimension), in which case the HUD renders exactly as it always did.
+ * <p><b>Where a quest is sending the player is not here.</b> It used to be, as a {@code TargetHint}
+ * of a name and a {@code BlockPos} — with no dimension, because "an arrow across dimensions would be
+ * a lie" — and it could only ever name a villager, so a quest about an ancient city had nothing to
+ * put in it. That is {@code GuidanceTarget}'s job, it does it for places as well as people and with
+ * the dimension attached, and since 1.5.0 the guidance packet carries one per quest rather than one
+ * per player. Keeping both would have been two answers to one question, drifting apart.
+ *
+ * <p>{@code tracked} is whether this is the quest the world marker and the villager outline are about.
+ * Exactly one entry can have it, and none need to. It is here rather than on the guidance packet
+ * because the quest log has to draw the pin on the right row, which is a question about the list and
+ * not about the marker.
  */
 public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Component title, Component giverName,
-                            Component chainLabel, List<Component> objectives, boolean ready,
-                            boolean suspended, OptionalLong deadlineGameTime,
-                            Optional<TargetHint> target, List<Component> townsteadContext) {
-
-    /**
-     * Where the quest wants the player to go: a villager's name and their position. The position is a live
-     * one when the villager is loaded, otherwise their last known home, so the arrow still points somewhere
-     * useful for a target far outside render distance.
-     */
-    public record TargetHint(Component name, BlockPos pos, boolean lastKnown) {
-
-        static void encode(FriendlyByteBuf buf, TargetHint hint) {
-            buf.writeComponent(hint.name);
-            buf.writeBlockPos(hint.pos); // one long: VarInt is unsigned-biased, so negative coords cost 5B each
-            buf.writeBoolean(hint.lastKnown);
-        }
-
-        static TargetHint decode(FriendlyByteBuf buf) {
-            return new TargetHint(buf.readComponent(), buf.readBlockPos(), buf.readBoolean());
-        }
-    }
+                            Component chainLabel, List<CardObjective> objectives, boolean ready,
+                            boolean suspended, boolean tracked, OptionalLong deadlineGameTime,
+                            List<Component> townsteadContext) {
 
     public static void encode(FriendlyByteBuf buf, QuestLogEntry entry) {
         buf.writeResourceLocation(entry.questId);
@@ -56,14 +45,14 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
         buf.writeComponent(entry.title);
         buf.writeComponent(entry.giverName);
         buf.writeComponent(entry.chainLabel);
-        buf.writeCollection(entry.objectives, FriendlyByteBuf::writeComponent);
+        buf.writeCollection(entry.objectives, CardObjective::encode);
         buf.writeBoolean(entry.ready);
         buf.writeBoolean(entry.suspended);
+        buf.writeBoolean(entry.tracked);
         buf.writeBoolean(entry.deadlineGameTime.isPresent());
         if (entry.deadlineGameTime.isPresent()) {
             buf.writeVarLong(entry.deadlineGameTime.getAsLong());
         }
-        buf.writeOptional(entry.target, TargetHint::encode);
         buf.writeCollection(entry.townsteadContext, FriendlyByteBuf::writeComponent);
     }
 
@@ -74,11 +63,11 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
                 buf.readComponent(),
                 buf.readComponent(),
                 buf.readComponent(),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
+                buf.readCollection(ArrayList::new, CardObjective::decode),
+                buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean() ? OptionalLong.of(buf.readVarLong()) : OptionalLong.empty(),
-                buf.readOptional(TargetHint::decode),
                 buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent));
     }
 }

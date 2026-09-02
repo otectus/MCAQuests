@@ -59,6 +59,18 @@ The `mcaquests:currency` reward says *"pay the player some money"* and lets the 
 | `mediumCurrencyMin` / `mediumCurrencyMax` | `2` / `4` | Payout range for `"difficulty": "medium"`. |
 | `hardCurrencyMin` / `hardCurrencyMax` | `4` / `8` | Payout range for `"difficulty": "hard"`. |
 
+### `[rewards.reputation]`
+
+| Key | Default | Meaning |
+|---|---|---|
+| `easyQuestReputation` | `2` | Village standing granted for completing an `"difficulty": "easy"` quest that declares no `reputation` block and no `mcaquests:village_reputation` reward. |
+| `mediumQuestReputation` | `4` | The same for `"difficulty": "medium"` — and for a quest that declares no difficulty at all, which most do not. |
+| `hardQuestReputation` | `7` | The same for `"difficulty": "hard"`. |
+
+**A quest that authors its own outcome always wins**; these only fill in the blank, and they only ever fill in a *reward* — failing or abandoning a quest still costs nothing unless the pack says so.
+
+They exist because the blank was almost always there. Only 10 of the 262 bundled quests carried a `village_reputation` reward and none used the `reputation` block, so 252 of them were worth no standing at all, while seven quests were gated on standing and the ladder put Acquaintance at 25 and Friend at 75. Set all three to `0` for the pre-1.5.0 behaviour.
+
 **Numismatics is never a hard dependency.** The coin is looked up by registry id at runtime; MCA: Quests contains no reference to any Numismatics class and cannot classload one. An uninstalled Numismatics is simply an id that does not resolve, and takes the `currencyFallback` path.
 
 The band defaults reproduce the built-in pack's pre-1.1.0 emerald payouts, so enabling nothing changes nothing.
@@ -90,7 +102,11 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 | `followGiverAfterAccept` | `false` | If `true`, the giver follows the player after a quest is accepted (escort-style). **Default `false`: accepting never makes a villager follow you, and an existing auto-follow is cleared.** |
 | `leadVillagerSpeed` | `0.6` | Walk-speed multiplier for a villager **leading** the player in a lead-style escort (`escort_entity` with `lead:true`). Lower keeps it near walking pace so the player can stay close and guard it. Range `0.1`–`2.0`. |
 | `minEscortJourney` | `24` | How far, in blocks, the subject of an `escort_entity` or `reach_location` objective must **start** from the destination for the quest to be worth doing. A quest whose subject is already inside this distance is **not offered**, and one granted some other way (a quest chain, a command) will not credit arrival until the subject has genuinely travelled. This is what stops *"walk me to my bed"* being offered by a villager standing at their bed and completed instantly for the reward. A datapack can override it per objective with `min_journey`; set `0` here to fall back to the objective's own arrival radius. Range `0`–`512`. |
-| `highlightQuestTargets` | `true` | A villager that is the target of one of your active quests (the delivery recipient, a missing relative you have found, or the villager to heal/cure/escort/protect/defend) is **outlined** through walls while it is loaded, so you can find it. Sent to the quest owner only — other players never see your quest markers. A quest whose objectives target nobody in particular outlines the **giver** instead. |
+| `highlightQuestTargets` | `true` | Outline, through walls, the villager the quest you are **following** currently wants you to reach — the delivery recipient, the escortee, the villager to heal/cure/protect/defend, or (once every objective is done) the villager you hand the quest back to. Sent to the quest owner only; other players never see your outlines. Through 1.4.3 this outlined a villager for *every* objective of *every* active quest, plus the giver of any quest that named nobody, for the quest's whole lifetime — see `highlightAllActiveQuests`. |
+| `highlightAllActiveQuests` | `false` | Restore the pre-1.5.0 behaviour: outline every active quest's target at once instead of only the quest you are following. The giver fallback is **not** restored — outlining somebody because they once gave you a quest carried no information. |
+| `guidanceSearchIntervalTicks` | `200` | How long before the quest marker retries a world search that found nothing. Locating a structure or biome is the same work as `/locate` and runs on the server thread; a search that **succeeds** is remembered on the objective permanently (and survives a restart), so this only governs how often a failed one is retried as you travel. Range `20`–`24000`. |
+| `guidanceSearchesPerPass` | `1` | How many world searches one player's guidance pass may run, per second. Since 1.5.0 every active quest gets its own destination rather than only the one carrying the marker, so a player holding five quests whose structures are all out of range could otherwise fire five `/locate` calls at once. Quests that do not get a turn are asked again on the next pass — nothing is skipped, it is only spread out. Range `1`–`8`. |
+| `autoTrackNewQuests` | `true` | Accepting a quest starts following it when you are not already following one, so the marker and the tracker point at it without being asked. Set `false` to choose with the pin in the quest log instead. A **server** setting, because the server decides what to point you at. |
 | `highlightUsesGlowingEffect` | `false` | Legacy highlighting mode. Applies the vanilla **Glowing status effect** to the villager itself instead of drawing a per-player outline. That effect is world state, so **every player on the server sees it** and it can appear in minimaps and shader outlines — which is why it is no longer the default. Only enable it if you want that behaviour back. |
 | `questChatMessages` | `true` | Send a short chat confirmation when a quest is accepted or completed. |
 
@@ -179,11 +195,19 @@ See [TOWNSTEAD.md](TOWNSTEAD.md) for the full condition/objective/reward referen
 | `showSituationToast` | `true` | Toast popup when a nearby village opens a situation that needs help (0.8.0). |
 | `playQuestSounds` | `true` | Play a sound with the ready toast. |
 | `showQuestTrackerHud` | `true` | Show the on-screen active-quest tracker. |
-| `showQuestTargetDirection` | `true` | Add a line to the tracker naming the villager the quest wants you to find, with the distance to them and which way to turn ("Hans — 84 blocks to your right"). Falls back to their last known home while they are outside render distance. Hidden once the quest is ready to hand in. Needs `showQuestTrackerHud`. |
-| `questTrackerMaxEntries` | `3` | Max quests listed in the HUD tracker. |
+| `showQuestTargetDirection` | `true` | Add a line to the tracker saying where a quest is sending you, how far it is and which way to turn ("Nether Fortress — 412 blocks ahead-left"). **Every** active quest that can name a place gets its own line, and each follows the objective that quest is actually on, so it moves to the next step as each one lands. The world marker still stands on only one of them. Needs `showQuestTrackerHud`. |
+| `showQuestTargetCoordinates` | `true` | Append the destination's coordinates to that line, and to the quest log's — "Nether Fortress — 412 blocks ahead-left (1024, 68, -330)". Before this the mod could say how far away somewhere was and never where it was, so there was nothing to write down, type into a minimap or send to somebody else. A destination in **another dimension** shows its coordinates too: a bearing across dimensions would be a lie, but a coordinate is exactly what you want written down before you go looking for a portal. |
+| `showQuestLogDestination` | `true` | Show each quest's destination in the quest log as well as on the HUD tracker. The log listed objectives and never said where any of them were. Each row gains a button to copy the coordinates, and — where a supported minimap is installed — one to drop a waypoint you keep. |
+| `questTrackerMaxEntries` | `5` | Max quests listed in the HUD tracker. Range `1`–`15`. |
+| `questTrackerBackground` | `true` | Draw a background behind the tracker at all. |
+| `questTrackerStyle` | `PANEL` | Which background the tracker draws when `questTrackerBackground` is on (1.5.0): `PANEL` for the mod's textured panel, `SHADED` for the plain translucent box used through 1.4.3. Ignored when `questTrackerBackground` is `false`. |
 | `questTrackerAnchor` | `TOP_LEFT` | Screen corner the tracker anchors to: `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`. |
 | `questTrackerX` | `4` | Horizontal pixel offset from the anchored corner. |
 | `questTrackerY` | `4` | Vertical pixel offset from the anchored corner. |
+| `showQuestMarker` | `true` | Draw a marker in the world at the place the quest you are following is currently sending you: a beam and an icon, visible through walls, fading out as you arrive. Only ever one at a time, for the objective you are actually on. Turn it off for the tracker text alone. |
+| `questMarkerMaxDistance` | `256` | How far away the world marker is still drawn, in blocks. Past this only the tracker line names the target, which keeps a beam off the horizon for a destination two thousand blocks away. Range `16`–`4096`. |
+| `mapWaypoints` | `true` | Put your quest destinations on **JourneyMap** and **Xaero's Minimap**, where either is installed. One waypoint per quest that has somewhere to send you, created when it resolves, moved as the quest advances, and taken away when it is done. They are not saved into your own waypoint list — they belong to the quest, not to you — so uninstalling this mod leaves nothing behind. A destination in another dimension gets no waypoint: the Nether's coordinates are the overworld's divided by eight, so the raw number would sit somewhere you have no reason to go. Run `/mcaquests debug waypoints` to see what bound. |
+| `mapWaypointsFollowedOnly` | `false` | Restrict those waypoints to the quest you are following, so the map carries one at a time rather than one per quest. The in-world marker beam has always worked this way; this makes the map match it. |
 
 > The anchor + X/Y offset together make any on-screen tracker position reachable. Example: `TOP_RIGHT` with `questTrackerX = 4`, `questTrackerY = 28` tucks it under the top-right corner.
 

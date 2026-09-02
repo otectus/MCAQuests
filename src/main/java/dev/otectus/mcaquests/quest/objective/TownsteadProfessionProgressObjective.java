@@ -114,6 +114,15 @@ public record TownsteadProfessionProgressObjective(TownsteadTarget target,
         return value.map(OptionalInt::of).orElseGet(OptionalInt::empty);
     }
 
+
+    /** The resident whose profession track this is about. */
+    @Override
+    public java.util.Optional<net.minecraft.world.entity.Entity> townsteadSubject(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        return dev.otectus.mcaquests.quest.target.TownsteadTargetResolver
+                .resolveForObjective(target, player, active, progress, level);
+    }
+
     @Override
     public QuestObjectiveType<?> type() {
         return ObjectiveTypes.TOWNSTEAD_PROFESSION_PROGRESS;

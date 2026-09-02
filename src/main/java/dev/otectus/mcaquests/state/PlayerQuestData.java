@@ -23,6 +23,9 @@ public final class PlayerQuestData {
     private final ProgressionStats stats = new ProgressionStats();
     private final OfferSessions offers = new OfferSessions();
 
+    /** The quest the marker, the guidance line and the villager outline are all about. */
+    private TrackedQuest tracked;
+
     public List<ActiveQuest> active() {
         return active;
     }
@@ -47,6 +50,42 @@ public final class PlayerQuestData {
      */
     public OfferSessions offers() {
         return offers;
+    }
+
+    /**
+     * The quest this player is following, if it is still active.
+     *
+     * <p>Filtered against {@link #active} on every read rather than cleared when a quest ends, so no
+     * caller has to remember to tidy up at the moment a quest completes, fails, is abandoned, or
+     * disappears in a datapack reload. A dangling reference simply stops being an answer.
+     */
+    public Optional<TrackedQuest> tracked() {
+        if (tracked == null) {
+            return Optional.empty();
+        }
+        return active.stream().anyMatch(tracked::matches) ? Optional.of(tracked) : Optional.empty();
+    }
+
+    /** The active quest this player is following, if any. */
+    public Optional<ActiveQuest> trackedQuest() {
+        return tracked().flatMap(ref -> active.stream().filter(ref::matches).findFirst());
+    }
+
+    /** Follows {@code quest}; pass {@code null} to follow nothing. */
+    public void setTracked(ActiveQuest quest) {
+        tracked = quest == null ? null : new TrackedQuest(quest.questId(), quest.villagerUuid());
+    }
+
+    /** Follows {@code quest} only if nothing valid is being followed already. */
+    public void trackIfNothingTracked(ActiveQuest quest) {
+        if (tracked().isEmpty()) {
+            setTracked(quest);
+        }
+    }
+
+    /** True when {@code quest} is the one being followed. */
+    public boolean isTracked(ActiveQuest quest) {
+        return tracked().map(ref -> ref.matches(quest)).orElse(false);
     }
 
     public int activeCount() {
@@ -82,6 +121,7 @@ public final class PlayerQuestData {
         titles.copyFrom(other.titles);
         stats.copyFrom(other.stats);
         offers.copyFrom(other.offers);
+        tracked = other.tracked;
     }
 
     public CompoundTag save() {
@@ -95,6 +135,11 @@ public final class PlayerQuestData {
         tag.put("titles", titles.save());
         tag.put("stats", stats.save());
         tag.put("offers", offers.save());
+        // Written only when something is tracked, so a save that never used the feature is byte-for-byte
+        // what it was — the same discipline ActiveQuest applies to its own optional fields.
+        if (tracked != null) {
+            tag.put("tracked", tracked.save());
+        }
         return tag;
     }
 
@@ -108,5 +153,7 @@ public final class PlayerQuestData {
         titles.load(tag.getCompound("titles")); // absent on pre-0.7.0 saves -> empty
         stats.load(tag.getCompound("stats")); // absent on pre-1.0.0 saves -> empty
         offers.load(tag.getCompound("offers")); // absent on pre-1.4.3 saves -> empty, so offers redraw
+        // Absent on pre-1.5.0 saves -> nothing tracked, and the next quest accepted picks itself up.
+        tracked = TrackedQuest.load(tag.getCompound("tracked")).orElse(null);
     }
 }

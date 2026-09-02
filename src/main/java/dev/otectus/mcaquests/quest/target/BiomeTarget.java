@@ -1,8 +1,10 @@
 package dev.otectus.mcaquests.quest.target;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -62,6 +64,27 @@ public record BiomeTarget(Optional<ResourceLocation> biome, Optional<TagKey<Biom
     public void validate(String prefix, List<String> errors) {
         if (biome.isEmpty() && tag.isEmpty()) {
             errors.add(prefix + " must set either 'biome' or 'tag'.");
+        }
+    }
+
+    /**
+     * The nearest position in this biome to {@code from}, or empty.
+     *
+     * <p>Vanilla's {@code /locatebiome} search, and as costly as {@code StructureTarget.locate} for
+     * the same reason — it samples the biome source outward in rings. Throttled by its only caller,
+     * {@code LocateCache}, never here.
+     *
+     * <p>The {@code step} is 32 rather than vanilla's 8: a quest wants "there is warm ocean that
+     * way", not the exact first block of it, and the coarser stride cuts the sample count roughly
+     * sixteenfold. Fails to empty rather than throwing, for an id naming nothing in this world.
+     */
+    public Optional<BlockPos> locate(ServerLevel level, BlockPos from, int blockRadius) {
+        try {
+            Pair<BlockPos, Holder<Biome>> found = level.findClosestBiome3d(
+                    this::matches, from, Math.max(64, blockRadius), 32, 64);
+            return found == null ? Optional.empty() : Optional.of(found.getFirst());
+        } catch (Throwable t) {
+            return Optional.empty();
         }
     }
 

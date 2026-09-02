@@ -49,6 +49,19 @@ public record BuildNearLocationObjective(BlockTarget block, LocationAnchor locat
         return Component.translatable("mcaquests.objective.build_near_location", count, block.describe(), location.describe());
     }
 
+    /**
+     * Where the building has to happen. Blocks placed anywhere else do not count, so a marker here is
+     * the difference between the objective being clear and being a guessing game.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        return ObjectiveSupport.anchorGuidance(location, player, active, level, radius);
+    }
+
     @Override
     public int required() {
         return count;

@@ -3,16 +3,16 @@ package dev.otectus.mcaquests.network;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import dev.otectus.mcaquests.support.TestBootstrap;
 import io.netty.buffer.Unpooled;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 
@@ -76,14 +76,23 @@ class HighlightAndLogEntryCodecTest {
     }
 
     @Nested
-    @DisplayName("QuestLogEntry's new target hint")
+    @DisplayName("QuestLogEntry after the target hint was removed")
     class LogEntry {
 
-        private QuestLogEntry entryWith(Optional<QuestLogEntry.TargetHint> target) {
+        /**
+         * The entry no longer carries a destination at all.
+         *
+         * <p>It used to, as a {@code TargetHint} of a name and a {@code BlockPos} with no dimension,
+         * which could only ever name a villager — a quest about an ancient city had nothing to put in
+         * it. {@code GuidanceTarget} answers the same question for places as well as people, with the
+         * dimension attached, and since protocol 13 the guidance packet carries one per quest. Two
+         * answers to one question is how they drift apart, so there is now one.
+         */
+        private QuestLogEntry entry(List<CardObjective> objectives, boolean tracked) {
             return new QuestLogEntry(new ResourceLocation("mcaquests", "test_quest"),
                     UUID.randomUUID(), Component.literal("A Title"), Component.literal("Anna"),
-                    Component.empty(), List.of(Component.literal("Deliver 1x Paper")), false, false,
-                    OptionalLong.empty(), target, List.of());
+                    Component.empty(), objectives, false, false, tracked, OptionalLong.empty(),
+                    List.of());
         }
 
         private QuestLogEntry roundTrip(QuestLogEntry entry) {
@@ -95,36 +104,25 @@ class HighlightAndLogEntryCodecTest {
         }
 
         @Test
-        @DisplayName("an entry with no target round-trips as empty")
-        void absentTarget() {
-            assertTrue(roundTrip(entryWith(Optional.empty())).target().isEmpty(),
-                    "most quests point at nobody in particular; the HUD must render as it always did");
+        @DisplayName("an entry round-trips its objectives and its follow pin")
+        void entryRoundTrips() {
+            QuestLogEntry entry = entry(List.of(CardObjective.offered(
+                    Component.literal("Deliver 1x Paper"), 1, new ItemStack(Items.PAPER))), true);
+
+            QuestLogEntry decoded = roundTrip(entry);
+
+            assertEquals(entry.questId(), decoded.questId());
+            assertEquals(entry.villagerUuid(), decoded.villagerUuid());
+            assertEquals(1, decoded.objectives().size());
+            assertTrue(decoded.tracked(), "the log draws the pin on this row, so the flag must survive");
         }
 
         @Test
-        @DisplayName("a target hint round-trips name, position and the last-known flag")
-        void presentTarget() {
-            QuestLogEntry.TargetHint hint =
-                    new QuestLogEntry.TargetHint(Component.literal("Hans"), new BlockPos(120, 68, -340), true);
-
-            QuestLogEntry.TargetHint decoded = roundTrip(entryWith(Optional.of(hint))).target().orElseThrow();
-
-            assertEquals(hint.name().getString(), decoded.name().getString());
-            assertEquals(hint.pos(), decoded.pos());
-            assertTrue(decoded.lastKnown(),
-                    "the HUD words the line differently for a last-known position, so the flag must survive");
-        }
-
-        @Test
-        @DisplayName("negative coordinates survive intact")
-        void negativeCoordinates() {
-            // The reason the position is written as a packed BlockPos long rather than three VarInts:
-            // VarInt is not zig-zag encoded, so every negative coordinate would silently cost 5 bytes.
-            BlockPos pos = new BlockPos(-4096, -48, -30_000_000);
-            QuestLogEntry.TargetHint hint = new QuestLogEntry.TargetHint(Component.literal("Greta"), pos, false);
-
-            assertEquals(pos, roundTrip(entryWith(Optional.of(hint))).target().orElseThrow().pos(),
-                    "a target in the far negative quadrant must still point the player the right way");
+        @DisplayName("an entry with no objectives round-trips")
+        void emptyObjectives() {
+            // The shape QuestManager sends for a quest whose definition vanished on a datapack reload:
+            // still listed, under its raw id, so the player can abandon it.
+            assertTrue(roundTrip(entry(List.of(), false)).objectives().isEmpty());
         }
     }
 }

@@ -24,11 +24,17 @@ public final class QuestClientHandlers {
         Minecraft.getInstance().setScreen(new QuestMenuScreen(data));
     }
 
-    /** Caches the latest project menu for a villager and live-refreshes the project screen if it's open. */
+    /**
+     * Caches the latest project menu for a villager and live-refreshes the project screen if it's open.
+     *
+     * <p>Refreshed <b>in place</b> rather than reopened. The server pushes the whole menu again after
+     * every contribution, and replacing the screen threw away the player's scroll position each time —
+     * so giving to a project several entries down bounced you back to the top of the list.
+     */
     public static void onProjectMenuData(UUID villagerUuid, List<ProjectCard> cards) {
         ClientProjectData.cacheMenu(villagerUuid, cards);
         if (Minecraft.getInstance().screen instanceof ProjectMenuScreen open && open.villagerUuid().equals(villagerUuid)) {
-            Minecraft.getInstance().setScreen(new ProjectMenuScreen(villagerUuid, cards));
+            open.refresh(cards);
         }
     }
 
@@ -87,5 +93,10 @@ public final class QuestClientHandlers {
     /** The full set of villagers this player's active quests want outlined; replaces whatever was set. */
     public static void setHighlights(int[] entityIds) {
         ClientHighlightData.update(entityIds);
+    }
+
+    /** Where this player's quests are sending them, or an empty snapshot to take the marker away. */
+    public static void setGuidance(dev.otectus.mcaquests.quest.guidance.GuidanceSnapshot snapshot) {
+        ClientGuidanceData.update(snapshot);
     }
 }

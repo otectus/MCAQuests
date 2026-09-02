@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.state;
 
+import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
@@ -19,7 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * One accepted, in-flight quest stored on the player (spec section 16). Holds a snapshot of the
@@ -87,6 +90,12 @@ public final class ActiveQuest {
      */
     private final java.util.BitSet dispatchedPhases = new java.util.BitSet();
 
+    /**
+     * Quest ids already reported as having gained objectives since a player accepted them, so the
+     * padding in {@link #reconcile(QuestDefinition)} logs once per id rather than once per tick.
+     */
+    private static final Set<ResourceLocation> RECONCILED_QUESTS = ConcurrentHashMap.newKeySet();
+
     /** Lazily-built concretized definition, derived from {@link #template}; not persisted. */
     @Nullable
     private transient QuestDefinition resolvedCache;
@@ -132,8 +141,12 @@ public final class ActiveQuest {
      * from the frozen {@link #template} values) when this came from a template, otherwise {@code base}
      * unchanged. Cached so the per-second progress tick does not re-parse JSON. Falls back to
      * {@code base} if the stored values can no longer be substituted (e.g. a datapack changed).
+     *
+     * <p>Also the point where a held quest is reconciled with a definition that has since gained
+     * objectives -- see {@link #reconcile(QuestDefinition)}.
      */
     public QuestDefinition resolve(QuestDefinition base) {
+        reconcile(base);
         if (template == null || base.template().isEmpty()) {
             return base;
         }
@@ -191,8 +204,36 @@ public final class ActiveQuest {
         return java.util.Optional.ofNullable(situationInstance);
     }
 
+    /**
+     * Progress for objective {@code index}, growing the list if the definition has gained objectives
+     * since this quest was accepted. Progress is stored positionally and every reader indexes it by
+     * the live definition, so a datapack (or an update) that appends an objective to a quest a player
+     * is already holding would otherwise throw on the next tick. The list is never trimmed: a
+     * definition that loses an objective may leave a stale trailing entry, which nothing reads.
+     */
     public ObjectiveProgress progress(int index) {
+        while (progress.size() <= index) {
+            progress.add(new ObjectiveProgress());
+        }
         return progress.get(index);
+    }
+
+    /**
+     * Pads this quest's progress list up to {@code base}'s objective count, logging once per quest id.
+     * The player is told nothing: the new objective simply shows up at 0, which is what it is.
+     */
+    private void reconcile(QuestDefinition base) {
+        int wanted = base.objectives().size();
+        if (progress.size() >= wanted) {
+            return;
+        }
+        if (RECONCILED_QUESTS.add(questId)) {
+            McaQuests.LOGGER.info("[MCA: Quests] Quest '{}' has more objectives ({}) than when it was "
+                    + "accepted ({}); the new ones start at 0.", questId, wanted, progress.size());
+        }
+        while (progress.size() < wanted) {
+            progress.add(new ObjectiveProgress());
+        }
     }
 
     /**

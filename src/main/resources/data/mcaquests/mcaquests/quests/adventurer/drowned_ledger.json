@@ -48,12 +48,18 @@
     {
       "type": "mcaquests:kill_entity",
       "entity": "minecraft:drowned",
-      "count": 10
+      "count": 10,
+      "source": {
+        "structure_tag": "mcaquests:ocean_ruins"
+      }
     },
     {
       "type": "mcaquests:obtain_item",
       "item": "minecraft:prismarine_crystals",
-      "count": 8
+      "count": 8,
+      "source": {
+        "structure_tag": "mcaquests:ocean_ruins"
+      }
     }
   ],
   "rewards": [

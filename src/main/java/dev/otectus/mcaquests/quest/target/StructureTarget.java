@@ -1,9 +1,12 @@
 package dev.otectus.mcaquests.quest.target;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -70,6 +73,44 @@ public record StructureTarget(Optional<ResourceLocation> structure, Optional<Tag
             return tag.isEmpty() || registry.getTag(tag.get()).map(named -> named.size() > 0).orElse(false);
         } catch (Throwable t) {
             return true;
+        }
+    }
+
+    /**
+     * The nearest generated instance of this structure to {@code from}, or empty.
+     *
+     * <p>This is vanilla's own {@code /locate} call, and it is <b>expensive</b>: it walks outward
+     * chunk by chunk and can stall the server tick for a noticeable fraction of a second on a slow
+     * disk. Nothing here throttles it — callers must, and the only caller does, through
+     * {@code LocateCache}, which searches once per objective and remembers the answer for good.
+     *
+     * <p>{@code skipKnownStructures} is {@code false} so a structure the player has already been
+     * inside still counts. The objective is "go there", not "find one nobody has seen".
+     *
+     * <p>Fails to empty rather than throwing, exactly like {@link #matches}: the id lives in a
+     * dynamic registry and may name nothing in this world, in which case there is no marker to draw
+     * and the quest simply says where to go in words.
+     */
+    public Optional<BlockPos> locate(ServerLevel level, BlockPos from, int chunkRadius) {
+        try {
+            Registry<Structure> registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
+            HolderSet<Structure> set = null;
+            if (structure.isPresent()) {
+                set = registry.getHolder(ResourceKey.create(Registries.STRUCTURE, structure.get()))
+                        .map(HolderSet::direct).orElse(null);
+            }
+            if (set == null && tag.isPresent()) {
+                set = registry.getTag(tag.get()).map(named -> (HolderSet<Structure>) named).orElse(null);
+            }
+            if (set == null || set.size() == 0) {
+                return Optional.empty();
+            }
+            Pair<BlockPos, Holder<Structure>> found =
+                    level.getChunkSource().getGenerator().findNearestMapStructure(level, set, from,
+                            Math.max(1, chunkRadius), false);
+            return found == null ? Optional.empty() : Optional.of(found.getFirst());
+        } catch (Throwable t) {
+            return Optional.empty();
         }
     }
 

@@ -136,14 +136,26 @@ public enum RegistryKind {
      * result cannot tell "this tag does not exist" apart from "no tag exists yet" — which is how
      * {@code minecraft:fishes}, a vanilla tag with six items in it, got reported as empty or unknown.
      * Callers that treat emptiness as a finding must ask this first.
+     *
+     * <p>The question has to be "does any tag actually have members", not "does the registry know
+     * any tag names". A registry accumulates {@link net.minecraft.core.HolderSet.Named} entries the
+     * moment anything <em>asks</em> for a tag, and in a large modpack plenty of things ask long
+     * before the first datapack reload applies; those entries are present but empty. Counting them
+     * as bound is what let the {@code minecraft:fishes} report survive the first attempt at this
+     * guard. A populated holder set, by contrast, can only come from a real bind.
      */
     public boolean tagsBound() {
         return switch (this) {
-            case ITEM -> BuiltInRegistries.ITEM.getTagNames().findAny().isPresent();
-            case BLOCK -> BuiltInRegistries.BLOCK.getTagNames().findAny().isPresent();
-            case ENTITY -> BuiltInRegistries.ENTITY_TYPE.getTagNames().findAny().isPresent();
+            case ITEM -> anyTagPopulated(BuiltInRegistries.ITEM);
+            case BLOCK -> anyTagPopulated(BuiltInRegistries.BLOCK);
+            case ENTITY -> anyTagPopulated(BuiltInRegistries.ENTITY_TYPE);
             case BIOME, DIMENSION -> false;
         };
+    }
+
+    /** True once some tag in {@code registry} holds at least one member, i.e. a bind has happened. */
+    private static <T> boolean anyTagPopulated(Registry<T> registry) {
+        return registry.getTags().anyMatch(tag -> tag.getSecond().size() > 0);
     }
 
     private static <T> void collectMembers(Registry<T> registry, ResourceKey<? extends Registry<T>> registryKey,

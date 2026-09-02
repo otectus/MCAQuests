@@ -41,7 +41,10 @@
       "type": "mcaquests:item_delivery",
       "item": "minecraft:wheat",
       "count": 16,
-      "consume": true
+      "consume": true,
+      "source": {
+        "block": "minecraft:wheat"
+      }
     }
   ],
   "rewards": [

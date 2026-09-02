@@ -20,6 +20,9 @@ import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
+import dev.otectus.mcaquests.quest.dialogue.VoicePool;
+import dev.otectus.mcaquests.quest.dialogue.VoicePools;
+import dev.otectus.mcaquests.network.CardObjective;
 import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
@@ -60,6 +63,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.common.MinecraftForge;
@@ -143,6 +147,29 @@ public final class QuestManager {
      * authorization — a client can only abandon a quest it actually holds — and the giver is resolved
      * best-effort purely so listeners see it when it happens to be around.
      */
+    /**
+     * Follows one of this player's active quests, or nothing when either argument is {@code null}.
+     *
+     * <p>The quest is looked up in the player's own state rather than taken from the packet, so a
+     * client asking to follow a quest it does not hold simply follows nothing. Clicking the pin on the
+     * quest already being followed clears it, which is what makes one button do both jobs.
+     *
+     * <p>Re-syncs the log immediately rather than waiting for the next poll, because the pin is a
+     * button and a button that takes a second to visibly do anything reads as broken.
+     */
+    public static void track(ServerPlayer player, @Nullable UUID villagerUuid,
+                             @Nullable ResourceLocation questId) {
+        QuestCapabilities.get(player).ifPresent(data -> {
+            if (villagerUuid == null || questId == null) {
+                data.setTracked(null);
+            } else {
+                Optional<ActiveQuest> quest = data.find(questId, villagerUuid);
+                data.setTracked(quest.filter(q -> !data.isTracked(q)).orElse(null));
+            }
+            syncLog(player);
+        });
+    }
+
     public static void abandonFromLog(ServerPlayer player, UUID villagerUuid, ResourceLocation questId) {
         QuestCapabilities.get(player).ifPresent(data -> data.find(questId, villagerUuid).ifPresent(active -> {
             abandon(player, active, resolveGiver(player, active), data);
@@ -223,18 +250,35 @@ public final class QuestManager {
             cards.add(buildCard(player, villager, offer.definition(), offer.resolver(), null,
                     QuestDefinition.OFFER, offer.dialogue(player, villager)));
         }
-        send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, QuestMenuStatus.OFFER, cards));
+        // What this villager says on opening the menu, before the offers themselves. Deterministic per
+        // villager per day, like the offers below it, so reopening the menu does not re-greet you.
+        Component greeting = VoicePools.pick(VoicePool.GREETING,
+                new QuestContext(player, villager, data, NO_QUESTS_CARD)).orElse(Component.empty());
+        send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, greeting,
+                QuestMenuStatus.OFFER, cards));
     }
 
+    /** The card shown when a villager has nothing and no quest of theirs explains why. */
+    private static final ResourceLocation NO_QUESTS_CARD = new ResourceLocation(McaQuests.MOD_ID, "no_quests");
+
     /**
-     * The villager's own explanation for having nothing to offer, if one of their quests wrote one.
+     * The villager's own explanation for having nothing to offer.
      *
      * <p>Prefers a quest on cooldown over a locked one, and among quests on cooldown the one coming back
      * soonest — "come back tomorrow" is more use than "there is a thing you cannot do yet".
      *
-     * <p>Rendered as a card under {@link QuestMenuStatus#NO_QUESTS}, which adds no buttons, so this needs
-     * no protocol change. Returns an empty list when no quest of this villager's has anything to say, and
-     * the plain no-quests state is shown exactly as before.
+     * <p>Rendered as a card under {@link QuestMenuStatus#NO_QUESTS}, which adds no buttons.
+     *
+     * <p>This used to require the chosen quest to <em>author</em> a {@code cooldown} or {@code locked}
+     * line, and its own comment claimed "every quest already authors" both. None did — not one of the
+     * 262 bundled quests, and neither key existed in either locale — so this method searched, found
+     * candidates, rejected every one of them for having nothing to say, and returned empty every single
+     * time. Every busy villager in the game said "I do not need anything right now."
+     *
+     * <p>The line is now looked for in three places, in order: the quest's own dialogue, the shared
+     * {@link VoicePools} for that state, and — when a villager has nothing at all rather than something
+     * withheld — the {@code no_quests} pool. Only if all three are silent does this return empty and
+     * the flat status line show, exactly as before.
      */
     private static List<QuestCard> whyNothingIsOffered(ServerPlayer player, Entity villager,
                                                        PlayerQuestData data) {
@@ -250,15 +294,13 @@ public final class QuestManager {
             if (!def.enabled() || !givenBy(def, pass)) {
                 continue;
             }
-            if (def.dialogue().containsKey(QuestDefinition.COOLDOWN)) {
-                Optional<Long> remaining = data.history()
-                        .cooldownRemaining(def.id(), pass.villagerUuid(), pass.now());
-                if (remaining.isPresent() && remaining.get() < soonestRemaining) {
-                    soonestRemaining = remaining.get();
-                    soonest = def;
-                }
+            Optional<Long> remaining = data.history()
+                    .cooldownRemaining(def.id(), pass.villagerUuid(), pass.now());
+            if (remaining.isPresent() && remaining.get() < soonestRemaining) {
+                soonestRemaining = remaining.get();
+                soonest = def;
             }
-            if (locked == null && def.dialogue().containsKey(QuestDefinition.LOCKED)
+            if (locked == null
                     && !data.history().onCooldown(def.id(), pass.villagerUuid(), pass.now())
                     && !data.hasActive(def.id(), pass.villagerUuid())
                     && !def.effectiveConditions().map(c -> c.test(pass.contextFor(def))).orElse(true)) {
@@ -267,13 +309,36 @@ public final class QuestManager {
         }
         QuestDefinition chosen = soonest != null ? soonest : locked;
         if (chosen == null) {
-            return List.of();
+            return sharedVoiceCard(player, villager, data, VoicePool.NO_QUESTS);
         }
         String state = soonest != null ? QuestDefinition.COOLDOWN : QuestDefinition.LOCKED;
-        Component line = chosen.dialogueOr(state, chosen.title(resolver), resolver);
+        QuestContext context = pass.contextFor(chosen);
+        Component line = chosen.dialogue().containsKey(state)
+                ? chosen.dialogueOr(state, chosen.title(resolver), resolver)
+                : VoicePools.pick(state, context).orElse(null);
+        if (line == null) {
+            return sharedVoiceCard(player, villager, data, VoicePool.NO_QUESTS);
+        }
+        // Informational only: this card is the villager explaining why they have nothing, so it
+        // carries no objectives, no rewards and no difficulty badge for a quest you cannot take.
         return List.of(new QuestCard(chosen.id(), chosen.title(resolver), Component.empty(),
                 QuestDialogueHooks.resolve(player, villager, chosen, state, line),
-                List.of(), List.of()));
+                List.of(), List.of(), List.of(), ""));
+    }
+
+    /**
+     * A card carrying only a shared voice line, for a villager with nothing to point at.
+     *
+     * <p>The card's id is synthetic because there is no quest behind it. Nothing consults it: the
+     * NO_QUESTS status renders no buttons, so no packet is ever sent naming it.
+     */
+    private static List<QuestCard> sharedVoiceCard(ServerPlayer player, Entity villager,
+                                                   PlayerQuestData data, String state) {
+        QuestContext context = new QuestContext(player, villager, data, NO_QUESTS_CARD);
+        return VoicePools.pick(state, context)
+                .map(line -> List.of(new QuestCard(NO_QUESTS_CARD, Component.empty(), Component.empty(),
+                        line, List.of(), List.of(), List.of(), "")))
+                .orElseGet(List::of);
     }
 
     /** Whether this villager is one of the givers {@code def} names — the cheap half of the gate. */
@@ -309,7 +374,8 @@ public final class QuestManager {
         boolean situation = def.category().map(SituationOffer.CATEGORY::equals).orElse(false);
         Component label = situation ? Component.translatable("mcaquests.situation.card_tag") : chainLabel(def, resolver);
         return new QuestCard(def.id(), def.title(resolver), label, dialogue,
-                objectiveLines(player, def, active), rewardLines(def, active));
+                objectiveLines(player, def, active), rewardLines(def, active),
+                rewardIcons(def), difficultyLabel(def));
     }
 
     /** The relationship-arc context line for the UI (arc / "Part 2 of 4" / chapter), or empty for standalone quests. */
@@ -407,6 +473,12 @@ public final class QuestManager {
         freezeRandomizedRewards(player, accepted, active);
         bindVillagerTargets(player, villager, accepted, active);
         data.add(active);
+        // Follow what you just took on, unless you are already following something. A quest you accept
+        // is almost always the one you mean to do next, and a marker that has to be switched on by
+        // hand before it ever appears is a feature most players would never find.
+        if (McaQuestsConfig.COMMON.autoTrackNewQuests.get()) {
+            data.trackIfNothingTracked(active);
+        }
         if (situationLink != null && player.getServer() != null) {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
         }
@@ -552,8 +624,25 @@ public final class QuestManager {
                 // Binds the relative who satisfies the target's own require, not merely the first entry
                 // in MCA's walk. Without the filter this wrote whatever came back — including a UUID with
                 // no body anywhere in the world — into the objective's progress, permanently.
-                case FAMILY -> selector.selectRelative(villager, level)
-                        .ifPresent(active.progress(i)::setTargetUuid);
+                //
+                // selectRelativeForBinding, not selectRelative: the gate that let this quest be offered
+                // ran when the villager's offers were drawn, and since 1.4.3 those are remembered rather
+                // than recomputed. A "require": "nearby" relative has usually stopped being nearby by the
+                // time the player accepts, and binding nothing left the objective uncreditable in
+                // silence. Failing to bind at all is now a WARN, because it means the quest is about
+                // somebody who cannot be found and the player should be told, not left at 0/1.
+                case FAMILY -> {
+                    java.util.Optional<UUID> bound = selector.selectRelativeForBinding(villager, level);
+                    if (bound.isPresent()) {
+                        active.progress(i).setTargetUuid(bound.get());
+                    } else {
+                        McaQuests.LOGGER.warn("[MCA: Quests] Quest '{}' objective[{}] names a {} of its "
+                                        + "giver requiring '{}', and no such relative could be bound at "
+                                        + "accept. The objective will report its target as unavailable "
+                                        + "rather than sitting at 0.", def.id(), i,
+                                selector.effectiveRelation(), selector.effectiveRequire());
+                    }
+                }
                 // A situation offer's focal villager is fixed the moment the quest is accepted, so a
                 // second infection opening later cannot silently re-point a quest already in progress.
                 case SITUATION_FOCUS -> SituationFocus
@@ -720,20 +809,26 @@ public final class QuestManager {
     }
 
     /**
-     * Applies any {@code village_reputation} rewards on a quest to the giver's village (independent
-     * mod-side reputation), keyed identically to village-scoped projects so the {@code village_reputation}
-     * condition reads the same value. No-op when the giver has no resolvable village.
-     */
-    /**
      * Records the reputation outcome of a finished quest (spec §29.3).
      *
-     * <h2>Two ways to author it, never both applied</h2>
+     * <h2>Three ways to arrive at an amount, never two applied</h2>
      *
      * <p>A quest may declare a top-level {@code reputation} block, or it may carry the legacy
      * {@code mcaquests:village_reputation} rewards, or both. When the block exists it is authoritative
      * and the legacy rewards are treated as display-only; otherwise their sum is translated into one
      * generic completion outcome. Applying both would silently double a reward the author only meant
      * once, which is exactly the sort of thing nobody notices until the numbers look wrong.
+     *
+     * <p>When a quest declares <b>neither</b> — which was true of 252 of the 262 bundled quests, and of
+     * every quest that has ever used the documented {@code reputation} block, since none did — the
+     * configured per-difficulty default applies. That is not a convenience: without it, finishing all but
+     * ten of the bundled quests moved village standing by zero, and six of the seven quests gated on
+     * standing were themselves among those ten. The default is a whole difficulty band rather than a flat
+     * number so it lands beside the currency bands it mirrors, and setting all three to zero restores the
+     * old behaviour for a pack that means it.
+     *
+     * <p>Failure and abandonment are unchanged and still cost nothing unless the pack says so (§29.3,
+     * §33 rule 6): the default fills in a <em>reward</em>, never a penalty.
      *
      * <p>Runs inside the atomic claim flow, after the reward-claim guard and before event
      * notification, and every failure inside the bridge is contained: the player has already done the
@@ -743,12 +838,16 @@ public final class QuestManager {
                                              QuestDefinition def, ActiveQuest active, String outcomeKey) {
         MinecraftServer server = player.getServer();
         if (grantVillager == null || server == null || !(player.level() instanceof ServerLevel)) {
+            debugNoReputation(def, outcomeKey, "no giver entity or not a server level");
             return;
         }
         java.util.Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community> community =
                 dev.otectus.mcaquests.quest.reputation.QuestReputation.resolve(grantVillager);
         if (community.isEmpty()) {
-            return; // no village resolves: nobody to have an opinion (§12.2)
+            // No village resolves: nobody to have an opinion (§12.2). Worth a line, because from the
+            // outside it is indistinguishable from the award simply not working.
+            debugNoReputation(def, outcomeKey, "the giver belongs to no resolvable village");
+            return;
         }
 
         java.util.Optional<dev.otectus.mcaquests.quest.reputation.ReputationOutcome> authored =
@@ -766,17 +865,22 @@ public final class QuestManager {
                     .filter(r -> r instanceof dev.otectus.mcaquests.quest.reward.VillageReputationReward)
                     .mapToInt(r -> ((dev.otectus.mcaquests.quest.reward.VillageReputationReward) r).amount())
                     .sum();
-            if (legacyAmount == 0) {
+            int amount = legacyAmount != 0 ? legacyAmount : defaultCompletionReputation(def);
+            if (amount == 0) {
+                debugNoReputation(def, outcomeKey, "the quest authors no reputation outcome and the "
+                        + "configured default for its difficulty band is 0");
                 return;
             }
-            outcome = dev.otectus.mcaquests.quest.reputation.ReputationOutcome.ofShorthand(legacyAmount)
+            outcome = dev.otectus.mcaquests.quest.reputation.ReputationOutcome.ofShorthand(amount)
                     .withDefaultIncident(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock
                             .Incidents.QUEST_COMPLETED);
         } else {
             // §29.3, §33 rule 6: failing or abandoning costs nothing unless the pack says so.
+            debugNoReputation(def, outcomeKey, "failure and abandonment cost nothing unless authored");
             return;
         }
         if (outcome.isNoOp()) {
+            debugNoReputation(def, outcomeKey, "the authored outcome resolves to no change");
             return;
         }
 
@@ -799,6 +903,34 @@ public final class QuestManager {
                         .build());
     }
 
+
+    /**
+     * The standing a completed quest is worth when it says nothing about standing itself, from the
+     * difficulty band it already declares for its currency reward. A quest with no declared difficulty
+     * uses the medium band, which is the same fallback {@code CurrencyReward} has always used.
+     */
+    private static int defaultCompletionReputation(QuestDefinition def) {
+        return switch (def.difficulty().orElse(QuestDifficulty.DEFAULT)) {
+            case EASY -> McaQuestsConfig.COMMON.easyQuestReputation.get();
+            case MEDIUM -> McaQuestsConfig.COMMON.mediumQuestReputation.get();
+            case HARD -> McaQuestsConfig.COMMON.hardQuestReputation.get();
+        };
+    }
+
+    /**
+     * Says, once per turn-in and only under {@code debugLogging}, why a finished quest changed nobody's
+     * opinion.
+     *
+     * <p>Every one of these was a bare {@code return}. That is how 262 quests came to be worth no
+     * standing at all without anybody noticing: the feature was not throwing, not warning, and not
+     * logging — it was declining, silently, every single time.
+     */
+    private static void debugNoReputation(QuestDefinition def, String outcomeKey, String why) {
+        if (McaQuestsConfig.COMMON.debugLogging.get()) {
+            McaQuests.LOGGER.debug("[MCA: Quests] no reputation recorded for '{}' ({}): {}",
+                    def.id(), outcomeKey, why);
+        }
+    }
 
     public static boolean abandon(ServerPlayer player, Entity villager, ResourceLocation questId) {
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
@@ -1342,8 +1474,16 @@ public final class QuestManager {
                 : data.history().completionCount(def.id());
     }
 
-    private static List<Component> objectiveLines(ServerPlayer player, QuestDefinition def, @Nullable ActiveQuest active) {
-        List<Component> lines = new ArrayList<>();
+    /**
+     * The objectives as the client renders them.
+     *
+     * <p>The counts used to be appended to the sentence as a literal {@code "  (3/24)"}. They are sent
+     * as numbers now, so the client can draw a bar and a done/pending icon rather than parsing a
+     * string it has no business parsing; the text is just the text.
+     */
+    private static List<CardObjective> objectiveLines(ServerPlayer player, QuestDefinition def,
+                                                      @Nullable ActiveQuest active) {
+        List<CardObjective> lines = new ArrayList<>();
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
             QuestObjective objective = objectives.get(i);
@@ -1352,23 +1492,71 @@ public final class QuestManager {
             Component line = active != null
                     ? objective.describe(player, active, active.progress(i), (ServerLevel) player.level())
                     : objective.describe();
-            if (active != null) {
-                Optional<Component> unavailable = objective.unavailableReason(
-                        player, active, active.progress(i), (ServerLevel) player.level());
-                if (unavailable.isPresent()) {
-                    // No counter: "0/45" beside an objective nothing can advance reads as failure rather
-                    // than as "this is on hold", and the number would be a frozen baseline anyway.
-                    lines.add(Component.empty().append(line).append(Component.literal("  "))
-                            .append(unavailable.get()));
-                    continue;
-                }
-                int current = objective.current(player, active.progress(i));
-                line = Component.empty().append(line)
-                        .append(Component.literal("  (" + current + "/" + objective.required() + ")"));
+            ItemStack icon = objective.icon();
+            if (active == null) {
+                lines.add(CardObjective.offered(line, objective.required(), icon));
+                continue;
             }
-            lines.add(line);
+            Optional<Component> unavailable = objective.unavailableReason(
+                    player, active, active.progress(i), (ServerLevel) player.level());
+            if (unavailable.isPresent()) {
+                // No counter: "0/45" beside an objective nothing can advance reads as failure rather
+                // than as "this is on hold", and the number would be a frozen baseline anyway.
+                lines.add(new CardObjective(
+                        Component.empty().append(line).append(Component.literal("  ")).append(unavailable.get()),
+                        0, objective.required(), lostState(objective, active, i, player), icon));
+                continue;
+            }
+            boolean done = objective.isSatisfied(player, active.progress(i));
+            lines.add(new CardObjective(line, objective.current(player, active.progress(i)),
+                    objective.required(),
+                    done ? CardObjective.State.DONE : CardObjective.State.PENDING, icon));
         }
         return lines;
+    }
+
+    /**
+     * Tells "the person this was about is gone" apart from "this cannot be read right now".
+     *
+     * <p>Both stop an objective advancing, and the old single {@code unavailable} flag conflated them,
+     * so a quest whose villager had died looked identical to one waiting on an uninstalled mod. Only
+     * a villager-targeted objective can lose a person, and {@code ObjectiveSupport.boundTargetLost} is
+     * the one place that decides they have — so asking it again here cannot disagree with the sentence
+     * already appended to the line.
+     */
+    private static CardObjective.State lostState(QuestObjective objective, ActiveQuest active, int index,
+                                                 ServerPlayer player) {
+        if (!(objective instanceof VillagerTargeted targeted) || !(player.level() instanceof ServerLevel level)) {
+            return CardObjective.State.UNAVAILABLE;
+        }
+        return ObjectiveSupport.boundTargetLost(targeted.targetSelector(), active, active.progress(index), level)
+                .isPresent() ? CardObjective.State.LOST : CardObjective.State.UNAVAILABLE;
+    }
+
+    /**
+     * Preview stacks for a card's rewards, in the order the rewards are declared.
+     *
+     * <p>Cosmetic only, and deliberately never consulted when granting: a reward type that shows
+     * nothing (hearts, reputation, a title) contributes nothing here and the card falls back to its
+     * text line, which every reward still has.
+     */
+    private static List<ItemStack> rewardIcons(QuestDefinition def) {
+        List<ItemStack> icons = new ArrayList<>();
+        for (QuestReward reward : def.rewards()) {
+            for (ItemStack stack : reward.previewIcons()) {
+                if (!stack.isEmpty()) {
+                    icons.add(stack);
+                }
+            }
+        }
+        return icons;
+    }
+
+    /** The declared difficulty band as the client names it, or empty when the quest declares none. */
+    private static String difficultyLabel(QuestDefinition def) {
+        return def.difficulty()
+                .map(band -> band.name().toLowerCase(java.util.Locale.ROOT))
+                .orElse("");
     }
 
     /**
@@ -1440,8 +1628,8 @@ public final class QuestManager {
                     PlaceholderResolver resolver = active.textResolver(mcaName);
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), def.title(resolver),
                             active.villagerName(), chainLabel(def, resolver), objectiveLines(player, def, active),
-                            isComplete(player, def, active), isSuspended(player, def, active), deadline,
-                            targetHint(player, def, active),
+                            isComplete(player, def, active), isSuspended(player, def, active),
+                            data.isTracked(active), deadline,
                             TownsteadContextLines.forQuest(player, def, active)));
                 }, () ->
                     // The definition disappeared on a datapack reload (spec section 36). Still list it, under
@@ -1450,69 +1638,11 @@ public final class QuestManager {
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
                             Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
                             active.villagerName(), Component.empty(), List.of(), false, false,
-                            java.util.OptionalLong.empty(), Optional.empty(), List.of())));
+                            data.isTracked(active), java.util.OptionalLong.empty(),
+                            List.of())));
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
         });
-    }
-
-    /**
-     * The villager this quest wants the player to find, for the HUD's distance and compass line.
-     *
-     * <p>Tries three sources in order, so the player is told something useful as often as possible:
-     * a loaded target villager; that same villager's <em>last known home</em> when they are bound but
-     * unloaded (the case where a direction cue matters most, since there is no entity to walk toward);
-     * and finally the quest giver, which is the right answer for the many family quests told in the first
-     * person, where the relative in the fiction is the giver.
-     *
-     * <p>Empty when the target is in another dimension — an arrow across dimensions would be a lie.
-     */
-    private static Optional<QuestLogEntry.TargetHint> targetHint(ServerPlayer player, QuestDefinition def,
-                                                                 ActiveQuest active) {
-        if (!(player.level() instanceof ServerLevel level)) {
-            return Optional.empty();
-        }
-        List<QuestObjective> objectives = def.objectives();
-        for (int i = 0; i < objectives.size(); i++) {
-            QuestObjective objective = objectives.get(i);
-            ObjectiveProgress progress = active.progress(i);
-            // Point at the next thing still to do. A satisfied objective may still name a villager (a found
-            // relative keeps their highlight so the player can lead them home), but the hint should have
-            // moved on to whatever the quest wants next.
-            if (!(objective instanceof VillagerTargeted targeted) || objective.isSatisfied(player, progress)) {
-                continue;
-            }
-            Optional<LivingEntity> loaded = targeted.highlightTarget(player, active, progress, level);
-            if (loaded.isPresent()) {
-                return Optional.of(new QuestLogEntry.TargetHint(
-                        McaCompat.getVillagerDisplayName(loaded.get()), loaded.get().blockPosition(), false));
-            }
-            UUID bound = progress.targetUuid();
-            if (bound != null) {
-                Optional<QuestLogEntry.TargetHint> lastKnown = lastKnownHint(level, active, bound);
-                if (lastKnown.isPresent()) {
-                    return lastKnown;
-                }
-            }
-        }
-        return level.getEntity(active.villagerUuid()) instanceof LivingEntity giver && McaCompat.isMcaVillager(giver)
-                ? Optional.of(new QuestLogEntry.TargetHint(active.villagerName(), giver.blockPosition(), false))
-                : Optional.empty();
-    }
-
-    /** A bound-but-unloaded villager's name and home, read from MCA's persistent data. Same dimension only. */
-    private static Optional<QuestLogEntry.TargetHint> lastKnownHint(ServerLevel level, ActiveQuest active, UUID bound) {
-        Entity giver = level.getEntity(active.villagerUuid());
-        if (giver == null) {
-            return Optional.empty();
-        }
-        Optional<String> name = McaCompat.getRelativeDisplayName(giver, bound);
-        if (name.isEmpty()) {
-            return Optional.empty();
-        }
-        return McaCompat.getRelativeHome(level, bound)
-                .filter(home -> home.dimension().equals(level.dimension()))
-                .map(home -> new QuestLogEntry.TargetHint(Component.literal(name.get()), home.pos(), true));
     }
 
     // ---------------------------------------------------------------- diagnostics (/mcaquests debug)

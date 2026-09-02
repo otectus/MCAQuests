@@ -29,6 +29,15 @@ import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.title.TitleService;
 import dev.otectus.mcaquests.quest.OfferSessionService;
 import dev.otectus.mcaquests.state.OfferSession;
+import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
+import dev.otectus.mcaquests.compat.MapWaypointBridge;
+import dev.otectus.mcaquests.quest.guidance.GuidanceService;
+import dev.otectus.mcaquests.quest.guidance.GuidanceSnapshot;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraft.ChatFormatting;
+import dev.otectus.mcaquests.state.ActiveQuest;
+import net.minecraft.server.level.ServerLevel;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.PlayerTitles;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -54,6 +63,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Locale;
 
 /**
@@ -95,6 +105,10 @@ public final class McaQuestsCommand {
                         .then(Commands.literal("quest")
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
                                         .executes(McaQuestsCommand::debugQuest)))
+                        .then(Commands.literal("guidance")
+                                .executes(McaQuestsCommand::debugGuidance))
+                        .then(Commands.literal("waypoints")
+                                .executes(McaQuestsCommand::debugWaypoints))
                         .then(Commands.literal("offers")
                                 .executes(McaQuestsCommand::debugOffers)
                                 .then(Commands.literal("reroll")
@@ -765,6 +779,113 @@ public final class McaQuestsCommand {
      * report about "the story changing": it shows what was drawn, when, how long until it rerolls, and
      * what you have already turned down.
      */
+    /**
+     * Why the quest marker is, or is not, pointing anywhere.
+     *
+     * <p>A marker that does not appear has several possible causes and none of them are distinguishable
+     * from inside the game: nothing is being followed, the objective genuinely has no place attached
+     * (a delivery with no authored {@code source}), a world search found nothing in range, the target
+     * is in another dimension, or a config is off. The first build of this feature shipped looking
+     * broken when it was in fact merely silent, and there was no way to tell the two apart — which is
+     * the whole reason this exists.
+     *
+     * <p>Read-only, except that asking a structure or biome objective where it points will run its one
+     * cached world search if it has not run yet. That is the same work the marker itself would do.
+     */
+    private static int debugGuidance(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null) {
+            ctx.getSource().sendFailure(Component.literal("No quest data for this player."));
+            return 0;
+        }
+        if (!(player.level() instanceof ServerLevel level)) {
+            ctx.getSource().sendFailure(Component.literal("Not on a server level."));
+            return 0;
+        }
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.literal("Quest guidance").withStyle(ChatFormatting.GOLD));
+        lines.add(Component.literal("  highlightQuestTargets: "
+                + McaQuestsConfig.COMMON.highlightQuestTargets.get()
+                + ", autoTrackNewQuests: " + McaQuestsConfig.COMMON.autoTrackNewQuests.get()
+                + " (showQuestMarker is a CLIENT setting and is not visible here)"));
+
+        if (data.active().isEmpty()) {
+            lines.add(Component.literal("  No active quests, so nothing to point at.")
+                    .withStyle(ChatFormatting.GRAY));
+            lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+            return 1;
+        }
+        lines.add(Component.literal("  Following: " + data.tracked()
+                .map(t -> t.questId().toString()).orElse("(nothing)")));
+
+        // Per quest, so "the one I pinned has nothing to say" is visible rather than inferred. Asked
+        // through GuidanceService.forQuest, which is the same call the tracker and the marker make.
+        for (ActiveQuest active : data.active()) {
+            Optional<ActiveGuidance> per = GuidanceService.forQuest(player, active, level);
+            String marker = data.isTracked(active) ? " *" : "  ";
+            lines.add(Component.literal("  " + marker + " " + active.questId() + " -> "
+                            + per.map(g -> describeGuidance(g, level)).orElse("nothing to point at"))
+                    .withStyle(per.isPresent() ? ChatFormatting.GREEN : ChatFormatting.GRAY));
+        }
+
+        GuidanceSnapshot snapshot = GuidanceService.snapshot(player, level, data);
+        lines.add(snapshot.primaryGuidance()
+                .map(g -> Component.literal("  Marker: " + g.questId() + " -> "
+                        + describeGuidance(g, level)).withStyle(ChatFormatting.AQUA))
+                .orElseGet(() -> Component.literal("  Marker: none — no active quest has a place attached. "
+                        + "Gathering objectives only point somewhere when the pack gives them a "
+                        + "\"source\"; see DATAPACK.md.").withStyle(ChatFormatting.YELLOW)));
+        lines.add(Component.literal("  Tracker rows with a destination: " + snapshot.all().size()
+                + " of " + data.active().size() + " active quest(s)."));
+        lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+        return 1;
+    }
+
+    private static String describeGuidance(ActiveGuidance guidance, ServerLevel level) {
+        var target = guidance.target();
+        String where = target.pos().getX() + " " + target.pos().getY() + " " + target.pos().getZ();
+        String dimension = target.dimension().equals(level.dimension())
+                ? "" : " in " + target.dimension().location();
+        return target.kind() + " \"" + target.label().getString() + "\" at " + where + dimension
+                + (target.approximate() ? " (approximate)" : "")
+                + (target.entityId().isPresent() ? " [entity " + target.entityId().getAsInt() + "]" : "");
+    }
+
+    /**
+     * What the minimap integration bound to, and whether it actually works.
+     *
+     * <p>Both supported mods can decline a waypoint without throwing, and neither reports anything
+     * when it does. Without this, "no waypoints appear" would be indistinguishable from inside the
+     * game from "the feature is off", "no minimap is installed" and "this JourneyMap build moved a
+     * method" — which is exactly the shape of silence the world marker shipped with.
+     *
+     * <p>Waypoints are a client feature, so on a dedicated server there is nothing here to read. The
+     * report says so rather than reporting an empty bridge as a broken one.
+     */
+    private static int debugWaypoints(CommandContext<CommandSourceStack> ctx) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.literal("Quest map waypoints").withStyle(ChatFormatting.GOLD));
+        if (FMLEnvironment.dist != Dist.CLIENT) {
+            lines.add(Component.literal("  Waypoints are drawn by the player's own minimap, so a "
+                            + "dedicated server has nothing to report. Run this in single-player, or "
+                            + "read the client log for the \"Minimap —\" lines written at startup.")
+                    .withStyle(ChatFormatting.GRAY));
+            lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+            return 1;
+        }
+        MapWaypointBridge bridge = MapWaypointBridge.Holder.get();
+        lines.add(Component.literal("  Available: " + bridge.isAvailable())
+                .withStyle(bridge.isAvailable() ? ChatFormatting.GREEN : ChatFormatting.YELLOW));
+        for (String line : bridge.probe()) {
+            lines.add(Component.literal("  " + line));
+        }
+        lines.add(Component.literal("  mapWaypoints and mapWaypointsFollowedOnly are CLIENT settings "
+                + "and are not visible here.").withStyle(ChatFormatting.GRAY));
+        lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+        return 1;
+    }
+
     private static int debugOffers(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         Entity target = nearestMcaVillager(player, 10.0D);

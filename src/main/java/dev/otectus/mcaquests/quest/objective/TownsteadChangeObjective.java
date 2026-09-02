@@ -106,6 +106,15 @@ public record TownsteadChangeObjective(TownsteadQuery query, Direction direction
                             .forGetter(TownsteadChangeObjective::baselineOnAccept)
             ).apply(instance, TownsteadChangeObjective::new));
 
+
+    /** The resident this reads, when the query is about one rather than about the settlement. */
+    @Override
+    public java.util.Optional<net.minecraft.world.entity.Entity> townsteadSubject(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        return java.util.Optional.ofNullable(
+                TownsteadObjectives.subjectEntity(query, player, active, progress, level));
+    }
+
     @Override
     public QuestObjectiveType<?> type() {
         return ObjectiveTypes.TOWNSTEAD_CHANGE;

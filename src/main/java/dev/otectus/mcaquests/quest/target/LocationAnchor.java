@@ -13,10 +13,14 @@ import dev.otectus.mcaquests.compat.TownsteadVillageBuilding;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.levelgen.structure.Structure;
 
 import javax.annotation.Nullable;
 
@@ -134,6 +138,23 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
      * about the same dock. It deliberately omits everything that does not change which candidate is
      * chosen, so two spellings of the same requirement still collide.
      */
+    /** Chunks the vanilla-village fallback search may walk. Vanilla's own {@code /locate} reach. */
+    private static final int VANILLA_VILLAGE_SEARCH_CHUNKS = 100;
+
+    /**
+     * Vanilla's own village structures, for the {@link #vanillaVillage} fallback.
+     *
+     * <p>Built on demand rather than held in a {@code static final}. {@code TagKey.create} names
+     * {@code Registries.STRUCTURE}, and touching that class runs {@code BuiltInRegistries}'
+     * initialiser, which throws {@code Not bootstrapped} outside a running game — so a constant here
+     * would make merely <em>parsing</em> an anchor require a booted Minecraft, and take every codec
+     * test that has ever loaded this class down with it. Creating one is an interner lookup, and this
+     * runs at most once per objective.
+     */
+    private static TagKey<Structure> vanillaVillages() {
+        return TagKey.create(Registries.STRUCTURE, new ResourceLocation("minecraft", "village"));
+    }
+
     public String fingerprint() {
         return switch (type) {
             case TOWNSTEAD_BUILDING -> "building/" + TownsteadBuildings.normalise(buildingType.orElse(""))
@@ -172,7 +193,46 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
         if (freezes()) {
             return frozen(player, active, level).map(FrozenLocation::resolved);
         }
-        return resolveTarget(player, level.getEntity(active.villagerUuid()), level);
+        Optional<Resolved> resolved = resolveTarget(player, level.getEntity(active.villagerUuid()), level);
+        if (resolved.isEmpty() && type == Type.NEAREST_VILLAGE) {
+            return vanillaVillage(player, active, level);
+        }
+        return resolved;
+    }
+
+    /**
+     * The nearest <em>vanilla</em> village, for a {@code nearest_village} anchor MCA cannot answer.
+     *
+     * <p>MCA keeps its own roll of villages and {@link McaCompat#findNearestVillageId} reads it, which
+     * is the right first answer: an MCA village has residents, a name, a border and a standing, and
+     * that is what a quest about a village means. But a settlement MCA has not taken over is not on
+     * that roll, so in a world where the nearest one is an untouched vanilla village the anchor
+     * resolved to nothing at all and every objective built on it silently pointed nowhere. The game
+     * can answer that question — {@code #minecraft:village} is a structure tag — so it is asked.
+     *
+     * <p>The answer carries no village id, so arrival falls back to the radius test rather than the
+     * border test. That is correct rather than a compromise: a vanilla village has no MCA border to be
+     * inside of.
+     *
+     * <p><b>MCA always wins.</b> This is only consulted when the roll had nothing, and the roll is
+     * re-read every pass, so a village that becomes an MCA one later takes over from the frozen
+     * fallback immediately. The fallback is frozen because it is a real {@code /locate}: recording it
+     * on the quest, under its own fingerprint, is how it is paid for exactly once and survives a
+     * restart.
+     */
+    private Optional<Resolved> vanillaVillage(ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        String key = fingerprint() + "/vanilla";
+        FrozenLocation existing = active.frozenLocation(key);
+        if (existing != null) {
+            return existing.dimension().equals(level.dimension().location())
+                    ? Optional.of(existing.resolved())
+                    : Optional.empty();
+        }
+        Optional<BlockPos> found = new StructureTarget(Optional.empty(), Optional.of(vanillaVillages()))
+                .locate(level, player.blockPosition(), VANILLA_VILLAGE_SEARCH_CHUNKS);
+        found.ifPresent(pos -> active.freezeLocation(key,
+                FrozenLocation.of(pos, level.dimension().location())));
+        return found.map(Resolved::of);
     }
 
     /**
@@ -275,13 +335,83 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
             case GIVER_POS -> Optional.ofNullable(giver).map(Entity::blockPosition).map(Resolved::of);
             case VILLAGER -> villager.flatMap(v -> v.resolveFrom(player, giver, level))
                     .map(Entity::blockPosition).map(Resolved::of);
-            case WORKSTATION -> Optional.ofNullable(giver).flatMap(McaCompat::getWorkstationPos).map(Resolved::of);
-            case BED -> Optional.ofNullable(giver).flatMap(McaCompat::getHomePos).map(Resolved::of);
+            case WORKSTATION -> resident(player, giver, level).flatMap(McaCompat::getWorkstationPos)
+                    .map(Resolved::of);
+            case BED -> resident(player, giver, level).flatMap(McaCompat::getHomePos).map(Resolved::of);
             case COORDS -> pos.map(Resolved::of);
             // Offer-time resolution of a frozen anchor: nothing is recorded, so this answers "is there
             // a candidate at all?" without committing the quest to one before it has been accepted.
             case TOWNSTEAD_BUILDING, NEAREST_OTHER_VILLAGE ->
                     choose(player, giver, level).map(FrozenLocation::resolved);
+        };
+    }
+
+    /**
+     * Whose home or workplace {@code bed} / {@code workstation} means.
+     *
+     * <p>It used to mean the giver's, always — the {@code villager} field on this record existed but
+     * was read only by the {@code villager} anchor. That is a bug and not only a cosmetic one: an
+     * escort whose escortee is somebody other than the giver ("walk my parent home") was resolved to
+     * the <em>giver's</em> bed, so the quest walked the wrong person to the wrong house, and any
+     * marker drawn on it would have been marking a bed that has nothing to do with the objective.
+     *
+     * <p>Defaults to the giver when no {@code villager} is stated, so every pack that has ever been
+     * written keeps its current behaviour.
+     */
+    private Optional<Entity> resident(ServerPlayer player, @Nullable Entity giver, ServerLevel level) {
+        if (villager.isEmpty()) {
+            return Optional.ofNullable(giver);
+        }
+        return villager.get().resolveFrom(player, giver, level).map(e -> (Entity) e);
+    }
+
+    /**
+     * As {@link #describe()}, but naming the villager a {@code bed} / {@code workstation} anchor
+     * belongs to when that villager can be identified — "Anna's home" rather than "their home".
+     *
+     * <p>"their home" is ambiguous the moment the escortee is not the giver, which is exactly the
+     * case the {@code villager} field above exists to express.
+     */
+    public Component describe(ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        return switch (type) {
+            // "their home" is ambiguous the moment the escortee is not the giver, which is exactly what
+            // the villager field above exists to express.
+            case BED -> named("mcaquests.anchor.home_of", player, active, level);
+            case WORKSTATION -> named("mcaquests.anchor.workstation_of", player, active, level);
+            // "the villager" and "them" name nobody. The mod knows who these are.
+            case VILLAGER -> villager.<Component>map(v -> v.describeResolved(player, active, level))
+                    .orElseGet(this::describe);
+            case GIVER_POS -> active.villagerName();
+            default -> describe();
+        };
+    }
+
+    /** {@code key} filled with the anchor's villager, or the generic label when there is nobody to name. */
+    private Component named(String key, ServerPlayer player, ActiveQuest active, ServerLevel level) {
+        return villager.<Component>map(v -> Component.translatable(key, v.describeResolved(player, active, level)))
+                .orElseGet(this::describe);
+    }
+
+    /**
+     * What a marker on this anchor is standing on, so it draws a bed rather than a generic pin.
+     *
+     * <p>{@code resolvedToVillage} is passed rather than inferred because two anchors that resolve
+     * the same way still mean different things: a {@code coords} anchor that happens to land inside a
+     * village is still a coordinate, while {@code nearest_village} is a village whether or not the
+     * resolver managed to attach an id to it.
+     */
+    public dev.otectus.mcaquests.quest.guidance.GuidanceKind guidanceKind(boolean resolvedToVillage) {
+        if (resolvedToVillage) {
+            return dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGE;
+        }
+        return switch (type) {
+            case BED -> dev.otectus.mcaquests.quest.guidance.GuidanceKind.HOME;
+            case WORKSTATION -> dev.otectus.mcaquests.quest.guidance.GuidanceKind.WORKSTATION;
+            case HOME_VILLAGE, NEAREST_VILLAGE, NEAREST_OTHER_VILLAGE ->
+                    dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGE;
+            case VILLAGER -> dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGER;
+            case TOWNSTEAD_BUILDING -> dev.otectus.mcaquests.quest.guidance.GuidanceKind.STRUCTURE;
+            case GIVER_POS, COORDS -> dev.otectus.mcaquests.quest.guidance.GuidanceKind.LOCATION;
         };
     }
 
@@ -348,6 +478,12 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
                 errors.add(prefix + " has radius " + r + " (must be > 0).");
             }
         });
+        // `villager` means something on exactly three anchors. Saying it anywhere else is a silent
+        // no-op, and a silent no-op in a datapack is a bug the author will never be told about.
+        if (villager.isPresent() && type != Type.VILLAGER && type != Type.BED && type != Type.WORKSTATION) {
+            errors.add(prefix + " sets 'villager' on anchor '" + type.name().toLowerCase(Locale.ROOT)
+                    + "', which ignores it; it is read only by 'villager', 'bed' and 'workstation'.");
+        }
         villager.ifPresent(v -> v.validate(prefix + " villager", errors));
     }
 }

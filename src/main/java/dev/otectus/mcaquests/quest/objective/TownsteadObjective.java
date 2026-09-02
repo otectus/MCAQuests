@@ -1,11 +1,15 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
+import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
+import dev.otectus.mcaquests.quest.guidance.GuidanceTarget;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 import java.util.Set;
@@ -62,6 +66,61 @@ public interface TownsteadObjective extends QuestObjective {
      */
     default void freezeBaseline(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
                                 ServerLevel level) {
+    }
+
+
+    /**
+     * The villager this objective is about, when it is about one.
+     *
+     * <p>Half the Townstead objectives name a resident — "keep them rested", "get them to journeyman"
+     * — and half are about the settlement as a whole. The ones that name somebody say so by overriding
+     * this; the rest inherit the village answer below. Nothing else needs to know which is which.
+     */
+    default Optional<Entity> townsteadSubject(ServerPlayer player, ActiveQuest active,
+                                              ObjectiveProgress progress, ServerLevel level) {
+        return Optional.empty();
+    }
+
+    /**
+     * Where a Townstead objective is sending the player: the resident it names, or the village.
+     *
+     * <p>Sixty-one bundled objectives point somewhere for the first time here. Every one of them was
+     * previously a sentence about a place with no place attached — "a week kept well", "the whole
+     * flock", "first shift" — and the tracker's answer to *where* was nothing at all, in the family of
+     * quests where the village <em>is</em> the subject.
+     *
+     * <p>The village is the giver's home village rather than the nearest one, because a Townstead
+     * quest is about the settlement that asked for it. A giver who is unloaded, or who lives nowhere,
+     * yields nothing rather than a guess: the answer would be a marker on a place the quest is not
+     * about, and the player would walk to it.
+     */
+    @Override
+    default Optional<GuidanceTarget> guidance(ServerPlayer player, ActiveQuest active,
+                                              ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress) || !townsteadReady()) {
+            return Optional.empty();
+        }
+        Optional<Entity> subject = townsteadSubject(player, active, progress, level);
+        if (subject.isPresent()) {
+            return subject.map(villager -> GuidanceTarget.ofEntity(villager, GuidanceKind.VILLAGER,
+                    McaCompat.getVillagerDisplayName(villager)));
+        }
+        return homeVillage(active, level);
+    }
+
+    /** The giver's home village centre, named, as something to draw. */
+    private static Optional<GuidanceTarget> homeVillage(ActiveQuest active, ServerLevel level) {
+        /* Wide, because a village is a place you arrive in rather than stand on. */
+        final int arriveRadius = 24;
+        Entity giver = level.getEntity(active.villagerUuid());
+        if (giver == null) {
+            return Optional.empty();
+        }
+        Component name = McaCompat.getHomeVillageName(giver)
+                .<Component>map(Component::literal)
+                .orElseGet(() -> Component.translatable("mcaquests.anchor.village"));
+        return McaCompat.getHomeVillageCenter(giver).map(centre -> GuidanceTarget.ofPos(centre, level,
+                GuidanceKind.VILLAGE, name, arriveRadius, false));
     }
 
     /** Convenience for the objective's own guards: true when every declared capability is available. */

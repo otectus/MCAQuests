@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "state": "no_quests",
+  "lines": [
+    {
+      "when": {
+        "type": "mcaquests:personality",
+        "personalities": [
+          "grumpy",
+          "greedy"
+        ]
+      },
+      "translate": "mcaquests.voice.no_quests.brusque"
+    },
+    {
+      "when": {
+        "type": "mcaquests:personality",
+        "personalities": [
+          "peppy",
+          "confident",
+          "athletic"
+        ]
+      },
+      "translate": "mcaquests.voice.no_quests.bright"
+    },
+    {
+      "when": {
+        "type": "mcaquests:personality",
+        "personalities": [
+          "shy",
+          "sensitive",
+          "friendly"
+        ]
+      },
+      "translate": "mcaquests.voice.no_quests.gentle"
+    },
+    {
+      "when": {
+        "type": "mcaquests:personality",
+        "personalities": [
+          "witty",
+          "odd",
+          "flirty"
+        ]
+      },
+      "translate": "mcaquests.voice.no_quests.wry"
+    },
+    {
+      "when": {
+        "type": "mcaquests:personality",
+        "personalities": [
+          "lazy",
+          "gloomy"
+        ]
+      },
+      "translate": "mcaquests.voice.no_quests.weary"
+    },
+    {
+      "translate": "mcaquests.voice.no_quests.fallback"
+    }
+  ]
+}

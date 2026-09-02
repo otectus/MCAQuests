@@ -2,6 +2,11 @@ package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.HudAnchor;
+import dev.otectus.mcaquests.McaQuestsConfig.HudBackground;
+import dev.otectus.mcaquests.client.gui.GuiTextures;
+import dev.otectus.mcaquests.client.gui.Palette;
+import dev.otectus.mcaquests.client.gui.Panel;
+import dev.otectus.mcaquests.network.CardObjective;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
@@ -16,16 +21,29 @@ import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.List;
 
 /**
  * HUD tracker for active MCA quests — each shows its title, giver, and first objective. Position is
  * fully configurable via {@code questTrackerAnchor} (corner) + {@code questTrackerX/Y} offsets (spec section 21).
+ *
+ * <p>The background is the mod's nine-sliced panel rather than the flat translucent rectangle it used
+ * to be; {@code questTrackerStyle} keeps the old one available, and {@code questTrackerBackground}
+ * still decides whether there is one at all.
+ *
+ * <p>Right-anchored lines keep their indent. They used to lose it — every line was flushed to the
+ * right edge, so heading, quest and objective all started in the same column and the hierarchy the
+ * indents exist to show was visible in two corners out of four.
  */
 public class QuestHudOverlay implements IGuiOverlay {
 
     private static final int LINE_HEIGHT = 10;
+    /** A section heading's row, which is taller because it carries a 16px glyph. */
+    private static final int HEADING_HEIGHT = 12;
     private static final int PADDING = 2;
+    /** The glyph gutter on a heading row. */
+    private static final int ICON_GUTTER = 18;
     /** Below this many ticks remaining the countdown turns red ("expiring"); amber above it. */
     private static final long URGENT_TICKS = 1200L; // ~1 minute
 
@@ -48,51 +66,75 @@ public class QuestHudOverlay implements IGuiOverlay {
         List<Line> lines = new ArrayList<>();
         if (!entries.isEmpty()) {
             int max = Math.min(entries.size(), McaQuestsConfig.CLIENT.questTrackerMaxEntries.get());
-            lines.add(new Line(Component.translatable("mcaquests.hud.title"), 0xFFE08A, 0));
+            lines.add(Line.heading(Component.translatable("mcaquests.hud.title"), Palette.Hud.TITLE,
+                    GuiTextures.ICON_QUEST));
             for (int i = 0; i < max; i++) {
                 QuestLogEntry entry = entries.get(i);
                 MutableComponent title = entry.title().copy()
                         .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
                         .append(entry.giverName().copy().withStyle(ChatFormatting.GRAY));
-                lines.add(new Line(title, entry.ready() ? 0x5CFF5C : 0xFFFFFF, 2));
+                // A dot marks the quest the marker and the outline are about. Drawn rather than
+                // implied by position, because the tracker lists several and the followed one is not
+                // necessarily first.
+                lines.add(entry.tracked()
+                        ? Line.icon(title, entry.ready() ? Palette.Hud.READY : Palette.Hud.TEXT, 2,
+                                GuiTextures.ICON_DOT)
+                        : Line.of(title, entry.ready() ? Palette.Hud.READY : Palette.Hud.TEXT, 2));
                 if (!entry.objectives().isEmpty()) {
-                    lines.add(new Line(entry.objectives().get(0), 0xBFBFBF, 6));
+                    // The counts used to be inside the sentence; now they are numbers, so the tracker
+                    // adds them back as text and draws the bar the numbers were always describing.
+                    CardObjective first = entry.objectives().get(0);
+                    if (first.unavailable() || first.required() <= 0) {
+                        lines.add(Line.of(first.text(), Palette.Hud.OBJECTIVE, 6));
+                    } else {
+                        lines.add(Line.withBar(first.text().copy().append(Component.literal(
+                                        "  " + first.current() + "/" + first.required())),
+                                first.satisfied() ? Palette.Hud.READY : Palette.Hud.OBJECTIVE, 6,
+                                first.current(), first.required()));
+                    }
                 }
-                // Who to find and which way to turn. Dropped once the quest is ready to hand in, when the
-                // player's next stop is the giver rather than the target.
-                if (!entry.ready() && McaQuestsConfig.CLIENT.showQuestTargetDirection.get()) {
-                    entry.target().ifPresent(hint -> lines.add(new Line(targetLine(hint, minecraft), 0x8AD8FF, 6)));
+                // Where to go, how far, which way, and — since 1.5.0 — the coordinates. Every row
+                // gets its own, because the server now resolves a destination per quest rather than
+                // one per player; the world marker still stands on exactly one of them.
+                if (McaQuestsConfig.CLIENT.showQuestTargetDirection.get()) {
+                    guidanceLine(entry, minecraft).ifPresent(line ->
+                            lines.add(Line.of(line, Palette.Hud.DIRECTION, 6)));
                 }
                 // A live deadline countdown for quests with a time-based failure (none when ready to turn in).
                 if (entry.deadlineGameTime().isPresent() && !entry.ready()) {
                     long remaining = Math.max(0L, entry.deadlineGameTime().getAsLong() - gameTime);
-                    lines.add(new Line(Component.translatable("mcaquests.hud.deadline", formatCountdown(remaining)),
-                            remaining <= URGENT_TICKS ? 0xFF5C5C : 0xFFD24D, 6));
+                    lines.add(Line.of(Component.translatable("mcaquests.hud.deadline", formatCountdown(remaining)),
+                            remaining <= URGENT_TICKS ? Palette.Hud.URGENT : Palette.Hud.WARNING, 6));
                 }
             }
         }
         if (!projects.isEmpty()) {
             int pmax = Math.min(projects.size(), McaQuestsConfig.CLIENT.projectTrackerMaxEntries.get());
-            lines.add(new Line(Component.translatable("mcaquests.hud.projects"), 0x5CC8FF, 0));
+            lines.add(Line.heading(Component.translatable("mcaquests.hud.projects"), Palette.Hud.HEADING,
+                    GuiTextures.ICON_PROJECT));
             for (int i = 0; i < pmax; i++) {
                 ProjectLogEntry project = projects.get(i);
                 MutableComponent header = project.title().copy()
                         .append(Component.literal(" · ").withStyle(ChatFormatting.GRAY))
                         .append(project.phaseLabel().copy().withStyle(ChatFormatting.GRAY));
-                lines.add(new Line(header, 0xFFFFFF, 2));
+                lines.add(Line.of(header, Palette.Hud.TEXT, 2));
                 ProjectObjectiveLine first = firstIncomplete(project);
                 if (first != null) {
-                    lines.add(new Line(first.label().copy()
-                            .append(Component.literal("  " + first.sharedCurrent() + "/" + first.required())), 0xBFBFBF, 6));
+                    // The counts were already here; the bar under them is what makes "nearly there"
+                    // readable without stopping to do the division.
+                    lines.add(Line.withBar(first.label().copy()
+                                    .append(Component.literal("  " + first.sharedCurrent() + "/" + first.required())),
+                            Palette.Hud.OBJECTIVE, 6, first.sharedCurrent(), first.required()));
                 }
             }
         }
 
         int blockWidth = 0;
+        int blockHeight = 0;
         for (Line line : lines) {
-            blockWidth = Math.max(blockWidth, line.indent + font.width(line.text));
+            blockWidth = Math.max(blockWidth, line.leftGutter() + line.indent() + font.width(line.text()));
+            blockHeight += line.height();
         }
-        int blockHeight = lines.size() * LINE_HEIGHT;
 
         HudAnchor anchor = McaQuestsConfig.CLIENT.questTrackerAnchor.get();
         int offsetX = McaQuestsConfig.CLIENT.questTrackerX.get();
@@ -105,33 +147,62 @@ public class QuestHudOverlay implements IGuiOverlay {
         int rightEdge = originX + blockWidth;
 
         if (McaQuestsConfig.CLIENT.questTrackerBackground.get()) {
-            graphics.fill(originX - PADDING, originY - PADDING,
-                    rightEdge + PADDING, originY + blockHeight + PADDING, 0x80000000);
+            int padded = PADDING + 2;
+            if (McaQuestsConfig.CLIENT.questTrackerStyle.get() == HudBackground.PANEL) {
+                Panel.hud(graphics, originX - padded, originY - padded,
+                        blockWidth + padded * 2, blockHeight + padded * 2);
+            } else {
+                graphics.fill(originX - PADDING, originY - PADDING,
+                        rightEdge + PADDING, originY + blockHeight + PADDING, Palette.Hud.FILL_SHADED);
+            }
         }
 
         int y = originY;
         for (Line line : lines) {
-            int x = right ? rightEdge - font.width(line.text) : originX + line.indent;
-            graphics.drawString(font, line.text, x, y, line.color);
-            y += LINE_HEIGHT;
+            // Right-anchored lines are mirrored rather than flattened: the indent is measured from the
+            // right edge, so the heading/quest/objective hierarchy survives in all four corners.
+            int textWidth = font.width(line.text());
+            int x = right
+                    ? rightEdge - line.indent() - textWidth
+                    : originX + line.leftGutter() + line.indent();
+            if (line.icon() != null) {
+                int iconX = right ? rightEdge - line.indent() - textWidth - ICON_GUTTER : originX;
+                // A heading's glyph is full size and sits proud of its taller row; a glyph on an
+                // ordinary row shares a 10px line with the text, so it is drawn at half scale and
+                // centred on the baseline rather than overlapping the row above.
+                if (line.heading()) {
+                    Panel.icon(graphics, line.icon(), iconX, y - 4);
+                } else {
+                    Panel.iconScaled(graphics, line.icon(), iconX + 4, y - 1, 0.5F);
+                }
+            }
+            graphics.drawString(font, line.text(), x, y, line.color());
+            if (line.barMax() > 0) {
+                Panel.bar(graphics, x, y + 9, Math.max(8, textWidth), line.barCurrent(), line.barMax(),
+                        GuiTextures.BAR_GREEN);
+            }
+            y += line.height();
         }
     }
 
     /**
-     * "Hans — 84 blocks to your right", or the {@code _last_known} variant when the position is the
-     * target's home rather than where they actually are (which is all we have while they are unloaded).
-     * Distance is horizontal so a target up a hill does not read as further away than it is to walk.
+     * The one line that answers "where do I go next", for this row's quest.
+     *
+     * <p>Every active quest that can name a place gets one. It used to be the marked quest's line and
+     * nothing else, so a player holding "enter an ancient city" and "kill eight blazes in a fortress"
+     * was told where one of them was and left to guess at the other — both answers existed on the
+     * server, and only one was ever sent.
+     *
+     * <p>Silent once the quest is ready to hand in, because at that point the guidance is the giver
+     * and the row already names them.
      */
-    private static Component targetLine(QuestLogEntry.TargetHint hint, Minecraft minecraft) {
+    private static Optional<Component> guidanceLine(QuestLogEntry entry, Minecraft minecraft) {
         LocalPlayer player = minecraft.player;
         if (player == null) {
-            return hint.name();
+            return Optional.empty();
         }
-        double dx = (hint.pos().getX() + 0.5D) - player.getX();
-        double dz = (hint.pos().getZ() + 0.5D) - player.getZ();
-        long blocks = Math.round(Math.sqrt(dx * dx + dz * dz));
-        return Component.translatable(hint.lastKnown() ? "mcaquests.hud.target_last_known" : "mcaquests.hud.target",
-                hint.name(), blocks, Component.translatable(HudDirection.key(dx, dz, player.getYRot())));
+        return ClientGuidanceData.forQuest(entry.questId(), entry.villagerUuid())
+                .map(guidance -> GuidanceText.line(guidance.target(), player, minecraft.level));
     }
 
     /** The first not-yet-complete objective of a project (or the first objective if all are done). */
@@ -150,6 +221,45 @@ public class QuestHudOverlay implements IGuiOverlay {
         return String.format("%d:%02d", seconds / 60L, seconds % 60L);
     }
 
-    private record Line(Component text, int color, int indent) {
+    /**
+     * One tracker row.
+     *
+     * @param icon    a glyph drawn in the gutter, or null
+     * @param heading whether this row is a section heading. Separate from {@code icon} because a row
+     *                can now carry a glyph without being one — the followed quest is marked with a dot
+     *                beside its title, and it is a quest, not a section
+     * @param barMax  a denominator to draw a progress bar under the row, or 0 for no bar
+     */
+    private record Line(Component text, int color, int indent, GuiTextures.Sprite icon, boolean heading,
+                        int barCurrent, int barMax) {
+
+        static Line of(Component text, int color, int indent) {
+            return new Line(text, color, indent, null, false, 0, 0);
+        }
+
+        static Line heading(Component text, int color, GuiTextures.Sprite icon) {
+            return new Line(text, color, 0, icon, true, 0, 0);
+        }
+
+        /** A row with a glyph in the gutter that is not a section heading. */
+        static Line icon(Component text, int color, int indent, GuiTextures.Sprite icon) {
+            return new Line(text, color, indent, icon, false, 0, 0);
+        }
+
+        static Line withBar(Component text, int color, int indent, int current, int max) {
+            return new Line(text, color, indent, null, false, current, max);
+        }
+
+        /** Any row with a glyph reserves the gutter, so its text lines up with every other glyphed row. */
+        int leftGutter() {
+            return icon != null ? ICON_GUTTER : 0;
+        }
+
+        int height() {
+            if (heading) {
+                return HEADING_HEIGHT;
+            }
+            return barMax > 0 ? LINE_HEIGHT + 4 : LINE_HEIGHT;
+        }
     }
 }

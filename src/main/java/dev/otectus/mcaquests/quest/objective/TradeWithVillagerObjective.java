@@ -43,6 +43,52 @@ public record TradeWithVillagerObjective(Optional<VillagerTarget> villager,
         return Component.translatable("mcaquests.objective.trade_with_villager", count, who);
     }
 
+
+    /**
+     * The merchant to trade with, when the objective names one it can find.
+     *
+     * <p>Three shapes, and only two of them have an honest answer. A named {@code villager} is a
+     * person and points at them. A {@code profession} means "any blacksmith will do", so it points at
+     * the nearest loaded one, exactly as {@code talk_to_profession} does — the marker is a suggestion
+     * of who to walk to, not a claim that this particular villager is the one. With neither field the
+     * quest asks for a trade with anybody at all, and there is nothing to point at that would not be
+     * arbitrary.
+     *
+     * <p>Scans loaded entities only. A villager outside render distance cannot be traded with either,
+     * so there is nothing to point at and nothing is pointed at.
+     */
+    @Override
+    public Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return Optional.empty();
+        }
+        if (villager.isPresent()) {
+            return villager.get()
+                    .resolveFrom(player, level.getEntity(active.villagerUuid()), level)
+                    .map(TradeWithVillagerObjective::mark);
+        }
+        if (profession.isEmpty()) {
+            return Optional.empty();
+        }
+        return level.getEntitiesOfClass(LivingEntity.class,
+                        player.getBoundingBox().inflate(MERCHANT_SEARCH_RADIUS),
+                        e -> McaCompat.isMcaVillager(e)
+                                && McaCompat.getProfessionId(e).filter(profession.get()::equals).isPresent())
+                .stream()
+                .min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(player)))
+                .map(TradeWithVillagerObjective::mark);
+    }
+
+    private static dev.otectus.mcaquests.quest.guidance.GuidanceTarget mark(LivingEntity merchant) {
+        return dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofEntity(merchant,
+                dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGER,
+                McaCompat.getVillagerDisplayName(merchant));
+    }
+
+    /** Blocks around the player to look in. Beyond loaded range there is nobody to trade with anyway. */
+    private static final double MERCHANT_SEARCH_RADIUS = 64.0D;
+
     @Override
     public int required() {
         return count;

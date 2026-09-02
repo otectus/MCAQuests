@@ -39,6 +39,34 @@ public interface VillagerTargeted extends QuestObjective {
     VillagerTarget targetSelector();
 
     /**
+     * Points at the villager this objective is about: the live entity when they are loaded, and the
+     * last place they were known to live when they are not.
+     *
+     * <p>Inherited by all seven implementors, so a delivery, a cure, an escort and a rescue all send
+     * the player to the same person by the same route, and an objective type that wants something
+     * else — {@code escort_entity} points at the <em>destination</em>, not the escortee — says so by
+     * overriding rather than by every other type having remembered to implement this.
+     *
+     * <p>Answers empty once satisfied. The one deliberate exception is
+     * {@code FindMissingRelativeObjective}, whose whole point is that the player can find their way
+     * back to the person they just found.
+     */
+    @Override
+    default Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return Optional.empty();
+        }
+        Optional<LivingEntity> loaded = highlightTarget(player, active, progress, level);
+        if (loaded.isPresent()) {
+            return loaded.map(entity -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofEntity(
+                    entity, dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGER,
+                    dev.otectus.mcaquests.compat.McaCompat.getVillagerDisplayName(entity)));
+        }
+        return ObjectiveSupport.lastKnownWhereabouts(player, active, progress, level);
+    }
+
+    /**
      * Reports the villager this objective bound as lost, once they are.
      *
      * <p>All seven implementors inherit it, so a delivery, a cure, an escort and a rescue all say the same

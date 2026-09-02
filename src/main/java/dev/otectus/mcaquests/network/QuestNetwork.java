@@ -11,11 +11,19 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 10 — QuestLogEntry now carries whether a quest is suspended, so the log can say a
-    // quest is waiting on a mod that is no longer installed instead of showing a counter that
-    // nothing can advance. (9 was per-player quest-target highlighting: HighlightTargetsS2CPacket
-    // is new and
-    // QuestLogEntry now carries the bound target's name and position for the HUD's direction cue.
+    // Bumped to 13 — a destination for every quest, not just the marked one. QuestGuidanceS2CPacket
+    // now carries a GuidanceSnapshot (one ActiveGuidance per quest, plus the index of the one the
+    // marker stands on) rather than a single optional target, GuidanceTarget says whether a position
+    // is somebody's last known whereabouts, and QuestLogEntry.TargetHint is gone — it was a second,
+    // dimensionless way of saying the same thing and only ever named a villager.
+    // (12 was objective guidance. QuestGuidanceS2CPacket and QuestTrackC2SPacket were new,
+    // CardObjective carries an objective's state as an enum rather than a single "unavailable" flag,
+    // and QuestLogEntry says which quest the player is following.) (11 was v1.5.0's interface: cards
+    // gained per-objective progress, reward preview stacks and a difficulty band; 10 was
+    // QuestLogEntry carrying whether a quest is suspended, so the log could say a quest is waiting on
+    // a mod that is no longer installed instead of showing a counter that nothing can advance; 9 was
+    // per-player quest-target highlighting — HighlightTargetsS2CPacket was new and QuestLogEntry
+    // gained the bound target's name and position for the HUD's direction cue.
     // (8 was the journal's View Deeds link (§29.7): JournalVillageEntry gained the village's dimension
     // and id, JournalSyncS2CPacket gained whether MCA: Reputation is canonical, and
     // OpenStandingC2SPacket was new; 7 was v1.1.0: the built-in pack moved to translation keys;
@@ -24,7 +32,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "10";
+    private static final String PROTOCOL_VERSION = "13";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -97,5 +105,15 @@ public final class QuestNetwork {
         CHANNEL.registerMessage(nextId++, HighlightTargetsS2CPacket.class,
                 HighlightTargetsS2CPacket::encode, HighlightTargetsS2CPacket::decode,
                 HighlightTargetsS2CPacket::handle);
+
+        // v1.5.0 — objective guidance. The marker the player follows, and which quest they follow.
+        // Appended, because ids here are positional: inserting anywhere above renumbers every packet
+        // after it, and a client one build behind would decode a project contribution as a toast.
+        CHANNEL.registerMessage(nextId++, QuestGuidanceS2CPacket.class,
+                QuestGuidanceS2CPacket::encode, QuestGuidanceS2CPacket::decode,
+                QuestGuidanceS2CPacket::handle);
+        CHANNEL.registerMessage(nextId++, QuestTrackC2SPacket.class,
+                QuestTrackC2SPacket::encode, QuestTrackC2SPacket::decode,
+                QuestTrackC2SPacket::handle);
     }
 }

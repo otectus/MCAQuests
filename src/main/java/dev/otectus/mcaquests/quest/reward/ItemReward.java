@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /** Gives an item stack; inserts into the inventory or drops at the player if full (spec section 15). */
 public record ItemReward(Item item, int count) implements QuestReward {
@@ -30,6 +31,16 @@ public record ItemReward(Item item, int count) implements QuestReward {
     @Override
     public Component describe() {
         return Component.translatable("mcaquests.reward.item", item.getDescription(), count);
+    }
+
+    /**
+     * One stack showing the whole count, even past a stack limit. The card draws a single slot with
+     * the number on it, so 128 emeralds read as "128" rather than as two slots of 64 and one of 0 --
+     * this is a preview, not the delivery, which {@link #grant} still splits properly.
+     */
+    @Override
+    public List<ItemStack> previewIcons() {
+        return List.of(new ItemStack(item, count));
     }
 
     @Override

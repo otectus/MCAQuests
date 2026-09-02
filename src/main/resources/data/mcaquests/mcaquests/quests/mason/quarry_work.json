@@ -41,7 +41,10 @@
     {
       "type": "mcaquests:break_block",
       "block": "minecraft:stone",
-      "count": 48
+      "count": 48,
+      "source": {
+        "block": "minecraft:stone"
+      }
     }
   ],
   "rewards": [

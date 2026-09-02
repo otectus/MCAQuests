@@ -48,7 +48,10 @@
     {
       "type": "mcaquests:kill_entity",
       "entity": "minecraft:blaze",
-      "count": 8
+      "count": 8,
+      "source": {
+        "structure": "minecraft:fortress"
+      }
     },
     {
       "type": "mcaquests:deliver_to_villager",

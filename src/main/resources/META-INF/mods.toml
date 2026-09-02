@@ -73,3 +73,28 @@ description='''${mod_description}'''
     versionRange="[0.7.5,0.8)"
     ordering="AFTER"
     side="BOTH"
+
+# JourneyMap is an OPTIONAL, CLIENT-SIDE integration. When present, the quest destinations the tracker
+# already names also appear as waypoints on the map -- one per active quest that has somewhere to send
+# you, taken away when the quest ends. Nothing here is compiled against it: compat.map.MapBinding
+# resolves JourneyMap's API by name at runtime, so this mod loads unchanged when it is absent, and a
+# JourneyMap point release that moves a method disables the waypoints and nothing else. CLIENT only --
+# a waypoint is a thing on one player's map. Range starts at 6.0.0, where the API moved to v2 and the
+# Waypoint constructor this mod used to be able to call was replaced by a factory.
+[[dependencies.${mod_id}]]
+    modId="journeymap"
+    mandatory=false
+    versionRange="[1.20.1-6.0.0,)"
+    ordering="AFTER"
+    side="CLIENT"
+
+# Xaero's Minimap is an OPTIONAL, CLIENT-SIDE integration, on the same terms. It ships no API package
+# at all, so the binding reaches its third-party waypoint store -- the one its own Waystones support
+# uses -- by name. Those waypoints are never written to the player's saved waypoint files: they belong
+# to the quest, so uninstalling this mod leaves nothing behind to tidy up.
+[[dependencies.${mod_id}]]
+    modId="xaerominimap"
+    mandatory=false
+    versionRange="[26.0.0,)"
+    ordering="AFTER"
+    side="CLIENT"

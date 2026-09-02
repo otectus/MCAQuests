@@ -202,6 +202,33 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
         return McaCompat.findGiverRelative(level, giver, effectiveRelation(), effectiveRequire());
     }
 
+    /**
+     * The relative to <b>bind</b> this target to, which is a slightly different question from the one
+     * the offer gate asked.
+     *
+     * <p>The gate ran when the villager's offers were drawn. Since 1.4.3 those offers are remembered
+     * rather than recomputed, so the player may accept minutes or hours later — and a
+     * {@code "require": "nearby"} target's answer is only true while the relative is standing within
+     * twelve blocks of the giver. By the time the quest is accepted they have very often wandered off,
+     * {@link #selectRelative} finds nobody, nothing is bound, and the objective becomes permanently
+     * uncreditable in complete silence.
+     *
+     * <p>So: prefer exactly the relative the gate would have chosen; failing that, bind the same
+     * relation under {@link RelativeCandidate#matchesIdentity} — the same person, minus the distance
+     * test that only ever described a moment. This is not a looser <em>credit</em> check; credit is a
+     * UUID comparison against whoever is bound here.
+     */
+    public Optional<UUID> selectRelativeForBinding(@Nullable Entity giver, ServerLevel level) {
+        Optional<UUID> exact = selectRelative(giver, level);
+        if (exact.isPresent() || mode != Mode.FAMILY || giver == null) {
+            return exact;
+        }
+        return McaCompat.relativeCandidates(level, giver, effectiveRelation()).stream()
+                .filter(candidate -> candidate.matchesIdentity(effectiveRequire()))
+                .map(RelativeCandidate::uuid)
+                .findFirst();
+    }
+
     /** The candidates this target would choose from — the list the offer-time gate also reads. */
     public List<RelativeCandidate> candidates(@Nullable Entity giver, ServerLevel level) {
         if (mode != Mode.FAMILY || giver == null) {
@@ -238,9 +265,15 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
                     .map(p -> McaCompat.getProfessionId(candidate).map(p::equals).orElse(false))
                     .orElse(false);
             // Filtered by require for the same reason the selector is: a quest that may not be ABOUT a
-            // dead relative must not be CREDITED by one either.
+            // dead relative must not be CREDITED by one either -- but by the IDENTITY half of require,
+            // never the positional half. This branch used to re-run the selection query in full, so a
+            // "require": "nearby" delivery credited only while the recipient stood within twelve blocks
+            // of the QUEST GIVER: the one arrangement the player has just undone by walking over to
+            // them. It is reached only when nothing is bound yet; every bound target is the UUID
+            // comparison above, which is what the other four modes have always done.
             case FAMILY -> giver(level, active)
-                    .map(g -> candidates(g, level).stream()
+                    .map(g -> McaCompat.relativeCandidates(level, g, effectiveRelation()).stream()
+                            .filter(relative -> relative.matchesIdentity(effectiveRequire()))
                             .anyMatch(relative -> relative.uuid().equals(candidate.getUUID())))
                     .orElse(false);
             case SITUATION_FOCUS -> SituationFocus

@@ -255,6 +255,32 @@ tasks.register('townsteadProbeTest', Test) {
     }
 }
 
+// Resolves the JourneyMap and Xaero binding manifests against real jars, in their own JVM and their
+// own class loader. Separate from `test` because both mods are CurseForge-only -- there is no Maven
+// to resolve them from and libs/ is gitignored, so the paths are supplied by whoever runs it.
+//
+//     ./gradlew mapProbeTest -PjourneymapJar=libs/journeymap-forge-1.20.1-6.0.4.jar //                            -PxaeroJar=libs/xaerominimap-forge-1.20.1-26.4.2.jar
+//
+// Either may be given alone; a mod with no jar is skipped rather than failed. The test unpacks
+// JourneyMap's jar-in-jar API for itself -- the outer jar carries none of IClientAPI, Waypoint or
+// WaypointFactory, so probing it alone would pass while proving nothing.
+tasks.register('mapProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the JourneyMap and Xaero binding manifests against supplied jars.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.map.MapBindingProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    doFirst {
+        systemProperty 'mcaquests.map.probe.journeymap',
+                project.findProperty('journeymapJar')?.toString() ?: ''
+        systemProperty 'mcaquests.map.probe.xaero',
+                project.findProperty('xaeroJar')?.toString() ?: ''
+    }
+}
+
 // MixinGradle: generate the refmap for our mixin and register the config for reobfuscation.
 mixin {
     add sourceSets.main, 'mcaquests.refmap.json'
@@ -293,4 +319,76 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+// ForgeGradle reobfuscates in place, so for the moment between `jar` and `reobfJar` the archive
+// sitting at build/libs/mcaquests-<version>.jar is the un-reobfuscated one: Minecraft's members still
+// carry their official names, which no production runtime knows. A jar copied out of that window
+// looks completely normal and then dies the instant a class of ours touches Minecraft --
+// `NoSuchFieldError: UNKNOWN` from QuestClientSetup's keybinds, which is how 1.5.0 reached a player's
+// mods folder. Both tasks below therefore run after reobfJar and read the finished artifact, and
+// `installMod` exists so that copying it by hand -- the thing that lost that race -- is unnecessary.
+tasks.register('verifyReobfJar') {
+    group = 'verification'
+    description = 'Fails if the built jar still names Minecraft members by their official (dev-only) names.'
+    dependsOn 'reobfJar'
+    def builtJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+    inputs.file(builtJar)
+    doLast {
+        def jarPath = builtJar.get().asFile
+        int srgRefs = 0
+        new java.util.zip.ZipFile(jarPath).withCloseable { zip ->
+            zip.entries().each { entry ->
+                if (!entry.name.endsWith('.class')) {
+                    return
+                }
+                // Constant-pool UTF8 entries are raw bytes; ISO-8859-1 round-trips them, and an SRG
+                // member name (m_12345_ / f_12345_) is plain ASCII, so a scan of the text is enough.
+                def text = new String(zip.getInputStream(entry).bytes, 'ISO-8859-1')
+                if (text =~ /[mf]_\d+_/) {
+                    srgRefs++
+                }
+            }
+        }
+        if (srgRefs == 0) {
+            throw new GradleException("${jarPath.name} names no Minecraft member by its SRG name, so it was " +
+                    "never reobfuscated. Installing it would fail at class-init with NoSuchFieldError. Run " +
+                    "`gradlew build` to completion and install build/libs/${jarPath.name} (or use `gradlew installMod`).")
+        }
+        logger.lifecycle("${jarPath.name}: reobfuscated (${srgRefs} classes carry SRG member names).")
+    }
+}
+
+tasks.named('build').configure {
+    dependsOn 'verifyReobfJar'
+}
+
+// Installs the finished jar into a mods folder, so nobody has to copy build/libs by hand and race
+// reobfJar for it. The folder comes from -PmodsDir=..., else the MCAQUESTS_MODS_DIR environment
+// variable; nothing is deleted, but an older mcaquests jar left behind is called out, because two of
+// them in one folder is a duplicate-mod error rather than an upgrade.
+tasks.register('installMod') {
+    group = 'build'
+    description = 'Copies the verified, reobfuscated jar into -PmodsDir=<dir> (or $MCAQUESTS_MODS_DIR).'
+    dependsOn 'verifyReobfJar'
+    def builtJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+    def target = (project.findProperty('modsDir') ?: System.getenv('MCAQUESTS_MODS_DIR'))?.toString()
+    inputs.file(builtJar)
+    doLast {
+        if (!target) {
+            throw new GradleException('No mods folder given. Pass -PmodsDir=<path to your instance\'s mods folder> ' +
+                    'or set the MCAQUESTS_MODS_DIR environment variable.')
+        }
+        def modsDir = file(target)
+        if (!modsDir.isDirectory()) {
+            throw new GradleException("Mods folder does not exist: ${modsDir}")
+        }
+        def source = builtJar.get().asFile
+        modsDir.listFiles({ f -> f.name ==~ /^${mod_id}-.*\.jar$/ && f.name != source.name } as FileFilter)
+                ?.each { logger.warn("WARNING: ${it.name} is still in ${modsDir}; remove it, or Forge will refuse " +
+                        "to load two copies of ${mod_id}.") }
+        java.nio.file.Files.copy(source.toPath(), new File(modsDir, source.name).toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        logger.lifecycle("Installed ${source.name} to ${modsDir}.")
+    }
 }

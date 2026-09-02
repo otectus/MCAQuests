@@ -40,6 +40,21 @@ public record TameAnimalObjective(EntityTarget animal, Optional<LocationAnchor> 
         return Component.translatable("mcaquests.objective.tame_animal", count, animal.describe());
     }
 
+    /**
+     * The place this has to happen, when the objective names one. Tamed animals count
+     * anywhere if {@code near} is absent, and in that case there is nothing to mark and nothing is
+     * marked — a pin on the village square would imply a restriction the objective does not have.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        return near.flatMap(anchor ->
+                ObjectiveSupport.anchorGuidance(anchor, player, active, level, radius));
+    }
+
     @Override
     public int required() {
         return count;

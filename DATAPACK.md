@@ -153,7 +153,7 @@ Profession matching honors the `professionMatchingMode` config: `STRICT` (exact 
 
 ## Dialogue
 
-Six states; each is a [text value](#text-values). All optional — missing lines fall back to the title.
+Nine states; each is a [text value](#text-values). All optional — missing lines fall back to the title.
 
 ```json
 "dialogue": {
@@ -162,15 +162,85 @@ Six states; each is a [text value](#text-values). All optional — missing lines
   "decline":     { "text": "Maybe another time." },
   "in_progress": { "text": "Any luck with that wheat?" },
   "ready":       { "text": "You have it all? Wonderful!" },
-  "complete":    { "text": "Bless you, friend." }
+  "complete":    { "text": "Bless you, friend." },
+  "failed":      { "text": "Too late for that now." },
+  "cooldown":    { "text": "You have done enough for me this week." },
+  "locked":      { "text": "Perhaps when I know you better." }
 }
 ```
+
+| State | When the villager says it |
+|---|---|
+| `offer` | On the card, while the quest is being offered. |
+| `accept` | You took it on. |
+| `decline` | You turned it down. |
+| `in_progress` | You come back with work still to do. |
+| `ready` | You come back with every objective satisfied. |
+| `complete` | You hand it in. |
+| `failed` | It failed — a deadline ran out, the giver or the escortee died, the weather turned. |
+| `cooldown` | They would offer it again, but you did it too recently. |
+| `locked` | They have it, and you have not met its conditions yet. |
+
+The last three are about the *villager* having nothing to give you, so a quest that authors none of them
+falls back to the shared [voice pools](#shared-voice-pools--datansmcaquestsdialoguejson) below.
+
+### Shared voice pools — `data/<ns>/mcaquests/dialogue/*.json`
+
+A quest's `dialogue` covers the six states a quest actually reaches. The two states that explain a
+villager having **nothing** to offer — `cooldown` and `locked` — are reached by the *villager*, not by
+any one quest, and no quest in the bundled pack authored them, so every busy villager in the game said
+the same flat refusal. Voice pools are lines any villager can fall back on.
+
+```json
+{
+  "format_version": 1,
+  "state": "cooldown",
+  "priority": 0,
+  "lines": [
+    {
+      "when": { "type": "mcaquests:personality", "personalities": ["grumpy", "greedy"] },
+      "translate": "mcaquests.voice.cooldown.brusque"
+    },
+    { "text": "You have done enough for me lately. Come back tomorrow.", "weight": 2 }
+  ]
+}
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `state` | **required** | One of `greeting`, `cooldown`, `locked`, `no_quests`. Any other value fails to load — a pool naming a state nothing reads is a file that silently does nothing. |
+| `priority` | `0` | Higher pools are consulted first, so a pack can shadow the built-in voice without deleting it. |
+| `lines` | **required**, non-empty | The things that might be said. |
+| `lines[].when` | none | The **same** [condition language](#conditions) quests are gated with. A line with no `when` is the pool's fallback: always eligible, never preferred. |
+| `lines[].text` / `.translate` | **required** | A [text value](#text-values). |
+| `lines[].weight` | `1` | Relative likelihood among the lines that match. |
+
+The four states:
+
+| State | When it is said |
+|---|---|
+| `greeting` | In the menu header whenever the villager *does* have offers. |
+| `cooldown` | They have nothing because you did their quest recently. |
+| `locked` | They have something, but you have not earned it yet. |
+| `no_quests` | They have nothing, and there is no more specific reason. |
+
+**A quest's own line always wins where it has one.** This is the floor, not the ceiling.
+
+Selection is deterministic per player, villager, day and state, so reopening a menu does not re-voice a
+villager — the guarantee offers got in 1.4.3, applied one layer down.
+
+Reusing the condition language rather than inventing a dialogue mini-language is the whole design:
+personality, mood, time of day, weather, hearts, reputation tier, relationship state, age group and
+every condition added later are available to dialogue for free, and there is no second grammar to
+document, validate or teach.
 
 ---
 
 ## Objectives
 
-Every objective shares an optional `count` (default `1`). "Targets" accept **either** a concrete id **or** a tag:
+Every objective shares an optional `count` (default `1`). Progress is stored **positionally**, so append
+new objectives to the end of a quest or stage players may already be holding — never insert one in the
+middle, or their progress shifts onto the wrong objective. "Targets" accept **either** a concrete id **or** a tag:
 
 - item target: `"item": "minecraft:wheat"` or `"tag": "minecraft:planks"`
 - block target: `"block": "minecraft:stone"` or `"tag": "minecraft:logs"`
@@ -300,10 +370,12 @@ Fields named `destination` / `location` / `near` resolve to a position via an `a
 ```json
 { "anchor": "home_village" }                             // the giver's MCA home village (arrival = inside its border)
 { "anchor": "nearest_village", "radius": 128 }           // nearest village to the giver, within radius (arrival = inside its border)
+                                                         // falls back to the nearest VANILLA village (#minecraft:village) when MCA knows none
 { "anchor": "giver_pos" }                                 // the giver's current position
 { "anchor": "villager", "villager": { "mode": "family", "relation": "spouse" } }
 { "anchor": "workstation" }                               // the giver's job site
 { "anchor": "bed" }                                       // the giver's home/bed
+{ "anchor": "bed", "villager": { "mode": "family", "relation": "parent" } }   // that relative's bed
 { "anchor": "coords", "pos": [100, 64, -200] }
 { "anchor": "nearest_other_village", "radius": 2048 }     // the next MCA village along, never the giver's own
 { "anchor": "townstead_building", "building_type": "dock", "minimum_level": 2 }
@@ -325,9 +397,88 @@ cannot drift to different docks the moment a second one qualifies.
 | `minimum_level` | `townstead_building` | `1` | Minimum registered tier. |
 | `selection` | both frozen anchors | `nearest_to_giver` | Or `nearest_to_player_at_accept`. Ties break on the lower registered id, so the same world always chooses the same one. |
 | `radius` | `nearest_other_village` | `2048` | How far to look. |
+| `villager` | `villager`, `bed`, `workstation` | the giver | Whose home or workplace is meant. Stating it anywhere else is a load error, because it would be read by nothing. |
+
+**Whose bed?** `bed` and `workstation` mean *the giver's* unless the anchor names somebody. That is right
+for the common "walk me home", where the giver is the person being walked, and silently wrong the moment
+the escortee is anyone else: through 1.5.0 the bundled "one last walk" told the player to see an ageing
+parent "safely back to their bed" and sent them to the parent's child's house instead — the escort
+completed, at the wrong building. So an `escort_entity` whose escortee is not the giver and whose
+destination is an unowned `bed` or `workstation` is now a **load error**. Say whose it is.
 
 If the building is demolished later the frozen position stays a perfectly good place to walk to, build at
 or defend. An objective that needs the building to still be *registered* reads that live and separately.
+
+### `source` — where a thing can be got
+
+Any of `obtain_item`, `craft_item`, `fish_item`, `kill_entity`, `break_block`, `place_block` and
+`item_delivery` may carry an optional `source`, which is what the world marker and the tracker's
+direction line point at while that objective is the one the player is on.
+
+```json
+{ "type": "mcaquests:kill_entity", "entity": "minecraft:blaze", "count": 8,
+  "source": { "structure": "minecraft:fortress" } }
+
+{ "source": { "structure_tag": "mcaquests:ocean_ruins" } }
+{ "source": { "biome": "minecraft:warm_ocean" } }
+{ "source": { "biome_tag": "minecraft:is_ocean" } }
+{ "source": { "block": "minecraft:sweet_berry_bush" } }
+{ "source": { "block_tag": "minecraft:iron_ores" } }
+{ "source": { "dimension": "minecraft:the_nether" } }
+{ "source": { "anchor": { "anchor": "workstation" } } }
+```
+
+| Field | Meaning |
+|---|---|
+| `structure` / `structure_tag` | Locate the nearest generated instance. Vanilla's `/locate`. |
+| `biome` / `biome_tag` | Locate the nearest matching biome. Vanilla's `/locatebiome`. |
+| `block` / `block_tag` | The nearest matching block within 48 blocks, searched outward from the player and **only in loaded chunks**. For the things a village errand is actually about: wheat comes from `minecraft:wheat`, iron from `minecraft:iron_ores`. Re-checked against the world each pass and dropped the moment it stops matching, because a berry bush gets picked and a marker on empty ground is worse than none. |
+| `dimension` | Point at **the way in** — the nearest lit nether portal, or the nearest stronghold for the End — and stop pointing once the player is through. Not the dimension itself, which is not a place you can walk to. |
+| `anchor` | Any [location anchor](#location-anchors). Use it to point at a **village**: `{"anchor": {"anchor": "nearest_village"}}` marks the nearest one, `home_village` the giver's own, `nearest_other_village` the next one along. There is no separate `village` field — the anchor language already says all three, and a second spelling would be a second thing to keep in step. |
+
+At least one must be set, or the pack fails to load: a `source` that names nothing is a marker that
+never appears with no way to find out why. When several are set, the dimension and the anchor win first,
+then `block` — a berry bush twenty blocks away is a better answer than an ocean two thousand blocks
+away, and far cheaper to have found — then the structure and biome searches.
+
+**Nothing is inferred, and that is deliberate.** There is no index of where eight prismarine crystals
+are, and a guess would send the player somewhere confidently wrong — worse than sending them nowhere,
+because they would go. An objective with no `source` draws no marker at all and its text carries the
+whole instruction, exactly as before this field existed.
+
+**Cost.** A structure or biome `source` runs a real world search, once, on the first pass that needs it;
+the answer is written into the objective's own progress and survives a restart. A search that finds
+nothing is retried no more often than `guidanceSearchIntervalTicks`. Only the quest the player is
+following searches at all.
+
+**`item_delivery` has a fallback.** With no `source`, it points at the villager the goods are for.
+That does not claim to say where the wheat is — nothing can — but where the quest wants you to end up is
+a true and useful answer to "where next", and for a village errand the fields are usually within sight of
+the villager anyway. Give it a `source` when you know better and the source wins.
+
+`visit_dimension`, `enter_structure`, `visit_biome`, `reach_location`, `defend_location`,
+`build_near_location`, `escort_entity`, `talk_to_profession`, `trade_with_villager`,
+`sleep_or_rest`, every `townstead_*` objective and every villager-targeted objective already
+know where they are sending the player and need no `source`.
+
+A Townstead objective points at the resident its query names, or — for the ones about the
+settlement as a whole — at the giver's home village; `townstead_building_registered` points at
+the nearest building of the family it asks for, and at the village when there is not one yet to
+point at. `sleep_or_rest` points at the **player's own** bed, not the giver's: it is the player
+who has to sleep, and sending them to somebody else's house would be a marker on a place the
+quest is not about.
+
+### Why is nothing marked?
+
+Run **`/mcaquests debug guidance`**. It lists every active quest, what each one would point at, and
+which one the marker actually chose — so "the objective has no place attached" is distinguishable from
+"a search found nothing in range" and from "the feature is off", which from inside the game look
+identical.
+
+And **`/mcaquests debug waypoints`** for the map half: which of JourneyMap and Xaero bound, which
+members did not, and the result of a round-trip probe. Both mods can decline a waypoint without
+throwing, and neither says so, which from inside the game is indistinguishable from having no
+minimap installed at all.
 
 ### Validation & MCA limitations
 
@@ -347,8 +498,11 @@ or defend. An objective that needs the building to still be *registered* reads t
   MCA generated to pad a family tree, is already in the world, or is on any village's resident roll. Any of
   those simply pauses the objective — it never errors. In multiplayer two players searching for the same
   relative produce exactly one villager: the second spawn is refused and both complete on proximity.
-- **Workstation/bed anchors** depend on the giver having an assigned job site / home in MCA; otherwise
-  they resolve empty and the objective pauses.
+- **Workstation/bed anchors** depend on the villager they name having an assigned job site / home in
+  MCA; otherwise they resolve empty and the objective pauses.
+- **`source`** ids for structures and biomes belong to *dynamic* registries, so a name this world has
+  never heard of cannot be caught at load. It produces no marker rather than an error, and the quest
+  still says in words where to go.
 
 ---
 
@@ -1710,8 +1864,8 @@ Follow this scheme and your keys will read the same way as the shipped ones:
 
 | Locale | Coverage |
 |---|---|
-| `en_us` | Source of truth — 1,582 keys |
-| `pt_br` (Português do Brasil) | Complete — all 1,582 keys |
+| `en_us` | Source of truth — 2,891 keys |
+| `pt_br` (Português do Brasil) | Complete — all 2,891 keys |
 
 `LocaleParityTest` enforces the rules that keep this honest: every locale must cover all of `en_us` and define nothing `en_us` lacks, placeholders must agree between a translation and its source, no value may be blank or left as a `TODO` marker, no value may mix in a non-Latin writing system, and no built-in data file may go back to hard-coding English via `text`.
 

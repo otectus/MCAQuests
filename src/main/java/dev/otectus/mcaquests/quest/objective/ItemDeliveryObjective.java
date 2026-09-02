@@ -6,6 +6,10 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import dev.otectus.mcaquests.quest.target.SourceHint;
+import dev.otectus.mcaquests.state.ActiveQuest;
+import net.minecraft.server.level.ServerLevel;
+import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.Container;
@@ -27,7 +31,18 @@ import javax.annotation.Nullable;
  * written so a second turn-in cannot repeat it.
  */
 public record ItemDeliveryObjective(Item item, int count, boolean consume,
-                                    DeliveryDestination destination) implements QuestObjective {
+                                    DeliveryDestination destination,
+                                    Optional<SourceHint> source) implements QuestObjective {
+
+    /**
+     * The shape before {@code source} existed. See the note on the two-argument form below: adding a
+     * record component breaks every caller of the canonical constructor, and there is no reason to
+     * make an add-on pay that for a field whose absence means what it always meant.
+     */
+    public ItemDeliveryObjective(Item item, int count, boolean consume,
+                                 DeliveryDestination destination) {
+        this(item, count, consume, destination, Optional.empty());
+    }
 
     /**
      * The shape this objective had before destinations existed, kept so an add-on that constructs one
@@ -47,7 +62,8 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
             Codec.BOOL.optionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume),
             StrictCodecs.strictOptional(DeliveryDestination.CODEC, "destination",
-                    DeliveryDestination.CONSUMED).forGetter(ItemDeliveryObjective::destination)
+                    DeliveryDestination.CONSUMED).forGetter(ItemDeliveryObjective::destination),
+            SourceHint.FIELD.forGetter(ItemDeliveryObjective::source)
     ).apply(instance, ItemDeliveryObjective::new));
 
     @Override
@@ -58,6 +74,56 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
     @Override
     public Component describe() {
         return Component.translatable("mcaquests.objective.item_delivery", count, item.getDescription());
+    }
+
+    /**
+     * Where the goods can be got if the pack said, and otherwise where they are going.
+     *
+     * <p>A delivery has a place even when nobody has told it where the goods come from: the person
+     * waiting for them. That was missed in the first cut of guidance, which treated "carry 24 wheat to
+     * Gabrijel" as an objective with no location at all — and since deliveries are most of what this
+     * mod asks for, the marker was usually absent, which read as a broken feature rather than an
+     * honest silence.
+     *
+     * <p>It does not claim to say where wheat is. Nothing can: there is no index of wheat, and the
+     * whole design of {@link SourceHint} is that a guess would send the player somewhere confidently
+     * wrong. What it does say is where this quest wants them to end up, which is a true and useful
+     * answer to "where next" — and for a village errand the fields are usually within sight of the
+     * villager anyway.
+     *
+     * <p>This is a <em>marker</em>, not an outline. The giver is still not highlighted until the quest
+     * is actually ready to hand in: a glowing villager means "go and interact with this person now",
+     * and that is not yet true while the player is still gathering.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> hinted =
+                source.flatMap(hint -> hint.guidance(player, active, progress, level));
+        if (hinted.isPresent()) {
+            return hinted;
+        }
+        return recipient(active, level).map(villager -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofEntity(
+                villager, dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGER,
+                dev.otectus.mcaquests.compat.McaCompat.getVillagerDisplayName(villager)));
+    }
+
+    /** The villager the goods are for: the giver, who is who an item delivery is always handed to. */
+    private java.util.Optional<net.minecraft.world.entity.LivingEntity> recipient(ActiveQuest active,
+                                                                                 ServerLevel level) {
+        return level.getEntity(active.villagerUuid()) instanceof net.minecraft.world.entity.LivingEntity giver
+                && dev.otectus.mcaquests.compat.McaCompat.isMcaVillager(giver)
+                ? java.util.Optional.of(giver) : java.util.Optional.empty();
+    }
+
+    @Override
+    public void validate(net.minecraft.resources.ResourceLocation questId, int index,
+                         java.util.List<String> errors) {
+        source.ifPresent(hint ->
+                hint.validate("Quest '" + questId + "': objective[" + index + "]", errors));
     }
 
     @Override
@@ -168,4 +234,10 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
         }
         return found;
     }
+
+    @Override
+    public ItemStack icon() {
+        return new ItemStack(item);
+    }
+
 }

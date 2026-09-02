@@ -35,6 +35,7 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 - **Villagers who actually talk to you** *(with MCA: Conversations)* — install the optional **MCA: Conversations** add-on and villagers speak their quest lines in their own voice and personality, and "go talk to so-and-so" quests progress from a real conversation instead of a checkbox. Not installed? Everything still works — dialogue just reads as written.
 - **MCA: Reputation** *(optional)* — with Reputation installed, every village row in the Journal carries a **[View Deeds]** link straight into Reputation's own standing screen, so the two can never tell you different things. Without it, MCA: Quests keeps its own per-player standing and the link simply is not offered.
 - **FTB Quests integration** *(optional)* — build FTB Quests books that read your villager quests, reputation, titles, and hearts, and grant those same rewards straight from the book. Not installed? Nothing changes.
+- **Your quests on your map** *(with JourneyMap or Xaero's Minimap)* — every quest that has somewhere to send you gets a waypoint, colour-coded by what is waiting there, moved along as the quest advances and cleared away when it is done. They are the quest's, not yours: nothing is added to your own saved waypoints. Not installed? The tracker still names the place, the distance, the direction and the coordinates.
 - **An economy that fits your pack** — quests pay in *currency*, not hard-coded emeralds. Tag a quest easy, medium, or hard and the server picks the payout range and the coin: emeralds by default, **Create: Numismatics** coins, or any item you choose — one config line, and every installed quest pack follows. Payouts are locked in the moment you accept, so what the card promises is what you get.
 
 ### 🧭 Day to day
@@ -66,6 +67,7 @@ Complete the work, return, and turn it in for loot, XP, and — most importantly
 - **Optional:** [Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead) `[0.7.5,0.8)` — villager needs, professions, skills, and village character as quest state
 - **Optional:** MCA: Conversations — voiced quest dialogue & conversation-driven objectives · **MCA: Reputation** — Journal link into its standing screen
 - **Optional:** FTB Quests — two-way book integration · **Create: Numismatics** — pay quest rewards in coins
+- **Optional:** JourneyMap `1.20.1-6.0.0+` · Xaero's Minimap `26.0.0+` — quest destinations as map waypoints
 - **Languages:** English, Português (Brasil)
 - Server-authoritative and dup-proof — safe for multiplayer.
 - Source & docs: **https://github.com/otectus/MCAQuests**

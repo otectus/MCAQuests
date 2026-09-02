@@ -33,4 +33,23 @@ public record ItemTarget(Optional<Item> item, Optional<TagKey<Item>> tag) {
         }
         return tag.map(t -> DisplayNames.tagName(t.location())).orElse(Component.literal("?"));
     }
+
+    /**
+     * A stack the card can draw beside this objective, or {@link ItemStack#EMPTY} when there is
+     * nothing to show.
+     *
+     * <p>A tag is represented by its first member — "any log" has no single icon, and picking one is
+     * better than picking none. The text beside it still names the tag, so the icon illustrates the
+     * requirement rather than narrowing it. An empty or unloaded tag yields nothing rather than
+     * throwing: a datapack may name a tag no pack in this instance defines.
+     */
+    public ItemStack icon() {
+        if (item.isPresent()) {
+            return new ItemStack(item.get());
+        }
+        return tag.flatMap(t -> BuiltInRegistries.ITEM.getTag(t)
+                        .flatMap(members -> members.stream().findFirst())
+                        .map(holder -> new ItemStack(holder.value())))
+                .orElse(ItemStack.EMPTY);
+    }
 }

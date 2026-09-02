@@ -60,6 +60,19 @@ public record ReachLocationObjective(LocationAnchor location, int radius,
         return Component.translatable("mcaquests.objective.reach_location", location.describe());
     }
 
+    /**
+     * The place itself. This is the one objective whose whole content is a position, and until now
+     * the player was given its description in words and left to find it.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        return ObjectiveSupport.anchorGuidance(location, player, active, level, radius);
+    }
+
     @Override
     public int required() {
         return 1;

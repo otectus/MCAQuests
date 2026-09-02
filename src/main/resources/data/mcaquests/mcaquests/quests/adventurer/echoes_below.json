@@ -47,7 +47,10 @@
     {
       "type": "mcaquests:obtain_item",
       "item": "minecraft:echo_shard",
-      "count": 4
+      "count": 4,
+      "source": {
+        "structure": "minecraft:ancient_city"
+      }
     },
     {
       "type": "mcaquests:craft_item",

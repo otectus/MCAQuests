@@ -4,16 +4,32 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
 import net.minecraft.network.chat.Component;
+import dev.otectus.mcaquests.quest.target.SourceHint;
+import dev.otectus.mcaquests.state.ActiveQuest;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.Entity;
 
 /** Kill a number of matching entities (spec section 14). Credited by {@code QuestProgressEvents}. */
-public record KillEntityObjective(EntityTarget target, int count) implements QuestObjective {
+public record KillEntityObjective(EntityTarget target, int count,
+                                  Optional<SourceHint> source) implements QuestObjective {
+
+    /**
+     * The shape this objective had before {@code source} existed, kept so an add-on that builds
+     * one in code still compiles. Adding a record component is a source break for every caller of
+     * the canonical constructor, and no source hint means what it has always meant: no marker.
+     */
+    public KillEntityObjective(EntityTarget target, int count) {
+        this(target, count, Optional.empty());
+    }
 
     public static final Codec<KillEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(KillEntityObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(KillEntityObjective::count)
+            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(KillEntityObjective::count),
+            SourceHint.FIELD.forGetter(KillEntityObjective::source)
     ).apply(instance, KillEntityObjective::new));
 
     @Override
@@ -24,6 +40,29 @@ public record KillEntityObjective(EntityTarget target, int count) implements Que
     @Override
     public Component describe() {
         return Component.translatable("mcaquests.objective.kill_entity", count, target.describe());
+    }
+
+    /**
+     * Where the thing this asks for can actually be got, when the pack said.
+     *
+     * <p>Nothing is inferred. There is no index of where eight prismarine crystals are, and a guess
+     * would send the player somewhere confidently wrong — which is worse than sending them nowhere,
+     * because they would go. So an objective with no {@code source} draws no marker and the quest
+     * text carries the whole instruction, exactly as it always did. See {@link SourceHint}.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        return source.flatMap(hint -> hint.guidance(player, active, progress, level));
+    }
+
+    @Override
+    public void validate(ResourceLocation questId, int index, java.util.List<String> errors) {
+        source.ifPresent(hint ->
+                hint.validate("Quest '" + questId + "': objective[" + index + "]", errors));
     }
 
     @Override

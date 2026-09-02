@@ -117,6 +117,49 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
         return ObjectiveSupport.resolveLocked(relative, player, active, progress, level);
     }
 
+    /**
+     * The person once they have been materialised, and the place to search for them until then.
+     *
+     * <p>The inherited {@link VillagerTargeted} answer is only half of this objective. Before the
+     * relative is placed there is no entity anywhere to point at, and the player has been told to
+     * search "the old mineshaft" with no way to find one — which is the state the objective spends
+     * almost all of its time in. So the marker is the structure or biome the search is anchored to
+     * until somebody is actually out there, and the person afterwards.
+     *
+     * <p>Unlike every other implementor this keeps answering once satisfied, for the same reason
+     * {@link #highlightTarget} does: the point of finding someone is being able to walk back to them.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        java.util.Optional<net.minecraft.world.entity.LivingEntity> found =
+                highlightTarget(player, active, progress, level);
+        if (found.isPresent()) {
+            return found.map(entity -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofEntity(entity, dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGER,
+                    dev.otectus.mcaquests.compat.McaCompat.getVillagerDisplayName(entity)));
+        }
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> area = structure.flatMap(target -> dev.otectus.mcaquests.quest.guidance.LocateCache
+                .resolve(progress, "searchStruct", level,
+                        () -> target.locate(level, player.blockPosition(), SEARCH_CHUNKS))
+                .map(pos -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(pos, level, dev.otectus.mcaquests.quest.guidance.GuidanceKind.STRUCTURE,
+                        target.describe(), discoverRadius, true)));
+        if (area.isPresent()) {
+            return area;
+        }
+        return biome.flatMap(target -> dev.otectus.mcaquests.quest.guidance.LocateCache
+                .resolve(progress, "searchBiome", level,
+                        () -> target.locate(level, player.blockPosition(), SEARCH_BLOCKS))
+                .map(pos -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(pos, level, dev.otectus.mcaquests.quest.guidance.GuidanceKind.BIOME,
+                        target.describe(), discoverRadius, true)));
+    }
+
+    /** Chunks a structure search may walk, and blocks a biome search may sample. */
+    private static final int SEARCH_CHUNKS = 100;
+    private static final int SEARCH_BLOCKS = 3200;
+
     @Override
     public int required() {
         return 1;

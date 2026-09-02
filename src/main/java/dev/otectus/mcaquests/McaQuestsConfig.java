@@ -60,11 +60,18 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue mediumCurrencyMax;
         public final ForgeConfigSpec.IntValue hardCurrencyMin;
         public final ForgeConfigSpec.IntValue hardCurrencyMax;
+        public final ForgeConfigSpec.IntValue easyQuestReputation;
+        public final ForgeConfigSpec.IntValue mediumQuestReputation;
+        public final ForgeConfigSpec.IntValue hardQuestReputation;
         public final ForgeConfigSpec.BooleanValue followGiverAfterAccept;
         public final ForgeConfigSpec.DoubleValue leadVillagerSpeed;
         public final ForgeConfigSpec.IntValue minEscortJourney;
         public final ForgeConfigSpec.BooleanValue highlightQuestTargets;
         public final ForgeConfigSpec.BooleanValue highlightUsesGlowingEffect;
+        public final ForgeConfigSpec.BooleanValue highlightAllActiveQuests;
+        public final ForgeConfigSpec.IntValue guidanceSearchIntervalTicks;
+        public final ForgeConfigSpec.IntValue guidanceSearchesPerPass;
+        public final ForgeConfigSpec.BooleanValue autoTrackNewQuests;
         public final ForgeConfigSpec.BooleanValue questChatMessages;
         public final ForgeConfigSpec.BooleanValue strictJsonValidation;
         public final ForgeConfigSpec.BooleanValue debugLogging;
@@ -226,6 +233,33 @@ public final class McaQuestsConfig {
             hardCurrencyMax = b.defineInRange("hardCurrencyMax", 8, 0, 10000);
             b.pop();
 
+            b.push("rewards.reputation");
+            // What finishing a quest is worth to the village when the quest does not say.
+            //
+            // It had to say, and 252 of the 262 bundled quests did not: only ten carried a
+            // village_reputation reward, none used the documented "reputation" block at all, and six of
+            // the seven quests GATED on standing were themselves among those ten. So an ordinary village
+            // playthrough earned nothing from 96% of the pack, against a ladder with Acquaintance at 25,
+            // Friend at 75, Honored at 150 and Revered at 300. A player reported it as "no matter what I
+            // do I have 25 more to acquaintance and my rank is stranger", which is precisely correct
+            // arithmetic over a score almost nothing was adding to.
+            //
+            // These bands mirror the currency bands beside them and are applied ONLY when a quest
+            // authors nothing of its own; anything it does author still wins outright. Set all three to
+            // 0 for the pre-1.5.0 behaviour, where quests were worth no standing at all.
+            easyQuestReputation = b.comment(
+                    "Village standing granted for completing a quest with \"difficulty\": \"easy\" that",
+                    "declares no \"reputation\" block and no mcaquests:village_reputation reward.")
+                    .defineInRange("easyQuestReputation", 2, 0, 1000);
+            mediumQuestReputation = b.comment(
+                    "As easyQuestReputation, for \"difficulty\": \"medium\". Also the amount used by a",
+                    "quest that declares no difficulty at all, which most do not.")
+                    .defineInRange("mediumQuestReputation", 4, 0, 1000);
+            hardQuestReputation = b.comment(
+                    "As easyQuestReputation, for \"difficulty\": \"hard\".")
+                    .defineInRange("hardQuestReputation", 7, 0, 1000);
+            b.pop();
+
             b.push("matching");
             professionMatchingMode = b.comment("How giver professions are matched: STRICT, NORMALIZED, or LOOSE.")
                     .defineEnum("professionMatchingMode", ProfessionMatchingMode.NORMALIZED);
@@ -262,6 +296,34 @@ public final class McaQuestsConfig {
                     "is part of world state, so EVERY player on the server sees it and it can show up in",
                     "minimaps and shader outlines. Only enable it if you want that behaviour back.")
                     .define("highlightUsesGlowingEffect", false);
+            highlightAllActiveQuests = b.comment(
+                    "If true, every active quest highlights its target at once, as versions before 1.5.0 did.",
+                    "The default (false) highlights only the quest you are tracking, and within it only the",
+                    "villager the objective you are actually on is about — plus the villager you hand the",
+                    "quest back to, once it is ready. Highlighting everything meant a player holding five",
+                    "quests had five glowing villagers and no way to tell which one mattered.")
+                    .define("highlightAllActiveQuests", false);
+            guidanceSearchIntervalTicks = b.comment(
+                    "How long, in ticks, before the quest marker retries a world search that found nothing.",
+                    "Locating a structure or a biome is the same work as /locate and runs on the server",
+                    "thread; a search that SUCCEEDS is remembered permanently on the objective, so this only",
+                    "governs how often a failed one is tried again as the player travels. Lower it if you",
+                    "want markers to appear sooner after a long journey; raise it on a busy server.")
+                    .defineInRange("guidanceSearchIntervalTicks", 200, 20, 24000);
+            guidanceSearchesPerPass = b.comment(
+                    "How many world searches one player's guidance pass may run, per second.",
+                    "Since 1.5.0 every active quest gets its own destination rather than only the one",
+                    "carrying the marker, so a player holding five quests whose structures are all out of",
+                    "range could otherwise fire five /locate calls at once. Quests that do not get a turn",
+                    "are asked again on the next pass -- nothing is skipped, it is only spread out. Raise it",
+                    "if destinations take too long to appear after a long journey.")
+                    .defineInRange("guidanceSearchesPerPass", 1, 1, 8);
+            autoTrackNewQuests = b.comment(
+                    "If true (default), accepting a quest starts following it when you are not already",
+                    "following one, so the marker and the tracker point at it without you having to ask.",
+                    "Set false if you would rather pick what to follow yourself, with the pin in the quest",
+                    "log. This is a server setting because the server decides what to point you at.")
+                    .define("autoTrackNewQuests", true);
             questChatMessages = b.comment("Send a short chat confirmation when a quest is accepted or completed.")
                     .define("questChatMessages", true);
             b.pop();
@@ -456,12 +518,19 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue showQuestToasts;
         public final ForgeConfigSpec.BooleanValue showQuestTrackerHud;
         public final ForgeConfigSpec.BooleanValue showQuestTargetDirection;
+        public final ForgeConfigSpec.BooleanValue showQuestTargetCoordinates;
+        public final ForgeConfigSpec.BooleanValue showQuestLogDestination;
         public final ForgeConfigSpec.BooleanValue playQuestSounds;
         public final ForgeConfigSpec.IntValue questTrackerMaxEntries;
         public final ForgeConfigSpec.BooleanValue questTrackerBackground;
+        public final ForgeConfigSpec.EnumValue<HudBackground> questTrackerStyle;
         public final ForgeConfigSpec.EnumValue<HudAnchor> questTrackerAnchor;
         public final ForgeConfigSpec.IntValue questTrackerX;
         public final ForgeConfigSpec.IntValue questTrackerY;
+        public final ForgeConfigSpec.BooleanValue showQuestMarker;
+        public final ForgeConfigSpec.IntValue questMarkerMaxDistance;
+        public final ForgeConfigSpec.BooleanValue mapWaypoints;
+        public final ForgeConfigSpec.BooleanValue mapWaypointsFollowedOnly;
         public final ForgeConfigSpec.BooleanValue showProjectTrackerHud;
         public final ForgeConfigSpec.IntValue projectTrackerMaxEntries;
         public final ForgeConfigSpec.BooleanValue showSituationToast;
@@ -480,20 +549,59 @@ public final class McaQuestsConfig {
             showQuestTrackerHud = b.define("showQuestTrackerHud", true);
             showQuestTargetDirection = b.comment(
                     "Add a line to the quest tracker naming the villager the quest wants you to find, with",
-                    "the distance to them and which way to turn. Shown only while the quest is not yet ready",
-                    "to hand in. Needs showQuestTrackerHud.")
+                    "the distance to it and which way to turn -- \"Nether Fortress -- 412 blocks ahead-left\".",
+                    "Every active quest that can name a place gets its own line; the world marker still",
+                    "stands on only one of them. Needs showQuestTrackerHud.")
                     .define("showQuestTargetDirection", true);
+            showQuestTargetCoordinates = b.comment(
+                    "Add the destination's coordinates to that line, and to the quest log's. The mod could",
+                    "say how far away somewhere was and never where it was, so there was nothing to write",
+                    "down, type into a minimap or send to somebody else. A destination in another dimension",
+                    "shows its coordinates too -- a bearing across dimensions would be a lie, but a",
+                    "coordinate is exactly what you want written down before you go looking for a portal.")
+                    .define("showQuestTargetCoordinates", true);
+            showQuestLogDestination = b.comment(
+                    "Show each quest's destination in the quest log as well as on the HUD tracker. The log",
+                    "listed objectives and never said where any of them were. Click the line to copy the",
+                    "coordinates.")
+                    .define("showQuestLogDestination", true);
             playQuestSounds = b.define("playQuestSounds", true);
             questTrackerMaxEntries = b.comment("How many quests the tracker HUD shows at once.")
                     .defineInRange("questTrackerMaxEntries", 5, 1, 15);
-            questTrackerBackground = b.comment("Draw a translucent background behind the quest tracker HUD.")
+            questTrackerBackground = b.comment("Draw a background behind the quest tracker HUD.")
                     .define("questTrackerBackground", true);
+            questTrackerStyle = b.comment(
+                    "Which background the quest tracker draws, when questTrackerBackground is on:",
+                    "PANEL for the mod's textured panel, SHADED for the plain translucent box used",
+                    "before 1.5.0. Ignored entirely when questTrackerBackground is false.")
+                    .defineEnum("questTrackerStyle", HudBackground.PANEL);
             questTrackerAnchor = b.comment("Screen corner the quest tracker HUD anchors to: TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT.")
                     .defineEnum("questTrackerAnchor", HudAnchor.TOP_LEFT);
             questTrackerX = b.comment("Quest tracker horizontal offset in pixels from its anchored corner.")
                     .defineInRange("questTrackerX", 4, 0, 10000);
             questTrackerY = b.comment("Quest tracker vertical offset in pixels from its anchored corner.")
                     .defineInRange("questTrackerY", 4, 0, 10000);
+            showQuestMarker = b.comment(
+                    "Draw a marker in the world at the place your tracked quest is currently sending you --",
+                    "a beam and an icon, visible through walls, which fades out as you arrive. Only ever one",
+                    "at a time, for the objective you are actually on. Turn it off for the tracker text alone.")
+                    .define("showQuestMarker", true);
+            questMarkerMaxDistance = b.comment(
+                    "How far away, in blocks, the world marker is still drawn. Past this only the tracker",
+                    "line names the target, which keeps a beam from standing on the horizon for a destination",
+                    "two thousand blocks away.")
+                    .defineInRange("questMarkerMaxDistance", 256, 16, 4096);
+            mapWaypoints = b.comment(
+                    "Put your quest destinations on JourneyMap and Xaero's Minimap, where either is",
+                    "installed. One waypoint per quest that has somewhere to send you, created when it",
+                    "resolves, moved as the quest advances, and taken away when it is done. They are not",
+                    "saved to your own waypoint list -- they belong to the quest, not to you.")
+                    .define("mapWaypoints", true);
+            mapWaypointsFollowedOnly = b.comment(
+                    "Restrict those waypoints to the quest you are following, so the map carries one at a",
+                    "time rather than one per quest. The in-world marker beam has always worked this way;",
+                    "this makes the map match it.")
+                    .define("mapWaypointsFollowedOnly", false);
             showProjectTrackerHud = b.comment("Show participating community projects in the HUD tracker.")
                     .define("showProjectTrackerHud", true);
             projectTrackerMaxEntries = b.comment("How many community projects the tracker HUD shows at once.")
@@ -527,6 +635,20 @@ public final class McaQuestsConfig {
         EMERALDS,
         /** Grant nothing for that reward. */
         DISABLE
+    }
+
+    /**
+     * Which background the quest tracker draws, when it draws one at all.
+     *
+     * <p>Whether there is a background stays {@code questTrackerBackground}'s decision, so every
+     * existing config keeps the meaning it had; this only picks between the textured panel and the
+     * flat shading the tracker used before it had a texture to draw.
+     */
+    public enum HudBackground {
+        /** The mod's nine-sliced panel. */
+        PANEL,
+        /** The plain translucent-black box the tracker used through 1.4.3. */
+        SHADED
     }
 
     /** Screen corner the quest-tracker HUD anchors to (spec section 21). */

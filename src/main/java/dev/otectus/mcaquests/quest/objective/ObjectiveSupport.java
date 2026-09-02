@@ -3,6 +3,8 @@ package dev.otectus.mcaquests.quest.objective;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.RelativeCandidate;
+import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
+import dev.otectus.mcaquests.quest.guidance.GuidanceTarget;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
 import dev.otectus.mcaquests.quest.target.LocationAnchor;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
@@ -73,6 +75,14 @@ public final class ObjectiveSupport {
             return target.resolve(player, active, level, locked);
         }
         Optional<LivingEntity> resolved = target.resolve(player, active, level);
+        if (resolved.isEmpty() && target.mode() == VillagerTarget.Mode.FAMILY) {
+            // The moment the offer gate described has passed - a "require": "nearby" relative has
+            // wandered away from the giver. Bind the same person anyway rather than leave the objective
+            // permanently unbound; see VillagerTarget#selectRelativeForBinding for why that is the same
+            // person and not a looser one.
+            resolved = target.selectRelativeForBinding(level.getEntity(active.villagerUuid()), level)
+                    .flatMap(uuid -> target.resolve(player, active, level, uuid));
+        }
         if (lockEveryMode || target.mode() == VillagerTarget.Mode.FAMILY) {
             resolved.ifPresent(entity -> progress.setTargetUuid(entity.getUUID()));
         }
@@ -121,9 +131,79 @@ public final class ObjectiveSupport {
         return Optional.empty();
     }
 
-    /** True when {@code candidate} is the villager {@code target} means, honouring an already-locked binding. */
+    /**
+     * Where a bound-but-unloaded villager was last known to live, as guidance the client can draw.
+     *
+     * <p>This is the case a direction cue matters most in: there is no entity to walk toward, so
+     * without it the player is told a name and nothing else. MCA keeps village rolls persistently, so
+     * a villager two thousand blocks away and long unloaded still has a village centre to aim at.
+     *
+     * <p>Marked {@code approximate}, because it is a village and not a person, and filtered to this
+     * dimension — a marker in another world would draw through bedrock at a coordinate that means
+     * nothing here. Empty when the villager is not bound, is loaded (the caller has a better answer),
+     * or cannot be placed at all.
+     */
+    public static Optional<GuidanceTarget> lastKnownWhereabouts(ServerPlayer player, ActiveQuest active,
+                                                                ObjectiveProgress progress,
+                                                                ServerLevel level) {
+        UUID bound = progress.targetUuid();
+        if (bound == null || level.getEntity(bound) != null) {
+            return Optional.empty();
+        }
+        Entity giver = level.getEntity(active.villagerUuid());
+        if (giver == null) {
+            return Optional.empty();
+        }
+        Optional<String> name = McaCompat.getRelativeDisplayName(giver, bound);
+        if (name.isEmpty()) {
+            return Optional.empty();
+        }
+        return McaCompat.getRelativeHome(level, bound)
+                .filter(home -> home.dimension().equals(level.dimension()))
+                .map(home -> GuidanceTarget.ofPos(home.pos(), level, GuidanceKind.VILLAGE,
+                        Component.literal(name.get()), LAST_KNOWN_ARRIVE_RADIUS, true).asLastKnown());
+    }
+
+    /** How close counts as "you have reached the village they were last known to live in". */
+    private static final int LAST_KNOWN_ARRIVE_RADIUS = 24;
+
+    /**
+     * A {@link LocationAnchor} as guidance the client can draw, or empty while it will not resolve.
+     *
+     * <p>Six objective types carry an anchor and none of them wanted a different answer, so they
+     * share this one rather than each growing a copy that could drift. Resolution is cheap here — an
+     * anchor reads a villager's residency or a village centre, it does not search the world — so
+     * unlike a structure or biome hint it is recomputed every pass and follows a village whose centre
+     * moves.
+     *
+     * <p>Empty rather than a fallback when the anchor cannot resolve: an unloaded giver or an
+     * unsurveyed building is a temporary "not yet", and drawing the player's own feet in the meantime
+     * would be a marker that means nothing.
+     */
+    public static Optional<GuidanceTarget> anchorGuidance(LocationAnchor anchor, ServerPlayer player,
+                                                          ActiveQuest active, ServerLevel level,
+                                                          int arriveRadius) {
+        return anchor.resolveTarget(player, active, level).map(resolved -> GuidanceTarget.ofPos(
+                resolved.pos(), level, anchor.guidanceKind(resolved.villageId().isPresent()),
+                anchor.describe(player, active, level), arriveRadius, false));
+    }
+
+    /**
+     * True when {@code candidate} is the villager {@code target} means - binding the target first if it
+     * has not been bound yet, so this and {@link #resolveLocked} are one implementation of one question.
+     *
+     * <p>They were two. The quest log and the highlight went through {@code resolveLocked}, which pins a
+     * family target's UUID the first time it resolves; the credit check went through {@code matches},
+     * which re-ran the selection query from scratch every time it was asked. So the log could name one
+     * person while the hand-over refused to accept them, and nothing anywhere said so. Resolving here
+     * first makes the credit check a UUID comparison in every mode, which is what {@code self},
+     * {@code uuid} and {@code situation_focus} have always been.
+     */
     public static boolean matchesLocked(VillagerTarget target, LivingEntity candidate, ServerPlayer player,
                                         ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (progress.targetUuid() == null) {
+            resolveLocked(target, player, active, progress, level);
+        }
         return target.matches(candidate, player, active, level, progress.targetUuid());
     }
 

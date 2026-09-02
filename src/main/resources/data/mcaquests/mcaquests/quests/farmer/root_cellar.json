@@ -42,7 +42,10 @@
       "type": "mcaquests:item_delivery",
       "item": "minecraft:carrot",
       "count": 16,
-      "consume": true
+      "consume": true,
+      "source": {
+        "block": "minecraft:carrots"
+      }
     }
   ],
   "rewards": [

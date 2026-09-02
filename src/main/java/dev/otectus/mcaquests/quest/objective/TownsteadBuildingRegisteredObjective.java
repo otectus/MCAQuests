@@ -18,7 +18,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.Entity;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -84,6 +86,42 @@ public record TownsteadBuildingRegisteredObjective(String buildingType, int mini
     @Override
     public Set<TownsteadCapability> requiredCapabilities() {
         return Set.of(TownsteadCapability.READ_BUILDING);
+    }
+
+
+    /**
+     * The building the work is about, or the village that needs one.
+     *
+     * <p>Eleven bundled objectives ask for a dock, a shed or a smokehouse and, until now, pointed at
+     * nothing: the type id is a Townstead concept and the mod had no way to turn it into a place. It
+     * does — MCA registers every building with a centre, which is what
+     * {@link #qualifyingIgnoringLevel} already reads to take its acceptance snapshot.
+     *
+     * <p>Both readings of this objective get a true answer. "Make sure we still have a dock" points at
+     * the dock. "Build us a dock", in a village that has a tier-one one to raise, points at the
+     * building to raise; in a village with none at all there is no dock to point at and the answer
+     * falls through to the settlement, which is where the player has to build it anyway.
+     *
+     * <p>Nearest to the player rather than to the giver, because unlike the frozen
+     * {@code townstead_building} anchor this is not a commitment — nothing is recorded, the objective
+     * counts buildings rather than one chosen building, and the nearest one is the one worth walking
+     * to.
+     */
+    @Override
+    public Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress) || !townsteadReady()) {
+            return Optional.empty();
+        }
+        /* A building is a place you arrive at, not a block you stand on. */
+        final int arriveRadius = 12;
+        return qualifyingIgnoringLevel(player, active, level).stream()
+                .min(Comparator.comparingDouble(b -> b.center().distSqr(player.blockPosition())))
+                .map(building -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(
+                        building.center(), level,
+                        dev.otectus.mcaquests.quest.guidance.GuidanceKind.STRUCTURE,
+                        TownsteadNames.building(buildingType), arriveRadius, false))
+                .or(() -> TownsteadObjective.super.guidance(player, active, progress, level));
     }
 
     @Override

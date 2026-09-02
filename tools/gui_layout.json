@@ -1,0 +1,615 @@
+{
+  "sheet": 256,
+  "panel": {
+    "badge": {
+      "u": 192,
+      "v": 48,
+      "w": 32,
+      "h": 16,
+      "sliceX": 5,
+      "sliceY": 5
+    },
+    "band_footer": {
+      "u": 48,
+      "v": 72,
+      "w": 48,
+      "h": 24,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "band_header": {
+      "u": 48,
+      "v": 48,
+      "w": 48,
+      "h": 24,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "bar_amber": {
+      "u": 0,
+      "v": 146,
+      "w": 64,
+      "h": 6,
+      "sliceX": 3,
+      "sliceY": 2
+    },
+    "bar_blue": {
+      "u": 0,
+      "v": 140,
+      "w": 64,
+      "h": 6,
+      "sliceX": 3,
+      "sliceY": 2
+    },
+    "bar_green": {
+      "u": 0,
+      "v": 134,
+      "w": 64,
+      "h": 6,
+      "sliceX": 3,
+      "sliceY": 2
+    },
+    "bar_track": {
+      "u": 0,
+      "v": 128,
+      "w": 64,
+      "h": 6,
+      "sliceX": 3,
+      "sliceY": 2
+    },
+    "button": {
+      "u": 0,
+      "v": 96,
+      "w": 80,
+      "h": 20,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "button_compact": {
+      "u": 0,
+      "v": 116,
+      "w": 64,
+      "h": 12,
+      "sliceX": 4,
+      "sliceY": 4
+    },
+    "button_compact_disabled": {
+      "u": 128,
+      "v": 116,
+      "w": 64,
+      "h": 12,
+      "sliceX": 4,
+      "sliceY": 4
+    },
+    "button_compact_hover": {
+      "u": 64,
+      "v": 116,
+      "w": 64,
+      "h": 12,
+      "sliceX": 4,
+      "sliceY": 4
+    },
+    "button_disabled": {
+      "u": 160,
+      "v": 96,
+      "w": 80,
+      "h": 20,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "button_hover": {
+      "u": 80,
+      "v": 96,
+      "w": 80,
+      "h": 20,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "card": {
+      "u": 96,
+      "v": 0,
+      "w": 48,
+      "h": 48,
+      "sliceX": 5,
+      "sliceY": 5
+    },
+    "card_hover": {
+      "u": 192,
+      "v": 0,
+      "w": 48,
+      "h": 48,
+      "sliceX": 5,
+      "sliceY": 5
+    },
+    "card_ready": {
+      "u": 144,
+      "v": 0,
+      "w": 48,
+      "h": 48,
+      "sliceX": 5,
+      "sliceY": 5
+    },
+    "divider": {
+      "u": 192,
+      "v": 66,
+      "w": 48,
+      "h": 3,
+      "sliceX": 2,
+      "sliceY": 1
+    },
+    "hud": {
+      "u": 0,
+      "v": 48,
+      "w": 48,
+      "h": 48,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "scroll_thumb": {
+      "u": 70,
+      "v": 128,
+      "w": 6,
+      "h": 32,
+      "sliceX": 2,
+      "sliceY": 3
+    },
+    "scroll_thumb_drag": {
+      "u": 82,
+      "v": 128,
+      "w": 6,
+      "h": 32,
+      "sliceX": 2,
+      "sliceY": 3
+    },
+    "scroll_thumb_hover": {
+      "u": 76,
+      "v": 128,
+      "w": 6,
+      "h": 32,
+      "sliceX": 2,
+      "sliceY": 3
+    },
+    "scroll_track": {
+      "u": 64,
+      "v": 128,
+      "w": 6,
+      "h": 32,
+      "sliceX": 2,
+      "sliceY": 3
+    },
+    "slot": {
+      "u": 224,
+      "v": 48,
+      "w": 18,
+      "h": 18,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "tab_hover": {
+      "u": 160,
+      "v": 48,
+      "w": 32,
+      "h": 24,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "tab_selected": {
+      "u": 96,
+      "v": 48,
+      "w": 32,
+      "h": 24,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "tab_unselected": {
+      "u": 128,
+      "v": 48,
+      "w": 32,
+      "h": 24,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "well": {
+      "u": 48,
+      "v": 0,
+      "w": 48,
+      "h": 48,
+      "sliceX": 6,
+      "sliceY": 6
+    },
+    "window": {
+      "u": 0,
+      "v": 0,
+      "w": 48,
+      "h": 48,
+      "sliceX": 8,
+      "sliceY": 8
+    }
+  },
+  "icons": {
+    "book": {
+      "u": 240,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "chain": {
+      "u": 16,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "check": {
+      "u": 192,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "clock": {
+      "u": 128,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "coin": {
+      "u": 176,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "compass": {
+      "u": 144,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "cross": {
+      "u": 208,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "danger": {
+      "u": 176,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "distance": {
+      "u": 160,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "dot": {
+      "u": 240,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "family": {
+      "u": 112,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "gift": {
+      "u": 208,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "heart_empty": {
+      "u": 32,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "heart_full": {
+      "u": 0,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "heart_half": {
+      "u": 16,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "obj_done": {
+      "u": 64,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "obj_failed": {
+      "u": 80,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "obj_pending": {
+      "u": 48,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "obj_suspended": {
+      "u": 96,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "pause": {
+      "u": 224,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "pip_easy": {
+      "u": 112,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "pip_hard": {
+      "u": 144,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "pip_medium": {
+      "u": 128,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_archer": {
+      "u": 224,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_armorer": {
+      "u": 112,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_butcher": {
+      "u": 160,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_cartographer": {
+      "u": 80,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_cleric": {
+      "u": 96,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_farmer": {
+      "u": 0,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_fisherman": {
+      "u": 16,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_fletcher": {
+      "u": 48,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_guard": {
+      "u": 208,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_leatherworker": {
+      "u": 176,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_librarian": {
+      "u": 64,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_mason": {
+      "u": 192,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_shepherd": {
+      "u": 32,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_toolsmith": {
+      "u": 144,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_villager": {
+      "u": 240,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "prof_weaponsmith": {
+      "u": 128,
+      "v": 32,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "project": {
+      "u": 32,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "quest": {
+      "u": 0,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "reputation": {
+      "u": 64,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "scroll": {
+      "u": 224,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "situation": {
+      "u": 48,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "star": {
+      "u": 160,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "title": {
+      "u": 80,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "village": {
+      "u": 96,
+      "v": 0,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    },
+    "xp": {
+      "u": 192,
+      "v": 16,
+      "w": 16,
+      "h": 16,
+      "sliceX": 0,
+      "sliceY": 0
+    }
+  }
+}

@@ -46,7 +46,10 @@
     {
       "type": "mcaquests:kill_entity",
       "entity": "minecraft:blaze",
-      "count": 6
+      "count": 6,
+      "source": {
+        "structure": "minecraft:fortress"
+      }
     },
     {
       "type": "mcaquests:craft_item",

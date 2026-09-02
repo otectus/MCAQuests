@@ -62,9 +62,9 @@ public final class CardText {
         }
         for (int i = 0; i < lines.size(); i++) {
             if (i == 0) {
-                graphics.drawString(font, bullet, left, y, colour);
+                graphics.drawString(font, bullet, left, y, colour, false);
             }
-            graphics.drawString(font, lines.get(i), left + indent, y, colour);
+            graphics.drawString(font, lines.get(i), left + indent, y, colour, false);
             y += LINE;
         }
         return y;
@@ -78,7 +78,7 @@ public final class CardText {
             return y + LINE;
         }
         for (FormattedCharSequence line : lines) {
-            graphics.drawString(font, line, left, y, colour);
+            graphics.drawString(font, line, left, y, colour, false);
             y += LINE;
         }
         return y;

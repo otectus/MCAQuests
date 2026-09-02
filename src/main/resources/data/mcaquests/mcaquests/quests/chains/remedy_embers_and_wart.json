@@ -43,12 +43,18 @@
     {
       "type": "mcaquests:obtain_item",
       "item": "minecraft:nether_wart",
-      "count": 6
+      "count": 6,
+      "source": {
+        "structure": "minecraft:fortress"
+      }
     },
     {
       "type": "mcaquests:kill_entity",
       "entity": "minecraft:blaze",
-      "count": 4
+      "count": 4,
+      "source": {
+        "structure": "minecraft:fortress"
+      }
     }
   ],
   "rewards": [

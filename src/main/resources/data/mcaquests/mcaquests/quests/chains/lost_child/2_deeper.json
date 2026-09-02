@@ -34,7 +34,7 @@
     }
   },
   "failure": {
-    "deadline_ticks": 12000,
+    "deadline_ticks": 24000,
     "failure_hearts": -4,
     "retry_after": 24000
   },
@@ -50,6 +50,19 @@
         "structure_tag": "minecraft:mineshaft"
       },
       "min_distance": 64
+    },
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": {
+        "mode": "family",
+        "relation": "child",
+        "require": "missing"
+      },
+      "destination": {
+        "anchor": "home_village"
+      },
+      "radius": 8,
+      "lead": true
     }
   ],
   "rewards": [

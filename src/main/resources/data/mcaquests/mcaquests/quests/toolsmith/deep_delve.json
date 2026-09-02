@@ -41,7 +41,10 @@
     {
       "type": "mcaquests:break_block",
       "tag": "minecraft:iron_ores",
-      "count": 5
+      "count": 5,
+      "source": {
+        "block_tag": "minecraft:iron_ores"
+      }
     }
   ],
   "rewards": [

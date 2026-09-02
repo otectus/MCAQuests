@@ -47,7 +47,10 @@
     {
       "type": "mcaquests:obtain_item",
       "tag": "mcaquests:pottery_sherds",
-      "count": 2
+      "count": 2,
+      "source": {
+        "structure_tag": "mcaquests:trail_ruins"
+      }
     },
     {
       "type": "mcaquests:craft_item",

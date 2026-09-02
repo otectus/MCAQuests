@@ -100,7 +100,8 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
     @Override
     public Component describe(ServerPlayer player, ActiveQuest active, ServerLevel level) {
         String key = lead ? "mcaquests.objective.lead_entity" : "mcaquests.objective.escort_entity";
-        return Component.translatable(key, villager.describeResolved(player, active, level), destination.describe());
+        return Component.translatable(key, villager.describeResolved(player, active, level),
+                destination.describe(player, active, level));
     }
 
     @Override
@@ -109,7 +110,7 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         String key = lead ? "mcaquests.objective.lead_entity" : "mcaquests.objective.escort_entity";
         return Component.translatable(key,
                 ObjectiveSupport.describeLocked(villager, player, active, progress, level),
-                destination.describe());
+                destination.describe(player, active, level));
     }
 
     @Override
@@ -121,6 +122,54 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
         return progress.count() >= 1 ? Optional.empty() : resolveLocked(player, active, progress, level);
+    }
+
+    /**
+     * Two answers, in the order the player needs them.
+     *
+     * <p>A <em>staged</em> escort has a first half the player must do before the escort begins: the
+     * escortee is held safe and motionless somewhere out in the world, and nothing happens until the
+     * player walks to them. While that is true the marker is the person. Once they are engaged — and
+     * for every unstaged escort, from the first poll — the marker is the destination, and the
+     * escortee is the thing glowing beside the player instead. That is the whole of "who am I
+     * escorting, and where am I taking them", which the mod could previously answer only in words.
+     *
+     * <p>The destination read here is the <em>frozen</em> one, the same position {@link #drive} walks
+     * the villager to, so the marker and the villager can never disagree about where home is.
+     *
+     * <p>Until it is frozen, the answer is the escortee. That window is under a second for a normal
+     * escort — the first poll freezes it — but it never closes at all when the destination anchor
+     * cannot resolve, which is an ordinary state: a {@code home_village} or {@code bed} anchor needs
+     * the giver loaded, and a {@code townstead_building} one needs the building surveyed. Answering
+     * "nothing" there was not merely unhelpful, it was actively harmful: guidance treated a quest that
+     * named a person but no place as having answered, and sent an empty payload that removed the
+     * marker for <em>every</em> quest the player held. {@code GuidanceService} no longer lets an
+     * objective do that, and this no longer tries to: the person you are walking is a true answer to
+     * "where next" even before the mod knows where you are walking them.
+     */
+    @Override
+    public Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (progress.count() >= 1) {
+            return Optional.empty();
+        }
+        if (isStaged() && !progress.extra().getBoolean(K_ENGAGED)) {
+            return escortee(player, active, progress, level);
+        }
+        return frozenDest(progress)
+                .map(dest -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(
+                        dest.pos(), level, destination.guidanceKind(dest.villageId().isPresent()),
+                        destination.describe(player, active, level), radius, false))
+                .or(() -> escortee(player, active, progress, level));
+    }
+
+    /** The person being walked, as something to draw. */
+    private Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> escortee(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        return resolveLocked(player, active, progress, level)
+                .map(escortee -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofEntity(
+                        escortee, dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGER,
+                        McaCompat.getVillagerDisplayName(escortee)));
     }
 
     @Override
@@ -357,5 +406,36 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         String prefix = "Quest '" + questId + "': objective[" + index + "]";
         villager.validate(prefix + " villager", errors);
         destination.validate(prefix + " destination", errors);
+        validateDestinationBelongsToEscortee(prefix, errors);
+    }
+
+    /**
+     * Refuses an escort that walks one villager to another villager's bed.
+     *
+     * <p>{@code bed} and {@code workstation} resolve the <em>giver's</em> home unless the anchor names
+     * somebody, which is right for the common "walk me home" quest where the giver is the person being
+     * walked. It is wrong, and silently so, the moment the escortee is somebody else: the shipped
+     * "one last walk" quest told the player to see an ageing parent "safely back to their bed" and
+     * sent them to the parent's child's house instead. Nothing failed — the escort completed at the
+     * wrong building — so the only way to notice was to know both villagers' addresses.
+     *
+     * <p>Reported as an error rather than a warning because there is no reading of it that is
+     * deliberate: an author who genuinely means the giver's bed can say so by naming the giver, and
+     * one who means the escortee's can say that. The ambiguous form is the one nobody wants.
+     */
+    private void validateDestinationBelongsToEscortee(String prefix, List<String> errors) {
+        if (destination.type() != LocationAnchor.Type.BED
+                && destination.type() != LocationAnchor.Type.WORKSTATION) {
+            return;
+        }
+        if (villager.mode() == VillagerTarget.Mode.SELF) {
+            return; // giver and escortee are the same villager; there is nothing to disambiguate
+        }
+        if (destination.villager().isEmpty()) {
+            errors.add(prefix + " escorts a villager other than the giver to a '"
+                    + destination.type().name().toLowerCase(java.util.Locale.ROOT)
+                    + "' anchor that names nobody, so it resolves to the GIVER's."
+                    + " Add \"villager\" to the destination to say whose it is.");
+        }
     }
 }

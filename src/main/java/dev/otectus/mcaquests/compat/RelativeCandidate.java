@@ -17,8 +17,14 @@ import java.util.UUID;
  * brother who had died the week before.
  *
  * <p>Now the gate, the offer-time resolvability check, the accept-time binder, {@code matches} and the
- * display name all filter the <em>same</em> candidate list with the <em>same</em> predicate, so they
- * cannot disagree.
+ * display name all filter the <em>same</em> candidate list.
+ *
+ * <p>They do <b>not</b> all use the same predicate, and the comment that used to claim they did was
+ * describing an intention rather than the code. Two of the seven statuses are partly <em>positional</em>
+ * — {@code nearby} is "within 12 blocks of the giver right now" — and a positional predicate re-asked
+ * at a different instant is a different question, not the same one. Selection asks
+ * {@link #matches(String)}; identity, which must survive the walk from the giver to the recipient,
+ * asks {@link #matchesIdentity(String)}. See that method for what separates them and why.
  *
  * <p><b>Only JDK types.</b> Candidates are built inside {@link McaCompat} from MCA's family tree, but no
  * MCA type may escape that class ({@code NoMcaStaticLinkTest} enforces it), so everything here is a
@@ -96,6 +102,31 @@ public record RelativeCandidate(UUID uuid,
      */
     public boolean isMissing() {
         return isAlive() && !embodied && !residentAnywhere;
+    }
+
+    /**
+     * True when this candidate is <em>the person</em> {@code status} describes, ignoring where they
+     * happen to be standing this tick.
+     *
+     * <p>{@link #matches} answers a selection question — "who may this quest be about?" — and two of
+     * its statuses answer it partly with a position: {@code nearby} is
+     * {@code loaded && within 12 blocks of the giver}. That is the right question at offer time and
+     * the wrong one at every later moment, because the player's next move is to walk away from the
+     * giver to find this person. Asking it again when the goods are handed over is asking whether the
+     * recipient is standing beside the villager the player just left, which is the one thing the
+     * player has guaranteed is false.
+     *
+     * <p>So this drops the distance test from {@code nearby} and keeps everything else — alive, not a
+     * fabricated ancestor, not a player, and findable — which is the half of the status that is about
+     * identity rather than geography. Every other status is already position-free (or, for
+     * {@code reachable}, deliberately tolerant of being unloaded) and answers identically.
+     *
+     * <p>Used for two things only: binding a target when the moment the offer described has passed,
+     * and crediting an objective that was never bound. Selection itself still uses {@link #matches},
+     * so which quests are offered is unchanged.
+     */
+    public boolean matchesIdentity(String status) {
+        return "nearby".equals(status) ? isReachable() : matches(status);
     }
 
     /** True when this candidate satisfies {@code status}. Unknown statuses fail closed. */

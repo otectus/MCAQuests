@@ -46,6 +46,9 @@
       "destination": {
         "type": "townstead_villager_inventory",
         "target": "giver"
+      },
+      "source": {
+        "block": "minecraft:wheat"
       }
     }
   ],

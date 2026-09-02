@@ -41,7 +41,10 @@
     {
       "type": "mcaquests:obtain_item",
       "item": "minecraft:sweet_berries",
-      "count": 4
+      "count": 4,
+      "source": {
+        "block": "minecraft:sweet_berry_bush"
+      }
     }
   ],
   "rewards": [

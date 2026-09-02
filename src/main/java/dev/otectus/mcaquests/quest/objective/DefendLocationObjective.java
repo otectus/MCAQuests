@@ -49,6 +49,18 @@ public record DefendLocationObjective(LocationAnchor location, EntityTarget thre
         return Component.translatable("mcaquests.objective.defend_location", count, threat.describe(), location.describe());
     }
 
+    /**
+     * The place being defended, so a player who has wandered off can get back to the fight.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        return ObjectiveSupport.anchorGuidance(location, player, active, level, radius);
+    }
+
     @Override
     public int required() {
         return count;

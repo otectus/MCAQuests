@@ -6,6 +6,8 @@ import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import dev.otectus.mcaquests.state.ActiveQuest;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 
@@ -32,6 +34,38 @@ public record TalkToProfessionObjective(ResourceLocation profession, int count) 
         return Component.translatable("mcaquests.objective.talk_to_profession", count,
                 DisplayNames.name(profession));
     }
+
+    /**
+     * The nearest villager of the profession the player has not already spoken to.
+     *
+     * <p>"Speak with three of our farmers" is only obvious in a village the player already knows, and
+     * the objective deliberately counts <em>distinct</em> villagers — so the useful marker is not any
+     * farmer, it is one who does not count yet. {@code progress.hasTalkedTo} already remembers who
+     * does, so this simply skips them and the marker steps to the next one as each is talked to.
+     *
+     * <p>Scans loaded entities around the player only. A villager who is not loaded cannot be talked
+     * to either, so there is nothing to point at and nothing is pointed at.
+     */
+    @Override
+    public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        if (isSatisfied(player, progress)) {
+            return java.util.Optional.empty();
+        }
+        return level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        player.getBoundingBox().inflate(SEARCH_RADIUS),
+                        e -> dev.otectus.mcaquests.compat.McaCompat.isMcaVillager(e)
+                                && !progress.hasTalkedTo(e.getUUID())
+                                && matches(dev.otectus.mcaquests.compat.McaCompat
+                                        .getProfessionId(e).orElse(null)))
+                .stream()
+                .min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(player)))
+                .map(villager -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofEntity(villager, dev.otectus.mcaquests.quest.guidance.GuidanceKind.VILLAGER,
+                        dev.otectus.mcaquests.compat.McaCompat.getVillagerDisplayName(villager)));
+    }
+
+    /** Blocks around the player to look in. Beyond loaded range there is nobody to talk to anyway. */
+    private static final double SEARCH_RADIUS = 64.0D;
 
     @Override
     public int required() {

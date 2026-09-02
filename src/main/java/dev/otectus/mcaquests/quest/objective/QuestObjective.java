@@ -25,6 +25,20 @@ public interface QuestObjective {
     Component describe();
 
     /**
+     * An item to draw beside this objective's line, or empty for an objective with nothing to show.
+     *
+     * <p>Purely cosmetic, and never consulted for progress: an objective that asks for wheat may show
+     * wheat, but {@link #isSatisfied} remains the only thing that decides whether it is done.
+     *
+     * <p>Defaults to empty, so existing objective types — including those registered by add-ons — are
+     * unaffected and keep compiling, exactly like {@link #isTriviallySatisfied} and
+     * {@link #unofferableReason} before it.
+     */
+    default net.minecraft.world.item.ItemStack icon() {
+        return net.minecraft.world.item.ItemStack.EMPTY;
+    }
+
+    /**
      * Context-aware variant used to build the active quest-log line: lets an objective resolve a concrete
      * target villager's real name (and a location hint) server-side, so the player knows who to find.
      * Defaults to {@link #describe()}.
@@ -128,6 +142,35 @@ public interface QuestObjective {
      */
     default java.util.Optional<Component> unavailableReason(ServerPlayer player, ActiveQuest active,
                                                             ObjectiveProgress progress, ServerLevel level) {
+        return java.util.Optional.empty();
+    }
+
+    /**
+     * Where this objective wants the player to go <em>right now</em>, if it can say.
+     *
+     * <p>The mod could always answer "who" ({@link VillagerTargeted}) and "where, roughly"
+     * ({@code LocationAnchor}), but neither answer ever reached the client as something it could
+     * draw. A player was told to fetch six nether wart and left to work out on their own that this
+     * meant building a portal. This is the question whose absence made that possible.
+     *
+     * <p>Three rules implementations must keep, because a marker is a promise:
+     * <ul>
+     *   <li><b>Answer empty once satisfied.</b> The caller checks too, but an objective that keeps
+     *       pointing after it is done is how a stale marker outlives its quest.</li>
+     *   <li><b>Answer empty rather than guess.</b> There is no marker for "eight prismarine
+     *       crystals", and inventing one sends the player somewhere confidently wrong — worse than
+     *       sending them nowhere, because they will go. See {@code SourceHint}.</li>
+     *   <li><b>Do not search the world from here.</b> This runs about once a second per player.
+     *       Anything as expensive as {@code /locate} goes through {@code LocateCache}, which runs it
+     *       once per objective and remembers the answer across restarts.</li>
+     * </ul>
+     *
+     * <p>Defaults to empty, so existing objective types — including those registered by add-ons —
+     * are unaffected and keep compiling, exactly like {@link #icon} and {@link #unofferableReason}
+     * before it.
+     */
+    default java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
         return java.util.Optional.empty();
     }
 

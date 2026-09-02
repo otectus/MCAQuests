@@ -1,5 +1,10 @@
 package dev.otectus.mcaquests.client;
 
+import dev.otectus.mcaquests.client.gui.GuiTextures;
+import dev.otectus.mcaquests.client.gui.IconButton;
+import dev.otectus.mcaquests.client.gui.McaButton;
+import dev.otectus.mcaquests.client.gui.Palette;
+import dev.otectus.mcaquests.client.gui.Panel;
 import dev.otectus.mcaquests.network.JournalArchiveEntry;
 import dev.otectus.mcaquests.network.JournalVillageEntry;
 import dev.otectus.mcaquests.network.OpenStandingC2SPacket;
@@ -8,9 +13,9 @@ import dev.otectus.mcaquests.network.RequestJournalC2SPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,141 +26,238 @@ import java.util.List;
  * <p>With MCA: Reputation canonical, each village row carries a View Deeds link (§29.7) that asks the
  * server to open Reputation's standing screen for that village — the journal links to the same screen
  * everyone else uses rather than drawing its own version, so the two can never disagree.
+ *
+ * <p>This screen was the odd one out and carried a real bug. It had <b>no {@code ScrollView} and no
+ * scissor at all</b>: it measured its own height <em>while drawing</em>, so scrolled content painted
+ * straight over the title and around the Back button. And its View Deeds link was a hand-rolled
+ * rectangle rebuilt every frame and hit-tested by hand, which meant it could be clicked and nothing
+ * else — no keyboard, no focus, no narrator.
+ *
+ * <p>Both are fixed by laying the page out <em>before</em> drawing it. {@link #rows} is built once
+ * from the cached data; the height it totals is what the view scrolls, the draw pass only walks it,
+ * and the deeds links are real {@link IconButton}s placed from it.
  */
-public class JournalScreen extends Screen {
+public class JournalScreen extends McaQuestsScreen {
 
-    /** A clickable View Deeds region, rebuilt every frame because the list scrolls. */
-    private record DeedsLink(int x0, int y0, int x1, int y1, JournalVillageEntry entry) {
-        boolean contains(double x, double y) {
-            return x >= x0 && x <= x1 && y >= y0 && y <= y1;
+    /** Height of a reputation bar row, including the gap under it. */
+    private static final int BAR_ROW = 8;
+    private static final int DEEDS_W = 14;
+
+    /**
+     * One laid-out line. Building these up front is what lets the page be measured without being
+     * drawn — the thing this screen could not previously do.
+     *
+     * @param bar     a {@code current}/{@code max} pair to draw a progress bar under the row, or null
+     * @param deeds   the village this row links to, or null
+     * @param heading whether a rule is drawn under the row; stated rather than inferred from the
+     *                colour, so restyling a heading cannot silently remove its rule
+     */
+    private record Row(Component text, int indent, int colour, int height,
+                       @Nullable GuiTextures.Sprite icon, @Nullable int[] bar,
+                       @Nullable JournalVillageEntry deeds, boolean heading) {
+
+        static Row of(Component text, int indent, int colour, int height) {
+            return new Row(text, indent, colour, height, null, null, null, false);
+        }
+
+        static Row icon(Component text, int indent, int colour, int height, GuiTextures.Sprite icon) {
+            return new Row(text, indent, colour, height, icon, null, null, false);
+        }
+
+        static Row heading(Component text, GuiTextures.Sprite icon) {
+            return new Row(text, 0, Palette.HEADING, 12, icon, null, null, true);
         }
     }
 
-    private int scroll;
-    private int contentHeight;
-    private final List<DeedsLink> deedsLinks = new ArrayList<>();
+    private final List<Row> rows = new ArrayList<>();
+    private final List<ScrolledButton> deedsButtons = new ArrayList<>();
+
+    /** The data the current layout was built from, so {@link #tick} can notice the server's reply. */
+    private List<JournalVillageEntry> renderedVillages = List.of();
+    private List<Component> renderedTitles = List.of();
+    private List<JournalArchiveEntry> renderedArchive = List.of();
+
+    /** A deeds link, remembered with its content-space y so scrolling can reposition it. */
+    private record ScrolledButton(Button button, int contentY) {
+    }
 
     public JournalScreen() {
         super(Component.translatable("mcaquests.screen.journal.title"));
     }
 
     @Override
+    protected int tabStripHeight() {
+        return TAB_H;
+    }
+
+    private int wrapWidth() {
+        return Math.max(1, contentWidth() - 4);
+    }
+
+    @Override
     protected void init() {
+        super.init();
         // Request a fresh server-authoritative snapshot each time the journal opens.
         QuestNetwork.CHANNEL.sendToServer(new RequestJournalC2SPacket());
-        int centerX = this.width / 2;
-        addRenderableWidget(Button.builder(Component.translatable("mcaquests.button.back"), b -> onClose())
-                .bounds(centerX - 50, this.height - 36, 100, 20)
+        buildRows();
+
+        addBookTabs(BookTab.JOURNAL);
+        addRenderableWidget(McaButton.create(Component.translatable("mcaquests.button.back"), b -> onClose())
+                .bounds(centerX() - 50, footerButtonY(), 100, 20)
                 .build());
+    }
+
+    @Override
+    public void tick() {
+        // The journal is requested on open and arrives a tick or two later; the caches swap their list
+        // reference on update, so an identity check is a cheap, sufficient "the reply landed" signal.
+        if (renderedVillages != ClientJournalData.villages()
+                || renderedTitles != ClientJournalData.globalTitles()
+                || renderedArchive != ClientJournalData.archive()) {
+            rebuildWidgets();
+        }
+    }
+
+    /** Lays the whole page out in content space, and places the deeds links while doing it. */
+    private void buildRows() {
+        rows.clear();
+        deedsButtons.clear();
+        renderedVillages = ClientJournalData.villages();
+        renderedTitles = ClientJournalData.globalTitles();
+        renderedArchive = ClientJournalData.archive();
+
+        if (isEmpty()) {
+            view.setContentHeight(0);
+            return;
+        }
+
+        rows.add(Row.heading(section("mcaquests.screen.journal.villages"), GuiTextures.ICON_VILLAGE));
+        if (renderedVillages.isEmpty()) {
+            rows.add(Row.of(dim("mcaquests.screen.journal.no_villages"), 4, Palette.SUBTITLE, 11));
+        }
+        for (JournalVillageEntry village : renderedVillages) {
+            Component nameLine = village.villageName().copy()
+                    .append(Component.literal("  ").append(village.currentTier())
+                            .withStyle(ChatFormatting.GOLD));
+            rows.add(new Row(nameLine, 0, Palette.TITLE, 11, null, null,
+                    ClientJournalData.reputationPresent() ? village : null, false));
+            Component repLine = village.nextThreshold() >= 0
+                    ? Component.translatable("mcaquests.screen.journal.rep_next",
+                            village.reputation(), village.nextTier(), village.nextThreshold())
+                    : Component.translatable("mcaquests.screen.journal.rep_max", village.reputation());
+            // The bar is derived entirely from numbers the packet already carried; a reputation of
+            // 63 toward 75 is a fact the player had to do arithmetic on before.
+            int[] bar = village.nextThreshold() > 0
+                    ? new int[]{village.reputation(), village.nextThreshold()}
+                    : null;
+            rows.add(new Row(repLine, 4, Palette.OBJECTIVE, bar != null ? 10 + BAR_ROW : 10,
+                    null, bar, null, false));
+            for (Component title : village.titles()) {
+                rows.add(Row.icon(title, 8, Palette.PLAYER_TITLE, 10, GuiTextures.ICON_TITLE));
+            }
+            rows.add(Row.of(Component.empty(), 0, Palette.TEXT, 4));
+        }
+
+        rows.add(Row.of(Component.empty(), 0, Palette.TEXT, 6));
+        rows.add(Row.heading(section("mcaquests.screen.journal.titles"), GuiTextures.ICON_STAR));
+        if (renderedTitles.isEmpty()) {
+            rows.add(Row.of(dim("mcaquests.screen.journal.no_titles"), 4, Palette.SUBTITLE, 11));
+        }
+        for (Component title : renderedTitles) {
+            rows.add(Row.icon(title, 8, Palette.PLAYER_TITLE, 10, GuiTextures.ICON_TITLE));
+        }
+
+        rows.add(Row.of(Component.empty(), 0, Palette.TEXT, 6));
+        rows.add(Row.heading(section("mcaquests.screen.journal.archive"), GuiTextures.ICON_BOOK));
+        if (renderedArchive.isEmpty()) {
+            rows.add(Row.of(dim("mcaquests.screen.journal.no_archive"), 4, Palette.SUBTITLE, 11));
+        }
+        for (JournalArchiveEntry entry : renderedArchive) {
+            Component line = entry.count() > 1
+                    ? entry.questTitle().copy().append(Component.literal("  x" + entry.count())
+                            .withStyle(ChatFormatting.DARK_GRAY))
+                    : entry.questTitle();
+            rows.add(Row.icon(line, 8, Palette.OBJECTIVE, 10, GuiTextures.ICON_CHECK));
+        }
+
+        int y = 0;
+        for (Row row : rows) {
+            if (row.deeds() != null) {
+                IconButton link = IconButton.of(contentRight() - DEEDS_W - 2, view.screenY(y),
+                        GuiTextures.ICON_REPUTATION,
+                        Component.translatable("mcaquests.screen.journal.view_deeds"),
+                        Component.translatable("mcaquests.screen.journal.view_deeds"),
+                        b -> openDeeds(row.deeds()));
+                link.setWidth(DEEDS_W);
+                link.setHeight(12);
+                addRenderableWidget(link);
+                deedsButtons.add(new ScrolledButton(link, y));
+            }
+            y += row.height();
+        }
+        view.setContentHeight(y);
+    }
+
+    private void openDeeds(JournalVillageEntry village) {
+        // The server validates the address before opening anything (§29.7); Reputation's screen
+        // arrives with this journal as its parent, so Back returns here.
+        QuestNetwork.CHANNEL.sendToServer(
+                new OpenStandingC2SPacket(village.dimension(), village.villageId()));
+    }
+
+    private boolean isEmpty() {
+        return ClientJournalData.villages().isEmpty()
+                && ClientJournalData.globalTitles().isEmpty()
+                && ClientJournalData.archive().isEmpty();
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
-        int centerX = this.width / 2;
-        graphics.drawCenteredString(this.font, getTitle(), centerX, 14, 0xFFFFFF);
+        renderPanel(graphics);
 
-        List<JournalVillageEntry> villages = ClientJournalData.villages();
-        List<Component> globalTitles = ClientJournalData.globalTitles();
-        List<JournalArchiveEntry> archive = ClientJournalData.archive();
-
-        int left = centerX - 150;
-        int y = 36 - scroll;
-        int top = y;
-
-        if (villages.isEmpty() && globalTitles.isEmpty() && archive.isEmpty()) {
-            graphics.drawCenteredString(this.font,
-                    Component.translatable("mcaquests.screen.journal.empty"), centerX, this.height / 2, 0xA0A0A0);
+        if (rows.isEmpty()) {
+            renderEmptyState(graphics, Component.translatable("mcaquests.screen.journal.empty"));
             super.render(graphics, mouseX, mouseY, partialTick);
             return;
         }
 
-        graphics.drawString(this.font, section("mcaquests.screen.journal.villages"), left, y, 0x5CC8FF);
-        y += 12;
-        if (villages.isEmpty()) {
-            graphics.drawString(this.font, dim("mcaquests.screen.journal.no_villages"), left + 4, y, 0x9A9A9A);
-            y += 11;
-        }
-        deedsLinks.clear();
-        for (JournalVillageEntry v : villages) {
-            Component nameLine = v.villageName().copy()
-                    .append(Component.literal("  ").append(v.currentTier()).withStyle(ChatFormatting.GOLD));
-            graphics.drawString(this.font, nameLine, left, y, 0xFFE08A);
-            if (ClientJournalData.reputationPresent()) {
-                Component link = Component.translatable("mcaquests.screen.journal.view_deeds")
-                        .withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE);
-                int linkX = left + this.font.width(nameLine) + 8;
-                graphics.drawString(this.font, link, linkX, y, 0x5CC8FF);
-                deedsLinks.add(new DeedsLink(linkX, y, linkX + this.font.width(link), y + 9, v));
-            }
-            y += 11;
-            Component repLine = v.nextThreshold() >= 0
-                    ? Component.translatable("mcaquests.screen.journal.rep_next",
-                            v.reputation(), v.nextTier(), v.nextThreshold())
-                    : Component.translatable("mcaquests.screen.journal.rep_max", v.reputation());
-            graphics.drawString(this.font, repLine, left + 4, y, 0xBFBFBF);
-            y += 10;
-            for (Component title : v.titles()) {
-                graphics.drawString(this.font, Component.literal("  + ").append(title), left + 4, y, 0xC8A2FF);
-                y += 9;
-            }
-            y += 4;
+        // Hidden rather than clipped, like every other scrolled widget in this package: super.render
+        // draws widgets outside the scissor and an invisible one is also unclickable.
+        for (ScrolledButton scrolled : deedsButtons) {
+            scrolled.button().setY(view.screenY(scrolled.contentY()));
+            scrolled.button().visible = view.isFullyVisible(scrolled.contentY(), 12);
         }
 
-        y += 6;
-        graphics.drawString(this.font, section("mcaquests.screen.journal.titles"), left, y, 0x5CC8FF);
-        y += 12;
-        if (globalTitles.isEmpty()) {
-            graphics.drawString(this.font, dim("mcaquests.screen.journal.no_titles"), left + 4, y, 0x9A9A9A);
-            y += 11;
+        beginContentClip(graphics);
+        int y = 0;
+        for (Row row : rows) {
+            renderRow(graphics, row, y);
+            y += row.height();
         }
-        for (Component title : globalTitles) {
-            graphics.drawString(this.font, Component.literal("  + ").append(title), left + 4, y, 0xC8A2FF);
-            y += 10;
-        }
-
-        y += 6;
-        graphics.drawString(this.font, section("mcaquests.screen.journal.archive"), left, y, 0x5CC8FF);
-        y += 12;
-        if (archive.isEmpty()) {
-            graphics.drawString(this.font, dim("mcaquests.screen.journal.no_archive"), left + 4, y, 0x9A9A9A);
-            y += 11;
-        }
-        for (JournalArchiveEntry entry : archive) {
-            Component line = Component.literal("  - ").append(entry.questTitle());
-            if (entry.count() > 1) {
-                line = line.copy().append(Component.literal("  x" + entry.count()).withStyle(ChatFormatting.DARK_GRAY));
-            }
-            graphics.drawString(this.font, line, left + 4, y, 0xBFBFBF);
-            y += 10;
-        }
-
-        contentHeight = y - top;
+        endContentClip(graphics);
+        renderScrollbar(graphics, mouseX, mouseY);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        int viewport = this.height - 80;
-        int max = Math.max(0, contentHeight - viewport);
-        scroll = Math.max(0, Math.min(max, scroll - (int) (delta * 12)));
-        return true;
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            for (DeedsLink link : deedsLinks) {
-                if (link.contains(mouseX, mouseY)) {
-                    // The server validates the address before opening anything (§29.7); Reputation's
-                    // screen arrives with this journal as its parent, so Back returns here.
-                    QuestNetwork.CHANNEL.sendToServer(new OpenStandingC2SPacket(
-                            link.entry().dimension(), link.entry().villageId()));
-                    return true;
-                }
-            }
+    private void renderRow(GuiGraphics graphics, Row row, int contentY) {
+        int screenY = view.screenY(contentY);
+        int x = contentLeft() + row.indent();
+        if (row.icon() != null) {
+            Panel.icon(graphics, row.icon(), x - 14, screenY - 4);
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        if (!row.text().getString().isEmpty()) {
+            CardText.draw(graphics, this.font, row.text(), x, screenY,
+                    Math.max(1, wrapWidth() - row.indent() - (row.deeds() != null ? DEEDS_W + 4 : 0)),
+                    row.colour());
+        }
+        if (row.bar() != null) {
+            Panel.bar(graphics, x, screenY + 11, wrapWidth() - row.indent() - 8,
+                    row.bar()[0], row.bar()[1], GuiTextures.BAR_GREEN);
+        }
+        if (row.heading()) {
+            Panel.divider(graphics, contentLeft(), screenY + 9, contentWidth());
+        }
     }
 
     private Component section(String key) {
@@ -164,10 +266,5 @@ public class JournalScreen extends Screen {
 
     private Component dim(String key) {
         return Component.translatable(key).withStyle(ChatFormatting.GRAY);
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
     }
 }

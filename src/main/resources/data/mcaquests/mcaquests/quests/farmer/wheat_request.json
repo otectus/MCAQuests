@@ -10,29 +10,54 @@
     "cooldown_ticks": 24000
   },
   "giver": {
-    "professions": ["minecraft:farmer"],
+    "professions": [
+      "minecraft:farmer"
+    ],
     "adult_only": true,
     "min_hearts": -100
   },
   "dialogue": {
-    "offer": { "translate": "mcaquests.quest.farmer_wheat_request.offer" },
-    "accept": { "translate": "mcaquests.quest.farmer_wheat_request.accept" },
-    "decline": { "translate": "mcaquests.quest.farmer_wheat_request.decline" },
-    "in_progress": { "translate": "mcaquests.quest.farmer_wheat_request.in_progress" },
-    "ready": { "translate": "mcaquests.quest.farmer_wheat_request.ready" },
-    "complete": { "translate": "mcaquests.quest.farmer_wheat_request.complete" }
+    "offer": {
+      "translate": "mcaquests.quest.farmer_wheat_request.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.farmer_wheat_request.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.farmer_wheat_request.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.farmer_wheat_request.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.farmer_wheat_request.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.farmer_wheat_request.complete"
+    }
   },
   "objectives": [
     {
       "type": "mcaquests:item_delivery",
       "item": "minecraft:wheat",
       "count": 24,
-      "consume": true
+      "consume": true,
+      "source": {
+        "block": "minecraft:wheat"
+      }
     }
   ],
   "rewards": [
-    { "type": "mcaquests:currency" },
-    { "type": "mcaquests:xp", "amount": 25 },
-    { "type": "mcaquests:hearts", "amount": 8 }
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
   ]
 }

@@ -109,6 +109,15 @@ public record TownsteadScheduleStreakObjective(TownsteadTarget target, String ac
                             .forGetter(TownsteadScheduleStreakObjective::resetOnMiss)
             ).apply(instance, TownsteadScheduleStreakObjective::new));
 
+
+    /** The resident whose working day this is about. */
+    @Override
+    public java.util.Optional<net.minecraft.world.entity.Entity> townsteadSubject(
+            ServerPlayer player, ActiveQuest active, ObjectiveProgress progress, ServerLevel level) {
+        return dev.otectus.mcaquests.quest.target.TownsteadTargetResolver
+                .resolveForObjective(target, player, active, progress, level);
+    }
+
     @Override
     public QuestObjectiveType<?> type() {
         return ObjectiveTypes.TOWNSTEAD_SCHEDULE_STREAK;

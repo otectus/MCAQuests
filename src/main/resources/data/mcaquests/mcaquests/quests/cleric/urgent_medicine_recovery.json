@@ -41,7 +41,10 @@
       "type": "mcaquests:item_delivery",
       "item": "minecraft:sweet_berries",
       "count": 6,
-      "consume": true
+      "consume": true,
+      "source": {
+        "block": "minecraft:sweet_berry_bush"
+      }
     },
     {
       "type": "mcaquests:item_delivery",
