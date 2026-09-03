@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import dev.otectus.mcaquests.support.TestPaths;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class DeadConfigTest {
 
-    private static final Path MAIN = Path.of("src/main/java");
+    private static final Path MAIN = TestPaths.of("src/main/java");
     private static final Path CONFIG =
             MAIN.resolve("dev/otectus/mcaquests/McaQuestsConfig.java");
 
@@ -57,12 +58,12 @@ class DeadConfigTest {
                 + "either wire them up or delete them, along with their CONFIG.md rows");
     }
 
-    /** Every {@code ForgeConfigSpec.*Value} field on both spec holders, by field name. */
+    /** Every {@code ModConfigSpec.*Value} field on both spec holders, by field name. */
     private static List<String> declaredOptions() {
         List<String> names = new ArrayList<>();
         for (Object holder : List.of(McaQuestsConfig.COMMON, McaQuestsConfig.CLIENT)) {
             for (Field field : holder.getClass().getDeclaredFields()) {
-                if (ForgeConfigSpec.ConfigValue.class.isAssignableFrom(field.getType())) {
+                if (ModConfigSpec.ConfigValue.class.isAssignableFrom(field.getType())) {
                     names.add(field.getName());
                 }
             }

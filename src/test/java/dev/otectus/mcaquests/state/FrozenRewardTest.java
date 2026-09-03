@@ -33,11 +33,11 @@ class FrozenRewardTest {
 
     private static ActiveQuest quest() {
         return ActiveQuest.create(
-                new ResourceLocation("mcaquests", "test_quest"),
+                ResourceLocation.fromNamespaceAndPath("mcaquests", "test_quest"),
                 UUID.randomUUID(),
                 Component.literal("Anna"),
-                new ResourceLocation("minecraft", "farmer"),
-                new ResourceLocation("minecraft", "overworld"),
+                ResourceLocation.withDefaultNamespace("farmer"),
+                ResourceLocation.withDefaultNamespace("overworld"),
                 0L,
                 1,
                 null);
@@ -45,10 +45,10 @@ class FrozenRewardTest {
 
     private static ProjectState project() {
         return new ProjectState(
-                new ResourceLocation("mcaquests", "test_project"),
+                ResourceLocation.fromNamespaceAndPath("mcaquests", "test_project"),
                 ProjectScope.VILLAGE,
                 "v:1",
-                new ResourceLocation("minecraft", "overworld"),
+                ResourceLocation.withDefaultNamespace("overworld"),
                 BlockPos.ZERO,
                 OptionalInt.of(1),
                 0L,

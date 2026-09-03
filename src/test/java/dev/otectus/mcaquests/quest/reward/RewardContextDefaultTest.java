@@ -26,7 +26,7 @@ class RewardContextDefaultTest {
     private static final class TwoArgOnlyReward implements QuestReward {
 
         private static final QuestRewardType<TwoArgOnlyReward> TYPE = new QuestRewardType<>(
-                new ResourceLocation("mcaquests", "test_two_arg_only"), MapCodec.unit(TwoArgOnlyReward::new));
+                ResourceLocation.fromNamespaceAndPath("mcaquests", "test_two_arg_only"), MapCodec.unit(TwoArgOnlyReward::new));
 
         private int grants;
 
@@ -51,8 +51,8 @@ class RewardContextDefaultTest {
     void defaultDelegatesToTheTwoArgumentForm() {
         TwoArgOnlyReward reward = new TwoArgOnlyReward();
         QuestReward.RewardContext context = new QuestReward.RewardContext(UUID.randomUUID(),
-                Component.literal("Anna"), new ResourceLocation("minecraft", "overworld"),
-                OptionalInt.of(3), new ResourceLocation("mcaquests", "test_quest"));
+                Component.literal("Anna"), ResourceLocation.withDefaultNamespace("overworld"),
+                OptionalInt.of(3), ResourceLocation.fromNamespaceAndPath("mcaquests", "test_quest"));
 
         reward.grant(null, null, context);
 
@@ -63,11 +63,11 @@ class RewardContextDefaultTest {
     @DisplayName("a context carrying a village resolves to that community")
     void contextResolvesItsCommunity() {
         QuestReward.RewardContext withVillage = new QuestReward.RewardContext(UUID.randomUUID(),
-                Component.literal("Anna"), new ResourceLocation("minecraft", "overworld"),
-                OptionalInt.of(3), new ResourceLocation("mcaquests", "test_quest"));
+                Component.literal("Anna"), ResourceLocation.withDefaultNamespace("overworld"),
+                OptionalInt.of(3), ResourceLocation.fromNamespaceAndPath("mcaquests", "test_quest"));
         QuestReward.RewardContext withoutVillage = new QuestReward.RewardContext(UUID.randomUUID(),
-                Component.literal("Anna"), new ResourceLocation("minecraft", "overworld"),
-                OptionalInt.empty(), new ResourceLocation("mcaquests", "test_quest"));
+                Component.literal("Anna"), ResourceLocation.withDefaultNamespace("overworld"),
+                OptionalInt.empty(), ResourceLocation.fromNamespaceAndPath("mcaquests", "test_quest"));
 
         assertTrue(withVillage.community().isPresent(), "a frozen village names a community");
         assertEquals(3, withVillage.community().orElseThrow().villageId());

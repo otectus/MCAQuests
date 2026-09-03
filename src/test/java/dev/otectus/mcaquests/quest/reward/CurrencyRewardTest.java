@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import dev.otectus.mcaquests.support.TestConfig;
 import com.electronwill.nightconfig.core.CommentedConfig;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.CurrencyFallback;
@@ -40,9 +41,9 @@ class CurrencyRewardTest {
     /** Loads config defaults so {@code .get()} returns the declared default instead of "config not loaded". */
     @BeforeAll
     static void loadCommonConfigDefaults() {
-        CommentedConfig config = CommentedConfig.inMemory();
-        McaQuestsConfig.COMMON_SPEC.correct(config);
-        McaQuestsConfig.COMMON_SPEC.acceptConfig(config);
+        // PORT: 1.20.1's ModConfigSpec#setConfig(CommentedConfig) became acceptConfig(ILoadedConfig);
+        // TestConfig owns that wrapping now, so this is the same attach in one call.
+        TestConfig.ensureCommonLoaded();
     }
 
     @AfterEach

@@ -35,7 +35,7 @@ class ChainFinalStageTest {
     void stageTotalPresentIgnoresUnlocksWhenDecidingFinality() {
         // stage_total is authoritative when present, even if unlocks happens to be non-empty (e.g. a
         // sequel arc hook) or empty (e.g. a genuinely last stage) — stage == stageTotal decides it.
-        ResourceLocation sequelHook = new ResourceLocation("mcaquests", "sequel_arc_intro");
+        ResourceLocation sequelHook = ResourceLocation.fromNamespaceAndPath("mcaquests", "sequel_arc_intro");
         assertTrue(chain(3, Optional.of(3), List.of(sequelHook)).isFinalStage());
         assertFalse(chain(1, Optional.of(3), List.of()).isFinalStage());
     }
@@ -47,7 +47,7 @@ class ChainFinalStageTest {
 
     @Test
     void stageTotalAbsentAndUnlocksNonEmptyIsNotFinal() {
-        ResourceLocation next = new ResourceLocation("mcaquests", "family_arc_stage_2");
+        ResourceLocation next = ResourceLocation.fromNamespaceAndPath("mcaquests", "family_arc_stage_2");
         assertFalse(chain(1, Optional.empty(), List.of(next)).isFinalStage());
     }
 
@@ -61,7 +61,7 @@ class ChainFinalStageTest {
         assertTrue(badEnding.isFinalStage());
 
         // A third sibling that instead continues the arc is correctly excluded.
-        ResourceLocation continuation = new ResourceLocation("mcaquests", "family_arc_stage_3");
+        ResourceLocation continuation = ResourceLocation.fromNamespaceAndPath("mcaquests", "family_arc_stage_3");
         ChainSpec middleBranch = chain(2, Optional.empty(), List.of(continuation));
         assertFalse(middleBranch.isFinalStage());
     }

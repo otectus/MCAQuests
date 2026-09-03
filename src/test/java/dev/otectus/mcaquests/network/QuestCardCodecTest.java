@@ -1,8 +1,8 @@
 package dev.otectus.mcaquests.network;
 
+import dev.otectus.mcaquests.support.TestRegistries;
 import dev.otectus.mcaquests.support.TestBootstrap;
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Wire round-trips for the offer card, over a real {@link FriendlyByteBuf} and no Minecraft server.
+ * Wire round-trips for the offer card, over a real {@link RegistryFriendlyByteBuf} and no Minecraft server.
  *
  * <p>Protocol 11 widened {@link QuestCard} three ways at once — structured {@link CardObjective}s in
  * place of sentences with the counts written into them, reward preview stacks, and the difficulty
@@ -31,12 +31,12 @@ class QuestCardCodecTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static FriendlyByteBuf buffer() {
-        return new FriendlyByteBuf(Unpooled.buffer());
+    private static RegistryFriendlyByteBuf buffer() {
+        return TestRegistries.buffer();
     }
 
     private static QuestCard roundTrip(QuestCard card) {
-        FriendlyByteBuf buf = buffer();
+        RegistryFriendlyByteBuf buf = buffer();
         QuestCard.encode(buf, card);
         QuestCard decoded = QuestCard.decode(buf);
         assertEquals(0, buf.readableBytes(), "decode must consume exactly what encode wrote");
@@ -44,7 +44,7 @@ class QuestCardCodecTest {
     }
 
     private static QuestCard card(List<CardObjective> objectives, List<ItemStack> icons, String difficulty) {
-        return new QuestCard(new ResourceLocation("mcaquests", "test_quest"),
+        return new QuestCard(ResourceLocation.fromNamespaceAndPath("mcaquests", "test_quest"),
                 Component.literal("A Title"), Component.empty(), Component.literal("Bring me wheat."),
                 objectives, List.of(Component.literal("3x Emerald")), icons, difficulty);
     }
@@ -64,7 +64,7 @@ class QuestCardCodecTest {
         assertEquals(3, objective.current());
         assertEquals(24, objective.required());
         assertFalse(objective.unavailable());
-        assertTrue(ItemStack.isSameItemSameTags(new ItemStack(Items.WHEAT), objective.icon()));
+        assertTrue(ItemStack.isSameItemSameComponents(new ItemStack(Items.WHEAT), objective.icon()));
         assertEquals(1, decoded.rewardIcons().size());
         assertEquals(3, decoded.rewardIcons().get(0).getCount());
     }

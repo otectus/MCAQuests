@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -49,8 +50,8 @@ class BuiltinVoicePoolsTest {
         assertTrue(QuestDefinition.CODEC != null);
     }
 
-    private static final Path POOLS = Path.of("src/main/resources/data/mcaquests/mcaquests/dialogue");
-    private static final Path LANG = Path.of("src/main/resources/assets/mcaquests/lang");
+    private static final Path POOLS = TestPaths.of("src/main/resources/data/mcaquests/mcaquests/dialogue");
+    private static final Path LANG = TestPaths.of("src/main/resources/assets/mcaquests/lang");
 
     private static Map<String, VoicePool> loadPools() {
         Map<String, VoicePool> pools = new LinkedHashMap<>();
@@ -58,9 +59,7 @@ class BuiltinVoicePoolsTest {
             for (Path file : files.filter(p -> p.toString().endsWith(".json")).toList()) {
                 JsonElement json = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8));
                 VoicePool pool = VoicePool.CODEC.parse(JsonOps.INSTANCE, json)
-                        .getOrThrow(false, message -> {
-                            throw new AssertionError(file.getFileName() + ": " + message);
-                        });
+                        .getOrThrow(message -> new AssertionError(file.getFileName() + ": " + message));
                 pools.put(file.getFileName().toString(), pool);
             }
         } catch (IOException e) {

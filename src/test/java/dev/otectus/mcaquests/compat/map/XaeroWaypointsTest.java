@@ -39,8 +39,8 @@ class XaeroWaypointsTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static final ResourceLocation QUESTS = new ResourceLocation("mcaquests", "quests");
-    private static final ResourceLocation PINS = new ResourceLocation("mcaquests", "pins");
+    private static final ResourceLocation QUESTS = ResourceLocation.fromNamespaceAndPath("mcaquests", "quests");
+    private static final ResourceLocation PINS = ResourceLocation.fromNamespaceAndPath("mcaquests", "pins");
 
     @Test
     @DisplayName("Xaero's pins are session-only and its waypoints are this-dimension-only")

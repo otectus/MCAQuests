@@ -32,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class QuestAlreadyActiveTest {
 
-    private static final ResourceLocation PLAIN = new ResourceLocation("testpack", "gather_wheat");
-    private static final ResourceLocation ARC = new ResourceLocation("testpack", "arc_stage_1");
-    private static final ResourceLocation DIMENSION = new ResourceLocation("minecraft", "overworld");
+    private static final ResourceLocation PLAIN = ResourceLocation.fromNamespaceAndPath("testpack", "gather_wheat");
+    private static final ResourceLocation ARC = ResourceLocation.fromNamespaceAndPath("testpack", "arc_stage_1");
+    private static final ResourceLocation DIMENSION = ResourceLocation.withDefaultNamespace("overworld");
 
     private static final UUID VILLAGER_A = UUID.randomUUID();
     private static final UUID VILLAGER_B = UUID.randomUUID();
@@ -84,6 +84,6 @@ class QuestAlreadyActiveTest {
 
     private static ActiveQuest accept(ResourceLocation id, UUID villager) {
         return ActiveQuest.create(id, villager, Component.literal("Anna"),
-                new ResourceLocation("minecraft", "farmer"), DIMENSION, 0L, 1, null);
+                ResourceLocation.withDefaultNamespace("farmer"), DIMENSION, 0L, 1, null);
     }
 }

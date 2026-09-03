@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.state;
 
+import net.minecraft.core.RegistryAccess;
 import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.TurnInMode;
 import dev.otectus.mcaquests.support.TestBootstrap;
@@ -75,7 +76,7 @@ class DeadGiverReconcileTest {
         assertTrue(data.isDead(GIVER));
         assertFalse(data.isDead(OTHER_GIVER), "an unloaded villager is not a dead one");
 
-        DeadGiversData reloaded = DeadGiversData.load(data.save(new CompoundTag()));
+        DeadGiversData reloaded = DeadGiversData.load(data.save(new CompoundTag(), RegistryAccess.EMPTY), RegistryAccess.EMPTY);
         assertTrue(reloaded.isDead(GIVER), "a player who returns after a restart must still be reconciled");
         assertFalse(reloaded.isDead(OTHER_GIVER));
     }

@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -31,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ContentTotalsTest {
 
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
-    private static final Path TAGS = Path.of("src/main/resources/data/mcaquests/tags");
+    private static final Path DATA = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path TAGS = TestPaths.of("src/main/resources/data/mcaquests/tags");
 
     /** 190 before Life of the Town, plus the 72 that release added. */
     private static final int QUESTS = 262;

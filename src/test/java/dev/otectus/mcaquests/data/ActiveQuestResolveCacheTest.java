@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
@@ -34,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  */
 class ActiveQuestResolveCacheTest {
 
-    private static final Path TEMPLATE = Path.of(
+    private static final Path TEMPLATE = TestPaths.of(
             "src/main/resources/data/mcaquests/mcaquests/quests/templates/farmer_crop_request.json");
 
     static {
@@ -49,8 +50,8 @@ class ActiveQuestResolveCacheTest {
                 before.id(),
                 UUID.randomUUID(),
                 Component.literal("Anna"),
-                new ResourceLocation("minecraft", "farmer"),
-                new ResourceLocation("minecraft", "overworld"),
+                ResourceLocation.withDefaultNamespace("farmer"),
+                ResourceLocation.withDefaultNamespace("overworld"),
                 0L,
                 before.objectives().size(),
                 new ResolvedTemplate(new LinkedHashMap<>()));
@@ -80,6 +81,6 @@ class ActiveQuestResolveCacheTest {
         DataResult<QuestDefinition> result =
                 QuestDefinition.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(raw));
         return result.result().orElseThrow(() -> new AssertionError(
-                file + " did not parse: " + result.error().map(DataResult.PartialResult::message).orElse("?")));
+                file + " did not parse: " + result.error().map(DataResult.Error::message).orElse("?")));
     }
 }

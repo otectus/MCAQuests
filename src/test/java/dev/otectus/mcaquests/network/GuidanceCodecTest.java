@@ -1,13 +1,13 @@
 package dev.otectus.mcaquests.network;
 
+import dev.otectus.mcaquests.support.TestRegistries;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
 import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
 import dev.otectus.mcaquests.quest.guidance.GuidanceSnapshot;
 import dev.otectus.mcaquests.quest.guidance.GuidanceTarget;
 import dev.otectus.mcaquests.support.TestBootstrap;
-import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Wire round-trips for the two packets protocol 12 adds, over a real {@link FriendlyByteBuf}.
+ * Wire round-trips for the two packets protocol 12 adds, over a real {@link RegistryFriendlyByteBuf}.
  *
  * <p>Every case drains the buffer, for the reason {@code QuestCardCodecTest} spells out: a packet that
  * encodes more than it decodes does not fail where the mistake was made, it leaves the buffer
@@ -41,12 +41,12 @@ class GuidanceCodecTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static FriendlyByteBuf buffer() {
-        return new FriendlyByteBuf(Unpooled.buffer());
+    private static RegistryFriendlyByteBuf buffer() {
+        return TestRegistries.buffer();
     }
 
     private static GuidanceTarget roundTrip(GuidanceTarget target) {
-        FriendlyByteBuf buf = buffer();
+        RegistryFriendlyByteBuf buf = buffer();
         GuidanceTarget.encode(buf, target);
         GuidanceTarget decoded = GuidanceTarget.decode(buf);
         assertEquals(0, buf.readableBytes(), "decode must consume exactly what encode wrote");
@@ -123,12 +123,12 @@ class GuidanceCodecTest {
             GuidanceTarget target = new GuidanceTarget(GuidanceKind.VILLAGER, OptionalInt.of(i),
                     new BlockPos(-2000 - i, 63, 3000 + i), Level.OVERWORLD, Component.literal(name),
                     3, false, false, 1.95F);
-            all.add(new ActiveGuidance(new ResourceLocation("mcaquests", "quest_" + i),
+            all.add(new ActiveGuidance(ResourceLocation.fromNamespaceAndPath("mcaquests", "quest_" + i),
                     UUID.randomUUID(), target));
         }
 
-        FriendlyByteBuf buf = buffer();
-        QuestGuidanceS2CPacket.encode(new QuestGuidanceS2CPacket(new GuidanceSnapshot(all, 0)), buf);
+        RegistryFriendlyByteBuf buf = buffer();
+        new QuestGuidanceS2CPacket(new GuidanceSnapshot(all, 0)).encode(buf);
 
         assertTrue(buf.readableBytes() < 1024,
                 "the guidance packet grew to " + buf.readableBytes() + " bytes for five destinations");
@@ -153,9 +153,9 @@ class GuidanceCodecTest {
                 new BlockPos(1024, 68, -330), Level.OVERWORLD, Component.literal("Fortress"),
                 24, true, false, 0.0F);
         ActiveGuidance relay = new ActiveGuidance(
-                new ResourceLocation("mcaquests", "adventurer_nether_relay"), UUID.randomUUID(), portal);
+                ResourceLocation.fromNamespaceAndPath("mcaquests", "adventurer_nether_relay"), UUID.randomUUID(), portal);
         ActiveGuidance trial = new ActiveGuidance(
-                new ResourceLocation("mcaquests", "adventurer_trial_by_fire"), UUID.randomUUID(), fortress);
+                ResourceLocation.fromNamespaceAndPath("mcaquests", "adventurer_trial_by_fire"), UUID.randomUUID(), fortress);
 
         // Two quests, and the second one carries the marker: the pinned quest is not always the one
         // that can answer, which is the whole reason the index travels rather than being inferred.
@@ -185,7 +185,7 @@ class GuidanceCodecTest {
                 new BlockPos(-40, 64, 512), Level.OVERWORLD, Component.literal("Riverbend"),
                 24, false, true, 0.0F);
         ActiveGuidance guidance = new ActiveGuidance(
-                new ResourceLocation("mcaquests", "townstead_first_shift"), UUID.randomUUID(), target);
+                ResourceLocation.fromNamespaceAndPath("mcaquests", "townstead_first_shift"), UUID.randomUUID(), target);
 
         GuidanceSnapshot decoded =
                 roundTrip(new QuestGuidanceS2CPacket(new GuidanceSnapshot(List.of(guidance), 7))).snapshot();
@@ -198,8 +198,8 @@ class GuidanceCodecTest {
     }
 
     private static QuestGuidanceS2CPacket roundTrip(QuestGuidanceS2CPacket packet) {
-        FriendlyByteBuf buf = buffer();
-        QuestGuidanceS2CPacket.encode(packet, buf);
+        RegistryFriendlyByteBuf buf = buffer();
+        packet.encode(buf);
         QuestGuidanceS2CPacket decoded = QuestGuidanceS2CPacket.decode(buf);
         assertEquals(0, buf.readableBytes(), "decode must consume exactly what encode wrote");
         return decoded;
@@ -209,7 +209,7 @@ class GuidanceCodecTest {
     @DisplayName("the track packet round-trips a quest and the request to follow nothing")
     void trackPacketRoundTrips() {
         UUID villager = UUID.randomUUID();
-        ResourceLocation quest = new ResourceLocation("mcaquests", "relations_walk_me_to_bed");
+        ResourceLocation quest = ResourceLocation.fromNamespaceAndPath("mcaquests", "relations_walk_me_to_bed");
 
         QuestTrackC2SPacket decoded = roundTrip(QuestTrackC2SPacket.of(villager, quest));
         assertEquals(Optional.of(villager), decoded.villagerUuid());
@@ -221,8 +221,8 @@ class GuidanceCodecTest {
     }
 
     private static QuestTrackC2SPacket roundTrip(QuestTrackC2SPacket packet) {
-        FriendlyByteBuf buf = buffer();
-        QuestTrackC2SPacket.encode(packet, buf);
+        RegistryFriendlyByteBuf buf = buffer();
+        packet.encode(buf);
         QuestTrackC2SPacket decoded = QuestTrackC2SPacket.decode(buf);
         assertEquals(0, buf.readableBytes(), "decode must consume exactly what encode wrote");
         return decoded;

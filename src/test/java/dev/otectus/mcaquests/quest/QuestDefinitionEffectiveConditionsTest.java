@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class QuestDefinitionEffectiveConditionsTest {
 
     private static final String HEX = "1A2B3C4D5E6F7081";
-    private static final ResourceLocation QUEST_ID = new ResourceLocation("mcaquests", "archivist_bonus");
+    private static final ResourceLocation QUEST_ID = ResourceLocation.fromNamespaceAndPath("mcaquests", "archivist_bonus");
 
     static {
         // See QuestFilterTest for why real QuestDefinitions need the vanilla "bootstrapped" flag flipped.
@@ -66,7 +66,7 @@ class QuestDefinitionEffectiveConditionsTest {
 
     @Test
     void satisfyModeWithAuthorConditionsLeavesThemUnchanged() {
-        QuestCondition author = new QuestCompletedCondition(new ResourceLocation("mcaquests", "some_other_quest"),
+        QuestCondition author = new QuestCompletedCondition(ResourceLocation.fromNamespaceAndPath("mcaquests", "some_other_quest"),
                 HistoryScope.GLOBAL);
         QuestDefinition def = definitionWith(Optional.of(author), Optional.empty(),
                 ftbqObjective(AlreadyCompleteMode.SATISFY));
@@ -90,9 +90,9 @@ class QuestDefinitionEffectiveConditionsTest {
 
     @Test
     void blockOfferComposesWithAuthorConditionsAndChainPrerequisite() {
-        QuestCondition author = new QuestCompletedCondition(new ResourceLocation("mcaquests", "some_other_quest"),
+        QuestCondition author = new QuestCompletedCondition(ResourceLocation.fromNamespaceAndPath("mcaquests", "some_other_quest"),
                 HistoryScope.GLOBAL);
-        ResourceLocation prerequisiteId = new ResourceLocation("mcaquests", "prereq_quest");
+        ResourceLocation prerequisiteId = ResourceLocation.fromNamespaceAndPath("mcaquests", "prereq_quest");
         ChainSpec chain = new ChainSpec("family_arc", 2, Optional.empty(), Optional.empty(), Optional.empty(),
                 List.of(prerequisiteId), List.of());
         QuestDefinition def = definitionWith(Optional.of(author), Optional.of(chain),
@@ -110,7 +110,7 @@ class QuestDefinitionEffectiveConditionsTest {
 
     @Test
     void satisfyModeObjectiveDoesNotTriggerBlockOfferDesugarEvenAlongsideChainPrerequisite() {
-        ResourceLocation prerequisiteId = new ResourceLocation("mcaquests", "prereq_quest");
+        ResourceLocation prerequisiteId = ResourceLocation.fromNamespaceAndPath("mcaquests", "prereq_quest");
         ChainSpec chain = new ChainSpec("family_arc", 2, Optional.empty(), Optional.empty(), Optional.empty(),
                 List.of(prerequisiteId), List.of());
         QuestDefinition def = definitionWith(Optional.empty(), Optional.of(chain),

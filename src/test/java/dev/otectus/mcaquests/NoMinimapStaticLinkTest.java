@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p><b>JourneyMap</b> comes the other way: it discovers an annotated class implementing
  * {@code IClientPlugin} and calls it. An annotation has to be in the class file and an interface has
  * to be in the {@code implements} clause, so that entry point cannot be built reflectively and
- * {@code compat/journeymap/} is compiled against {@code journeymap-api-forge}. The guarantee is
+ * {@code compat/journeymap/} is compiled against {@code journeymap-api-neoforge}. The guarantee is
  * therefore containment rather than absence: those classes may name JourneyMap, nothing else may name
  * them, and JourneyMap's own annotation scan — which only runs when JourneyMap is installed — is the
  * only thing that ever loads them.
@@ -122,7 +123,7 @@ class NoMinimapStaticLinkTest {
      * @param exemptPrefix the one package allowed to hold the reference, or {@code null} when none is
      */
     private static List<String> scan(byte[] needle, @Nullable String exemptPrefix) throws IOException {
-        Path classesDir = Paths.get("build", "classes", "java", "main");
+        Path classesDir = TestPaths.of("build", "classes", "java", "main");
         assertTrue(Files.isDirectory(classesDir),
                 "build/classes/java/main does not exist; run `./gradlew compileJava` (or `test`, "
                         + "which depends on it) before running this test directly.");

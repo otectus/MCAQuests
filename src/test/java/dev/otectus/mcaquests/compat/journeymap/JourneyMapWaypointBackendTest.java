@@ -9,7 +9,7 @@ import journeymap.api.v2.client.IClientAPI;
 import journeymap.api.v2.client.display.DisplayType;
 import journeymap.api.v2.client.display.Displayable;
 import journeymap.api.v2.client.util.UIState;
-import journeymap.api.v2.common.Context;
+import journeymap.api.v2.client.display.Context;
 import journeymap.api.v2.common.waypoint.Waypoint;
 import journeymap.api.v2.common.waypoint.WaypointGroup;
 import net.minecraft.core.BlockPos;
@@ -406,6 +406,8 @@ class JourneyMapWaypointBackendTest {
         private String primaryDimension;
         private final TreeSet<String> dimensions = new TreeSet<>();
         private final Map<String, String> customData = new HashMap<>();
+        @Nullable
+        private String unkeyedCustomData;
         private boolean persistent;
         private boolean enabled = true;
         private boolean showDeviation;
@@ -664,12 +666,12 @@ class JourneyMapWaypointBackendTest {
 
         @Override
         @Nullable
-        public ResourceLocation getIconIdentifier() {
+        public ResourceLocation getIconResourceLocation() {
             return iconIdentifier;
         }
 
         @Override
-        public void setIconIdentifier(ResourceLocation iconIdentifier) {
+        public void setIconResourceLoctaion(ResourceLocation iconIdentifier) {
             this.iconIdentifier = iconIdentifier;
         }
 
@@ -702,6 +704,19 @@ class JourneyMapWaypointBackendTest {
         @Nullable
         public String getCustomData(String key) {
             return customData.get(key);
+        }
+
+        // PORT: the 1.21.1 API added an unkeyed custom-data slot alongside the keyed one. Nothing in
+        // this mod writes it, so it is a plain field rather than an alias of the keyed map.
+        @Override
+        public void setCustomData(String data) {
+            unkeyedCustomData = data;
+        }
+
+        @Override
+        @Nullable
+        public String getCustomData() {
+            return unkeyedCustomData;
         }
     }
 }

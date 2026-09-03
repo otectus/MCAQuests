@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TownsteadNamesTest {
 
-    private static final Path LANG = Path.of("src/main/resources/assets/mcaquests/lang");
+    private static final Path LANG = TestPaths.of("src/main/resources/assets/mcaquests/lang");
     private static final String PREFIX = "mcaquests.townstead.predicate.";
 
     @Test

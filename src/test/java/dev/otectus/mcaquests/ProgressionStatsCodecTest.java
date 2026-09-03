@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ProgressionStatsCodecTest {
 
-    private static final ResourceLocation SITUATION_A = new ResourceLocation("mcaquests", "raid_defense");
-    private static final ResourceLocation SITUATION_B = new ResourceLocation("mcaquests", "food_shortage");
-    private static final ResourceLocation PROJECT_A = new ResourceLocation("mcaquests", "build_well");
-    private static final ResourceLocation PROJECT_B = new ResourceLocation("mcaquests", "repair_walls");
+    private static final ResourceLocation SITUATION_A = ResourceLocation.fromNamespaceAndPath("mcaquests", "raid_defense");
+    private static final ResourceLocation SITUATION_B = ResourceLocation.fromNamespaceAndPath("mcaquests", "food_shortage");
+    private static final ResourceLocation PROJECT_A = ResourceLocation.fromNamespaceAndPath("mcaquests", "build_well");
+    private static final ResourceLocation PROJECT_B = ResourceLocation.fromNamespaceAndPath("mcaquests", "repair_walls");
 
     @Test
     void incrementAddsAndSums() {

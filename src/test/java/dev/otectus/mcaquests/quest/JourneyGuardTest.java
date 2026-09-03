@@ -116,9 +116,7 @@ class JourneyGuardTest {
 
         EscortEntityObjective parsed = EscortEntityObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
-                .getOrThrow(false, error -> {
-                    throw new AssertionError("escort_entity failed to parse: " + error);
-                });
+                .getOrThrow(error -> new AssertionError("escort_entity failed to parse: " + error));
 
         assertEquals(Optional.of(32), parsed.minJourney());
         assertEquals(4, parsed.radius());
@@ -131,9 +129,7 @@ class JourneyGuardTest {
 
         EscortEntityObjective parsed = EscortEntityObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
-                .getOrThrow(false, error -> {
-                    throw new AssertionError("escort_entity failed to parse: " + error);
-                });
+                .getOrThrow(error -> new AssertionError("escort_entity failed to parse: " + error));
 
         assertEquals(Optional.empty(), parsed.minJourney(),
                 "An absent min_journey must stay absent so the config default applies at runtime.");
@@ -146,9 +142,7 @@ class JourneyGuardTest {
 
         ReachLocationObjective parsed = ReachLocationObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
-                .getOrThrow(false, error -> {
-                    throw new AssertionError("reach_location failed to parse: " + error);
-                });
+                .getOrThrow(error -> new AssertionError("reach_location failed to parse: " + error));
 
         assertEquals(Optional.of(64), parsed.minJourney());
         assertEquals(8, parsed.radius());
@@ -162,9 +156,7 @@ class JourneyGuardTest {
 
         ReachLocationObjective reach = ReachLocationObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
-                .getOrThrow(false, error -> {
-                    throw new AssertionError("reach_location failed to parse: " + error);
-                });
+                .getOrThrow(error -> new AssertionError("reach_location failed to parse: " + error));
 
         assertEquals(Optional.empty(), reach.minJourney());
     }

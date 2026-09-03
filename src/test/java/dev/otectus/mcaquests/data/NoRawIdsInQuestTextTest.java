@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class NoRawIdsInQuestTextTest {
 
-    private static final Path SOURCE = Path.of("src/main/java/dev/otectus/mcaquests");
+    private static final Path SOURCE = TestPaths.of("src/main/java/dev/otectus/mcaquests");
 
     /**
      * The helpers that turn an id into a display name. An id passed <em>to</em> one of these is
@@ -117,7 +118,7 @@ class NoRawIdsInQuestTextTest {
     @Test
     @DisplayName("the display vocabulary is actually populated")
     void vocabularyIsPresent() {
-        String english = read(Path.of("src/main/resources/assets/mcaquests/lang/en_us.json"));
+        String english = read(TestPaths.of("src/main/resources/assets/mcaquests/lang/en_us.json"));
         List<String> missing = new ArrayList<>();
         for (String key : List.of(
                 "mcaquests.townstead.activity.work",

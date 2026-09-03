@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.client;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
@@ -42,7 +43,7 @@ class GuidanceTextTest {
     }
 
     private static final Path EN_US =
-            Path.of("src/main/resources/assets/mcaquests/lang/en_us.json");
+            TestPaths.of("src/main/resources/assets/mcaquests/lang/en_us.json");
 
     private static GuidanceTarget target(boolean approximate, boolean lastKnown) {
         return new GuidanceTarget(GuidanceKind.STRUCTURE, OptionalInt.empty(),

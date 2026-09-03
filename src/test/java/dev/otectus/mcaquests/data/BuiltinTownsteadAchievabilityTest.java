@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -40,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class BuiltinTownsteadAchievabilityTest {
 
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path DATA = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
 
     /**
      * The professions Townstead 0.7.6's {@code ProfessionXpType} supplies progression for. Cook is

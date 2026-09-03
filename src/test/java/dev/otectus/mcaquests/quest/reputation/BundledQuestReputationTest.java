@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.reputation;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -46,9 +47,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BundledQuestReputationTest {
 
     private static final Path QUESTS =
-            Path.of("src/main/resources/data/mcaquests/mcaquests/quests");
+            TestPaths.of("src/main/resources/data/mcaquests/mcaquests/quests");
     private static final Path PROJECTS =
-            Path.of("src/main/resources/data/mcaquests/mcaquests/projects");
+            TestPaths.of("src/main/resources/data/mcaquests/mcaquests/projects");
 
     private record Quest(Path path, JsonObject json) {
 

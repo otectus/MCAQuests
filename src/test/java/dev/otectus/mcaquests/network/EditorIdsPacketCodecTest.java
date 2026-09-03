@@ -1,7 +1,7 @@
 package dev.otectus.mcaquests.network;
 
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
+import dev.otectus.mcaquests.support.TestRegistries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Registry-free round-trip + truncation tests for {@link FtbqEditorIdsS2CPacket} (spec §29.1 #9, task
- * M5.1). Uses a real {@link FriendlyByteBuf} over a Netty {@link Unpooled#buffer()} — no Minecraft
+ * M5.1). Uses a real {@link RegistryFriendlyByteBuf} over a Netty buffer — no Minecraft
  * server or FTB jar required, matching the "no MC server / no FTB on the test classpath" constraint.
  */
 class EditorIdsPacketCodecTest {
@@ -29,8 +29,8 @@ class EditorIdsPacketCodecTest {
                 List.of("mcaquests:rebuild_the_mill"),
                 List.of("mcaquests:bandit_raid"));
 
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        FtbqEditorIdsS2CPacket.encode(original, buf);
+        RegistryFriendlyByteBuf buf = TestRegistries.buffer();
+        original.encode(buf);
         FtbqEditorIdsS2CPacket decoded = FtbqEditorIdsS2CPacket.decode(buf);
 
         assertEquals(original.questIds(), decoded.questIds());
@@ -48,8 +48,8 @@ class EditorIdsPacketCodecTest {
         FtbqEditorIdsS2CPacket empty = FtbqEditorIdsS2CPacket.build(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
 
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        FtbqEditorIdsS2CPacket.encode(empty, buf);
+        RegistryFriendlyByteBuf buf = TestRegistries.buffer();
+        empty.encode(buf);
         FtbqEditorIdsS2CPacket decoded = FtbqEditorIdsS2CPacket.decode(buf);
 
         assertTrue(decoded.questIds().isEmpty());

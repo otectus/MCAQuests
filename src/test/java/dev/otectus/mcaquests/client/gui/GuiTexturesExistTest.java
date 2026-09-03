@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.client.gui;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.DisplayName;
@@ -38,12 +39,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class GuiTexturesExistTest {
 
-    private static final Path ASSETS = Path.of("src/main/resources/assets/mcaquests/textures/gui");
+    private static final Path ASSETS = TestPaths.of("src/main/resources/assets/mcaquests/textures/gui");
     /**
      * The atlas manifest lives with the generator rather than with the PNGs: the game never reads it,
      * and a shipped jar should not carry ten kilobytes of something only this test looks at.
      */
-    private static final Path LAYOUT = Path.of("tools/gui_layout.json");
+    private static final Path LAYOUT = TestPaths.of("tools/gui_layout.json");
 
     /** Both sheets must be this size: {@code blitRepeating}'s common overload assumes it. */
     private static final int EXPECTED_SHEET = 256;

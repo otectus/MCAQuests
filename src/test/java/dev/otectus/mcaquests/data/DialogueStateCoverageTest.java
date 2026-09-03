@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -48,8 +49,8 @@ class DialogueStateCoverageTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static final Path MAIN = Path.of("src/main/java");
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path MAIN = TestPaths.of("src/main/java");
+    private static final Path DATA = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
 
     @Test
     @DisplayName("every declared dialogue state is requested somewhere in the mod")

@@ -20,9 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class SituationManagerTest {
 
-    private static final ResourceLocation DEF_A = new ResourceLocation("mcaquests:after_raid");
-    private static final ResourceLocation DEF_B = new ResourceLocation("mcaquests:cure_infected");
-    private static final ResourceLocation DEF_C = new ResourceLocation("mcaquests:night_watch");
+    private static final ResourceLocation DEF_A = ResourceLocation.parse("mcaquests:after_raid");
+    private static final ResourceLocation DEF_B = ResourceLocation.parse("mcaquests:cure_infected");
+    private static final ResourceLocation DEF_C = ResourceLocation.parse("mcaquests:night_watch");
 
     private static Optional<SituationInstance> open(SituationSavedData data, ResourceLocation def, int village,
                                                     long now, int maxConcurrent, long globalCd,

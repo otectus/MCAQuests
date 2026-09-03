@@ -35,9 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OfferSessionDeclineTest {
 
     private static final UUID VILLAGER = UUID.fromString("11111111-2222-3333-4444-555555555555");
-    private static final ResourceLocation LETTER = new ResourceLocation("mcaquests", "relations_letter_to_brother");
-    private static final ResourceLocation MEND = new ResourceLocation("mcaquests", "relations_mend_the_quarrel");
-    private static final ResourceLocation TOY = new ResourceLocation("mcaquests", "relations_childs_first_toy");
+    private static final ResourceLocation LETTER = ResourceLocation.fromNamespaceAndPath("mcaquests", "relations_letter_to_brother");
+    private static final ResourceLocation MEND = ResourceLocation.fromNamespaceAndPath("mcaquests", "relations_mend_the_quarrel");
+    private static final ResourceLocation TOY = ResourceLocation.fromNamespaceAndPath("mcaquests", "relations_childs_first_toy");
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -77,7 +77,7 @@ class OfferSessionDeclineTest {
         OfferSession session = session();
         List<OfferSession.Slot> before = List.copyOf(session.slots());
 
-        int index = session.removeSlot(new ResourceLocation("somepack", "not_on_the_menu"));
+        int index = session.removeSlot(ResourceLocation.fromNamespaceAndPath("somepack", "not_on_the_menu"));
 
         assertEquals(-1, index, "a client may only decline what it was actually offered");
         assertEquals(before, session.slots());

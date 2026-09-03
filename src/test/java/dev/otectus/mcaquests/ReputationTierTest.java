@@ -128,6 +128,6 @@ class ReputationTierTest {
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation("mcaquests", path);
+        return ResourceLocation.fromNamespaceAndPath("mcaquests", path);
     }
 }

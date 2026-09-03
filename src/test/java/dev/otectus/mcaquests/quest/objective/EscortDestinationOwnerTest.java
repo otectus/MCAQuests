@@ -34,7 +34,7 @@ class EscortDestinationOwnerTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static final ResourceLocation QUEST = new ResourceLocation("mcaquests", "test_escort");
+    private static final ResourceLocation QUEST = ResourceLocation.fromNamespaceAndPath("mcaquests", "test_escort");
 
     private static VillagerTarget self() {
         return VillagerTarget.SELF;

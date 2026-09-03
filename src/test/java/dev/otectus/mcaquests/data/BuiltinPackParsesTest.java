@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.DataResult;
@@ -40,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class BuiltinPackParsesTest {
 
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path DATA = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -178,7 +179,7 @@ class BuiltinPackParsesTest {
         DataResult<QuestCondition> parsed = ConditionTypes.CODEC
                 .parse(JsonOps.INSTANCE, owner.get("conditions"));
         if (parsed.result().isEmpty()) {
-            lost.add(file + ": " + parsed.error().map(DataResult.PartialResult::message).orElse("?"));
+            lost.add(file + ": " + parsed.error().map(DataResult.Error::message).orElse("?"));
         }
     }
 
@@ -226,7 +227,7 @@ class BuiltinPackParsesTest {
     private static <T> T parseOrThrow(Path file, com.mojang.serialization.Codec<T> codec) {
         DataResult<T> result = codec.parse(JsonOps.INSTANCE, json(file));
         return result.result().orElseThrow(() -> new AssertionError(
-                file + " did not parse: " + result.error().map(DataResult.PartialResult::message).orElse("?")));
+                file + " did not parse: " + result.error().map(DataResult.Error::message).orElse("?")));
     }
 
     private static List<Path> jsonUnder(String folder) {

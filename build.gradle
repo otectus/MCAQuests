@@ -229,8 +229,44 @@ dependencies {
     }
 }
 
+// A jar carrying nothing but a mods.toml, declaring modId `mca`.
+//
+// The MDG unit-test runner boots FML and loads this mod (see neoForge.unitTest.testedMod), and
+// neoforge.mods.toml declares `mca` as a *required* dependency -- so without something answering to
+// that id the whole suite dies in ModLoader with "mca is not installed". Putting the real MCA jar on
+// testRuntimeClasspath is exactly what the exclusion above forbids: "MCA is not bound" is the state
+// McaCompatSafeFailTest exercises, and McaBindingProbeTest reaches the real jar through its own class
+// loader instead. A manifest with no classes behind it satisfies the loader and leaves the classpath
+// as MCA-free as before.
+def mcaTestStub = tasks.register('mcaTestStubJar', Jar) {
+    group = 'verification'
+    description = 'Manifest-only stand-in for MCA, so FML can load this mod in the unit-test JVM.'
+    archiveBaseName = 'mca-unit-test-stub'
+    destinationDirectory = layout.buildDirectory.dir('unit-test-stub')
+    // The version only has to fall inside mca_version_range; nothing reads it.
+    def stubToml = """modLoader="lowcodefml"
+loaderVersion="${loader_version_range}"
+license="Manifest-only test stand-in; contains no code."
+
+[[mods]]
+modId="mca"
+version="7.7.0"
+displayName="Minecraft Comes Alive (unit-test stand-in)"
+description="No classes. Exists only so FML's dependency check passes with MCA genuinely absent."
+"""
+    def stubDir = layout.buildDirectory.dir('unit-test-stub/src')
+    doFirst {
+        def toml = stubDir.get().file('META-INF/neoforge.mods.toml').asFile
+        toml.parentFile.mkdirs()
+        toml.text = stubToml
+    }
+    from(stubDir)
+}
+
 test {
     useJUnitPlatform()
+    dependsOn mcaTestStub
+    classpath += files(mcaTestStub)
     // The MDG unitTest runner's working dir is build/minecraft-junit; the repo-introspection tests
     // (pack parsing, locale parity, classfile scans) resolve paths through this property.
     systemProperty 'mcaquests.projectRoot', project.projectDir.absolutePath

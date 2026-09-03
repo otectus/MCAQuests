@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TargetGateValidatorTest {
 
-    private static final ResourceLocation ID = new ResourceLocation("testpack", "letter_to_brother");
+    private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("testpack", "letter_to_brother");
 
     static {
         TestBootstrap.ensureBootstrapped();

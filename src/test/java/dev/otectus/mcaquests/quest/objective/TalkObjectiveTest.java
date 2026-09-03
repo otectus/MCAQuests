@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.support.TestConfig;
 import com.electronwill.nightconfig.core.CommentedConfig;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
@@ -31,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TalkObjectiveTest {
 
-    private static final ResourceLocation VANILLA_CARTOGRAPHER = new ResourceLocation("minecraft", "cartographer");
-    private static final ResourceLocation MCA_CARTOGRAPHER = new ResourceLocation("mca", "cartographer");
-    private static final ResourceLocation FARMER = new ResourceLocation("minecraft", "farmer");
+    private static final ResourceLocation VANILLA_CARTOGRAPHER = ResourceLocation.withDefaultNamespace("cartographer");
+    private static final ResourceLocation MCA_CARTOGRAPHER = ResourceLocation.fromNamespaceAndPath("mca", "cartographer");
+    private static final ResourceLocation FARMER = ResourceLocation.withDefaultNamespace("farmer");
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -41,9 +42,9 @@ class TalkObjectiveTest {
 
     @BeforeAll
     static void loadCommonConfigDefaults() {
-        CommentedConfig config = CommentedConfig.inMemory();
-        McaQuestsConfig.COMMON_SPEC.correct(config);
-        McaQuestsConfig.COMMON_SPEC.acceptConfig(config);
+        // PORT: 1.20.1's ModConfigSpec#setConfig(CommentedConfig) became acceptConfig(ILoadedConfig);
+        // TestConfig owns that wrapping now, so this is the same attach in one call.
+        TestConfig.ensureCommonLoaded();
     }
 
     @AfterEach

@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * is caught instead.
  *
  * <p><b>JourneyMap</b> is compiled against, so javac already pins every member the backend calls. What
- * goes unchecked there is <em>drift</em>: the API the game loads is the {@code journeymap-api-forge}
+ * goes unchecked there is <em>drift</em>: the API the game loads is the {@code journeymap-api-neoforge}
  * jar-in-jar inside the mod, while the API this build compiles against comes from a Maven mirror. They
  * are the same artifact today. Nothing but this test would notice the day they stopped being.
  *
@@ -58,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <h2>The JourneyMap jar is two jars</h2>
  *
  * <p>{@code IClientAPI}, {@code Waypoint} and {@code WaypointFactory} do not live in the JourneyMap
- * jar. They live in {@code META-INF/jarjar/journeymap-api-forge-*.jar} inside it, which Forge unpacks
+ * jar. They live in {@code META-INF/jarjar/journeymap-api-neoforge-*.jar} inside it, which NeoForge unpacks
  * at runtime and this test has to unpack for itself — probing the outer jar alone would find no API
  * whatsoever and the run would pass vacuously while proving nothing.
  *

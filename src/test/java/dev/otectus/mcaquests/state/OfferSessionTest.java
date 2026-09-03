@@ -24,9 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OfferSessionTest {
 
     private static final UUID VILLAGER = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-    private static final ResourceLocation ONE = new ResourceLocation("mcaquests", "one");
-    private static final ResourceLocation TWO = new ResourceLocation("mcaquests", "two");
-    private static final ResourceLocation THREE = new ResourceLocation("mcaquests", "three");
+    private static final ResourceLocation ONE = ResourceLocation.fromNamespaceAndPath("mcaquests", "one");
+    private static final ResourceLocation TWO = ResourceLocation.fromNamespaceAndPath("mcaquests", "two");
+    private static final ResourceLocation THREE = ResourceLocation.fromNamespaceAndPath("mcaquests", "three");
 
     private static final int REFRESH = 24000;
     private static final int GENERATION = 1;

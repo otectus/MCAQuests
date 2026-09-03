@@ -120,6 +120,6 @@ class GuidanceDirtyDispatchTest {
                 new BlockPos(x, y, z), Level.OVERWORLD, Component.literal("Anna"),
                 3, false, false, 1.95F);
         return new GuidanceSnapshot(
-                List.of(new ActiveGuidance(new ResourceLocation(questId), new UUID(1L, 2L), target)), 0);
+                List.of(new ActiveGuidance(ResourceLocation.parse(questId), new UUID(1L, 2L), target)), 0);
     }
 }

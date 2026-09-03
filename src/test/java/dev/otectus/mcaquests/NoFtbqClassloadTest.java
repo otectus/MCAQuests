@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -67,7 +68,7 @@ class NoFtbqClassloadTest {
 
     private static List<String> scan(byte[] needle, java.util.function.Predicate<String> whitelisted)
             throws IOException {
-        Path classesDir = Paths.get("build", "classes", "java", "main");
+        Path classesDir = TestPaths.of("build", "classes", "java", "main");
         assertTrue(Files.isDirectory(classesDir),
                 "build/classes/java/main does not exist; run `./gradlew compileJava` (or `test`, "
                         + "which depends on it) before running this test directly.");

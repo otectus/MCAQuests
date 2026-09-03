@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -37,8 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class LocaleParityTest {
 
-    private static final Path LANG = Path.of("src/main/resources/assets/mcaquests/lang");
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path LANG = TestPaths.of("src/main/resources/assets/mcaquests/lang");
+    private static final Path DATA = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
     private static final String SOURCE_LOCALE = "en_us";
 
     /** {@code %s}, {@code %d}, and the positional {@code %1$s} forms Minecraft's formatter accepts. */

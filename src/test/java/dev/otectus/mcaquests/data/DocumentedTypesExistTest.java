@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -57,27 +58,27 @@ class DocumentedTypesExistTest {
 
     /**
      * The three shapes a registration is written in: {@code register("x",},
-     * {@code register(new ResourceLocation(McaQuests.MOD_ID, "x")}, and the FTB bridge's
+     * {@code register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "x")}, and the FTB bridge's
      * {@code register(id("x")}.
      */
     private static final Pattern REGISTRATION = Pattern.compile(
-            "register\\(\\s*(?:new ResourceLocation\\(\\s*McaQuests\\.MOD_ID\\s*,\\s*|id\\(\\s*)?"
+            "register\\(\\s*(?:ResourceLocation\\.fromNamespaceAndPath\\(\\s*McaQuests\\.MOD_ID\\s*,\\s*|id\\(\\s*)?"
                     + "\"([a-z0-9_]+)\"");
 
     private static final List<Path> DOCS = List.of(
-            Path.of("TOWNSTEAD.md"), Path.of("DATAPACK.md"), Path.of("FTBQUESTS.md"),
-            Path.of("CONFIG.md"), Path.of("README.md"));
+            TestPaths.of("TOWNSTEAD.md"), TestPaths.of("DATAPACK.md"), TestPaths.of("FTBQUESTS.md"),
+            TestPaths.of("CONFIG.md"), TestPaths.of("README.md"));
 
     private static final List<Path> REGISTRIES = List.of(
-            Path.of("src/main/java/dev/otectus/mcaquests/quest/condition/ConditionTypes.java"),
-            Path.of("src/main/java/dev/otectus/mcaquests/quest/objective/ObjectiveTypes.java"),
-            Path.of("src/main/java/dev/otectus/mcaquests/quest/reward/RewardTypes.java"),
-            Path.of("src/main/java/dev/otectus/mcaquests/project/objective/ProjectObjectiveTypes.java"),
-            Path.of("src/main/java/dev/otectus/mcaquests/quest/situation/SituationTriggerTypes.java"),
+            TestPaths.of("src/main/java/dev/otectus/mcaquests/quest/condition/ConditionTypes.java"),
+            TestPaths.of("src/main/java/dev/otectus/mcaquests/quest/objective/ObjectiveTypes.java"),
+            TestPaths.of("src/main/java/dev/otectus/mcaquests/quest/reward/RewardTypes.java"),
+            TestPaths.of("src/main/java/dev/otectus/mcaquests/project/objective/ProjectObjectiveTypes.java"),
+            TestPaths.of("src/main/java/dev/otectus/mcaquests/quest/situation/SituationTriggerTypes.java"),
             // FTB tasks and rewards carry mcaquests: ids too, and FTBQUESTS.md documents them in the
             // same table shape, so leaving these out would report every one of them as missing.
-            Path.of("src/main/java/dev/otectus/mcaquests/compat/ftbq/FtbqTaskTypes.java"),
-            Path.of("src/main/java/dev/otectus/mcaquests/compat/ftbq/FtbqRewardTypes.java"));
+            TestPaths.of("src/main/java/dev/otectus/mcaquests/compat/ftbq/FtbqTaskTypes.java"),
+            TestPaths.of("src/main/java/dev/otectus/mcaquests/compat/ftbq/FtbqRewardTypes.java"));
 
     /**
      * Ids that are legitimately not registry types: the network channel, built-in reputation tiers and
@@ -122,7 +123,7 @@ class DocumentedTypesExistTest {
     @Test
     @DisplayName("the Townstead reference documents every Townstead type that shipped")
     void townsteadReferenceIsComplete() {
-        Set<String> documented = idsIn(Path.of("TOWNSTEAD.md"));
+        Set<String> documented = idsIn(TestPaths.of("TOWNSTEAD.md"));
         List<String> undocumented = new ArrayList<>();
 
         for (String id : registeredIds()) {
@@ -136,7 +137,7 @@ class DocumentedTypesExistTest {
     @Test
     @DisplayName("the reference names the storage destination that is not implemented, as unimplemented")
     void villageStorageIsNotPromised() {
-        String doc = read(Path.of("TOWNSTEAD.md"));
+        String doc = read(TestPaths.of("TOWNSTEAD.md"));
 
         assertTrue(doc.contains("townstead_village_storage"),
                 "an author who reaches for it should find out here rather than from a parse error");
@@ -180,7 +181,7 @@ class DocumentedTypesExistTest {
     /** Ids of the built-in pack's own quests, projects and situations, which are content, not types. */
     private static Set<String> contentIds() {
         Set<String> ids = new LinkedHashSet<>();
-        Path data = Path.of("src/main/resources/data/mcaquests/mcaquests");
+        Path data = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
         if (!Files.isDirectory(data)) {
             return ids;
         }

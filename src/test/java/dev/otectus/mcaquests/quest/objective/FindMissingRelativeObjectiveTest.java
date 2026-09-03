@@ -92,7 +92,7 @@ class FindMissingRelativeObjectiveTest {
 
         private List<String> errorsFor(String json) {
             List<String> errors = new ArrayList<>();
-            parse(json).validate(new ResourceLocation("mcaquests", "test"), 0, errors);
+            parse(json).validate(ResourceLocation.fromNamespaceAndPath("mcaquests", "test"), 0, errors);
             return errors;
         }
 

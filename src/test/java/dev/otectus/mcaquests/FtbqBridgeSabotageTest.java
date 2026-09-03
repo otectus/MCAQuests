@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests;
 
+import dev.otectus.mcaquests.support.TestConfig;
 import com.electronwill.nightconfig.core.CommentedConfig;
 import dev.otectus.mcaquests.compat.FtbqBridge;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -48,7 +49,7 @@ class FtbqBridgeSabotageTest {
 
     private static final String HEX = "1A2B3C4D5E6F7081";
     private static final QuestContext CONTEXT =
-            new QuestContext(null, null, null, new ResourceLocation("mcaquests", "dummy"), null);
+            new QuestContext(null, null, null, ResourceLocation.fromNamespaceAndPath("mcaquests", "dummy"), null);
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -63,9 +64,9 @@ class FtbqBridgeSabotageTest {
      */
     @BeforeAll
     static void loadCommonConfigDefaults() {
-        CommentedConfig config = CommentedConfig.inMemory();
-        McaQuestsConfig.COMMON_SPEC.correct(config);
-        McaQuestsConfig.COMMON_SPEC.acceptConfig(config);
+        // PORT: 1.20.1's ModConfigSpec#setConfig(CommentedConfig) became acceptConfig(ILoadedConfig);
+        // TestConfig owns that wrapping now, so this is the same attach in one call.
+        TestConfig.ensureCommonLoaded();
     }
 
     /** Every method throws, including the interface's {@code default} methods. */

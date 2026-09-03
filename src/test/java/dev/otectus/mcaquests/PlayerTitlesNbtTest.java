@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Registry-free NBT round-trips for player titles (0.7.0), including the legacy/empty case. */
 class PlayerTitlesNbtTest {
 
-    private static final ResourceLocation GLOBAL = new ResourceLocation("mcaquests", "wandering_helper");
-    private static final ResourceLocation VILLAGE_TITLE = new ResourceLocation("mcaquests", "honored_of_village");
-    private static final ResourceLocation OVERWORLD = new ResourceLocation("minecraft", "overworld");
-    private static final ResourceLocation NETHER = new ResourceLocation("minecraft", "the_nether");
+    private static final ResourceLocation GLOBAL = ResourceLocation.fromNamespaceAndPath("mcaquests", "wandering_helper");
+    private static final ResourceLocation VILLAGE_TITLE = ResourceLocation.fromNamespaceAndPath("mcaquests", "honored_of_village");
+    private static final ResourceLocation OVERWORLD = ResourceLocation.withDefaultNamespace("overworld");
+    private static final ResourceLocation NETHER = ResourceLocation.withDefaultNamespace("the_nether");
 
     @Test
     void titlesRoundTrip() {
@@ -105,7 +105,7 @@ class PlayerTitlesNbtTest {
         assertTrue(dest.titles().hasVillage(OVERWORLD, 5, VILLAGE_TITLE));
 
         // Mutating the copy must not affect the source (deep copy of village sets).
-        dest.titles().grantVillage(OVERWORLD, 5, new ResourceLocation("mcaquests", "other"));
+        dest.titles().grantVillage(OVERWORLD, 5, ResourceLocation.fromNamespaceAndPath("mcaquests", "other"));
         assertEquals(1, source.titles().forVillage(OVERWORLD, 5).size());
     }
 }

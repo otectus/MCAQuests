@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests;
 
+import net.minecraft.core.RegistryAccess;
 import dev.otectus.mcaquests.data.GraphCycles;
 import dev.otectus.mcaquests.project.ProjectScope;
 import dev.otectus.mcaquests.project.state.BankedReward;
@@ -51,8 +52,8 @@ class ProjectStateTest {
     void projectStateRoundTripsAndAdvances() {
         UUID sponsor = UUID.randomUUID();
         UUID player = UUID.randomUUID();
-        ProjectState state = new ProjectState(new ResourceLocation("mcaquests:well_repair"),
-                ProjectScope.VILLAGE, "v:12", new ResourceLocation("minecraft:overworld"),
+        ProjectState state = new ProjectState(ResourceLocation.parse("mcaquests:well_repair"),
+                ProjectScope.VILLAGE, "v:12", ResourceLocation.parse("minecraft:overworld"),
                 new BlockPos(10, 64, -20), OptionalInt.of(12), 1000L, 2);
         state.addSponsor(sponsor);
         state.addParticipant(player);
@@ -84,7 +85,7 @@ class ProjectStateTest {
 
     @Test
     void instanceKeyRoundTrips() {
-        ProjectInstanceKey key = new ProjectInstanceKey(new ResourceLocation("mcaquests:guardhouse_stockpile"),
+        ProjectInstanceKey key = new ProjectInstanceKey(ResourceLocation.parse("mcaquests:guardhouse_stockpile"),
                 ProjectScope.PROFESSION, "p:12:minecraft:librarian");
         Optional<ProjectInstanceKey> parsed = ProjectInstanceKey.parse(key.asString());
         assertTrue(parsed.isPresent());
@@ -94,9 +95,9 @@ class ProjectStateTest {
 
     @Test
     void graphCyclesDetectsFollowUpLoops() {
-        ResourceLocation a = new ResourceLocation("mcaquests:a");
-        ResourceLocation b = new ResourceLocation("mcaquests:b");
-        ResourceLocation c = new ResourceLocation("mcaquests:c");
+        ResourceLocation a = ResourceLocation.parse("mcaquests:a");
+        ResourceLocation b = ResourceLocation.parse("mcaquests:b");
+        ResourceLocation c = ResourceLocation.parse("mcaquests:c");
         assertTrue(GraphCycles.findCycle(Map.of(a, List.of(b), b, List.of(c), c, List.of())).isEmpty());
         assertTrue(GraphCycles.findCycle(Map.of(a, List.of(b), b, List.of(a))).isPresent());
     }
@@ -105,7 +106,7 @@ class ProjectStateTest {
 
     @Test
     void legacyPendingRewardTagWritesNoKindKeyAndRoundTrips() {
-        PendingReward legacy = PendingReward.ofPhase(new ResourceLocation("mcaquests:well_repair"), 1, 2);
+        PendingReward legacy = PendingReward.ofPhase(ResourceLocation.parse("mcaquests:well_repair"), 1, 2);
         CompoundTag tag = legacy.save();
 
         // Byte-identical to the pre-1.0.0 shape: no "kind" key, exactly the three legacy fields.
@@ -133,7 +134,7 @@ class ProjectStateTest {
         Optional<PendingReward> loaded = PendingReward.load(tag);
         assertTrue(loaded.isPresent());
         assertEquals(PendingReward.Kind.PROJECT_PHASE, loaded.get().kind());
-        assertEquals(new ResourceLocation("mcaquests:guardhouse_stockpile"), loaded.get().projectId());
+        assertEquals(ResourceLocation.parse("mcaquests:guardhouse_stockpile"), loaded.get().projectId());
         assertEquals(3, loaded.get().phase());
         assertEquals(0, loaded.get().rewardIndex());
     }
@@ -166,7 +167,7 @@ class ProjectStateTest {
 
     @Test
     void bankedTitleRoundTrips() {
-        ResourceLocation titleId = new ResourceLocation("mcaquests:hero_of_the_village");
+        ResourceLocation titleId = ResourceLocation.parse("mcaquests:hero_of_the_village");
         PendingReward pending = PendingReward.ofBanked(BankedReward.title(titleId, "VILLAGE"));
         Optional<PendingReward> loaded = PendingReward.load(pending.save());
         assertTrue(loaded.isPresent());
@@ -180,11 +181,11 @@ class ProjectStateTest {
     void mixedPendingListRoundTripsThroughProjectSavedData() {
         ProjectSavedData data = new ProjectSavedData();
         UUID player = UUID.randomUUID();
-        data.addPending(player, PendingReward.ofPhase(new ResourceLocation("mcaquests:well_repair"), 0, 1));
+        data.addPending(player, PendingReward.ofPhase(ResourceLocation.parse("mcaquests:well_repair"), 0, 1));
         data.addBankedReward(player, BankedReward.reputation(15));
         data.addBankedReward(player, BankedReward.hearts(5, "VILLAGE_RESIDENTS"));
 
-        ProjectSavedData loaded = ProjectSavedData.load(data.save(new CompoundTag()));
+        ProjectSavedData loaded = ProjectSavedData.load(data.save(new CompoundTag(), RegistryAccess.EMPTY), RegistryAccess.EMPTY);
         List<PendingReward> owed = loaded.drainPending(player);
         assertEquals(3, owed.size());
         assertEquals(PendingReward.Kind.PROJECT_PHASE, owed.get(0).kind());
@@ -204,7 +205,7 @@ class ProjectStateTest {
         CompoundTag root = new CompoundTag();
         CompoundTag pend = new CompoundTag();
         ListTag rewards = new ListTag();
-        rewards.add(PendingReward.ofPhase(new ResourceLocation("mcaquests:well_repair"), 0, 0).save());
+        rewards.add(PendingReward.ofPhase(ResourceLocation.parse("mcaquests:well_repair"), 0, 0).save());
 
         CompoundTag fromTheFuture = new CompoundTag();
         fromTheFuture.putString("kind", "some_future_kind_this_build_predates");
@@ -214,7 +215,7 @@ class ProjectStateTest {
         pend.put(player.toString(), rewards);
         root.put("pending", pend);
 
-        ProjectSavedData loaded = ProjectSavedData.load(root);
+        ProjectSavedData loaded = ProjectSavedData.load(root, RegistryAccess.EMPTY);
         List<PendingReward> owed = loaded.drainPending(player);
         assertEquals(2, owed.size()); // the unknown-kind entry is skipped; both siblings survive
         assertEquals(PendingReward.Kind.PROJECT_PHASE, owed.get(0).kind());
@@ -240,7 +241,7 @@ class ProjectStateTest {
         pend.put(player.toString(), rewards);
         root.put("pending", pend);
 
-        ProjectSavedData loaded = ProjectSavedData.load(root);
+        ProjectSavedData loaded = ProjectSavedData.load(root, RegistryAccess.EMPTY);
         List<PendingReward> owed = loaded.drainPending(player);
         assertEquals(1, owed.size());
         assertEquals(BankedReward.Type.HEARTS, owed.get(0).banked().type());
@@ -270,7 +271,7 @@ class ProjectStateTest {
         pend.put(player.toString(), rewards);
         root.put("pending", pend);
 
-        ProjectSavedData loaded = ProjectSavedData.load(root);
+        ProjectSavedData loaded = ProjectSavedData.load(root, RegistryAccess.EMPTY);
         List<PendingReward> owed = loaded.drainPending(player);
         assertEquals(1, owed.size()); // the titleless TITLE entry is skipped; the sibling survives
         assertEquals(BankedReward.Type.REPUTATION, owed.get(0).banked().type());

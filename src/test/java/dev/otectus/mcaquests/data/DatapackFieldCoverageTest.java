@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import dev.otectus.mcaquests.project.ProjectPhase;
 import dev.otectus.mcaquests.project.SponsorSpec;
 import dev.otectus.mcaquests.quest.FailureSpec;
@@ -52,7 +53,7 @@ class DatapackFieldCoverageTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static final Path MAIN = Path.of("src/main/java");
+    private static final Path MAIN = TestPaths.of("src/main/java");
 
     /** The datapack-facing records whose every field must do something. */
     private static final List<Class<?>> TYPES = List.of(

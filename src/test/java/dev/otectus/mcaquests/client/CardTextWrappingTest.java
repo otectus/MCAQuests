@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.client;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class CardTextWrappingTest {
 
-    private static final Path CLIENT = Path.of("src/main/java/dev/otectus/mcaquests/client");
+    private static final Path CLIENT = TestPaths.of("src/main/java/dev/otectus/mcaquests/client");
 
     /** The screens that draw a card of objectives and therefore must wrap and measure. */
     private static final List<String> CARD_SCREENS =

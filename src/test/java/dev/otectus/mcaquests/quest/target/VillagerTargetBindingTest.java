@@ -59,7 +59,7 @@ class VillagerTargetBindingTest {
             List<VillagerTarget> targets = List.of(
                     VillagerTarget.SELF,
                     new VillagerTarget(VillagerTarget.Mode.PROFESSION,
-                            Optional.of(new ResourceLocation("minecraft", "weaponsmith")),
+                            Optional.of(ResourceLocation.withDefaultNamespace("weaponsmith")),
                             Optional.empty(), Optional.empty()),
                     new VillagerTarget(VillagerTarget.Mode.FAMILY, Optional.empty(),
                             Optional.of("grandparent"), Optional.empty()),

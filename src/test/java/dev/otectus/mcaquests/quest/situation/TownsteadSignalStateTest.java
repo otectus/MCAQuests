@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.situation;
 
+import net.minecraft.core.RegistryAccess;
 import dev.otectus.mcaquests.quest.situation.state.TownsteadSignalStateSavedData;
 import dev.otectus.mcaquests.support.TestBootstrap;
 import net.minecraft.nbt.CompoundTag;
@@ -32,7 +33,7 @@ class TownsteadSignalStateTest {
 
     /** Round-trips through NBT exactly as a world save and reload would. */
     private static TownsteadSignalStateSavedData reloaded(TownsteadSignalStateSavedData data) {
-        return TownsteadSignalStateSavedData.load(data.save(new CompoundTag()));
+        return TownsteadSignalStateSavedData.load(data.save(new CompoundTag(), RegistryAccess.EMPTY), RegistryAccess.EMPTY);
     }
 
     @Nested
@@ -140,10 +141,10 @@ class TownsteadSignalStateTest {
             TownsteadSignalStateSavedData before = fresh();
             before.observeIncrease("12|spirit", 4);
 
-            CompoundTag tag = before.save(new CompoundTag());
+            CompoundTag tag = before.save(new CompoundTag(), RegistryAccess.EMPTY);
             tag.putInt("schema", 999); // as though a future build had written it
 
-            TownsteadSignalStateSavedData after = TownsteadSignalStateSavedData.load(tag);
+            TownsteadSignalStateSavedData after = TownsteadSignalStateSavedData.load(tag, RegistryAccess.EMPTY);
 
             assertEquals(0, after.size(), "a baseline whose meaning may have changed is dropped");
             assertFalse(after.observeIncrease("12|spirit", 4),

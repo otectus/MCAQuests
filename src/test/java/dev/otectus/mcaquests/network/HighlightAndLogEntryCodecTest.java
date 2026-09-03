@@ -1,9 +1,9 @@
 package dev.otectus.mcaquests.network;
 
+import dev.otectus.mcaquests.support.TestRegistries;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import dev.otectus.mcaquests.support.TestBootstrap;
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Wire round-trips for the two pieces of the per-player highlight that cross the network, over a real
- * {@link FriendlyByteBuf} — no Minecraft server needed. Both are new in protocol 9.
+ * {@link RegistryFriendlyByteBuf} — no Minecraft server needed. Both are new in protocol 9.
  */
 class HighlightAndLogEntryCodecTest {
 
@@ -30,8 +30,8 @@ class HighlightAndLogEntryCodecTest {
         TestBootstrap.ensureBootstrapped();
     }
 
-    private static FriendlyByteBuf buffer() {
-        return new FriendlyByteBuf(Unpooled.buffer());
+    private static RegistryFriendlyByteBuf buffer() {
+        return TestRegistries.buffer();
     }
 
     @Nested
@@ -43,8 +43,8 @@ class HighlightAndLogEntryCodecTest {
         void roundTrips() {
             HighlightTargetsS2CPacket original = new HighlightTargetsS2CPacket(new int[]{7, 42, 1337});
 
-            FriendlyByteBuf buf = buffer();
-            HighlightTargetsS2CPacket.encode(original, buf);
+            RegistryFriendlyByteBuf buf = buffer();
+            original.encode(buf);
             HighlightTargetsS2CPacket decoded = HighlightTargetsS2CPacket.decode(buf);
 
             assertArrayEquals(original.entityIds(), decoded.entityIds());
@@ -54,8 +54,8 @@ class HighlightAndLogEntryCodecTest {
         @Test
         @DisplayName("an empty set round-trips, because that is how a highlight is cleared")
         void emptyRoundTrips() {
-            FriendlyByteBuf buf = buffer();
-            HighlightTargetsS2CPacket.encode(new HighlightTargetsS2CPacket(new int[0]), buf);
+            RegistryFriendlyByteBuf buf = buffer();
+            new HighlightTargetsS2CPacket(new int[0]).encode(buf);
 
             assertEquals(0, HighlightTargetsS2CPacket.decode(buf).entityIds().length,
                     "clearing the highlight sends an empty set, so it must survive the wire");
@@ -67,8 +67,8 @@ class HighlightAndLogEntryCodecTest {
         void largeIds() {
             int[] ids = {Integer.MAX_VALUE, 0, 1};
 
-            FriendlyByteBuf buf = buffer();
-            HighlightTargetsS2CPacket.encode(new HighlightTargetsS2CPacket(ids), buf);
+            RegistryFriendlyByteBuf buf = buffer();
+            new HighlightTargetsS2CPacket(ids).encode(buf);
 
             assertArrayEquals(ids, HighlightTargetsS2CPacket.decode(buf).entityIds(),
                     "entity network ids are ordinary ints and can grow large in a long-lived world");
@@ -89,14 +89,14 @@ class HighlightAndLogEntryCodecTest {
          * answers to one question is how they drift apart, so there is now one.
          */
         private QuestLogEntry entry(List<CardObjective> objectives, boolean tracked) {
-            return new QuestLogEntry(new ResourceLocation("mcaquests", "test_quest"),
+            return new QuestLogEntry(ResourceLocation.fromNamespaceAndPath("mcaquests", "test_quest"),
                     UUID.randomUUID(), Component.literal("A Title"), Component.literal("Anna"),
                     Component.empty(), objectives, false, false, tracked, OptionalLong.empty(),
                     List.of());
         }
 
         private QuestLogEntry roundTrip(QuestLogEntry entry) {
-            FriendlyByteBuf buf = buffer();
+            RegistryFriendlyByteBuf buf = buffer();
             QuestLogEntry.encode(buf, entry);
             QuestLogEntry decoded = QuestLogEntry.decode(buf);
             assertEquals(0, buf.readableBytes(), "decode must consume exactly what encode wrote");

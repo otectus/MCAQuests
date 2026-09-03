@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class FtbqReferenceWalkerTest {
 
-    private static final ResourceLocation QUEST_ID = new ResourceLocation("mcaquests", "archivist_bonus");
+    private static final ResourceLocation QUEST_ID = ResourceLocation.fromNamespaceAndPath("mcaquests", "archivist_bonus");
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -76,7 +76,7 @@ class FtbqReferenceWalkerTest {
 
     @Test
     void nonFtbqConditionsAreIgnored() {
-        QuestCondition other = new QuestCompletedCondition(new ResourceLocation("mcaquests", "other"), HistoryScope.GLOBAL);
+        QuestCondition other = new QuestCompletedCondition(ResourceLocation.fromNamespaceAndPath("mcaquests", "other"), HistoryScope.GLOBAL);
         QuestDefinition def = definitionWith(Optional.of(other), List.of(), List.of());
         assertTrue(FtbqReferenceWalker.collect(def).isEmpty());
     }

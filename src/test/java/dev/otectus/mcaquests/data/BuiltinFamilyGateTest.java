@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.data;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
@@ -46,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class BuiltinFamilyGateTest {
 
-    private static final Path DATA = Path.of("src/main/resources/data/mcaquests/mcaquests");
+    private static final Path DATA = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
 
     static {
         TestBootstrap.ensureBootstrapped();

@@ -6,7 +6,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.quest.QuestText;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.contents.LiteralContents;
+import net.minecraft.network.chat.contents.PlainTextContents;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import org.junit.jupiter.api.Test;
 
@@ -98,8 +98,8 @@ class FtbqCompleteQuestObjectiveTest {
         assertEquals(1, contents.getArgs().length);
         Object arg = contents.getArgs()[0];
         assertTrue(arg instanceof Component, "display_name arg must be a Component");
-        assertTrue(((Component) arg).getContents() instanceof LiteralContents);
-        assertEquals("the Ancient Tome chapter", ((LiteralContents) ((Component) arg).getContents()).text());
+        assertTrue(((Component) arg).getContents() instanceof PlainTextContents.LiteralContents);
+        assertEquals("the Ancient Tome chapter", ((PlainTextContents.LiteralContents) ((Component) arg).getContents()).text());
     }
 
     @Test
@@ -113,8 +113,8 @@ class FtbqCompleteQuestObjectiveTest {
         assertEquals(1, contents.getArgs().length);
         Object arg = contents.getArgs()[0];
         assertTrue(arg instanceof Component, "fallback arg must be a Component");
-        assertTrue(((Component) arg).getContents() instanceof LiteralContents);
-        String fallbackText = ((LiteralContents) ((Component) arg).getContents()).text();
+        assertTrue(((Component) arg).getContents() instanceof PlainTextContents.LiteralContents);
+        String fallbackText = ((PlainTextContents.LiteralContents) ((Component) arg).getContents()).text();
         assertTrue(fallbackText.contains(HEX), "fallback line must name the hex id");
         assertTrue(fallbackText.toLowerCase().contains("linked ftb quest"), "fallback line must say what it is");
     }

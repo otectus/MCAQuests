@@ -23,9 +23,9 @@ class MarkerVisualStateTest {
 
     private static final UUID GIVER = UUID.nameUUIDFromBytes("giver".getBytes());
     private static final MarkerVisualState.Key BED = new MarkerVisualState.Key(
-            new ResourceLocation("mcaquests", "bed"), GIVER, 7);
+            ResourceLocation.fromNamespaceAndPath("mcaquests", "bed"), GIVER, 7);
     private static final MarkerVisualState.Key FORGE = new MarkerVisualState.Key(
-            new ResourceLocation("mcaquests", "forge"), GIVER, 9);
+            ResourceLocation.fromNamespaceAndPath("mcaquests", "forge"), GIVER, 9);
 
     @Nested
     @DisplayName("acquiring")

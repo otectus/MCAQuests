@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ObjectiveValidatorTest {
 
-    private static final ResourceLocation ID = new ResourceLocation("testpack", "gather_and_deliver");
+    private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("testpack", "gather_and_deliver");
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -128,7 +128,7 @@ class ObjectiveValidatorTest {
     void specifiedProfessionWithAProfession() {
         Map<ResourceLocation, QuestDefinition> quests = loaded(quest(List.of(obtain(Items.WHEAT)),
                 new TurnInSpec(TurnInMode.SPECIFIED_PROFESSION,
-                        List.of(new ResourceLocation("minecraft", "farmer")))));
+                        List.of(ResourceLocation.withDefaultNamespace("farmer")))));
 
         assertTrue(validate(quests).isEmpty());
         assertFalse(quests.isEmpty());

@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.state;
 
+import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
@@ -34,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 class ActiveQuestReconcileTest {
 
-    private static final Path DEEPER = Path.of(
+    private static final Path DEEPER = TestPaths.of(
             "src/main/resources/data/mcaquests/mcaquests/quests/chains/lost_child/2_deeper.json");
 
     static {
@@ -45,11 +46,11 @@ class ActiveQuestReconcileTest {
     @DisplayName("progress pads to a higher index and the extra entry round-trips")
     void progressPadsAndPersists() {
         ActiveQuest quest = ActiveQuest.create(
-                new ResourceLocation("mcaquests", "test_quest"),
+                ResourceLocation.fromNamespaceAndPath("mcaquests", "test_quest"),
                 UUID.randomUUID(),
                 Component.literal("Anna"),
-                new ResourceLocation("minecraft", "farmer"),
-                new ResourceLocation("minecraft", "overworld"),
+                ResourceLocation.withDefaultNamespace("farmer"),
+                ResourceLocation.withDefaultNamespace("overworld"),
                 0L,
                 1,
                 null);
@@ -80,8 +81,8 @@ class ActiveQuestReconcileTest {
                 def.id(),
                 UUID.randomUUID(),
                 Component.literal("Anna"),
-                new ResourceLocation("minecraft", "farmer"),
-                new ResourceLocation("minecraft", "overworld"),
+                ResourceLocation.withDefaultNamespace("farmer"),
+                ResourceLocation.withDefaultNamespace("overworld"),
                 0L,
                 progress,
                 null,
@@ -105,6 +106,6 @@ class ActiveQuestReconcileTest {
         DataResult<QuestDefinition> result =
                 QuestDefinition.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(raw));
         return result.result().orElseThrow(() -> new AssertionError(
-                file + " did not parse: " + result.error().map(DataResult.PartialResult::message).orElse("?")));
+                file + " did not parse: " + result.error().map(DataResult.Error::message).orElse("?")));
     }
 }

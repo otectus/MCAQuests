@@ -58,11 +58,11 @@ class SituationOfferEligibilityTest {
 
     @Test
     void professionListGatesNonGenericGivers() {
-        GiverSpec cleric = new GiverSpec(List.of(new ResourceLocation("minecraft:cleric")), false,
+        GiverSpec cleric = new GiverSpec(List.of(ResourceLocation.parse("minecraft:cleric")), false,
                 Integer.MIN_VALUE, Integer.MAX_VALUE);
-        assertTrue(DynamicOfferSource.giverEligible(cleric, new ResourceLocation("minecraft:cleric"),
+        assertTrue(DynamicOfferSource.giverEligible(cleric, ResourceLocation.parse("minecraft:cleric"),
                 true, 0, ProfessionMatchingMode.NORMALIZED));
-        assertFalse(DynamicOfferSource.giverEligible(cleric, new ResourceLocation("minecraft:farmer"),
+        assertFalse(DynamicOfferSource.giverEligible(cleric, ResourceLocation.parse("minecraft:farmer"),
                 true, 0, ProfessionMatchingMode.NORMALIZED));
         assertFalse(DynamicOfferSource.giverEligible(cleric, null, true, 0, ProfessionMatchingMode.NORMALIZED));
     }
