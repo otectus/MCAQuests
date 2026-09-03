@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project.state;
 
 import dev.otectus.mcaquests.McaQuests;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -27,6 +28,10 @@ public final class ProjectSavedData extends SavedData {
 
     public static final String DATA_NAME = "mcaquests_projects";
 
+    /** DataFixTypes is null: no vanilla data fixer applies to this mod's own store. */
+    public static final SavedData.Factory<ProjectSavedData> FACTORY =
+            new SavedData.Factory<>(ProjectSavedData::new, ProjectSavedData::load, null);
+
     private final Map<String, ProjectState> instances = new LinkedHashMap<>();
     private final Map<String, Integer> reputation = new LinkedHashMap<>();
     private final Map<String, String> tierHighWater = new LinkedHashMap<>();
@@ -39,7 +44,7 @@ public final class ProjectSavedData extends SavedData {
 
     public static ProjectSavedData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(ProjectSavedData::load, ProjectSavedData::new, DATA_NAME);
+        return overworld.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
     // --- instances ---
@@ -163,7 +168,7 @@ public final class ProjectSavedData extends SavedData {
     // --- persistence ---
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag instanceList = new ListTag();
         for (ProjectState state : instances.values()) {
             instanceList.add(state.save());
@@ -195,7 +200,7 @@ public final class ProjectSavedData extends SavedData {
         return tag;
     }
 
-    public static ProjectSavedData load(CompoundTag tag) {
+    public static ProjectSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         ProjectSavedData data = new ProjectSavedData();
         ListTag instanceList = tag.getList("instances", Tag.TAG_COMPOUND);
         for (int i = 0; i < instanceList.size(); i++) {

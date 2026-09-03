@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.state;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -35,6 +36,10 @@ public final class DeadGiversData extends SavedData {
 
     public static final String DATA_NAME = "mcaquests_dead_givers";
 
+    /** DataFixTypes is null: no vanilla data fixer applies to this mod's own store. */
+    public static final SavedData.Factory<DeadGiversData> FACTORY =
+            new SavedData.Factory<>(DeadGiversData::new, DeadGiversData::load, null);
+
     /** How long a death stays on the books: long enough for a returning player, short enough to bound. */
     public static final long RETENTION_TICKS = 20L * 24000L;
 
@@ -49,7 +54,7 @@ public final class DeadGiversData extends SavedData {
 
     public static DeadGiversData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(DeadGiversData::load, DeadGiversData::new, DATA_NAME);
+        return overworld.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
     /** Records that {@code giver} died at {@code gameTime}, and drops anything older than the retention. */
@@ -73,7 +78,7 @@ public final class DeadGiversData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag entries = new ListTag();
         deaths.forEach((giver, when) -> {
             CompoundTag entry = new CompoundTag();
@@ -85,7 +90,7 @@ public final class DeadGiversData extends SavedData {
         return tag;
     }
 
-    public static DeadGiversData load(CompoundTag tag) {
+    public static DeadGiversData load(CompoundTag tag, HolderLookup.Provider registries) {
         DeadGiversData data = new DeadGiversData();
         ListTag entries = tag.getList(KEY_ENTRIES, Tag.TAG_COMPOUND);
         for (int i = 0; i < entries.size(); i++) {

@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.network;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -21,26 +21,26 @@ public record JournalVillageEntry(ResourceLocation dimension, int villageId, Com
                                   int reputation, Component currentTier,
                                   Component nextTier, int nextThreshold, List<Component> titles) {
 
-    public static void encode(FriendlyByteBuf buf, JournalVillageEntry entry) {
+    public static void encode(RegistryFriendlyByteBuf buf, JournalVillageEntry entry) {
         buf.writeResourceLocation(entry.dimension);
         buf.writeVarInt(entry.villageId);
-        buf.writeComponent(entry.villageName);
+        NetComponents.write(buf, entry.villageName);
         buf.writeVarInt(entry.reputation);
-        buf.writeComponent(entry.currentTier);
-        buf.writeComponent(entry.nextTier);
+        NetComponents.write(buf, entry.currentTier);
+        NetComponents.write(buf, entry.nextTier);
         buf.writeVarInt(entry.nextThreshold);
-        buf.writeCollection(entry.titles, FriendlyByteBuf::writeComponent);
+        buf.writeCollection(entry.titles, NetComponents::write);
     }
 
-    public static JournalVillageEntry decode(FriendlyByteBuf buf) {
+    public static JournalVillageEntry decode(RegistryFriendlyByteBuf buf) {
         ResourceLocation dimension = buf.readResourceLocation();
         int villageId = buf.readVarInt();
-        Component name = buf.readComponent();
+        Component name = NetComponents.read(buf);
         int reputation = buf.readVarInt();
-        Component current = buf.readComponent();
-        Component next = buf.readComponent();
+        Component current = NetComponents.read(buf);
+        Component next = NetComponents.read(buf);
         int nextThreshold = buf.readVarInt();
-        List<Component> titles = buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent);
+        List<Component> titles = buf.readCollection(ArrayList::new, NetComponents::read);
         return new JournalVillageEntry(dimension, villageId, name, reputation, current, next,
                 nextThreshold, titles);
     }

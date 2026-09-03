@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.guidance;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,13 +85,14 @@ public record GuidanceSnapshot(List<ActiveGuidance> all, int primary) {
         return all.isEmpty();
     }
 
-    public static void encode(FriendlyByteBuf buf, GuidanceSnapshot snapshot) {
-        buf.writeCollection(snapshot.all, ActiveGuidance::encode);
+    public static void encode(RegistryFriendlyByteBuf buf, GuidanceSnapshot snapshot) {
+        buf.writeCollection(snapshot.all, (b, v) -> ActiveGuidance.encode((RegistryFriendlyByteBuf) b, v));
         buf.writeVarInt(snapshot.primary + 1); // +1 so "none" is 0 rather than a 5-byte negative
     }
 
-    public static GuidanceSnapshot decode(FriendlyByteBuf buf) {
-        List<ActiveGuidance> all = buf.readCollection(ArrayList::new, ActiveGuidance::decode);
+    public static GuidanceSnapshot decode(RegistryFriendlyByteBuf buf) {
+        List<ActiveGuidance> all = buf.readCollection(ArrayList::new,
+                b -> ActiveGuidance.decode((RegistryFriendlyByteBuf) b));
         return new GuidanceSnapshot(all, buf.readVarInt() - 1);
     }
 }

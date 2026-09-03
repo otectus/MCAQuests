@@ -9,7 +9,6 @@ import dev.otectus.mcaquests.network.QuestAbandonC2SPacket;
 import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestDecisionC2SPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestTurnInC2SPacket;
 import dev.otectus.mcaquests.quest.QuestMenuStatus;
 import net.minecraft.ChatFormatting;
@@ -23,6 +22,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -238,17 +238,17 @@ public class QuestMenuScreen extends McaQuestsScreen {
         switch (data.status()) {
             case OFFER -> addRow(buttonY,
                     button("mcaquests.button.accept", "mcaquests.tooltip.accept",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, true))),
+                            () -> PacketDistributor.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, true))),
                     button("mcaquests.button.decline", "mcaquests.tooltip.decline",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, false))));
+                            () -> PacketDistributor.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, false))));
             case READY -> addRow(buttonY,
                     button("mcaquests.button.complete", "mcaquests.tooltip.complete",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestTurnInC2SPacket(data.villagerUuid(), questId))),
+                            () -> PacketDistributor.sendToServer(new QuestTurnInC2SPacket(data.villagerUuid(), questId))),
                     button("mcaquests.button.abandon", "mcaquests.tooltip.abandon",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
+                            () -> PacketDistributor.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
             case IN_PROGRESS -> addRow(buttonY,
                     button("mcaquests.button.abandon", "mcaquests.tooltip.abandon",
-                            () -> QuestNetwork.CHANNEL.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
+                            () -> PacketDistributor.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
             default -> {
             }
         }

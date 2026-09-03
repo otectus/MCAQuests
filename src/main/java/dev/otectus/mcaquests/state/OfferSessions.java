@@ -52,6 +52,11 @@ public final class OfferSessions {
         return byVillager.size();
     }
 
+    /** True when no villager has drawn an offer set for this player — see {@link PlayerQuestData#isEmpty()}. */
+    public boolean isEmpty() {
+        return byVillager.isEmpty();
+    }
+
     /** Every remembered set, for the debug command. */
     public Map<UUID, OfferSession> view() {
         return Map.copyOf(byVillager);

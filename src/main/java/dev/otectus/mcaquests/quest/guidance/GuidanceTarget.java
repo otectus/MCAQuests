@@ -1,7 +1,8 @@
 package dev.otectus.mcaquests.quest.guidance;
 
+import dev.otectus.mcaquests.network.NetComponents;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -94,19 +95,19 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
                 true, entityHeight);
     }
 
-    public static void encode(FriendlyByteBuf buf, GuidanceTarget target) {
+    public static void encode(RegistryFriendlyByteBuf buf, GuidanceTarget target) {
         buf.writeVarInt(target.kind.ordinal());
         buf.writeVarInt(target.entityId.orElse(-1));
         buf.writeBlockPos(target.pos); // one long: VarInt is unsigned-biased, so negatives cost 5B
         buf.writeResourceLocation(target.dimension.location());
-        buf.writeComponent(target.label);
+        NetComponents.write(buf, target.label);
         buf.writeVarInt(target.arriveRadius);
         buf.writeBoolean(target.approximate);
         buf.writeBoolean(target.lastKnown);
         buf.writeFloat(target.entityHeight);
     }
 
-    public static GuidanceTarget decode(FriendlyByteBuf buf) {
+    public static GuidanceTarget decode(RegistryFriendlyByteBuf buf) {
         GuidanceKind kind = GuidanceKind.byOrdinal(buf.readVarInt());
         int id = buf.readVarInt();
         return new GuidanceTarget(kind,
@@ -114,7 +115,7 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
                 buf.readBlockPos(),
                 ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION,
                         buf.readResourceLocation()),
-                buf.readComponent(),
+                NetComponents.read(buf),
                 buf.readVarInt(),
                 buf.readBoolean(),
                 buf.readBoolean(),

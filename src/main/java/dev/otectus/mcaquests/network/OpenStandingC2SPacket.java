@@ -3,12 +3,12 @@ package dev.otectus.mcaquests.network;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.ReputationBridge;
 import dev.otectus.mcaquests.state.QuestCapabilities;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
  * Client to server: the journal's View Deeds link (§29.7) — "open the standing screen for this
@@ -16,33 +16,39 @@ import java.util.function.Supplier;
  * and that this player actually knows the named village before pushing anything, so a forged packet
  * can at worst open the player's own standing somewhere they legitimately stand.
  */
-public record OpenStandingC2SPacket(ResourceLocation dimension, int villageId) {
+public record OpenStandingC2SPacket(ResourceLocation dimension, int villageId) implements CustomPacketPayload {
 
-    public static void encode(OpenStandingC2SPacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.dimension);
-        buf.writeVarInt(msg.villageId);
+    public static final Type<OpenStandingC2SPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "open_standing"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, OpenStandingC2SPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(OpenStandingC2SPacket::encode, OpenStandingC2SPacket::decode);
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public static OpenStandingC2SPacket decode(FriendlyByteBuf buf) {
+    public void encode(RegistryFriendlyByteBuf buf) {
+        buf.writeResourceLocation(this.dimension);
+        buf.writeVarInt(this.villageId);
+    }
+
+    public static OpenStandingC2SPacket decode(RegistryFriendlyByteBuf buf) {
         return new OpenStandingC2SPacket(buf.readResourceLocation(), buf.readVarInt());
     }
 
-    public static void handle(OpenStandingC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
-            if (player == null || !ReputationBridge.isCanonical()) {
-                return;
-            }
-            if (!knowsVillage(player, msg.dimension, msg.villageId)) {
-                McaQuests.LOGGER.debug("[MCA: Quests] {} asked to view deeds for {}|{} without any "
-                                + "standing there; ignoring", player.getGameProfile().getName(),
-                        msg.dimension, msg.villageId);
-                return;
-            }
-            ReputationBridge.backend().openStandingScreen(player, msg.dimension, msg.villageId);
-        });
-        context.setPacketHandled(true);
+    public static void handle(OpenStandingC2SPacket msg, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player) || !ReputationBridge.isCanonical()) {
+            return;
+        }
+        if (!knowsVillage(player, msg.dimension, msg.villageId)) {
+            McaQuests.LOGGER.debug("[MCA: Quests] {} asked to view deeds for {}|{} without any "
+                            + "standing there; ignoring", player.getGameProfile().getName(),
+                    msg.dimension, msg.villageId);
+            return;
+        }
+        ReputationBridge.backend().openStandingScreen(player, msg.dimension, msg.villageId);
     }
 
     /** The same membership rule the journal itself lists villages by: standing or a held title. */

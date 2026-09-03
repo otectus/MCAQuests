@@ -1,16 +1,14 @@
 package dev.otectus.mcaquests.network;
 
 import dev.otectus.mcaquests.McaQuests;
-import dev.otectus.mcaquests.client.ClientKnownIds;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * Server to client: a snapshot of every id the FTB Quests editor's {@code mcaquests} condition/
@@ -57,7 +55,19 @@ import java.util.function.Supplier;
  */
 public record FtbqEditorIdsS2CPacket(List<String> questIds, List<String> chainEntries, List<String> ladderIds,
                                      List<String> ladderTierEntries, List<String> titleIds,
-                                     List<String> projectIds, List<String> situationIds) {
+                                     List<String> projectIds, List<String> situationIds)
+        implements CustomPacketPayload {
+
+    public static final Type<FtbqEditorIdsS2CPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "ftbq_editor_ids"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, FtbqEditorIdsS2CPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(FtbqEditorIdsS2CPacket::encode, FtbqEditorIdsS2CPacket::decode);
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     /** Soft byte budget for the combined payload (spec §20: "~64 KB truncation guard with WARN"). */
     public static final int BYTE_BUDGET = 64 * 1024;
@@ -121,33 +131,26 @@ public record FtbqEditorIdsS2CPacket(List<String> questIds, List<String> chainEn
         }
     }
 
-    public static void encode(FtbqEditorIdsS2CPacket msg, FriendlyByteBuf buf) {
-        writeList(buf, msg.questIds);
-        writeList(buf, msg.chainEntries);
-        writeList(buf, msg.ladderIds);
-        writeList(buf, msg.ladderTierEntries);
-        writeList(buf, msg.titleIds);
-        writeList(buf, msg.projectIds);
-        writeList(buf, msg.situationIds);
+    public void encode(RegistryFriendlyByteBuf buf) {
+        writeList(buf, this.questIds);
+        writeList(buf, this.chainEntries);
+        writeList(buf, this.ladderIds);
+        writeList(buf, this.ladderTierEntries);
+        writeList(buf, this.titleIds);
+        writeList(buf, this.projectIds);
+        writeList(buf, this.situationIds);
     }
 
-    public static FtbqEditorIdsS2CPacket decode(FriendlyByteBuf buf) {
+    public static FtbqEditorIdsS2CPacket decode(RegistryFriendlyByteBuf buf) {
         return new FtbqEditorIdsS2CPacket(readList(buf), readList(buf), readList(buf), readList(buf),
                 readList(buf), readList(buf), readList(buf));
     }
 
-    private static void writeList(FriendlyByteBuf buf, List<String> list) {
+    private static void writeList(RegistryFriendlyByteBuf buf, List<String> list) {
         buf.writeCollection(list, (b, s) -> b.writeUtf(s, Short.MAX_VALUE));
     }
 
-    private static List<String> readList(FriendlyByteBuf buf) {
+    private static List<String> readList(RegistryFriendlyByteBuf buf) {
         return buf.readCollection(ArrayList::new, b -> b.readUtf(Short.MAX_VALUE));
-    }
-
-    public static void handle(FtbqEditorIdsS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientKnownIds.update(msg)));
-        context.setPacketHandled(true);
     }
 }

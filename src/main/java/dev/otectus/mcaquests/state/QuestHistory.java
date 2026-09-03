@@ -51,6 +51,16 @@ public final class QuestHistory {
      */
     private final Map<String, String> periodTokens = new HashMap<>();
 
+    /** True when nothing has ever been recorded here — see {@link PlayerQuestData#isEmpty()}. */
+    public boolean isEmpty() {
+        return cooldownUntil.isEmpty()
+                && completions.isEmpty()
+                && outcomes.isEmpty()
+                && completionsByGiver.isEmpty()
+                && outcomesByGiver.isEmpty()
+                && periodTokens.isEmpty();
+    }
+
     private static String key(ResourceLocation quest, UUID villager) {
         return quest + "|" + villager;
     }

@@ -259,7 +259,7 @@ public final class GuidanceService {
             return;
         }
         remember(player.getUUID(), snapshot);
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        PacketDistributor.sendToPlayer(player,
                 new QuestGuidanceS2CPacket(snapshot));
     }
 

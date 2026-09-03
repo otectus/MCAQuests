@@ -255,7 +255,7 @@ public final class ProjectManager {
                 cards.add(buildCard(player, villager, def, state, scope));
             });
         }
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        PacketDistributor.sendToPlayer(player,
                 new ProjectMenuDataS2CPacket(villager.getUUID(), cards));
     }
 
@@ -473,7 +473,7 @@ public final class ProjectManager {
         for (UUID uuid : state.participants()) {
             ServerPlayer p = server.getPlayerList().getPlayer(uuid);
             if (p != null) {
-                QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> p),
+                PacketDistributor.sendToPlayer(p,
                         new ProjectPhaseToastS2CPacket(title, phaseLabel));
                 syncProjects(p);
             }
@@ -786,7 +786,7 @@ public final class ProjectManager {
                     scopeLabel(def), phaseLabel(def, state.currentPhase()),
                     objectiveLines(player, def, state, state.currentPhase()))));
         }
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProjectLogSyncS2CPacket(entries));
+        PacketDistributor.sendToPlayer(player, new ProjectLogSyncS2CPacket(entries));
     }
 
     private static Component sponsorLogLabel(ServerPlayer player, ProjectState state) {

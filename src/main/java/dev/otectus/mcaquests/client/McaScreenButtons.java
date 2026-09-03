@@ -4,7 +4,6 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.mixin.ScreenAccessor;
 import dev.otectus.mcaquests.network.OpenQuestMenuC2SPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -15,6 +14,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
@@ -148,7 +148,7 @@ public final class McaScreenButtons {
 
         Button quests = Button.builder(
                         Component.translatable(QUESTS_BUTTON),
-                        b -> QuestNetwork.CHANNEL.sendToServer(new OpenQuestMenuC2SPacket(villagerUuid)))
+                        b -> PacketDistributor.sendToServer(new OpenQuestMenuC2SPacket(villagerUuid)))
                 .bounds(x, y, width, height)
                 .build();
         ScreenAccessor lists = (ScreenAccessor) screen;

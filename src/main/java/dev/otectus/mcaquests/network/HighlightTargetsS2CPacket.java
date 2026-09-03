@@ -1,12 +1,10 @@
 package dev.otectus.mcaquests.network;
 
-import dev.otectus.mcaquests.client.QuestClientHandlers;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
+import dev.otectus.mcaquests.McaQuests;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Server to client: the complete set of entity ids this player's active quests want highlighted.
@@ -19,20 +17,24 @@ import java.util.function.Supplier;
  * set actually changes, and a full set means a dropped or reordered update can never leave a villager
  * glowing forever.
  */
-public record HighlightTargetsS2CPacket(int[] entityIds) {
+public record HighlightTargetsS2CPacket(int[] entityIds) implements CustomPacketPayload {
 
-    public static void encode(HighlightTargetsS2CPacket msg, FriendlyByteBuf buf) {
-        buf.writeVarIntArray(msg.entityIds);
+    public static final Type<HighlightTargetsS2CPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "highlight_targets"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, HighlightTargetsS2CPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(HighlightTargetsS2CPacket::encode, HighlightTargetsS2CPacket::decode);
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public static HighlightTargetsS2CPacket decode(FriendlyByteBuf buf) {
+    public void encode(RegistryFriendlyByteBuf buf) {
+        buf.writeVarIntArray(this.entityIds);
+    }
+
+    public static HighlightTargetsS2CPacket decode(RegistryFriendlyByteBuf buf) {
         return new HighlightTargetsS2CPacket(buf.readVarIntArray());
-    }
-
-    public static void handle(HighlightTargetsS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> QuestClientHandlers.setHighlights(msg.entityIds)));
-        context.setPacketHandled(true);
     }
 }

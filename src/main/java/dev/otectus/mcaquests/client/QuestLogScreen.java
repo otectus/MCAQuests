@@ -11,7 +11,6 @@ import dev.otectus.mcaquests.network.QuestAbandonFromLogC2SPacket;
 import dev.otectus.mcaquests.client.gui.IconButton;
 import dev.otectus.mcaquests.network.QuestTrackC2SPacket;
 import net.minecraft.client.gui.components.Tooltip;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import dev.otectus.mcaquests.client.map.ClientMapWaypointRegistry;
@@ -29,6 +28,7 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -168,7 +168,7 @@ public class QuestLogScreen extends McaQuestsScreen {
                     Component.translatable(tracked ? "mcaquests.button.untrack" : "mcaquests.button.track"),
                     tracked ? GuiTextures.ICON_DOT : GuiTextures.ICON_COMPASS,
                     IconButton.Look.BUTTON,
-                    b -> QuestNetwork.CHANNEL.sendToServer(tracked
+                    b -> PacketDistributor.sendToServer(tracked
                             ? QuestTrackC2SPacket.none()
                             : QuestTrackC2SPacket.of(entry.villagerUuid(), entry.questId())));
             track.setTooltip(Tooltip.create(Component.translatable(
@@ -285,7 +285,7 @@ public class QuestLogScreen extends McaQuestsScreen {
         // Abandoning destroys progress irreversibly, so make the player name the quest they mean.
         this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
             if (confirmed) {
-                QuestNetwork.CHANNEL.sendToServer(
+                PacketDistributor.sendToServer(
                         new QuestAbandonFromLogC2SPacket(entry.villagerUuid(), entry.questId()));
             }
             this.minecraft.setScreen(this);

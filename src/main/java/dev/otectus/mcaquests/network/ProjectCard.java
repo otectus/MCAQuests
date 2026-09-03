@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.network;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -22,28 +22,28 @@ public record ProjectCard(ResourceLocation projectId,
                           List<Component> rewards,
                           ProjectMenuStatus status) {
 
-    public static void encode(FriendlyByteBuf buf, ProjectCard card) {
+    public static void encode(RegistryFriendlyByteBuf buf, ProjectCard card) {
         buf.writeResourceLocation(card.projectId);
-        buf.writeComponent(card.title);
-        buf.writeComponent(card.scopeLabel);
-        buf.writeComponent(card.sponsorLabel);
-        buf.writeComponent(card.phaseLabel);
-        buf.writeComponent(card.dialogue);
-        buf.writeCollection(card.objectives, ProjectObjectiveLine::encode);
-        buf.writeCollection(card.rewards, FriendlyByteBuf::writeComponent);
+        NetComponents.write(buf, card.title);
+        NetComponents.write(buf, card.scopeLabel);
+        NetComponents.write(buf, card.sponsorLabel);
+        NetComponents.write(buf, card.phaseLabel);
+        NetComponents.write(buf, card.dialogue);
+        buf.writeCollection(card.objectives, (b, v) -> ProjectObjectiveLine.encode((RegistryFriendlyByteBuf) b, v));
+        buf.writeCollection(card.rewards, NetComponents::write);
         buf.writeEnum(card.status);
     }
 
-    public static ProjectCard decode(FriendlyByteBuf buf) {
+    public static ProjectCard decode(RegistryFriendlyByteBuf buf) {
         return new ProjectCard(
                 buf.readResourceLocation(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readCollection(ArrayList::new, ProjectObjectiveLine::decode),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                buf.readCollection(ArrayList::new, b -> ProjectObjectiveLine.decode((RegistryFriendlyByteBuf) b)),
+                buf.readCollection(ArrayList::new, NetComponents::read),
                 buf.readEnum(ProjectMenuStatus.class));
     }
 }

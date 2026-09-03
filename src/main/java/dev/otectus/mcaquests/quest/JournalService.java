@@ -68,7 +68,7 @@ public final class JournalService {
                 QuestRegistry.get(id).map(def -> def.title(resolver)).orElseGet(() -> Component.literal(id.toString()));
         List<JournalArchiveEntry> archive = buildArchive(data.history().completionsView(), titleResolver, ARCHIVE_CAP);
 
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        PacketDistributor.sendToPlayer(player,
                 new JournalSyncS2CPacket(globalTitles, villages, archive,
                         dev.otectus.mcaquests.compat.ReputationBridge.isCanonical()));
     }

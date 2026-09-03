@@ -1,7 +1,8 @@
 package dev.otectus.mcaquests.quest;
 
 import dev.otectus.mcaquests.network.CardObjective;
-import net.minecraft.network.FriendlyByteBuf;
+import dev.otectus.mcaquests.network.NetComponents;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -39,13 +40,13 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
                             boolean suspended, boolean tracked, OptionalLong deadlineGameTime,
                             List<Component> townsteadContext) {
 
-    public static void encode(FriendlyByteBuf buf, QuestLogEntry entry) {
+    public static void encode(RegistryFriendlyByteBuf buf, QuestLogEntry entry) {
         buf.writeResourceLocation(entry.questId);
         buf.writeUUID(entry.villagerUuid);
-        buf.writeComponent(entry.title);
-        buf.writeComponent(entry.giverName);
-        buf.writeComponent(entry.chainLabel);
-        buf.writeCollection(entry.objectives, CardObjective::encode);
+        NetComponents.write(buf, entry.title);
+        NetComponents.write(buf, entry.giverName);
+        NetComponents.write(buf, entry.chainLabel);
+        buf.writeCollection(entry.objectives, (b, v) -> CardObjective.encode((RegistryFriendlyByteBuf) b, v));
         buf.writeBoolean(entry.ready);
         buf.writeBoolean(entry.suspended);
         buf.writeBoolean(entry.tracked);
@@ -53,21 +54,21 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
         if (entry.deadlineGameTime.isPresent()) {
             buf.writeVarLong(entry.deadlineGameTime.getAsLong());
         }
-        buf.writeCollection(entry.townsteadContext, FriendlyByteBuf::writeComponent);
+        buf.writeCollection(entry.townsteadContext, NetComponents::write);
     }
 
-    public static QuestLogEntry decode(FriendlyByteBuf buf) {
+    public static QuestLogEntry decode(RegistryFriendlyByteBuf buf) {
         return new QuestLogEntry(
                 buf.readResourceLocation(),
                 buf.readUUID(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readCollection(ArrayList::new, CardObjective::decode),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                buf.readCollection(ArrayList::new, b -> CardObjective.decode((RegistryFriendlyByteBuf) b)),
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean() ? OptionalLong.of(buf.readVarLong()) : OptionalLong.empty(),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent));
+                buf.readCollection(ArrayList::new, NetComponents::read));
     }
 }

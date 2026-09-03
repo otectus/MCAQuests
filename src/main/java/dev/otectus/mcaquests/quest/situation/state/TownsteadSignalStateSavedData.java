@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.state;
 
 import dev.otectus.mcaquests.McaQuests;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
@@ -37,6 +38,10 @@ public final class TownsteadSignalStateSavedData extends SavedData {
 
     public static final String DATA_NAME = "mcaquests_townstead_signals";
 
+    /** DataFixTypes is null: no vanilla data fixer applies to this mod's own store. */
+    public static final SavedData.Factory<TownsteadSignalStateSavedData> FACTORY =
+            new SavedData.Factory<>(TownsteadSignalStateSavedData::new, TownsteadSignalStateSavedData::load, null);
+
     /** Bumped only when a stored reading changes meaning; see the class javadoc. */
     private static final int SCHEMA = 1;
 
@@ -67,8 +72,7 @@ public final class TownsteadSignalStateSavedData extends SavedData {
 
     public static TownsteadSignalStateSavedData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(
-                TownsteadSignalStateSavedData::load, TownsteadSignalStateSavedData::new, DATA_NAME);
+        return overworld.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
     /**
@@ -169,7 +173,7 @@ public final class TownsteadSignalStateSavedData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putInt(K_SCHEMA, SCHEMA);
         CompoundTag stored = new CompoundTag();
         readings.forEach(stored::putInt);
@@ -182,7 +186,7 @@ public final class TownsteadSignalStateSavedData extends SavedData {
         return tag;
     }
 
-    public static TownsteadSignalStateSavedData load(CompoundTag tag) {
+    public static TownsteadSignalStateSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         TownsteadSignalStateSavedData data = new TownsteadSignalStateSavedData();
         int schema = tag.contains(K_SCHEMA, Tag.TAG_INT) ? tag.getInt(K_SCHEMA) : 0;
         if (schema != SCHEMA) {

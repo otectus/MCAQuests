@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.network;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -9,14 +9,14 @@ import net.minecraft.network.chat.Component;
  */
 public record ProjectObjectiveLine(Component label, int sharedCurrent, int required, int yourContribution) {
 
-    public static void encode(FriendlyByteBuf buf, ProjectObjectiveLine line) {
-        buf.writeComponent(line.label);
+    public static void encode(RegistryFriendlyByteBuf buf, ProjectObjectiveLine line) {
+        NetComponents.write(buf, line.label);
         buf.writeVarInt(line.sharedCurrent);
         buf.writeVarInt(line.required);
         buf.writeVarInt(line.yourContribution);
     }
 
-    public static ProjectObjectiveLine decode(FriendlyByteBuf buf) {
-        return new ProjectObjectiveLine(buf.readComponent(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+    public static ProjectObjectiveLine decode(RegistryFriendlyByteBuf buf) {
+        return new ProjectObjectiveLine(NetComponents.read(buf), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
     }
 }

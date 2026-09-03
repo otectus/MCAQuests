@@ -8,11 +8,11 @@ import dev.otectus.mcaquests.client.gui.Panel;
 import dev.otectus.mcaquests.network.JournalArchiveEntry;
 import dev.otectus.mcaquests.network.JournalVillageEntry;
 import dev.otectus.mcaquests.network.OpenStandingC2SPacket;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.RequestJournalC2SPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -92,7 +92,7 @@ public class JournalScreen extends McaQuestsScreen {
     protected void init() {
         super.init();
         // Request a fresh server-authoritative snapshot each time the journal opens.
-        QuestNetwork.CHANNEL.sendToServer(new RequestJournalC2SPacket());
+        PacketDistributor.sendToServer(new RequestJournalC2SPacket());
         buildRows();
 
         addBookTabs(BookTab.JOURNAL);
@@ -193,7 +193,7 @@ public class JournalScreen extends McaQuestsScreen {
     private void openDeeds(JournalVillageEntry village) {
         // The server validates the address before opening anything (§29.7); Reputation's screen
         // arrives with this journal as its parent, so Back returns here.
-        QuestNetwork.CHANNEL.sendToServer(
+        PacketDistributor.sendToServer(
                 new OpenStandingC2SPacket(village.dimension(), village.villageId()));
     }
 

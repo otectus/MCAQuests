@@ -161,8 +161,7 @@ public final class LegacyReputationBackend implements ReputationBackend {
             reached.grantsTitle().ifPresent(title ->
                     grantTitle(server, award.player(), award.dimension(), award.villageId(), title, false));
             try {
-                dev.otectus.mcaquests.network.QuestNetwork.CHANNEL.send(
-                        net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                         new dev.otectus.mcaquests.network.ReputationTierToastS2CPacket(
                                 net.minecraft.network.chat.Component.literal(reached.name())));
             } catch (Throwable t) {

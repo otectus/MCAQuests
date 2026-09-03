@@ -1,31 +1,35 @@
 package dev.otectus.mcaquests.network;
 
-import dev.otectus.mcaquests.client.ClientProjectData;
+import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 /** Server to client: the player's participating community projects, for the quest log + HUD (spec 0.4.0). */
-public record ProjectLogSyncS2CPacket(List<ProjectLogEntry> entries) {
+public record ProjectLogSyncS2CPacket(List<ProjectLogEntry> entries) implements CustomPacketPayload {
 
-    public static void encode(ProjectLogSyncS2CPacket msg, FriendlyByteBuf buf) {
-        buf.writeCollection(msg.entries, ProjectLogEntry::encode);
+    public static final Type<ProjectLogSyncS2CPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "project_log_sync"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, ProjectLogSyncS2CPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(ProjectLogSyncS2CPacket::encode, ProjectLogSyncS2CPacket::decode);
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public static ProjectLogSyncS2CPacket decode(FriendlyByteBuf buf) {
-        return new ProjectLogSyncS2CPacket(buf.readCollection(ArrayList::new, ProjectLogEntry::decode));
+    public void encode(RegistryFriendlyByteBuf buf) {
+        buf.writeCollection(this.entries, (b, v) -> ProjectLogEntry.encode((RegistryFriendlyByteBuf) b, v));
     }
 
-    public static void handle(ProjectLogSyncS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientProjectData.updateProjects(msg.entries)));
-        context.setPacketHandled(true);
+    public static ProjectLogSyncS2CPacket decode(RegistryFriendlyByteBuf buf) {
+        return new ProjectLogSyncS2CPacket(buf.readCollection(ArrayList::new,
+                b -> ProjectLogEntry.decode((RegistryFriendlyByteBuf) b)));
     }
 }

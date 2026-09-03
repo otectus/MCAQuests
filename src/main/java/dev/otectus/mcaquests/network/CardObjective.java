@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.network;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -79,20 +79,20 @@ public record CardObjective(Component text, int current, int required, State sta
         return state == State.UNAVAILABLE || state == State.LOST;
     }
 
-    public static void encode(FriendlyByteBuf buf, CardObjective objective) {
-        buf.writeComponent(objective.text);
+    public static void encode(RegistryFriendlyByteBuf buf, CardObjective objective) {
+        NetComponents.write(buf, objective.text);
         buf.writeVarInt(objective.current);
         buf.writeVarInt(objective.required);
         buf.writeVarInt(objective.state.ordinal());
-        buf.writeItem(objective.icon);
+        ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, objective.icon);
     }
 
-    public static CardObjective decode(FriendlyByteBuf buf) {
+    public static CardObjective decode(RegistryFriendlyByteBuf buf) {
         return new CardObjective(
-                buf.readComponent(),
+                NetComponents.read(buf),
                 buf.readVarInt(),
                 buf.readVarInt(),
                 State.byOrdinal(buf.readVarInt()),
-                buf.readItem());
+                ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
     }
 }

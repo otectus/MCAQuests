@@ -224,7 +224,7 @@ public final class OfferSession {
                 entry.put("template", slot.frozenValues().save());
             }
             if (slot.voicedOffer() != null) {
-                entry.putString("voiced", Component.Serializer.toJson(slot.voicedOffer()));
+                entry.putString("voiced", NbtComponents.toJsonString(slot.voicedOffer()));
             }
             list.add(entry);
         }
@@ -261,7 +261,7 @@ public final class OfferSession {
             Component voiced = null;
             if (entry.contains("voiced")) {
                 try {
-                    voiced = Component.Serializer.fromJson(entry.getString("voiced"));
+                    voiced = NbtComponents.fromJsonString(entry.getString("voiced"));
                 } catch (RuntimeException ignored) {
                     voiced = null; // re-voice it live rather than lose the slot
                 }

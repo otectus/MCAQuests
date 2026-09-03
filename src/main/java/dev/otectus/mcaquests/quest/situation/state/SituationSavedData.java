@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.situation.state;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -30,6 +31,10 @@ public final class SituationSavedData extends SavedData {
 
     public static final String DATA_NAME = "mcaquests_situations";
 
+    /** DataFixTypes is null: no vanilla data fixer applies to this mod's own store. */
+    public static final SavedData.Factory<SituationSavedData> FACTORY =
+            new SavedData.Factory<>(SituationSavedData::new, SituationSavedData::load, null);
+
     private final Map<UUID, SituationInstance> instances = new LinkedHashMap<>();
     /** Key {@code "<villageId>|<defId>"} -> earliest game time the definition may re-open in the village. */
     private final Map<String, Long> cooldownUntil = new LinkedHashMap<>();
@@ -41,7 +46,7 @@ public final class SituationSavedData extends SavedData {
 
     public static SituationSavedData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(SituationSavedData::load, SituationSavedData::new, DATA_NAME);
+        return overworld.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
     // --- instances ---
@@ -126,7 +131,7 @@ public final class SituationSavedData extends SavedData {
     // --- persistence ---
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag instanceList = new ListTag();
         for (SituationInstance instance : instances.values()) {
             instanceList.add(instance.save());
@@ -143,7 +148,7 @@ public final class SituationSavedData extends SavedData {
         return tag;
     }
 
-    public static SituationSavedData load(CompoundTag tag) {
+    public static SituationSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         SituationSavedData data = new SituationSavedData();
         ListTag instanceList = tag.getList("instances", Tag.TAG_COMPOUND);
         for (int i = 0; i < instanceList.size(); i++) {

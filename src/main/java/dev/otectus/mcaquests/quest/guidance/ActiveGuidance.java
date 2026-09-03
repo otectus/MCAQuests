@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.guidance;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.UUID;
@@ -23,13 +23,13 @@ import java.util.UUID;
  */
 public record ActiveGuidance(ResourceLocation questId, UUID villagerUuid, GuidanceTarget target) {
 
-    public static void encode(FriendlyByteBuf buf, ActiveGuidance guidance) {
+    public static void encode(RegistryFriendlyByteBuf buf, ActiveGuidance guidance) {
         buf.writeResourceLocation(guidance.questId);
         buf.writeUUID(guidance.villagerUuid);
         GuidanceTarget.encode(buf, guidance.target);
     }
 
-    public static ActiveGuidance decode(FriendlyByteBuf buf) {
+    public static ActiveGuidance decode(RegistryFriendlyByteBuf buf) {
         return new ActiveGuidance(buf.readResourceLocation(), buf.readUUID(), GuidanceTarget.decode(buf));
     }
 

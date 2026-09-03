@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.state;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -39,6 +40,10 @@ public final class PendingHeartsData extends SavedData {
 
     public static final String DATA_NAME = "mcaquests_pending_hearts";
 
+    /** DataFixTypes is null: no vanilla data fixer applies to this mod's own store. */
+    public static final SavedData.Factory<PendingHeartsData> FACTORY =
+            new SavedData.Factory<>(PendingHeartsData::new, PendingHeartsData::load, null);
+
     private static final String KEY_ENTRIES = "entries";
     private static final String KEY_VILLAGER = "villager";
     private static final String KEY_OWED = "owed";
@@ -52,7 +57,7 @@ public final class PendingHeartsData extends SavedData {
 
     public static PendingHeartsData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(PendingHeartsData::load, PendingHeartsData::new, DATA_NAME);
+        return overworld.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
     /**
@@ -103,7 +108,7 @@ public final class PendingHeartsData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag entries = new ListTag();
         owed.forEach((villager, perPlayer) -> {
             CompoundTag entry = new CompoundTag();
@@ -122,7 +127,7 @@ public final class PendingHeartsData extends SavedData {
         return tag;
     }
 
-    public static PendingHeartsData load(CompoundTag tag) {
+    public static PendingHeartsData load(CompoundTag tag, HolderLookup.Provider registries) {
         PendingHeartsData data = new PendingHeartsData();
         ListTag entries = tag.getList(KEY_ENTRIES, Tag.TAG_COMPOUND);
         for (int i = 0; i < entries.size(); i++) {

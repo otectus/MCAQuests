@@ -112,7 +112,7 @@ public final class SituationManager {
             if (player.blockPosition().closerThan(center.get(), NOTIFY_RADIUS)) {
                 // Resolve per recipient so a {player} token in the situation title renders that player's MCA name.
                 Component title = def.offer().titleOr(fallback, PlaceholderResolver.forPlayer(player));
-                QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                PacketDistributor.sendToPlayer(player,
                         new SituationToastS2CPacket(title));
             }
         }

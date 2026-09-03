@@ -8,13 +8,13 @@ import dev.otectus.mcaquests.network.ProjectCard;
 import dev.otectus.mcaquests.network.ProjectContributeC2SPacket;
 import dev.otectus.mcaquests.network.ProjectMenuStatus;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -132,7 +132,7 @@ public class ProjectMenuScreen extends McaQuestsScreen {
     }
 
     private void contribute(ResourceLocation projectId) {
-        QuestNetwork.CHANNEL.sendToServer(new ProjectContributeC2SPacket(villagerUuid, projectId));
+        PacketDistributor.sendToServer(new ProjectContributeC2SPacket(villagerUuid, projectId));
     }
 
     /** Must agree exactly with {@link #renderCard}, or the Contribute buttons drift off their cards. */

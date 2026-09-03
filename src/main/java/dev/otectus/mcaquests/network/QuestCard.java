@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.network;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -34,26 +34,28 @@ public record QuestCard(ResourceLocation questId, Component title, Component cha
                         List<CardObjective> objectives, List<Component> rewards,
                         List<ItemStack> rewardIcons, String difficulty) {
 
-    public static void encode(FriendlyByteBuf buf, QuestCard card) {
+    public static void encode(RegistryFriendlyByteBuf buf, QuestCard card) {
         buf.writeResourceLocation(card.questId);
-        buf.writeComponent(card.title);
-        buf.writeComponent(card.chainLabel);
-        buf.writeComponent(card.dialogue);
-        buf.writeCollection(card.objectives, CardObjective::encode);
-        buf.writeCollection(card.rewards, FriendlyByteBuf::writeComponent);
-        buf.writeCollection(card.rewardIcons, FriendlyByteBuf::writeItem);
+        NetComponents.write(buf, card.title);
+        NetComponents.write(buf, card.chainLabel);
+        NetComponents.write(buf, card.dialogue);
+        buf.writeCollection(card.objectives, (b, v) -> CardObjective.encode((RegistryFriendlyByteBuf) b, v));
+        buf.writeCollection(card.rewards, NetComponents::write);
+        buf.writeCollection(card.rewardIcons,
+                (b, stack) -> ItemStack.OPTIONAL_STREAM_CODEC.encode((RegistryFriendlyByteBuf) b, stack));
         buf.writeUtf(card.difficulty);
     }
 
-    public static QuestCard decode(FriendlyByteBuf buf) {
+    public static QuestCard decode(RegistryFriendlyByteBuf buf) {
         return new QuestCard(
                 buf.readResourceLocation(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readComponent(),
-                buf.readCollection(ArrayList::new, CardObjective::decode),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readItem),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                NetComponents.read(buf),
+                buf.readCollection(ArrayList::new, b -> CardObjective.decode((RegistryFriendlyByteBuf) b)),
+                buf.readCollection(ArrayList::new, NetComponents::read),
+                buf.readCollection(ArrayList::new,
+                        b -> ItemStack.OPTIONAL_STREAM_CODEC.decode((RegistryFriendlyByteBuf) b)),
                 buf.readUtf());
     }
 }

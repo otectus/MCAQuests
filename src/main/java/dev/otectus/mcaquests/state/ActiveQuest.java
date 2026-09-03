@@ -404,7 +404,7 @@ public final class ActiveQuest {
         CompoundTag tag = new CompoundTag();
         tag.putString("quest", questId.toString());
         tag.putUUID("villager", villagerUuid);
-        tag.putString("villager_name", Component.Serializer.toJson(villagerName));
+        tag.putString("villager_name", NbtComponents.toJsonString(villagerName));
         if (villagerProfession != null) {
             tag.putString("profession", villagerProfession.toString());
         }
@@ -449,7 +449,7 @@ public final class ActiveQuest {
     }
 
     public static ActiveQuest load(CompoundTag tag) {
-        Component name = Component.Serializer.fromJson(tag.getString("villager_name"));
+        Component name = NbtComponents.fromJsonString(tag.getString("villager_name"));
         ResourceLocation profession = tag.contains("profession")
                 ? ResourceLocation.parse(tag.getString("profession")) : null;
         List<ObjectiveProgress> progress = new ArrayList<>();

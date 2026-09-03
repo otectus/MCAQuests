@@ -1,7 +1,6 @@
 package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.McaQuests;
-import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestTrackC2SPacket;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import net.minecraft.client.Minecraft;
@@ -10,6 +9,7 @@ import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 
@@ -60,7 +60,7 @@ public final class QuestClientInput {
             }
         }
         int next = current + 1;
-        QuestNetwork.CHANNEL.sendToServer(next >= entries.size()
+        PacketDistributor.sendToServer(next >= entries.size()
                 ? QuestTrackC2SPacket.none()
                 : QuestTrackC2SPacket.of(entries.get(next).villagerUuid(), entries.get(next).questId()));
     }

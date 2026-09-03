@@ -3,6 +3,7 @@
 build/
 run/
 run-data/
+run-server/
 out/
 src/generated/resources/.cache/
 

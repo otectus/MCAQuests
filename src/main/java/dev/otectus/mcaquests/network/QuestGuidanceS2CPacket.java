@@ -1,13 +1,11 @@
 package dev.otectus.mcaquests.network;
 
-import dev.otectus.mcaquests.client.QuestClientHandlers;
+import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.quest.guidance.GuidanceSnapshot;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Server to client: every place this player's quests are sending them, and which one carries the
@@ -31,20 +29,24 @@ import java.util.function.Supplier;
  * when an objective completes, a quest ends, or the feature is turned off. The server only sends when
  * the answer changes, so the steady state costs nothing.
  */
-public record QuestGuidanceS2CPacket(GuidanceSnapshot snapshot) {
+public record QuestGuidanceS2CPacket(GuidanceSnapshot snapshot) implements CustomPacketPayload {
 
-    public static void encode(QuestGuidanceS2CPacket msg, FriendlyByteBuf buf) {
-        GuidanceSnapshot.encode(buf, msg.snapshot);
+    public static final Type<QuestGuidanceS2CPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "quest_guidance"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, QuestGuidanceS2CPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(QuestGuidanceS2CPacket::encode, QuestGuidanceS2CPacket::decode);
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public static QuestGuidanceS2CPacket decode(FriendlyByteBuf buf) {
+    public void encode(RegistryFriendlyByteBuf buf) {
+        GuidanceSnapshot.encode(buf, this.snapshot);
+    }
+
+    public static QuestGuidanceS2CPacket decode(RegistryFriendlyByteBuf buf) {
         return new QuestGuidanceS2CPacket(GuidanceSnapshot.decode(buf));
-    }
-
-    public static void handle(QuestGuidanceS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> QuestClientHandlers.setGuidance(msg.snapshot)));
-        context.setPacketHandled(true);
     }
 }

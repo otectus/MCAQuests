@@ -1742,7 +1742,7 @@ public final class QuestManager {
 
 
     private static void send(ServerPlayer player, QuestMenuDataS2CPacket packet) {
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+        PacketDistributor.sendToPlayer(player, packet);
     }
 
     /**
@@ -1761,7 +1761,7 @@ public final class QuestManager {
                         TownsteadLifecycle.dispatch(player, active, resolveGiver(player, active),
                                 TownsteadLifecycle.Phase.READY);
                         // Resolve the MCA name only here (rare ready transition), not once per tick per player.
-                        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                        PacketDistributor.sendToPlayer(player,
                                 new QuestReadyToastS2CPacket(def.title(active.textResolver(player))));
                     } else if (!complete && active.readyNotified()) {
                         active.setReadyNotified(false);
@@ -1813,7 +1813,7 @@ public final class QuestManager {
                             data.isTracked(active), java.util.OptionalLong.empty(),
                             List.of())));
             }
-            QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
+            PacketDistributor.sendToPlayer(player, new QuestLogSyncS2CPacket(entries));
         });
     }
 

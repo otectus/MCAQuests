@@ -1,9 +1,11 @@
 package dev.otectus.mcaquests.state;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.common.util.INBTSerializable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,10 +14,10 @@ import java.util.UUID;
 
 /**
  * All of a player's MCA quest state — active quests, history, titles, progression stats and the offers
- * each villager is currently showing them — held in a Forge capability and serialised to the player's NBT
- * (spec section 16). Server-authoritative; never trust a client copy.
+ * each villager is currently showing them — held in a data attachment and serialised to the player's NBT
+ * (spec section 15). Server-authoritative; never trust a client copy.
  */
-public final class PlayerQuestData {
+public final class PlayerQuestData implements INBTSerializable<CompoundTag> {
 
     private final List<ActiveQuest> active = new ArrayList<>();
     private final QuestHistory history = new QuestHistory();
@@ -25,6 +27,9 @@ public final class PlayerQuestData {
 
     /** The quest the marker, the guidance line and the villager outline are all about. */
     private TrackedQuest tracked;
+
+    /** True once {@link ForgeCapsMigration} has pulled this player's 1.20.1 Forge capability data in. */
+    private boolean migratedFromForge;
 
     public List<ActiveQuest> active() {
         return active;
@@ -133,6 +138,33 @@ public final class PlayerQuestData {
         stats.copyFrom(other.stats);
         offers.copyFrom(other.offers);
         tracked = other.tracked;
+        migratedFromForge = other.migratedFromForge;
+    }
+
+    /**
+     * True when nothing has ever been recorded for this player.
+     *
+     * <p>The attachment is created on first read, so "has no data" is a question about the value, not
+     * about whether it exists. {@link ForgeCapsMigration} asks it to decide whether importing a legacy
+     * Forge blob could overwrite anything.
+     */
+    public boolean isEmpty() {
+        return active.isEmpty()
+                && history.isEmpty()
+                && titles.isEmpty()
+                && stats.isEmpty()
+                && offers.isEmpty()
+                && tracked == null;
+    }
+
+    /** True when this state came from a 1.20.1 Forge player file rather than being written natively. */
+    public boolean migratedFromForge() {
+        return migratedFromForge;
+    }
+
+    /** Records that the legacy import has run, so it never runs again for this player. */
+    public void markMigratedFromForge() {
+        this.migratedFromForge = true;
     }
 
     public CompoundTag save() {
@@ -166,5 +198,24 @@ public final class PlayerQuestData {
         offers.load(tag.getCompound("offers")); // absent on pre-1.4.3 saves -> empty, so offers redraw
         // Absent on pre-1.5.0 saves -> nothing tracked, and the next quest accepted picks itself up.
         tracked = TrackedQuest.load(tag.getCompound("tracked")).orElse(null);
+    }
+
+    /**
+     * PORT: the attachment serialiser, wrapping the unchanged {@link #save()} so the 1.20.1 payload is
+     * written byte-for-byte and only the migration marker is added around it. {@code provider} is
+     * unused — nothing here stores registry-bound data; see {@link NbtComponents} for the one place a
+     * 1.21 API wanted a lookup.
+     */
+    @Override
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+        CompoundTag tag = save();
+        tag.putBoolean("migrated_from_forge", migratedFromForge);
+        return tag;
+    }
+
+    @Override
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag tag) {
+        load(tag);
+        migratedFromForge = tag.getBoolean("migrated_from_forge"); // absent on Forge-era saves -> false
     }
 }

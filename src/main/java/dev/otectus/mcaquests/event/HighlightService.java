@@ -3,7 +3,7 @@ package dev.otectus.mcaquests.event;
 import dev.otectus.mcaquests.network.HighlightTargetsS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -43,7 +43,7 @@ public final class HighlightService {
             return;
         }
         LAST_SENT.put(player.getUUID(), entityIds);
-        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        PacketDistributor.sendToPlayer(player,
                 new HighlightTargetsS2CPacket(entityIds));
     }
 

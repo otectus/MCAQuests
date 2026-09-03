@@ -1,33 +1,24 @@
 package dev.otectus.mcaquests.state;
 
-import dev.otectus.mcaquests.McaQuests;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.common.capabilities.CapabilityToken;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 
 import java.util.Optional;
 
-/** Holds the {@link PlayerQuestData} capability token and registration (spec section 16). */
+/**
+ * The accessor gameplay code uses to reach a player's {@link PlayerQuestData} (spec section 15).
+ *
+ * <p>PORT: the Forge capability behind this name is gone; the state now lives in the
+ * {@link QuestAttachments#PLAYER_QUESTS} data attachment. The class and its {@code get} shape are kept
+ * so the ~60 call sites across quests, projects, situations, commands and compat read unchanged. See
+ * {@link QuestAttachments#get(Player)} for why the {@link Optional} is now always present.
+ */
 public final class QuestCapabilities {
-
-    public static final Capability<PlayerQuestData> PLAYER_QUESTS =
-            CapabilityManager.get(new CapabilityToken<>() {
-            });
-
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "player_quests");
 
     private QuestCapabilities() {
     }
 
-    /** Registered on the mod event bus. */
-    public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
-        event.register(PlayerQuestData.class);
-    }
-
+    /** This player's quest state, created on first read. Never empty. */
     public static Optional<PlayerQuestData> get(Player player) {
-        return player.getCapability(PLAYER_QUESTS).resolve();
+        return QuestAttachments.get(player);
     }
 }
