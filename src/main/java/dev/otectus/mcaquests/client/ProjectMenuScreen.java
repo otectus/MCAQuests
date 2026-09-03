@@ -157,13 +157,13 @@ public class ProjectMenuScreen extends McaQuestsScreen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Screen.render draws the menu background -- the full-screen blur pass and the tint -- itself
-        // since 1.20.2, and then the widgets, so it goes first and this screen's own chrome and
-        // content go on top of it. The 1.20.1 order (draw, then super.render) left everything drawn
-        // here to be blurred and dimmed a second time by the background pass.
-        applyScrolledVisibility();
-        super.render(graphics, mouseX, mouseY, partialTick);
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Vanilla's own pattern since 1.21, the one AbstractContainerScreen uses: the background
+        // pass runs the full-screen blur and the menu dim, and then everything this screen draws
+        // behind its widgets. Screen.render calls it before it draws the widgets, so the z-order is
+        // 1.20.1's again -- background, panel, content, widgets, tooltips -- with exactly one
+        // background pass a frame.
+        super.renderBackground(graphics, mouseX, mouseY, partialTick);
         renderPanel(graphics);
 
         if (cards.isEmpty()) {
@@ -177,6 +177,14 @@ public class ProjectMenuScreen extends McaQuestsScreen {
         }
         endContentClip(graphics);
         renderScrollbar(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Scrolled widgets must be moved onto their rows before super.render draws them; the panel
+        // and the content go in renderBackground above, which super.render calls first.
+        applyScrolledVisibility();
+        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     private void renderCard(GuiGraphics graphics, ProjectCard card, int top, int mouseX, int mouseY) {
