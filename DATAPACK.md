@@ -10,6 +10,8 @@ One quest per file. The file path is cosmetic — a quest's identity is its `id`
 
 Malformed or unknown quests are skipped with a logged error and listed by `/mcaquests validate`; the rest still load. Set `strictJsonValidation = true` in the config to treat any bad quest as a hard error instead.
 
+**Note:** All custom JSON schemas are identical to Minecraft 1.20.1. Datapacks authored for the Forge version load without modification on the NeoForge 1.21.1 version.
+
 > Looking for **shared, multi-player community goals** rather than per-player quests? See
 > [Village projects](#village-projects), loaded from `data/<namespace>/mcaquests/projects/**/*.json`.
 
@@ -35,12 +37,12 @@ You don't need to make a mod — quests load from any datapack. To add your own 
 
    Use **your own namespace** for the folder under `data/` (here, `mypack`) and for each quest's `id` (`mypack:wood_run`). Don't reuse `mcaquests` — that's the bundled pack, and a same-id quest would collide. Subfolders under `quests/` (like `errands/`) are organizational only.
 
-2. **Add `pack.mcmeta`** (the `pack_format` for 1.20.1 is `15`):
+2. **Add `pack.mcmeta`** (the `pack_format` for 1.21.1 is `34`; supported formats are 34–48):
 
    ```json
    {
      "pack": {
-       "pack_format": 15,
+       "pack_format": 34,
        "description": "My MCA quests"
      }
    }

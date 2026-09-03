@@ -4,7 +4,7 @@ An **optional** bridge between MCA: Quests and **[FTB Quests](https://www.cursef
 
 ## Install
 
-Drop **FTB Quests** (and its own dependencies, FTB Library and FTB Teams) into `mods/` alongside MCA: Quests and MCA Reborn. Tested against **FTB Quests 2001.4.x** (`ftb-quests-forge`), FTB Library 2001.2.9, FTB Teams 2001.3.0. MCA: Quests declares FTB Quests as an **optional** dependency (`mandatory=false`, version range `[2001.4,)`) — it is never required, and nothing else about MCA: Quests changes if you don't install it.
+Drop **FTB Quests** (and its own dependencies, FTB Library and FTB Teams) into `mods/` alongside MCA: Quests and MCA Reborn. Tested against **FTB Quests 2101.1.x** (`ftb-quests-neoforge`), FTB Library 2101.1.35, FTB Teams 2101.1.10. MCA: Quests declares FTB Quests as an **optional** dependency (`mandatory=false`, version range `[2101.1,)`) — it is never required, and nothing else about MCA: Quests changes if you don't install it.
 
 MCA: Quests **compiles against FTB's publicly published maven artifacts and ships none of them** — the jar contains zero FTB bytes; see the licensing note in the [README](README.md#license--credits).
 
@@ -143,7 +143,7 @@ The single most important thing to understand before building a book around this
 | **FTB Quests removed after a book was built with `mcaquests:` tasks/rewards** | FTB's own fallback keeps them as inert "Unknown type" placeholders — no crash. **If someone opens the editor and hits Save in that state, FTB strips the unknown fields from those tasks/rewards permanently.** Back up `config/ftbquests/quests/` before removing the mod if you might reinstall it later. |
 | **MCA: Quests present, FTB Quests removed later** | Any datapack `ftbq_*` conditions/objective fall back as documented above; an active `ftbq_complete_quest` quest simply never satisfies (the player can abandon it); nothing FTB-specific is stored in the MCA: Quests world save, so nothing there is at risk. |
 | **`/ftbquests change_progress` used to reset a task** | The task re-completes on its next check unless the underlying MCA state changed too — see [Team-credit semantics](#team-credit-semantics). |
-| **Client/server FTB Quests mismatch** | Unaffected by this integration specifically — Forge's own mod-list handshake catches it, same as any other mod. A client/server MCA: Quests **version** mismatch is caught by the network protocol handshake (bumped to `"6"` for this release; see the [changelog](CHANGELOG.md)). |
+| **Client/server FTB Quests mismatch** | Unaffected by this integration specifically — NeoForge's own mod-list handshake catches it, same as any other mod. A client/server MCA: Quests **version** mismatch is caught by the network protocol handshake (protocol 15; see the [changelog](CHANGELOG.md)). |
 
 ---
 

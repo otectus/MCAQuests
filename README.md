@@ -1,8 +1,8 @@
 # MCA: Quests
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-brightgreen)](https://www.minecraft.net/)
-[![Loader](https://img.shields.io/badge/Loader-Forge%2047.4.10%2B-1f425f)](https://files.minecraftforge.net/)
-[![Requires](https://img.shields.io/badge/Requires-MCA%20Reborn%207.6.x-orange)](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen)](https://www.minecraft.net/)
+[![Loader](https://img.shields.io/badge/Loader-NeoForge%2021.1-1f425f)](https://neoforged.net/)
+[![Requires](https://img.shields.io/badge/Requires-MCA%20Reborn%207.7-orange)](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE.md)
 
 An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** villagers. Right-click a villager, open the new **Quests** menu, accept a job, complete it out in the world, and turn it in for items, XP, status effects — and a meaningful boost to your **MCA hearts** with that specific villager.
@@ -42,12 +42,12 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 
 | | |
 |---|---|
-| **Minecraft** | 1.20.1 |
-| **Mod loader** | Forge 47.4.10 or newer |
-| **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.6.x |
-| **[Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api)** | **Required** (Forge) — MCA Reborn depends on it |
+| **Minecraft** | 1.21.1 |
+| **Mod loader** | NeoForge 21.1.x |
+| **Java** | JDK 21 (Gradle provisions it via foojay if JAVA_HOME is 17) |
+| **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.7.x (no longer requires Architectury; MCA 1.21.1 dropped it) |
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
-| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2001.4.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
+| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2101.1.x; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
 | **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.8)`, verified against **0.7.6**; adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
 | **Create: Numismatics** | *Optional* — set `currencyProvider = NUMISMATICS` to pay quest rewards in coins ([CONFIG.md](CONFIG.md#rewardscurrency)) |
 
@@ -55,8 +55,8 @@ MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
 ## Installation
 
-1. Install **Forge** for Minecraft 1.20.1.
-2. Drop **MCA Reborn**, **Architectury API**, and **MCA: Quests** into your `mods/` folder.
+1. Install **NeoForge** for Minecraft 1.21.1.
+2. Drop **MCA Reborn** and **MCA: Quests** into your `mods/` folder (Architectury is no longer required).
 3. Launch. Right-click an adult MCA villager and click **Quests**.
 
 ## How it works
@@ -84,13 +84,13 @@ Emergent **situations** load from `data/<namespace>/mcaquests/situations/**.json
 
 ## Building from source
 
-Requires **JDK 17**.
+Requires **JDK 21** (or JDK 17 with `JAVA_HOME` set; Gradle provisions JDK 21 via foojay toolchain resolver).
 
 ```bash
 ./gradlew build
 ```
 
-The jar lands in `build/libs/`. MCA Reborn and Architectury are pulled automatically (MCA via the Modrinth Maven). `gradle.properties` leaves `org.gradle.java.home` unset, so point `JAVA_HOME` at a JDK 17 install (or let the toolchain resolver fetch one) — Gradle itself must run on 17, since ForgeGradle 6 does not tolerate 21.
+The jar lands in `build/libs/`. MCA Reborn is pulled automatically via the Modrinth Maven. `gradle.properties` leaves `org.gradle.java.home` unset, so Gradle uses `JAVA_HOME` or provisions JDK 21 from foojay.
 
 To put the result in a mods folder, use:
 
@@ -98,17 +98,15 @@ To put the result in a mods folder, use:
 ./gradlew installMod -PmodsDir="<path to your instance's mods folder>"
 ```
 
-Do not copy `build/libs/` by hand while a build is running. ForgeGradle reobfuscates **in place**, so between `jar` and `reobfJar` the file at that path is still the dev-mapped jar; installing it gives you a mod that loads normally right up until it touches Minecraft, then dies with `NoSuchFieldError`. `installMod` copies only after reobfuscation, and `./gradlew build` now fails outright on a jar that was never reobfuscated.
-
 ## Compatibility note
 
-MCA Reborn exposes no public API, so MCA: Quests reaches into its internal classes. It supports the **7.6.x and 7.7.x** lines from one jar: rather than linking MCA at compile time, every MCA class and member is resolved **by name at runtime**, against whichever package layout is installed. MCA repackaged mid-7.7 — from a Forgix-merged jar (`forge.net.mca.*`) to a single-root one (`net.conczin.mca.*`) — and the layout cannot be inferred from the version number, so the mod probes for it on startup.
+MCA Reborn exposes no public API, so MCA: Quests reaches into its internal classes. It supports the **7.7.x line** from one jar: rather than linking MCA at compile time, every MCA class and member is resolved **by name at runtime**, against whichever package layout is installed. The mod probes for MCA's package root at startup.
 
-If an MCA build ever ships a layout this version does not recognise, MCA-backed features disable themselves with a single log line and **the server keeps running**; run `/mcaquests debug mca` to see which package root matched and whether anything is missing. All MCA access stays isolated behind the `McaCompat` adapter and its binding layer (`compat.mca`), and a build-time check fails the build if any class ever references an MCA type directly again.
+If an MCA build ever ships a layout this version does not recognise, MCA-backed features disable themselves with a single log line and **the server keeps running**; run `/mcaquests debug mca` to see which package root matched and whether anything is missing. All MCA access stays isolated behind the binding layer (`compat/mca`), and a build-time check fails the build if any class ever references an MCA type directly.
 
 The **MCA: Conversations** integration is a soft dependency: MCA: Quests exposes the dialogue and objective hooks (`QuestDialogueHooks`, `ExternalSignalObjective`) and the add-on registers itself against them. When it isn't installed the hooks simply no-op — quest dialogue falls back to the static datapack text and objectives progress through their normal detectors.
 
-The **FTB Quests** integration is likewise a soft, optional dependency (`mandatory=false`, tested against **2001.4.x**): every FTB-facing task/reward routes through an internal bridge that becomes an inert no-op if FTB Quests is absent, disabled, or throws, so nothing about MCA: Quests' own datapack format or world save depends on it being installed. The integration compiles against FTB's publicly published maven artifacts and ships none of them — the jar contains zero FTB code. See **[FTBQUESTS.md](FTBQUESTS.md)** for the full task/reward/condition reference.
+The **FTB Quests** integration is likewise a soft, optional dependency (`mandatory=false`, tested against **2101.1.x**): every FTB-facing task/reward routes through an internal bridge that becomes an inert no-op if FTB Quests is absent, disabled, or throws, so nothing about MCA: Quests' own datapack format or world save depends on it being installed. The integration compiles against FTB's publicly published maven artifacts and ships none of them — the jar contains zero FTB code. See **[FTBQUESTS.md](FTBQUESTS.md)** for the full task/reward/condition reference.
 
 The **Townstead** integration is optional in the same way, and is reached even more carefully. Townstead is itself built against MCA, so its own method signatures name MCA classes — binding any of them directly would tie this mod to one MCA package layout and undo the runtime resolution described above. So nothing is bound by parameter type: Townstead members are matched by name and arity and invoked through handles whose arguments are all `Object`, and a build-time check fails the build if any compiled class so much as mentions a Townstead type. The jar contains zero Townstead code and is not compiled against it.
 

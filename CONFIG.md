@@ -5,6 +5,8 @@ Two TOML files are generated in your instance's `config/` folder on first run:
 - **`mcaquests-common.toml`** — gameplay rules (server-authoritative). On a dedicated server this is the server's copy that matters.
 - **`mcaquests-client.toml`** — purely visual / local options.
 
+The configuration system is now NeoForge `ModConfigSpec` (was Forge `ForgeConfigSpec`). File names, all keys, defaults, and ranges are identical to the Minecraft 1.20.1 version — 1.20.1 config files load as-is.
+
 Edit with the game closed (or close the world), then relaunch / rejoin — these are loaded at startup, not via `/reload` (that command only reloads the quest **datapack**, not the config).
 
 ---

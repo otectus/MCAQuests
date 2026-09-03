@@ -4,9 +4,24 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.3] - Unreleased
+## [1.5.3] - 2026-09-03
 
-A comprehensive marker and map-layer rework: the in-world marker is redesigned as a compact diamond, its position corrected, its appearance made configurable and colorblind-safe; JourneyMap now integrates through its documented plugin API instead of reflection; Xaero pins are now explicitly labelled as session-only on Xaero-alone installs; waypoint reconciliation is event-driven and recoverable from failures; the marker's per-quest destinations are shown in the quest log and HUD. Network protocol 14 required (EntityHeight added to `GuidanceTarget`).
+**Port to Minecraft 1.21.1 / NeoForge 21.1.x.** The mod version remains 1.5.3; the platform is expressed by the Minecraft version and loader targeting, not by the mod's own semver. This is a **one-way migration** — existing Minecraft 1.20.1 / Forge worlds are automatically upgraded on first login by importing player quest data from `ForgeCaps` to NeoForge data attachments, then no longer backwards-compatible. **Back up your world before upgrading.** The bundled datapack, config file names and keys, world save names, and all JSON schemas are unchanged.
+
+### Platform changes
+
+- **Minecraft:** 1.21.1 (exactly; not compatible with 1.20.1 or 1.21.0)
+- **Mod loader:** NeoForge 21.1.248 (Forge 47.x no longer supported)
+- **Java:** JDK 21 required to build; Gradle provisions it via foojay toolchain resolver if `JAVA_HOME` is 17
+- **Dependencies changed:** MCA Reborn `[7.7,8)` (no longer requires Architectury; MCA 1.21.1 dropped it), FTB Quests `[2101.1,)` (tested 2101.1.31), MCA: Reputation `[0.2,)` (sibling 0.3.0 for 1.21.1), Townstead `[0.7.5,0.8)`, JourneyMap `[1.21.1-6.0.0,)`, Xaero's Minimap `[26.0,27)`
+- **Network protocol:** bumped to 15 (was 14); clients and servers must run the same protocol version and cannot interoperate across versions
+- **Player data migration:** Forge capabilities are migrated once to NeoForge data attachments (`mcaquests:player_quests`) on first login; the import is marked `migrated_from_forge` and never re-runs; a failed read (corrupted NBT) is retried on next login and never blocks login
+- **Rendering:** screens now use a single `super.render` call and foreground overlays; HUD tracker is a `LayeredDraw.Layer`; toasts use the `toast/advancement` sprite; the quest marker renderer uses the 1.21 vertex API with `ByteBufferBuilder`
+- **Config:** now NeoForge `ModConfigSpec` instead of Forge `ForgeConfigSpec`; file names, keys, defaults, and ranges are unchanged; 1.20.1 config files load as-is
+
+### Marker and map integration (1.5.3 core features)
+
+A comprehensive marker and map-layer rework: the in-world marker is redesigned as a compact diamond, its position corrected, its appearance made configurable and colorblind-safe; JourneyMap now integrates through its documented plugin API instead of reflection; Xaero pins are now explicitly labelled as session-only on Xaero-alone installs; waypoint reconciliation is event-driven and recoverable from failures; the marker's per-quest destinations are shown in the quest log and HUD.
 
 ### Fixed — marker
 
@@ -99,6 +114,10 @@ New translation keys for marker, map configuration, and diagnostics (both `en_us
 - **Fallback:** if the official API jar is unavailable, pass `-PjourneymapApiJar=<path>` to use a git-ignored `libs/` copy instead.
 - **Map probe test hardened:** `mapProbeTest` accepts `-PrequireMapJars=true` to fail the build if a jar is missing instead of skipping silently.
 - **Static link test:** `NoMinimapStaticLinkTest` restricts `journeymap/` type references to the dedicated `compat/journeymap/` package (typed against the compile-only API, loaded only via plugin discovery). XaeroMinimap type references remain banned everywhere.
+
+### Verification
+
+**Dedicated-server startup smoke passed** (2026-09-03): the server reached `Done (6.638s)!` with no crashes or `NoClassDefFoundError`, loading 262 quests (0 errors), 1 reputation tier ladder, 25 situations, 9 titles, 4 dialogue pools, and 21 projects; MCA 7.7.36 bound successfully. Awaiting supplied jars for JourneyMap and Xaero bindings, real-world world upgrades, and client visual matrix testing.
 
 ## [1.5.2] - 2026-09-03
 
