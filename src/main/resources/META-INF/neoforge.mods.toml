@@ -9,43 +9,39 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''${mod_description}'''
 
-# Client-only mixin that injects the Quests button into MCA's villager menu.
+# Client-only mixins: the glow highlight and the Screen accessor the Quests button injection uses.
 [[mixins]]
     config="mcaquests.mixins.json"
 
 # MCA: Quests is meaningless without MCA Reborn, so MCA is a mandatory dependency.
 # We load AFTER MCA so its entities, professions, and registries are present.
 [[dependencies.${mod_id}]]
-    modId="forge"
-    mandatory=true
-    versionRange="${forge_version_range}"
+    modId="neoforge"
+    type="required"
+    versionRange="${neoforge_version_range}"
     ordering="NONE"
     side="BOTH"
 [[dependencies.${mod_id}]]
     modId="minecraft"
-    mandatory=true
+    type="required"
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
 [[dependencies.${mod_id}]]
     modId="mca"
-    mandatory=true
-    versionRange="[7.6,8)"
+    type="required"
+    versionRange="${mca_version_range}"
     ordering="AFTER"
     side="BOTH"
-[[dependencies.${mod_id}]]
-    modId="architectury"
-    mandatory=true
-    versionRange="[9.2,10)"
-    ordering="AFTER"
-    side="BOTH"
+
+# NOTE: no architectury dependency -- MCA 1.21.1 no longer uses Architectury.
 
 # FTB Quests is an optional integration (compat.ftbq): load AFTER it when present so
 # its built-in TaskTypes are initialized before our constructor registers types.
 [[dependencies.${mod_id}]]
     modId="ftbquests"
-    mandatory=false
-    versionRange="[2001.4,)"
+    type="optional"
+    versionRange="${ftbquests_version_range}"
     ordering="AFTER"
     side="BOTH"
 
@@ -56,8 +52,8 @@ description='''${mod_description}'''
 # (spec 9.3, 32.6).
 [[dependencies.${mod_id}]]
     modId="mcareputation"
-    mandatory=false
-    versionRange="[0.2,)"
+    type="optional"
+    versionRange="${mcareputation_version_range}"
     ordering="AFTER"
     side="BOTH"
 
@@ -69,22 +65,20 @@ description='''${mod_description}'''
 # abandoned (Townstead spec 1.2, 10.1).
 [[dependencies.${mod_id}]]
     modId="townstead"
-    mandatory=false
-    versionRange="[0.7.5,0.8)"
+    type="optional"
+    versionRange="${townstead_version_range}"
     ordering="AFTER"
     side="BOTH"
 
 # JourneyMap is an OPTIONAL, CLIENT-SIDE integration. When present, the quest destinations the tracker
 # already names also appear as waypoints on the map -- one per active quest that has somewhere to send
-# you, taken away when the quest ends. Nothing here is compiled against it: compat.map.MapBinding
-# resolves JourneyMap's API by name at runtime, so this mod loads unchanged when it is absent, and a
-# JourneyMap point release that moves a method disables the waypoints and nothing else. CLIENT only --
-# a waypoint is a thing on one player's map. Range starts at 6.0.0, where the API moved to v2 and the
-# Waypoint constructor this mod used to be able to call was replaced by a factory.
+# you, taken away when the quest ends. CLIENT only -- a waypoint is a thing on one player's map. Range
+# starts at 6.0.0, where the API moved to v2 and the Waypoint constructor this mod used to be able to
+# call was replaced by a factory.
 [[dependencies.${mod_id}]]
     modId="journeymap"
-    mandatory=false
-    versionRange="[1.20.1-6.0.0,)"
+    type="optional"
+    versionRange="${journeymap_version_range}"
     ordering="AFTER"
     side="CLIENT"
 
@@ -94,7 +88,7 @@ description='''${mod_description}'''
 # to the quest, so uninstalling this mod leaves nothing behind to tidy up.
 [[dependencies.${mod_id}]]
     modId="xaerominimap"
-    mandatory=false
-    versionRange="[26.0.0,)"
+    type="optional"
+    versionRange="${xaero_version_range}"
     ordering="AFTER"
     side="CLIENT"

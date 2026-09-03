@@ -1,20 +1,9 @@
-buildscript {
-    repositories {
-        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'org.spongepowered:mixingradle:0.7.+'
-    }
-}
-
 plugins {
-    id 'eclipse'
     id 'idea'
-    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'eclipse'
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.141'
 }
-
-apply plugin: 'org.spongepowered.mixin'
 
 version = mod_version
 group = mod_group_id
@@ -23,52 +12,52 @@ base {
     archivesName = mod_id
 }
 
-// Minecraft 1.18+ ships Java 17; target it explicitly (system default JDK is 21).
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+// Minecraft 1.20.5+ requires Java 21; the foojay resolver provisions it if absent.
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 
-minecraft {
-    mappings channel: mapping_channel, version: mapping_version
+neoForge {
+    version = project.neoforge_version
 
-    // Required for this template's processResources/run setup.
-    copyIdeResources = true
+    parchment {
+        minecraftVersion = project.parchment_minecraft
+        mappingsVersion = project.parchment_version
+    }
 
     runs {
-        configureEach {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            // Remap dependency/our-own mixin refmaps SRG->official in dev. NOTE: this does NOT make
-            // MCA load in dev — MCA's forge mixins ship with no refmap and hard-coded SRG names, so
-            // they only resolve in a production (SRG) runtime. Real MCA behaviour is therefore
-            // verified in a production-style instance, not under dev runClient/runServer.
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-            mods {
-                "${mod_id}" {
-                    source sourceSets.main
-                }
-            }
-        }
-
         client {
-            property 'forge.enabledGameTestNamespaces', mod_id
+            client()
+            gameDirectory = project.file('run')
         }
-
         server {
-            property 'forge.enabledGameTestNamespaces', mod_id
-            args '--nogui'
+            server()
+            gameDirectory = project.file('run-server')
+            programArgument '--nogui'
         }
-
-        gameTestServer {
-            property 'forge.enabledGameTestNamespaces', mod_id
-        }
-
         data {
-            workingDirectory project.file('run-data')
-            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            data()
+            gameDirectory = project.file('run-data')
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
         }
+        configureEach {
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+
+    // JUnit tests that need Minecraft classes on the classpath (the whole test suite does --
+    // TestBootstrap touches SharedConstants/Bootstrap).
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
     }
 }
 
@@ -76,14 +65,8 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
-    // Architectury API (hard runtime dependency of MCA Reborn's Forge build).
-    maven { url = 'https://maven.architectury.dev/' }
-
-    // SpongePowered (Mixin annotation processor for our client menu-injection mixin).
-    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-
-    // MCA Reborn via Modrinth Maven. exclusiveContent keeps this repo scoped to the
-    // maven.modrinth group and routes resolution through ForgeGradle's deobf pipeline.
+    // MCA Reborn via Modrinth Maven, scoped to the maven.modrinth group. The 1.21.1 NeoForge jar is
+    // mojmap -- no deobf pipeline exists or is needed.
     exclusiveContent {
         forRepository {
             maven {
@@ -91,27 +74,38 @@ repositories {
                 url = 'https://api.modrinth.com/maven'
             }
         }
-        forRepositories(fg.repository)
         filter { includeGroup 'maven.modrinth' }
     }
 
-    // FTB Quests optional integration — scoped to dev.ftb.mods only.
-    maven {
-        name = 'FTB'
-        url = 'https://maven.ftb.dev/releases'
-        content { includeGroup 'dev.ftb.mods' }
+    // FTB Quests optional integration -- scoped to dev.ftb.mods only.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'FTB'
+                url = 'https://maven.ftb.dev/releases'
+            }
+        }
+        filter { includeGroup 'dev.ftb.mods' }
     }
 
-    // JourneyMap's client plugin API — scoped to info.journeymap only.
+    // Architectury API -- transitive compile-time dependency of the FTB 2101.x stack (NOT of this
+    // mod; MCA 1.21.1 itself dropped Architectury). Never shipped.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Architectury'
+                url = 'https://maven.architectury.dev/'
+            }
+        }
+        filter { includeGroup 'dev.architectury' }
+    }
+
+    // JourneyMap's client plugin API -- scoped to info.journeymap only.
     //
-    // Not JourneyMap's own Nexus (jm.gserv.me). That host publishes journeymap-api for 1.19-1.20.6
-    // and journeymap-api-forge for 1.21+/26.x, and neither set contains a 1.20.1 build of API 2.0:
-    // the closest, `journeymap-api:2.0+1.20-forge`, is a June 2023 snapshot of the *old*
-    // journeymap.client.api.* surface, with no @JourneyMapPlugin, no WaypointFactory and no
-    // per-waypoint visibility flags. What JourneyMap 1.20.1-6.0.x actually loads is
-    // journeymap-api-forge:1.20.1-2.0.0, and modmaven.dev is the reachable mirror carrying it —
-    // byte-for-byte the same API surface as the jar-in-jar inside the mod, which mapProbeTest
-    // re-checks against a real JourneyMap jar on demand.
+    // Not JourneyMap's own Nexus (jm.gserv.me): modmaven.dev is the reachable mirror carrying the
+    // artifacts. What JourneyMap 1.21.1-6.0.x loads is journeymap-api-neoforge, byte-for-byte the API
+    // surface of the jar-in-jar inside the mod jar, which mapProbeTest re-checks against a real
+    // JourneyMap jar on demand.
     exclusiveContent {
         forRepository {
             maven {
@@ -123,8 +117,8 @@ repositories {
     }
 }
 
-// Which MCA build dev runs launch with. Overridable per invocation so both MCA package layouts can
-// be exercised without editing a file: `./gradlew runServer -PmcaDevVersion=7.7.0-beta.2+1.20.1`.
+// Which MCA build dev runs launch with. Overridable per invocation so several MCA builds can be
+// exercised without editing a file: `./gradlew runServer -PmcaDevVersion=<modrinth version id>`.
 ext.mcaDevVersion = project.findProperty('mcaDevVersion') ?: mca_dev_version
 
 // Every MCA build McaBindingProbeTest verifies the manifest against, one configuration each. Two
@@ -143,6 +137,11 @@ mcaProbeVersions.eachWithIndex { version, i ->
     }
 }
 
+// Extra MCA jars to probe that no Maven can serve (a local build, a file pulled by hand):
+//     ./gradlew test "-PmcaProbeJars=C:\jars\mca-a.jar;C:\jars\mca-b.jar"
+ext.mcaProbeExtraJars = (project.findProperty('mcaProbeJars') ?: '')
+        .toString().split(';').collect { it.trim() }.findAll { !it.isEmpty() }
+
 configurations {
     // Keep MCA off the unit-test runtime. Gradle's testRuntimeOnly extends runtimeOnly, so the dev-run
     // MCA jar would otherwise land on testRuntimeClasspath -- and the unit suite is precisely where
@@ -155,109 +154,101 @@ configurations {
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-
-    // MCA Reborn — obfuscated production (Universal) jar, remapped to our dev mappings by fg.deobf.
+    // MCA Reborn -- the NeoForge jar is mojmap and loads as a mod in dev runs.
     //
     // runtimeOnly, NOT implementation: no class in src/main/java names an MCA type, because
     // compat.mca.McaBinding resolves every MCA class and member by name at runtime (that is what lets
     // one jar serve both MCA's forge.net.mca.* layout and the renamed net.conczin.mca.* one). A
-    // compile dependency would only invite the static linkage back — NoMcaStaticLinkTest fails the
+    // compile dependency would only invite the static linkage back -- NoMcaStaticLinkTest fails the
     // build if it ever returns. runtimeOnly also keeps MCA off testRuntimeClasspath, so the unit
     // suite exercises the genuine "MCA absent" degradation path rather than a half-bound one.
-    runtimeOnly fg.deobf("maven.modrinth:minecraft-comes-alive-reborn:${mcaDevVersion}")
+    runtimeOnly "maven.modrinth:minecraft-comes-alive-reborn:${mcaDevVersion}"
 
-    // The probe fleet (see ext.mcaProbeVersions). Deliberately NOT fg.deobf: only Minecraft's methods
-    // and fields carry SRG names in a production jar, never its class names, so MCA's own declarations
-    // already read as e.g. `getResidents(net.minecraft.server.level.ServerLevel)` -- which is exactly
-    // what the manifest's parameter hints compare against. Skipping the deobf round-trip also keeps
-    // these configurations out of ForgeGradle's remap pipeline, which only materialises artifacts for
-    // configurations it owns and cannot serve one resolved from a test task's doFirst.
+    // The probe fleet (see ext.mcaProbeVersions), one configuration per Modrinth version id.
     mcaProbeVersions.eachWithIndex { version, i ->
         add("mcaProbe${i}", "maven.modrinth:minecraft-comes-alive-reborn:${version}")
     }
 
-    // Architectury API (Forge) — required at runtime by MCA, and at compile time by the FTB Quests
-    // bridge, which names Architectury event types directly (FtbqEventBridge). Unlike MCA this stays a
-    // compile dependency: Architectury has not repackaged, and nothing here has to survive it doing so.
-    implementation fg.deobf("dev.architectury:architectury-forge:${architectury_version}")
-
-
-    // MCA: Reputation — OPTIONAL integration, compile-only. The sibling mod is not published to a
-    // Maven, so we compile against its dev-mapped class output; both mods use `official` 1.20.1
-    // mappings, so the Minecraft type names line up and reobfJar remaps our own references for
-    // production. Never bundled: the real mod supplies these classes at runtime, and everything that
-    // touches them is gated behind ReputationBridge's ModList check.
+    // MCA: Reputation -- OPTIONAL integration, compile-only. The sibling mod is not published to a
+    // Maven, so we compile against its class output (the 1.21.1 NeoForge port). Never bundled: the
+    // real mod supplies these classes at runtime, and everything that touches them is gated behind
+    // ReputationBridge's ModList check.
     //
-    // Build MCA: Reputation first (`../MCAReputation: ./gradlew classes`). When it is absent the
-    // compat.reputation package cannot compile, which is why the build fails loudly here rather than
-    // silently producing an integration-less jar (spec 9.2).
-    def mcaReputationClasses = file("${projectDir}/../MCAReputation/build/classes/java/main")
+    // A missing sibling is a hard error, not a warning: a jar built without this compile surface
+    // advertises an integration it cannot perform (spec 9.2). -PskipReputationCompat=true exists for
+    // a local compile-only loop and deliberately makes `jar` fail, so the skip cannot be shipped.
+    def mcaReputationClasses = file(project.findProperty('mcaReputationClasses')
+            ?: "${projectDir}/../MCAReputation_1.21.1/build/classes/java/main")
+    def skipReputationCompat = project.findProperty('skipReputationCompat')?.toString() == 'true'
     if (mcaReputationClasses.exists()) {
         compileOnly files(mcaReputationClasses)
+    } else if (!skipReputationCompat) {
+        throw new GradleException("MCA: Reputation compile surface missing at ${mcaReputationClasses}. " +
+                "Build the sibling (cd ../MCAReputation_1.21.1 && ./gradlew classes) or pass " +
+                "-PskipReputationCompat=true for a non-shippable build.")
     } else {
-        logger.warn("MCA: Reputation classes not found at ${mcaReputationClasses}; build it first " +
-                "(../MCAReputation: ./gradlew classes) or the optional Reputation integration will not compile.")
+        logger.warn("MCA: Reputation compile surface skipped; excluding compat/reputation/** from " +
+                "compilation and refusing to package a jar.")
+        sourceSets.main.java.exclude 'dev/otectus/mcaquests/compat/reputation/**'
+        tasks.named('jar') {
+            doFirst {
+                throw new GradleException("Refusing to package: Reputation compat was skipped")
+            }
+        }
     }
-
-    // Mixin annotation processor — generates the refmap for our client menu-injection mixin.
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     // Unit tests for the non-MCA quest engine (spec section 33).
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // JourneyMap optional integration — compile-time only. NEVER shipped, NEVER 'implementation'.
+    // JourneyMap optional integration -- compile-time only. NEVER shipped, NEVER 'implementation'.
     //
     // The one exception to this mod's "all third-party access is reflective" rule, and it is forced:
     // JourneyMap's entry point is a class carrying @JourneyMapPlugin and implementing IClientPlugin,
     // and neither an annotation nor an implements clause can be produced reflectively. Only
     // compat/journeymap/ names these types, and NoMinimapStaticLinkTest fails the build if anything
-    // else does — so a dedicated server, or a client without JourneyMap, never loads that package.
-    //
-    // Plain compileOnly, not fg.deobf: API 2.0's own signatures use official Minecraft class names
-    // (BlockPos, ResourceKey<Level>), which are the same in a production jar, and nothing here calls
-    // a Minecraft member through it.
+    // else does -- so a dedicated server, or a client without JourneyMap, never loads that package.
     //
     // testImplementation as well -- compile *and* test runtime, since JourneyMapWaypointBackendTest
     // hands the backend a stub IClientAPI and has to load the real interface to implement it. Test
     // scope only; nothing about this reaches the jar.
-    compileOnly "info.journeymap:journeymap-api-forge:${journeymap_api_version}"
-    testImplementation "info.journeymap:journeymap-api-forge:${journeymap_api_version}"
+    compileOnly "info.journeymap:journeymap-api-neoforge:${journeymap_api_version}"
+    testImplementation "info.journeymap:journeymap-api-neoforge:${journeymap_api_version}"
 
-    // FTB Quests optional integration — compile-time only. NEVER shipped, NEVER 'implementation'.
-    compileOnly fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
-    compileOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
-    compileOnly fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
+    // FTB Quests optional integration -- compile-time only. NEVER shipped, NEVER 'implementation'.
+    compileOnly "dev.ftb.mods:ftb-quests-neoforge:${ftb_quests_version}"
+    compileOnly "dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}"
+    compileOnly "dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}"
 
     // Optional: put the FTB stack on the dev runtime for hands-on testing.
     if (project.hasProperty('enableFtbqInDev') && project.enableFtbqInDev.toBoolean()) {
-        runtimeOnly fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
-        runtimeOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
-        runtimeOnly fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
+        runtimeOnly "dev.ftb.mods:ftb-quests-neoforge:${ftb_quests_version}"
+        runtimeOnly "dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}"
+        runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}"
     }
 }
 
 test {
     useJUnitPlatform()
+    // The MDG unitTest runner's working dir is build/minecraft-junit; the repo-introspection tests
+    // (pack parsing, locale parity, classfile scans) resolve paths through this property.
+    systemProperty 'mcaquests.projectRoot', project.projectDir.absolutePath
     // The MCA jars travel as paths, not a classpath: McaBindingProbeTest opens each in its own
     // URLClassLoader, so the binding manifest is verified against real MCA without MCA ever being
     // linked into the test JVM. They come from the mcaProbe* configurations, one per version, so that
-    // Gradle's conflict resolution cannot collapse the fleet down to the newest jar.
+    // Gradle's conflict resolution cannot collapse the fleet down to the newest jar; -PmcaProbeJars
+    // appends local jars no Maven can serve.
     //
     // The whole fleet is probed on every run (see mca_probe_versions), one entry per known package
-    // root, so a root the binding no longer recognises fails here. To probe a different set:
-    //     ./gradlew test -PmcaProbeVersions=7.7.1-alpha.2+1.20.1
-    //
-    // Resolved in doFirst, not at configuration time: resolving a configuration while the build is
-    // still being configured freezes ForgeGradle's deobf repository before every fg.deobf dependency
-    // is registered ("cannot mutate content repository descriptor after repository has been used").
+    // root, so a root the binding no longer recognises fails here. Resolved in doFirst, not at
+    // configuration time, so configuring the build never has to reach the network.
     doFirst {
-        systemProperty 'mcaquests.probe.jars', mcaProbeVersions.indices
+        systemProperty 'mcaquests.probe.jars', (mcaProbeVersions.indices
                 .collect { i -> configurations.getByName("mcaProbe${i}").files }
                 .flatten()
                 .findAll { it.name.contains('minecraft-comes-alive') }
+                .collect { it.toString() } + mcaProbeExtraJars)
                 .join(File.pathSeparator)
     }
 }
@@ -266,29 +257,47 @@ test {
 // classloader. Separate from `test` because it needs a jar nobody can resolve from a maven: Townstead
 // is published on CurseForge only, so the path is supplied by the person running it.
 //
-//     ./gradlew townsteadProbeTest -PtownsteadLegacyJar=/path/townstead-0.7.6+1.20.1.jar
+//     ./gradlew townsteadProbeTest -PtownsteadModernJar=/path/townstead-0.7.6.jar
 //
-// Both -PtownsteadModernJar and -PtownsteadLegacyJar are accepted and either may be given alone.
-// MCA rides along on `mcaquests.probe.jars` for a load-bearing reason: Townstead is compiled against
-// MCA, so enumerating TownsteadAPI's methods resolves an MCA parameter type, and without MCA present
-// the whole class reads as unbound and the probe would pass vacuously.
+// Both -PtownsteadModernJar and -PtownsteadFloorJar are accepted and either may be given alone. MCA
+// rides along on `mcaquests.probe.jars` for a load-bearing reason: Townstead is compiled against MCA,
+// so enumerating TownsteadAPI's methods resolves an MCA parameter type, and without MCA present the
+// whole class reads as unbound and the probe would pass vacuously.
+//
+// With no jar the task skips loudly rather than passing vacuously; -PrequireTownsteadJar=true turns a
+// missing jar into a failure, so a release gate cannot pass on a run that probed nothing.
 tasks.register('townsteadProbeTest', Test) {
     group = 'verification'
     description = 'Verifies the Townstead binding manifest against a supplied Townstead jar.'
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform()
     filter { includeTestsMatching 'dev.otectus.mcaquests.compat.TownsteadBindingProbeTest' }
     outputs.upToDateWhen { false }
     testLogging { showStandardStreams = true }
+    // The SKIPPED report lives in onlyIf rather than doFirst: onlyIf is evaluated first, and a
+    // doFirst on a skipped task never runs.
+    onlyIf {
+        def supplied = ['townsteadModernJar', 'townsteadFloorJar'].findAll { project.hasProperty(it) }
+        if (!supplied.isEmpty()) {
+            return true
+        }
+        if (project.findProperty('requireTownsteadJar')?.toString() == 'true') {
+            throw new GradleException('No Townstead jar supplied, but -PrequireTownsteadJar=true. Pass ' +
+                    '-PtownsteadModernJar=<path> and/or -PtownsteadFloorJar=<path>.')
+        }
+        logger.lifecycle('SKIPPED: no Townstead jar supplied (-PtownsteadModernJar/-PtownsteadFloorJar)')
+        false
+    }
     doFirst {
         systemProperty 'mcaquests.townstead.probe.jars',
-                ['townsteadModernJar', 'townsteadLegacyJar']
+                ['townsteadModernJar', 'townsteadFloorJar']
                         .findAll { project.hasProperty(it) }
                         .collect { project.property(it).toString() }
                         .join(File.pathSeparator)
-        systemProperty 'mcaquests.probe.jars', configurations.runtimeClasspath
+        systemProperty 'mcaquests.probe.jars', (mcaProbeVersions.indices
+                .collect { i -> configurations.getByName("mcaProbe${i}").files }
+                .flatten()
                 .findAll { it.name.contains('minecraft-comes-alive') }
+                .collect { it.toString() } + mcaProbeExtraJars)
                 .join(File.pathSeparator)
     }
 }
@@ -297,14 +306,15 @@ tasks.register('townsteadProbeTest', Test) {
 // Separate from `test` because the mod jars cannot be resolved from a Maven: both are CurseForge-only
 // (libs/ is gitignored), so the paths are supplied by whoever runs it.
 //
-//     ./gradlew mapProbeTest -PjourneymapJar=libs/journeymap-forge-1.20.1-6.0.4.jar //                            -PxaeroJar=libs/xaerominimap-forge-1.20.1-26.4.2.jar
+//     ./gradlew mapProbeTest -PjourneymapJar=libs/journeymap-neoforge-1.21.1-6.0.3.jar
+//                            -PxaeroJar=libs/xaerominimap-neoforge-1.21.1-26.4.2.jar
 //
 // The two halves ask different questions, because the two integrations are bound differently. Xaero
 // ships no API, so its manifest is resolved by name and this is the only thing that can prove the
 // names are right. JourneyMap is compiled against, so its members are already pinned by javac -- what
-// this checks there is *drift*: the runtime API is the journeymap-api-forge jar-in-jar inside the mod
-// jar, the compile API is journeymap_api_version from a Maven mirror, and nothing but this task
-// notices the day those two stop agreeing.
+// this checks there is *drift*: the runtime API is the journeymap-api jar-in-jar inside the mod jar,
+// the compile API is journeymap_api_version from a Maven mirror, and nothing but this task notices
+// the day those two stop agreeing.
 //
 // Either may be given alone; a mod with no jar is skipped rather than failed -- unless
 // -PrequireMapJars=true, which turns every missing jar into a failure so a release gate cannot pass
@@ -312,8 +322,6 @@ tasks.register('townsteadProbeTest', Test) {
 tasks.register('mapProbeTest', Test) {
     group = 'verification'
     description = 'Verifies the Xaero binding manifest and the JourneyMap API against supplied jars.'
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform()
     filter { includeTestsMatching 'dev.otectus.mcaquests.compat.map.MapBindingProbeTest' }
     outputs.upToDateWhen { false }
@@ -328,25 +336,48 @@ tasks.register('mapProbeTest', Test) {
     }
 }
 
-// MixinGradle: generate the refmap for our mixin and register the config for reobfuscation.
-mixin {
-    add sourceSets.main, 'mcaquests.refmap.json'
-    config 'mcaquests.mixins.json'
+// ModDevGradle configures `test` late (unitTest wires in the Minecraft classpath, the JUnit runner and
+// its JVM args), so the two probe tasks inherit that configuration here instead of assembling a
+// second, subtly different runtime out of sourceSets.
+afterEvaluate {
+    def base = tasks.named('test', Test).get()
+    ['townsteadProbeTest', 'mapProbeTest'].each { name ->
+        tasks.named(name, Test).configure {
+            classpath = base.classpath
+            testClassesDirs = base.testClassesDirs
+            jvmArgs = base.jvmArgs
+            base.systemProperties.each { key, value -> systemProperty(key, value) }
+            workingDir = base.workingDir
+            environment base.environment
+        }
+    }
 }
 
-// Expand metadata placeholders into mods.toml / pack.mcmeta at build time.
+// Expand metadata placeholders into neoforge.mods.toml / pack.mcmeta at build time.
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
-            minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
-            forge_version: forge_version, forge_version_range: forge_version_range,
-            loader_version_range: loader_version_range,
-            mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
-            mod_authors: mod_authors, mod_description: mod_description,
+            minecraft_version          : minecraft_version,
+            minecraft_version_range    : minecraft_version_range,
+            neoforge_version           : neoforge_version,
+            neoforge_version_range     : neoforge_version_range,
+            loader_version_range       : loader_version_range,
+            mca_version_range          : mca_version_range,
+            ftbquests_version_range    : ftbquests_version_range,
+            mcareputation_version_range: mcareputation_version_range,
+            townstead_version_range    : townstead_version_range,
+            journeymap_version_range   : journeymap_version_range,
+            xaero_version_range        : xaero_version_range,
+            mod_id                     : mod_id,
+            mod_name                   : mod_name,
+            mod_license                : mod_license,
+            mod_version                : mod_version,
+            mod_authors                : mod_authors,
+            mod_description            : mod_description,
     ]
     inputs.properties replaceProperties
 
-    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
-        expand replaceProperties + [project: project]
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties
     }
 }
 
@@ -361,63 +392,57 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Vendor'   : mod_authors
         ])
     }
-    finalizedBy 'reobfJar'
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-// ForgeGradle reobfuscates in place, so for the moment between `jar` and `reobfJar` the archive
-// sitting at build/libs/mcaquests-<version>.jar is the un-reobfuscated one: Minecraft's members still
-// carry their official names, which no production runtime knows. A jar copied out of that window
-// looks completely normal and then dies the instant a class of ours touches Minecraft --
-// `NoSuchFieldError: UNKNOWN` from QuestClientSetup's keybinds, which is how 1.5.0 reached a player's
-// mods folder. Both tasks below therefore run after reobfJar and read the finished artifact, and
-// `installMod` exists so that copying it by hand -- the thing that lost that race -- is unnecessary.
-tasks.register('verifyReobfJar') {
+// Replaces the ForgeGradle-era verifyReobfJar: under ModDevGradle there is no reobfuscation to check,
+// but the two failure modes that mattered still exist -- a jar missing its loader metadata or mixin
+// config, and a jar that swallowed a third-party dependency it must never ship.
+tasks.register('jarSmokeCheck') {
     group = 'verification'
-    description = 'Fails if the built jar still names Minecraft members by their official (dev-only) names.'
-    dependsOn 'reobfJar'
+    description = 'Fails if the built jar is missing its metadata or bundles a third-party dependency.'
+    dependsOn 'jar'
     def builtJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
     inputs.file(builtJar)
     doLast {
-        def jarPath = builtJar.get().asFile
-        int srgRefs = 0
-        new java.util.zip.ZipFile(jarPath).withCloseable { zip ->
-            zip.entries().each { entry ->
-                if (!entry.name.endsWith('.class')) {
-                    return
-                }
-                // Constant-pool UTF8 entries are raw bytes; ISO-8859-1 round-trips them, and an SRG
-                // member name (m_12345_ / f_12345_) is plain ASCII, so a scan of the text is enough.
-                def text = new String(zip.getInputStream(entry).bytes, 'ISO-8859-1')
-                if (text =~ /[mf]_\d+_/) {
-                    srgRefs++
-                }
+        def jarFile = builtJar.get().asFile
+        def names = zipTree(jarFile).matching { include '**/*' }.files.collect {
+            it.absolutePath.replace('\\', '/')
+        }
+        // zipTree explodes into a staging directory, so entries are compared by their path suffix.
+        def contains = { String entry -> names.any { it.endsWith('/' + entry) } }
+        ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json'].each { required ->
+            if (!contains(required)) {
+                throw new GradleException("${jarFile.name} is missing ${required}.")
             }
         }
-        if (srgRefs == 0) {
-            throw new GradleException("${jarPath.name} names no Minecraft member by its SRG name, so it was " +
-                    "never reobfuscated. Installing it would fail at class-init with NoSuchFieldError. Run " +
-                    "`gradlew build` to completion and install build/libs/${jarPath.name} (or use `gradlew installMod`).")
+        def forbidden = ['net/minecraftforge/', 'net/conczin/', 'net/mca/', 'forge/net/mca/',
+                         'dev/ftb/', 'journeymap/', 'xaero/', 'dev/architectury/',
+                         'dev/otectus/mcareputation/']
+        def bundled = names.findAll { name -> forbidden.any { name.contains('/' + it) } }
+        if (!bundled.isEmpty()) {
+            throw new GradleException("${jarFile.name} bundles third-party classes: " +
+                    "${bundled.take(10).join(', ')} (${bundled.size()} entries).")
         }
-        logger.lifecycle("${jarPath.name}: reobfuscated (${srgRefs} classes carry SRG member names).")
+        logger.lifecycle("${jarFile.name}: metadata present, no third-party classes bundled.")
     }
 }
 
-tasks.named('build').configure {
-    dependsOn 'verifyReobfJar'
+tasks.named('check') {
+    dependsOn 'jarSmokeCheck'
 }
 
-// Installs the finished jar into a mods folder, so nobody has to copy build/libs by hand and race
-// reobfJar for it. The folder comes from -PmodsDir=..., else the MCAQUESTS_MODS_DIR environment
-// variable; nothing is deleted, but an older mcaquests jar left behind is called out, because two of
-// them in one folder is a duplicate-mod error rather than an upgrade.
+// Installs the finished jar into a mods folder, so nobody has to copy build/libs by hand. The folder
+// comes from -PmodsDir=..., else the MCAQUESTS_MODS_DIR environment variable; nothing is deleted, but
+// an older mcaquests jar left behind is called out, because two of them in one folder is a
+// duplicate-mod error rather than an upgrade.
 tasks.register('installMod') {
     group = 'build'
-    description = 'Copies the verified, reobfuscated jar into -PmodsDir=<dir> (or $MCAQUESTS_MODS_DIR).'
-    dependsOn 'verifyReobfJar'
+    description = 'Copies the verified jar into -PmodsDir=<dir> (or $MCAQUESTS_MODS_DIR).'
+    dependsOn 'jarSmokeCheck'
     def builtJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
     def target = (project.findProperty('modsDir') ?: System.getenv('MCAQUESTS_MODS_DIR'))?.toString()
     inputs.file(builtJar)
@@ -432,7 +457,7 @@ tasks.register('installMod') {
         }
         def source = builtJar.get().asFile
         modsDir.listFiles({ f -> f.name ==~ /^${mod_id}-.*\.jar$/ && f.name != source.name } as FileFilter)
-                ?.each { logger.warn("WARNING: ${it.name} is still in ${modsDir}; remove it, or Forge will refuse " +
+                ?.each { logger.warn("WARNING: ${it.name} is still in ${modsDir}; remove it, or NeoForge will refuse " +
                         "to load two copies of ${mod_id}.") }
         java.nio.file.Files.copy(source.toPath(), new File(modsDir, source.name).toPath(),
                 java.nio.file.StandardCopyOption.REPLACE_EXISTING)
