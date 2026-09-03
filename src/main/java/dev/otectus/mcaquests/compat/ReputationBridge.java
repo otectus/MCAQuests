@@ -1,7 +1,7 @@
 package dev.otectus.mcaquests.compat;
 
 import dev.otectus.mcaquests.McaQuests;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 /**
  * The optional-classloading seam for MCA: Reputation (spec §29.1), built to exactly the discipline

@@ -114,7 +114,7 @@ class JourneyGuardTest {
                   "lead": true
                 }""";
 
-        EscortEntityObjective parsed = EscortEntityObjective.CODEC
+        EscortEntityObjective parsed = EscortEntityObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
                 .getOrThrow(false, error -> {
                     throw new AssertionError("escort_entity failed to parse: " + error);
@@ -129,7 +129,7 @@ class JourneyGuardTest {
         String json = """
                 { "villager": { "mode": "self" }, "destination": { "anchor": "bed" }, "radius": 4 }""";
 
-        EscortEntityObjective parsed = EscortEntityObjective.CODEC
+        EscortEntityObjective parsed = EscortEntityObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
                 .getOrThrow(false, error -> {
                     throw new AssertionError("escort_entity failed to parse: " + error);
@@ -144,7 +144,7 @@ class JourneyGuardTest {
         String json = """
                 { "location": { "anchor": "home_village" }, "radius": 8, "min_journey": 64 }""";
 
-        ReachLocationObjective parsed = ReachLocationObjective.CODEC
+        ReachLocationObjective parsed = ReachLocationObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
                 .getOrThrow(false, error -> {
                     throw new AssertionError("reach_location failed to parse: " + error);
@@ -160,7 +160,7 @@ class JourneyGuardTest {
         String json = """
                 { "location": { "anchor": "coords", "pos": [0, 64, 0] } }""";
 
-        ReachLocationObjective reach = ReachLocationObjective.CODEC
+        ReachLocationObjective reach = ReachLocationObjective.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json))
                 .getOrThrow(false, error -> {
                     throw new AssertionError("reach_location failed to parse: " + error);

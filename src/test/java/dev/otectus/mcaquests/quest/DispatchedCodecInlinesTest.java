@@ -1,6 +1,5 @@
 package dev.otectus.mcaquests.quest;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import dev.otectus.mcaquests.support.TestBootstrap;
 import net.minecraft.resources.ResourceLocation;
@@ -18,27 +17,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Every codec reached through a {@code dispatch("type", …)} registry must still be a
- * {@link MapCodec.MapCodecCodec}, so its fields stay inline beside {@code "type"}.
+ * {@link MapCodec}, so its fields stay inline beside {@code "type"}.
  *
  * <h2>Why this exists</h2>
  *
- * <p>DFU's {@code KeyDispatchCodec} has two decode paths. When the dispatched codec is a
- * {@code MapCodecCodec} — which is what {@code RecordCodecBuilder.create(…)} returns — the record's
- * fields are read from the <em>same</em> object as {@code "type"}, so
- * {@code {"type": "mcaquests:is_family_member", "relation": "child"}} works. When it is any other
- * {@code Codec}, DFU instead expects the payload nested under a {@code "value"} key.
+ * <p>DFU's {@code KeyDispatchCodec} reads the dispatched codec's fields from the <em>same</em>
+ * object as {@code "type"}, so {@code {"type": "mcaquests:is_family_member", "relation": "child"}}
+ * works. On 1.20.1 that only held when the registered codec was a {@code MapCodecCodec}; anything
+ * else was read from a nested {@code "value"} key.
  *
  * <p>Chaining {@code .flatXmap(…)} or {@code .xmap(…)} onto the result of
- * {@code RecordCodecBuilder.create(…)} silently converts it to that other kind. The declaration still
- * compiles, still looks right, and every hand-written data file then fails to parse — and because
+ * {@code RecordCodecBuilder.create(…)} silently converted it to that other kind. The declaration still
+ * compiled, still looked right, and every hand-written data file then failed to parse — and because
  * {@code QuestDefinition} reads conditions through {@code optionalFieldOf("conditions")}, whose DFU
  * implementation <b>swallows a decode error and substitutes {@code Optional.empty()}</b>, the failure
  * is completely silent. Thirty-six shipped quests lost their entire condition gate this way: a quest
  * gated on being the player's own child was being offered by every villager in the world, and the
  * only visible symptom anywhere was one unrelated-looking age-eligibility warning.
  *
- * <p>The fix, and the shape to keep, is to validate on the {@code MapCodec} and convert at the end:
- * {@code RecordCodecBuilder.<T>mapCodec(…).flatXmap(T::validate, T::validate).codec()}.
+ * <p>The registry now holds a {@link MapCodec} outright, so the shape to keep is
+ * {@code RecordCodecBuilder.<T>mapCodec(…).flatXmap(T::validate, T::validate)} — this test guards
+ * the property the registry type only states.
  *
  * @see dev.otectus.mcaquests.data.BuiltinPackParsesTest for the data-side half of this guarantee
  */
@@ -61,10 +60,10 @@ class DispatchedCodecInlinesTest {
                 "dev.otectus.mcaquests.quest.objective.ObjectiveTypes",
                 "dev.otectus.mcaquests.quest.reward.RewardTypes")) {
             for (Map.Entry<ResourceLocation, ?> entry : registry(owner).entrySet()) {
-                Codec<?> codec = codecOf(entry.getValue());
+                MapCodec<?> codec = codecOf(entry.getValue());
                 checked++;
-                if (!(codec instanceof MapCodec.MapCodecCodec)) {
-                    offenders.add(entry.getKey() + " (" + codec.getClass().getName() + ")");
+                if (codec == null) {
+                    offenders.add(entry.getKey() + " has no MapCodec");
                 }
             }
         }
@@ -72,7 +71,7 @@ class DispatchedCodecInlinesTest {
         assertEquals(List.of(), offenders,
                 "these codecs no longer inline under dispatch, so every data file using them fails to "
                         + "parse — silently, because optionalFieldOf swallows the error. Build them as "
-                        + "RecordCodecBuilder.<T>mapCodec(...).flatXmap(...).codec() instead of chaining "
+                        + "RecordCodecBuilder.<T>mapCodec(...).flatXmap(...) instead of chaining "
                         + "onto RecordCodecBuilder.create(...). Offenders: " + offenders);
     }
 
@@ -83,8 +82,8 @@ class DispatchedCodecInlinesTest {
         return (Map<ResourceLocation, ?>) byId.get(null);
     }
 
-    private static Codec<?> codecOf(Object type) throws Exception {
+    private static MapCodec<?> codecOf(Object type) throws Exception {
         Method codec = type.getClass().getMethod("codec");
-        return (Codec<?>) codec.invoke(type);
+        return (MapCodec<?>) codec.invoke(type);
     }
 }

@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
@@ -25,7 +26,7 @@ import java.util.Optional;
 public record HealEntityObjective(VillagerTarget villager, ItemTarget item,
                                   double belowHealthFraction, int count, boolean consume) implements QuestObjective, VillagerTargeted {
 
-    public static final Codec<HealEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<HealEntityObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(HealEntityObjective::villager),
             ItemTarget.MAP_CODEC.forGetter(HealEntityObjective::item),
             Codec.doubleRange(0.0D, 1.0D).optionalFieldOf("below_health_fraction", 1.0D)

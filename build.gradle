@@ -396,6 +396,8 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // javac stops at 100 diagnostics by default; the port needs the full picture.
+    options.compilerArgs << '-Xmaxerrs' << '2000'
 }
 
 // Replaces the ForgeGradle-era verifyReobfJar: under ModDevGradle there is no reobfuscation to check,

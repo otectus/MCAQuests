@@ -27,7 +27,7 @@ import dev.otectus.mcaquests.quest.template.RegistryKind;
 import net.minecraft.tags.TagKey;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import java.util.ArrayList;
 import java.util.HashSet;

@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.FtbqBridge;
@@ -27,7 +27,7 @@ public record FtbqChapterCompletedCondition(String chapter, FtbqWhenMissing when
 
     private static final String TYPE_ID = "mcaquests:ftbq_chapter_completed";
 
-    public static final Codec<FtbqChapterCompletedCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<FtbqChapterCompletedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             FtbqIds.hexIdCodec(TYPE_ID, "chapter").fieldOf("chapter").forGetter(FtbqChapterCompletedCondition::chapter),
             FtbqWhenMissing.CODEC.optionalFieldOf("when_missing", FtbqWhenMissing.NOT_MET)
                     .forGetter(FtbqChapterCompletedCondition::whenMissing)

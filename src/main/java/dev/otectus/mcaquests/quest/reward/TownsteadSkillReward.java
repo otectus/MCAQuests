@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuests;
@@ -35,7 +36,7 @@ import javax.annotation.Nullable;
 public record TownsteadSkillReward(TownsteadTarget target, ResourceLocation skill, boolean forget,
                                    boolean force) implements TownsteadReward {
 
-    public static final Codec<TownsteadSkillReward> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadSkillReward> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadSkillReward::target),

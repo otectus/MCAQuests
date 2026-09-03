@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
@@ -25,7 +26,7 @@ import java.util.Optional;
 public record ReachLocationObjective(LocationAnchor location, int radius,
                                      Optional<Integer> minJourney) implements QuestObjective {
 
-    public static final Codec<ReachLocationObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<ReachLocationObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(ReachLocationObjective::location),
             Codec.intRange(1, 64).optionalFieldOf("radius", 6).forGetter(ReachLocationObjective::radius),
             Codec.intRange(0, 512).optionalFieldOf("min_journey").forGetter(ReachLocationObjective::minJourney)

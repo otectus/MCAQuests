@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
@@ -29,7 +30,7 @@ import java.util.OptionalInt;
 public record TownsteadBuildingProjectObjective(String buildingType, int minimumLevel, int count)
         implements PollingProjectObjective {
 
-    public static final Codec<TownsteadBuildingProjectObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadBuildingProjectObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     Codec.STRING.fieldOf("building_type")
                             .forGetter(TownsteadBuildingProjectObjective::buildingType),

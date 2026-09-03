@@ -71,7 +71,7 @@ public final class BuiltinPack {
      * extension already stripped, so the full path has to be rebuilt to ask the manager about it.
      */
     private static boolean isBundled(ResourceManager manager, String directory, ResourceLocation id) {
-        ResourceLocation path = new ResourceLocation(id.getNamespace(),
+        ResourceLocation path = ResourceLocation.fromNamespaceAndPath(id.getNamespace(),
                 directory + "/" + id.getPath() + ".json");
         Optional<Resource> resource = manager.getResource(path);
         return resource.map(found -> found.sourcePackId().startsWith(MOD_SOURCE_PREFIX)

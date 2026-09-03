@@ -9,7 +9,7 @@ import dev.otectus.mcaquests.project.SharedReward;
 import dev.otectus.mcaquests.project.SharedRewardTarget;
 import dev.otectus.mcaquests.quest.reward.CommandReward;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import java.util.LinkedHashMap;
 import java.util.List;

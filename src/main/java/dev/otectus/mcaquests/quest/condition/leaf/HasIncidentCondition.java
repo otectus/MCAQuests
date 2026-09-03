@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.IncidentSelector;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
@@ -42,7 +43,7 @@ public record HasIncidentCondition(Optional<ResourceLocation> incident, List<Str
                                    List<String> tags, boolean knownToGiver, boolean negate)
         implements QuestCondition {
 
-    public static final Codec<HasIncidentCondition> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<HasIncidentCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     ResourceLocation.CODEC.optionalFieldOf("incident")
                             .forGetter(HasIncidentCondition::incident),

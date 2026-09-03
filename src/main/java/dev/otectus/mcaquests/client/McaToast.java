@@ -37,7 +37,7 @@ import java.util.List;
  */
 public abstract class McaToast implements Toast {
 
-    private static final ResourceLocation TEXTURE = new ResourceLocation("textures/gui/toasts.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.parse("textures/gui/toasts.png");
 
     /** Vanilla's own display time, before the accessibility multiplier. */
     private static final long DISPLAY_TIME = 5000L;

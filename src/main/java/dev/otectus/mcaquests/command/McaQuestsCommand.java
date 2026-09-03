@@ -32,8 +32,8 @@ import dev.otectus.mcaquests.state.OfferSession;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
 import dev.otectus.mcaquests.quest.guidance.GuidanceService;
 import dev.otectus.mcaquests.quest.guidance.GuidanceSnapshot;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.minecraft.ChatFormatting;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.server.level.ServerLevel;
@@ -50,11 +50,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -70,7 +70,7 @@ import java.util.Locale;
  * the entire {@link McaCompat} adapter end-to-end, and {@code debug mca} reports which MCA package
  * layout the runtime binding resolved against — ask for that one first on any MCA-shaped bug report.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class McaQuestsCommand {
 
     private McaQuestsCommand() {

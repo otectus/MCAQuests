@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
@@ -35,7 +36,7 @@ public record TownsteadSpiritProjectObjective(Optional<String> spirit, OptionalI
 
     private static final String K_BASELINE = "townstead_spirit_baseline";
 
-    public static final Codec<TownsteadSpiritProjectObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadSpiritProjectObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(Codec.STRING, "spirit")
                             .forGetter(TownsteadSpiritProjectObjective::spirit),

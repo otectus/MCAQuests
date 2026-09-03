@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.reward;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +26,7 @@ class RewardContextDefaultTest {
     private static final class TwoArgOnlyReward implements QuestReward {
 
         private static final QuestRewardType<TwoArgOnlyReward> TYPE = new QuestRewardType<>(
-                new ResourceLocation("mcaquests", "test_two_arg_only"), Codec.unit(TwoArgOnlyReward::new));
+                new ResourceLocation("mcaquests", "test_two_arg_only"), MapCodec.unit(TwoArgOnlyReward::new));
 
         private int grants;
 

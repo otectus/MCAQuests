@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -19,7 +20,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
  */
 public record TownsteadNeedTrigger(String need, float minimumFraction) implements SituationTrigger {
 
-    public static final Codec<TownsteadNeedTrigger> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadNeedTrigger> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     Codec.STRING.fieldOf("need").forGetter(TownsteadNeedTrigger::need),
                     StrictCodecs.strictOptional(Codec.floatRange(0f, 1f), "minimum_fraction", 0.34f)

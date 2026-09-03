@@ -14,10 +14,10 @@ import dev.otectus.mcaquests.api.event.TitleGrantedEvent;
 import dev.otectus.mcaquests.compat.FtbqBridge;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.List;
 import java.util.Map;
@@ -27,11 +27,11 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Forge-bus + Architectury listener table that pushes MCA: Quests domain events into the FTB
  * Quests book (spec §15.0, §12.3, §12.4). Registered <b>manually</b> from {@link FtbqBootstrap#init()}
- * via {@link MinecraftForge#EVENT_BUS}{@code .addListener(...)} / {@link ClearFileCacheEvent#EVENT}
- * {@code .register(...)} calls — deliberately <em>not</em> {@code @Mod.EventBusSubscriber}, so that
+ * via {@link NeoForge#EVENT_BUS}{@code .addListener(...)} / {@link ClearFileCacheEvent#EVENT}
+ * {@code .register(...)} calls — deliberately <em>not</em> {@code @EventBusSubscriber}, so that
  * when FTB Quests is absent (and {@link FtbqBootstrap#init()} never runs) not a single listener is
  * ever attached to the bus (spec §10.4 / {@code NoFtbqClassloadTest}: this whole package only
- * classloads when {@code init()} runs, and {@code @Mod.EventBusSubscriber} would instead attach at
+ * classloads when {@code init()} runs, and {@code @EventBusSubscriber} would instead attach at
  * class-scan time regardless of whether FTB Quests is installed).
  *
  * <h2>Task-list caching (§12.3)</h2>
@@ -108,14 +108,14 @@ public final class FtbqEventBridge {
 
     /** Called exactly once, from {@link FtbqBootstrap#init()}. */
     public static void register() {
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onQuestCompleted);
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onSituationResolved);
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onProjectCompleted);
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onProjectContributed);
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onReputationTierReached);
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onTitleGranted);
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onPlayerLoggedIn);
-        MinecraftForge.EVENT_BUS.addListener(FtbqEventBridge::onServerStopping);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onQuestCompleted);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onSituationResolved);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onProjectCompleted);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onProjectContributed);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onReputationTierReached);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onTitleGranted);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onPlayerLoggedIn);
+        NeoForge.EVENT_BUS.addListener(FtbqEventBridge::onServerStopping);
         ClearFileCacheEvent.EVENT.register(FtbqEventBridge::onClearFileCache);
     }
 

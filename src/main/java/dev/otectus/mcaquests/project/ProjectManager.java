@@ -42,8 +42,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -418,7 +418,7 @@ public final class ProjectManager {
                 ProjectRewardDistributor.distribute(server, level, data, state, def, current);
                 ProjectReputation.apply(server, level, state, def, def.reputation().phaseOutcome(),
                         "phase", current);
-                MinecraftForge.EVENT_BUS.post(new ProjectEvent.PhaseAdvanced(def, state, current));
+                NeoForge.EVENT_BUS.post(new ProjectEvent.PhaseAdvanced(def, state, current));
                 broadcastToast(server, state, def, current);
             }
             int next = current + 1;
@@ -656,7 +656,7 @@ public final class ProjectManager {
         // ProgressionStats (spec section 11.2): +amount for the contributing player, keyed by project id.
         QuestCapabilities.get(player).ifPresent(pdata ->
                 ProgressionStats.increment(pdata.stats().projectContributions(), state.projectId(), amount));
-        MinecraftForge.EVENT_BUS.post(new ProjectEvent.Contributed(def, state, player, objectiveIndex, amount));
+        NeoForge.EVENT_BUS.post(new ProjectEvent.Contributed(def, state, player, objectiveIndex, amount));
     }
 
     /**
@@ -716,7 +716,7 @@ public final class ProjectManager {
             case FAIL -> {
                 state.setStatus(ProjectStatus.FAILED);
                 addReputation(server, state, def, def.reputation().failOutcome(), "fail", -1);
-                MinecraftForge.EVENT_BUS.post(new ProjectEvent.Failed(def, state));
+                NeoForge.EVENT_BUS.post(new ProjectEvent.Failed(def, state));
             }
             case PAUSE -> state.setStatus(ProjectStatus.PAUSED);
             case TRANSFER -> {
@@ -746,7 +746,7 @@ public final class ProjectManager {
                         ProgressionStats.increment(pdata.stats().projectCompletions(), state.projectId(), 1));
             }
         }
-        MinecraftForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
+        NeoForge.EVENT_BUS.post(new ProjectEvent.Completed(def, state));
     }
 
     private static boolean tryTransfer(MinecraftServer server, ProjectState state, ProjectDefinition def) {

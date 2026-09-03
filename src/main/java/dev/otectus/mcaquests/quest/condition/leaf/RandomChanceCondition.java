@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -13,7 +14,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
  */
 public record RandomChanceCondition(double chance) implements QuestCondition {
 
-    public static final Codec<RandomChanceCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<RandomChanceCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.DOUBLE.fieldOf("chance").forGetter(RandomChanceCondition::chance)
     ).apply(instance, RandomChanceCondition::new));
 

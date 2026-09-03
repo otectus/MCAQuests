@@ -142,8 +142,8 @@ public final class XaeroWaypoints implements MapWaypointBackend {
     private static final int FALLBACK_ORDINAL = 0;
 
     private static final String MOD_ID = "xaerominimap";
-    private static final ResourceLocation QUESTS = new ResourceLocation(McaQuests.MOD_ID, "quests");
-    private static final ResourceLocation PINS = new ResourceLocation(McaQuests.MOD_ID, "pins");
+    private static final ResourceLocation QUESTS = ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "quests");
+    private static final ResourceLocation PINS = ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "pins");
 
     private static final MapBackendCapabilities CAPABILITIES =
             new MapBackendCapabilities(true, PinSupport.SESSION, true);

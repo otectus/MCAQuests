@@ -1,7 +1,7 @@
 package dev.otectus.mcaquests;
 
 import dev.otectus.mcaquests.project.SponsorDeathBehavior;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
@@ -11,16 +11,16 @@ import org.apache.commons.lang3.tuple.Pair;
 public final class McaQuestsConfig {
 
     public static final Common COMMON;
-    public static final ForgeConfigSpec COMMON_SPEC;
+    public static final ModConfigSpec COMMON_SPEC;
     public static final Client CLIENT;
-    public static final ForgeConfigSpec CLIENT_SPEC;
+    public static final ModConfigSpec CLIENT_SPEC;
 
     static {
-        final Pair<Common, ForgeConfigSpec> common = new ForgeConfigSpec.Builder().configure(Common::new);
+        final Pair<Common, ModConfigSpec> common = new ModConfigSpec.Builder().configure(Common::new);
         COMMON = common.getLeft();
         COMMON_SPEC = common.getRight();
 
-        final Pair<Client, ForgeConfigSpec> client = new ForgeConfigSpec.Builder().configure(Client::new);
+        final Pair<Client, ModConfigSpec> client = new ModConfigSpec.Builder().configure(Client::new);
         CLIENT = client.getLeft();
         CLIENT_SPEC = client.getRight();
     }
@@ -29,96 +29,96 @@ public final class McaQuestsConfig {
     }
 
     public static final class Common {
-        public final ForgeConfigSpec.BooleanValue enableDefaultQuestPack;
-        public final ForgeConfigSpec.IntValue maxActiveQuestsPerPlayer;
-        public final ForgeConfigSpec.IntValue maxActiveQuestsPerVillager;
-        public final ForgeConfigSpec.IntValue offersPerVillager;
-        public final ForgeConfigSpec.IntValue offerRefreshTicks;
-        public final ForgeConfigSpec.IntValue defaultQuestCooldownTicks;
-        public final ForgeConfigSpec.IntValue declineCooldownTicks;
-        public final ForgeConfigSpec.BooleanValue declineRefillsSlot;
-        public final ForgeConfigSpec.BooleanValue requireOriginalVillagerForTurnIn;
-        public final ForgeConfigSpec.BooleanValue allowTurnInToSameProfessionIfOriginalMissing;
-        public final ForgeConfigSpec.BooleanValue failQuestIfGiverDies;
-        public final ForgeConfigSpec.BooleanValue allowCommandRewards;
-        public final ForgeConfigSpec.BooleanValue allowLootTableRewards;
-        public final ForgeConfigSpec.DoubleValue heartsRewardMultiplier;
-        public final ForgeConfigSpec.IntValue minHeartsReward;
-        public final ForgeConfigSpec.IntValue maxHeartsReward;
-        public final ForgeConfigSpec.EnumValue<ProfessionMatchingMode> professionMatchingMode;
+        public final ModConfigSpec.BooleanValue enableDefaultQuestPack;
+        public final ModConfigSpec.IntValue maxActiveQuestsPerPlayer;
+        public final ModConfigSpec.IntValue maxActiveQuestsPerVillager;
+        public final ModConfigSpec.IntValue offersPerVillager;
+        public final ModConfigSpec.IntValue offerRefreshTicks;
+        public final ModConfigSpec.IntValue defaultQuestCooldownTicks;
+        public final ModConfigSpec.IntValue declineCooldownTicks;
+        public final ModConfigSpec.BooleanValue declineRefillsSlot;
+        public final ModConfigSpec.BooleanValue requireOriginalVillagerForTurnIn;
+        public final ModConfigSpec.BooleanValue allowTurnInToSameProfessionIfOriginalMissing;
+        public final ModConfigSpec.BooleanValue failQuestIfGiverDies;
+        public final ModConfigSpec.BooleanValue allowCommandRewards;
+        public final ModConfigSpec.BooleanValue allowLootTableRewards;
+        public final ModConfigSpec.DoubleValue heartsRewardMultiplier;
+        public final ModConfigSpec.IntValue minHeartsReward;
+        public final ModConfigSpec.IntValue maxHeartsReward;
+        public final ModConfigSpec.EnumValue<ProfessionMatchingMode> professionMatchingMode;
 
         // Semantic currency + reward scaling (spec 1.1.0).
-        public final ForgeConfigSpec.DoubleValue currencyRewardMultiplier;
-        public final ForgeConfigSpec.DoubleValue xpRewardMultiplier;
-        public final ForgeConfigSpec.EnumValue<CurrencyProviderMode> currencyProvider;
-        public final ForgeConfigSpec.ConfigValue<String> customCurrencyItem;
-        public final ForgeConfigSpec.ConfigValue<String> numismaticsCurrencyItem;
-        public final ForgeConfigSpec.EnumValue<CurrencyFallback> currencyFallback;
-        public final ForgeConfigSpec.IntValue easyCurrencyMin;
-        public final ForgeConfigSpec.IntValue easyCurrencyMax;
-        public final ForgeConfigSpec.IntValue mediumCurrencyMin;
-        public final ForgeConfigSpec.IntValue mediumCurrencyMax;
-        public final ForgeConfigSpec.IntValue hardCurrencyMin;
-        public final ForgeConfigSpec.IntValue hardCurrencyMax;
-        public final ForgeConfigSpec.IntValue easyQuestReputation;
-        public final ForgeConfigSpec.IntValue mediumQuestReputation;
-        public final ForgeConfigSpec.IntValue hardQuestReputation;
-        public final ForgeConfigSpec.BooleanValue followGiverAfterAccept;
-        public final ForgeConfigSpec.DoubleValue leadVillagerSpeed;
-        public final ForgeConfigSpec.IntValue minEscortJourney;
-        public final ForgeConfigSpec.BooleanValue highlightQuestTargets;
-        public final ForgeConfigSpec.BooleanValue highlightUsesGlowingEffect;
-        public final ForgeConfigSpec.BooleanValue highlightAllActiveQuests;
-        public final ForgeConfigSpec.IntValue guidanceSearchIntervalTicks;
-        public final ForgeConfigSpec.IntValue guidanceSearchesPerPass;
-        public final ForgeConfigSpec.BooleanValue autoTrackNewQuests;
-        public final ForgeConfigSpec.BooleanValue questChatMessages;
-        public final ForgeConfigSpec.BooleanValue strictJsonValidation;
-        public final ForgeConfigSpec.BooleanValue debugLogging;
+        public final ModConfigSpec.DoubleValue currencyRewardMultiplier;
+        public final ModConfigSpec.DoubleValue xpRewardMultiplier;
+        public final ModConfigSpec.EnumValue<CurrencyProviderMode> currencyProvider;
+        public final ModConfigSpec.ConfigValue<String> customCurrencyItem;
+        public final ModConfigSpec.ConfigValue<String> numismaticsCurrencyItem;
+        public final ModConfigSpec.EnumValue<CurrencyFallback> currencyFallback;
+        public final ModConfigSpec.IntValue easyCurrencyMin;
+        public final ModConfigSpec.IntValue easyCurrencyMax;
+        public final ModConfigSpec.IntValue mediumCurrencyMin;
+        public final ModConfigSpec.IntValue mediumCurrencyMax;
+        public final ModConfigSpec.IntValue hardCurrencyMin;
+        public final ModConfigSpec.IntValue hardCurrencyMax;
+        public final ModConfigSpec.IntValue easyQuestReputation;
+        public final ModConfigSpec.IntValue mediumQuestReputation;
+        public final ModConfigSpec.IntValue hardQuestReputation;
+        public final ModConfigSpec.BooleanValue followGiverAfterAccept;
+        public final ModConfigSpec.DoubleValue leadVillagerSpeed;
+        public final ModConfigSpec.IntValue minEscortJourney;
+        public final ModConfigSpec.BooleanValue highlightQuestTargets;
+        public final ModConfigSpec.BooleanValue highlightUsesGlowingEffect;
+        public final ModConfigSpec.BooleanValue highlightAllActiveQuests;
+        public final ModConfigSpec.IntValue guidanceSearchIntervalTicks;
+        public final ModConfigSpec.IntValue guidanceSearchesPerPass;
+        public final ModConfigSpec.BooleanValue autoTrackNewQuests;
+        public final ModConfigSpec.BooleanValue questChatMessages;
+        public final ModConfigSpec.BooleanValue strictJsonValidation;
+        public final ModConfigSpec.BooleanValue debugLogging;
 
         // Village projects (spec 0.4.0).
-        public final ForgeConfigSpec.BooleanValue enableVillageProjects;
-        public final ForgeConfigSpec.IntValue defaultScopeFallbackRadius;
-        public final ForgeConfigSpec.EnumValue<SponsorDeathBehavior> defaultSponsorDeathBehavior;
-        public final ForgeConfigSpec.BooleanValue oneSponsorPerProjectPerDay;
-        public final ForgeConfigSpec.IntValue projectOffersPerVillager;
-        public final ForgeConfigSpec.IntValue projectContributeMinIntervalTicks;
-        public final ForgeConfigSpec.IntValue defaultPerPlayerContributionCap;
-        public final ForgeConfigSpec.BooleanValue allowProjectCommandRewards;
-        public final ForgeConfigSpec.IntValue maxConcurrentProjectsPerScope;
+        public final ModConfigSpec.BooleanValue enableVillageProjects;
+        public final ModConfigSpec.IntValue defaultScopeFallbackRadius;
+        public final ModConfigSpec.EnumValue<SponsorDeathBehavior> defaultSponsorDeathBehavior;
+        public final ModConfigSpec.BooleanValue oneSponsorPerProjectPerDay;
+        public final ModConfigSpec.IntValue projectOffersPerVillager;
+        public final ModConfigSpec.IntValue projectContributeMinIntervalTicks;
+        public final ModConfigSpec.IntValue defaultPerPlayerContributionCap;
+        public final ModConfigSpec.BooleanValue allowProjectCommandRewards;
+        public final ModConfigSpec.IntValue maxConcurrentProjectsPerScope;
 
-        public final ForgeConfigSpec.BooleanValue enableReputationTiers;
+        public final ModConfigSpec.BooleanValue enableReputationTiers;
 
         // Living Village — situations (spec 0.8.0).
-        public final ForgeConfigSpec.BooleanValue enableSituations;
-        public final ForgeConfigSpec.IntValue maxConcurrentSituationsPerVillage;
-        public final ForgeConfigSpec.IntValue situationGlobalCooldownTicks;
-        public final ForgeConfigSpec.IntValue situationDetectionIntervalTicks;
-        public final ForgeConfigSpec.IntValue maxSituationOffersPerMenu;
-        public final ForgeConfigSpec.IntValue situationDefaultPriority;
+        public final ModConfigSpec.BooleanValue enableSituations;
+        public final ModConfigSpec.IntValue maxConcurrentSituationsPerVillage;
+        public final ModConfigSpec.IntValue situationGlobalCooldownTicks;
+        public final ModConfigSpec.IntValue situationDetectionIntervalTicks;
+        public final ModConfigSpec.IntValue maxSituationOffersPerMenu;
+        public final ModConfigSpec.IntValue situationDefaultPriority;
 
         // FTB Quests optional integration (spec section 10/13, v1.0.0).
-        public final ForgeConfigSpec.BooleanValue enableFtbQuestsIntegration;
-        public final ForgeConfigSpec.IntValue ftbqStatePollIntervalTicks;
-        public final ForgeConfigSpec.DoubleValue ftbqHeartsScanRadius;
-        public final ForgeConfigSpec.BooleanValue allowFtbqProgressRewards;
-        public final ForgeConfigSpec.BooleanValue syncFtbqEditorIds;
+        public final ModConfigSpec.BooleanValue enableFtbQuestsIntegration;
+        public final ModConfigSpec.IntValue ftbqStatePollIntervalTicks;
+        public final ModConfigSpec.DoubleValue ftbqHeartsScanRadius;
+        public final ModConfigSpec.BooleanValue allowFtbqProgressRewards;
+        public final ModConfigSpec.BooleanValue syncFtbqEditorIds;
 
         // Townstead optional integration (Townstead spec section 11, v1.4.0).
-        public final ForgeConfigSpec.BooleanValue townsteadEnabled;
-        public final ForgeConfigSpec.BooleanValue townsteadContentEnabled;
-        public final ForgeConfigSpec.BooleanValue townsteadReactionsEnabled;
-        public final ForgeConfigSpec.BooleanValue townsteadNeedRewardsEnabled;
-        public final ForgeConfigSpec.BooleanValue townsteadProfessionXpRewardsEnabled;
-        public final ForgeConfigSpec.BooleanValue townsteadSkillRewardsEnabled;
-        public final ForgeConfigSpec.BooleanValue townsteadAllowUncappedProfessionXp;
-        public final ForgeConfigSpec.BooleanValue townsteadRewardFailureBlocksCompletion;
-        public final ForgeConfigSpec.IntValue townsteadPollIntervalTicks;
-        public final ForgeConfigSpec.IntValue townsteadProjectPollIntervalTicks;
-        public final ForgeConfigSpec.IntValue townsteadMaxVillagersPerPass;
-        public final ForgeConfigSpec.IntValue townsteadMaxVillagesPerPass;
-        public final ForgeConfigSpec.IntValue townsteadNeedCrisisHysteresis;
-        public final ForgeConfigSpec.BooleanValue townsteadDebugBindingLogs;
+        public final ModConfigSpec.BooleanValue townsteadEnabled;
+        public final ModConfigSpec.BooleanValue townsteadContentEnabled;
+        public final ModConfigSpec.BooleanValue townsteadReactionsEnabled;
+        public final ModConfigSpec.BooleanValue townsteadNeedRewardsEnabled;
+        public final ModConfigSpec.BooleanValue townsteadProfessionXpRewardsEnabled;
+        public final ModConfigSpec.BooleanValue townsteadSkillRewardsEnabled;
+        public final ModConfigSpec.BooleanValue townsteadAllowUncappedProfessionXp;
+        public final ModConfigSpec.BooleanValue townsteadRewardFailureBlocksCompletion;
+        public final ModConfigSpec.IntValue townsteadPollIntervalTicks;
+        public final ModConfigSpec.IntValue townsteadProjectPollIntervalTicks;
+        public final ModConfigSpec.IntValue townsteadMaxVillagersPerPass;
+        public final ModConfigSpec.IntValue townsteadMaxVillagesPerPass;
+        public final ModConfigSpec.IntValue townsteadNeedCrisisHysteresis;
+        public final ModConfigSpec.BooleanValue townsteadDebugBindingLogs;
 
         /**
          * Per-theme switches for the bundled Townstead content (spec 5.10). All default true and all
@@ -129,14 +129,14 @@ public final class McaQuestsConfig {
          * schedule quests may have no interest in the spirit and building ones, and before this the only
          * way to express that was to disable the lot.
          */
-        public final ForgeConfigSpec.BooleanValue townsteadContentNeedsAndSchedules;
-        public final ForgeConfigSpec.BooleanValue townsteadContentProfessions;
-        public final ForgeConfigSpec.BooleanValue townsteadContentCalendarAndLife;
-        public final ForgeConfigSpec.BooleanValue townsteadContentSpiritAndBuildings;
-        public final ForgeConfigSpec.BooleanValue townsteadContentProjects;
-        public final ForgeConfigSpec.BooleanValue townsteadContentSituations;
+        public final ModConfigSpec.BooleanValue townsteadContentNeedsAndSchedules;
+        public final ModConfigSpec.BooleanValue townsteadContentProfessions;
+        public final ModConfigSpec.BooleanValue townsteadContentCalendarAndLife;
+        public final ModConfigSpec.BooleanValue townsteadContentSpiritAndBuildings;
+        public final ModConfigSpec.BooleanValue townsteadContentProjects;
+        public final ModConfigSpec.BooleanValue townsteadContentSituations;
 
-        Common(ForgeConfigSpec.Builder b) {
+        Common(ModConfigSpec.Builder b) {
             b.push("quests");
             enableDefaultQuestPack = b.comment("Ship and enable the built-in default quest pack.")
                     .define("enableDefaultQuestPack", true);
@@ -513,37 +513,37 @@ public final class McaQuestsConfig {
     }
 
     public static final class Client {
-        public final ForgeConfigSpec.BooleanValue showQuestButtonInMcaMenu;
-        public final ForgeConfigSpec.BooleanValue showTownsteadQuestContext;
-        public final ForgeConfigSpec.BooleanValue showQuestToasts;
-        public final ForgeConfigSpec.BooleanValue showQuestTrackerHud;
-        public final ForgeConfigSpec.BooleanValue showQuestTargetDirection;
-        public final ForgeConfigSpec.BooleanValue showQuestTargetCoordinates;
-        public final ForgeConfigSpec.BooleanValue showQuestLogDestination;
-        public final ForgeConfigSpec.BooleanValue playQuestSounds;
-        public final ForgeConfigSpec.IntValue questTrackerMaxEntries;
-        public final ForgeConfigSpec.BooleanValue questTrackerBackground;
-        public final ForgeConfigSpec.EnumValue<HudBackground> questTrackerStyle;
-        public final ForgeConfigSpec.EnumValue<HudAnchor> questTrackerAnchor;
-        public final ForgeConfigSpec.IntValue questTrackerX;
-        public final ForgeConfigSpec.IntValue questTrackerY;
-        public final ForgeConfigSpec.BooleanValue showQuestMarker;
-        public final ForgeConfigSpec.IntValue questMarkerMaxDistance;
-        public final ForgeConfigSpec.EnumValue<MarkerStyle> questMarkerStyle;
-        public final ForgeConfigSpec.EnumValue<MarkerOcclusion> questMarkerOcclusion;
-        public final ForgeConfigSpec.BooleanValue questMarkerEdgeIndicator;
-        public final ForgeConfigSpec.EnumValue<MarkerLabels> questMarkerLabels;
-        public final ForgeConfigSpec.BooleanValue questMarkerHighContrast;
-        public final ForgeConfigSpec.BooleanValue questMarkerReducedMotion;
-        public final ForgeConfigSpec.BooleanValue mapWaypoints;
-        public final ForgeConfigSpec.BooleanValue mapWaypointsFollowedOnly;
-        public final ForgeConfigSpec.BooleanValue journeyMapWaypoints;
-        public final ForgeConfigSpec.BooleanValue xaeroWaypoints;
-        public final ForgeConfigSpec.BooleanValue showProjectTrackerHud;
-        public final ForgeConfigSpec.IntValue projectTrackerMaxEntries;
-        public final ForgeConfigSpec.BooleanValue showSituationToast;
+        public final ModConfigSpec.BooleanValue showQuestButtonInMcaMenu;
+        public final ModConfigSpec.BooleanValue showTownsteadQuestContext;
+        public final ModConfigSpec.BooleanValue showQuestToasts;
+        public final ModConfigSpec.BooleanValue showQuestTrackerHud;
+        public final ModConfigSpec.BooleanValue showQuestTargetDirection;
+        public final ModConfigSpec.BooleanValue showQuestTargetCoordinates;
+        public final ModConfigSpec.BooleanValue showQuestLogDestination;
+        public final ModConfigSpec.BooleanValue playQuestSounds;
+        public final ModConfigSpec.IntValue questTrackerMaxEntries;
+        public final ModConfigSpec.BooleanValue questTrackerBackground;
+        public final ModConfigSpec.EnumValue<HudBackground> questTrackerStyle;
+        public final ModConfigSpec.EnumValue<HudAnchor> questTrackerAnchor;
+        public final ModConfigSpec.IntValue questTrackerX;
+        public final ModConfigSpec.IntValue questTrackerY;
+        public final ModConfigSpec.BooleanValue showQuestMarker;
+        public final ModConfigSpec.IntValue questMarkerMaxDistance;
+        public final ModConfigSpec.EnumValue<MarkerStyle> questMarkerStyle;
+        public final ModConfigSpec.EnumValue<MarkerOcclusion> questMarkerOcclusion;
+        public final ModConfigSpec.BooleanValue questMarkerEdgeIndicator;
+        public final ModConfigSpec.EnumValue<MarkerLabels> questMarkerLabels;
+        public final ModConfigSpec.BooleanValue questMarkerHighContrast;
+        public final ModConfigSpec.BooleanValue questMarkerReducedMotion;
+        public final ModConfigSpec.BooleanValue mapWaypoints;
+        public final ModConfigSpec.BooleanValue mapWaypointsFollowedOnly;
+        public final ModConfigSpec.BooleanValue journeyMapWaypoints;
+        public final ModConfigSpec.BooleanValue xaeroWaypoints;
+        public final ModConfigSpec.BooleanValue showProjectTrackerHud;
+        public final ModConfigSpec.IntValue projectTrackerMaxEntries;
+        public final ModConfigSpec.BooleanValue showSituationToast;
 
-        Client(ForgeConfigSpec.Builder b) {
+        Client(ModConfigSpec.Builder b) {
             b.push("client");
             showQuestButtonInMcaMenu = b.comment("Inject the Quests button into MCA's villager interaction menu.")
                     .define("showQuestButtonInMcaMenu", true);

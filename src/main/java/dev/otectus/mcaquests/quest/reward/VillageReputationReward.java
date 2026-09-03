@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,7 +17,7 @@ import javax.annotation.Nullable;
  */
 public record VillageReputationReward(int amount) implements QuestReward {
 
-    public static final Codec<VillageReputationReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<VillageReputationReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.fieldOf("amount").forGetter(VillageReputationReward::amount)
     ).apply(instance, VillageReputationReward::new));
 

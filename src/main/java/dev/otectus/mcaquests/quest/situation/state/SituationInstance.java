@@ -139,7 +139,7 @@ public final class SituationInstance {
         UUID familyRoot = tag.contains("family_root") ? tag.getUUID("family_root") : null;
         SituationInstance instance = new SituationInstance(
                 tag.getUUID("id"),
-                new ResourceLocation(tag.getString("def")),
+                ResourceLocation.parse(tag.getString("def")),
                 tag.getInt("village_id"),
                 villager,
                 familyRoot,

@@ -451,7 +451,7 @@ public final class ActiveQuest {
     public static ActiveQuest load(CompoundTag tag) {
         Component name = Component.Serializer.fromJson(tag.getString("villager_name"));
         ResourceLocation profession = tag.contains("profession")
-                ? new ResourceLocation(tag.getString("profession")) : null;
+                ? ResourceLocation.parse(tag.getString("profession")) : null;
         List<ObjectiveProgress> progress = new ArrayList<>();
         ListTag list = tag.getList("progress", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
@@ -461,11 +461,11 @@ public final class ActiveQuest {
                 ? ResolvedTemplate.load(tag.getCompound("template")) : null;
         UUID situationInstance = tag.contains("situation") ? tag.getUUID("situation") : null;
         ActiveQuest quest = new ActiveQuest(
-                new ResourceLocation(tag.getString("quest")),
+                ResourceLocation.parse(tag.getString("quest")),
                 tag.getUUID("villager"),
                 name != null ? name : Component.empty(),
                 profession,
-                new ResourceLocation(tag.getString("dimension")),
+                ResourceLocation.parse(tag.getString("dimension")),
                 tag.getLong("start"),
                 tag.contains("start_day") ? OptionalLong.of(tag.getLong("start_day")) : OptionalLong.empty(),
                 tag.contains("village") ? OptionalInt.of(tag.getInt("village")) : OptionalInt.empty(),

@@ -26,11 +26,11 @@ public final class GuiTextures {
 
     /** Panels, frames, buttons, bars and the scrollbar. */
     public static final ResourceLocation PANEL_SHEET =
-            new ResourceLocation(McaQuests.MOD_ID, "textures/gui/panel.png");
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "textures/gui/panel.png");
 
     /** 16×16 glyphs: quest kinds, objective states, hearts, difficulty pips, professions. */
     public static final ResourceLocation ICON_SHEET =
-            new ResourceLocation(McaQuests.MOD_ID, "textures/gui/icons.png");
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "textures/gui/icons.png");
 
     /** Both sheets are square and this size. See the class note on {@code blitRepeating}. */
     public static final int SHEET = 256;

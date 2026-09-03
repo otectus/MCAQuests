@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
 import dev.otectus.mcaquests.quest.target.LocationAnchor;
@@ -23,7 +24,7 @@ import java.util.Optional;
 public record BreedAnimalsObjective(EntityTarget animal, Optional<LocationAnchor> near,
                                     int radius, int count) implements QuestObjective {
 
-    public static final Codec<BreedAnimalsObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<BreedAnimalsObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityTarget.MAP_CODEC.fieldOf("animal").forGetter(BreedAnimalsObjective::animal),
             LocationAnchor.CODEC.optionalFieldOf("near").forGetter(BreedAnimalsObjective::near),
             Codec.intRange(1, 256).optionalFieldOf("radius", 32).forGetter(BreedAnimalsObjective::radius),

@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.quest.reputation.QuestReputation;
@@ -21,7 +22,7 @@ import java.util.OptionalInt;
  */
 public record VillageReputationCondition(Optional<Integer> min, Optional<Integer> max) implements QuestCondition {
 
-    public static final Codec<VillageReputationCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<VillageReputationCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("min").forGetter(VillageReputationCondition::min),
             Codec.INT.optionalFieldOf("max").forGetter(VillageReputationCondition::max)
     ).apply(instance, VillageReputationCondition::new));

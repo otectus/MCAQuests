@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -11,7 +12,7 @@ import dev.otectus.mcaquests.quest.target.ItemTarget;
 /** Requires the player to hold a matching item in either hand (spec section 13). */
 public record ItemHeldCondition(ItemTarget target) implements QuestCondition {
 
-    public static final Codec<ItemHeldCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<ItemHeldCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(ItemHeldCondition::target)
     ).apply(instance, ItemHeldCondition::new));
 

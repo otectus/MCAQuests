@@ -38,7 +38,7 @@ public final class QuestNetwork {
     private static final String PROTOCOL_VERSION = "14";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(McaQuests.MOD_ID, "main"),
+            ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "main"),
             () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals,
             PROTOCOL_VERSION::equals);

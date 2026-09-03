@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.HistoryScope;
@@ -16,7 +16,7 @@ import net.minecraft.resources.ResourceLocation;
  */
 public record QuestCompletedCondition(ResourceLocation quest, HistoryScope scope) implements QuestCondition {
 
-    public static final Codec<QuestCompletedCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<QuestCompletedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("quest").forGetter(QuestCompletedCondition::quest),
             HistoryScope.CODEC.optionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestCompletedCondition::scope)
     ).apply(instance, QuestCompletedCondition::new));

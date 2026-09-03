@@ -17,7 +17,7 @@ public final class QuestCapabilities {
             CapabilityManager.get(new CapabilityToken<>() {
             });
 
-    public static final ResourceLocation ID = new ResourceLocation(McaQuests.MOD_ID, "player_quests");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "player_quests");
 
     private QuestCapabilities() {
     }

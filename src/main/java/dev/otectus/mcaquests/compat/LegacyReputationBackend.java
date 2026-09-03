@@ -12,7 +12,7 @@ import dev.otectus.mcaquests.state.VillageStanding;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
@@ -169,7 +169,7 @@ public final class LegacyReputationBackend implements ReputationBackend {
                 McaQuests.LOGGER.debug("[MCA: Quests] tier toast delivery failed; standing is unaffected", t);
             }
         }
-        MinecraftForge.EVENT_BUS.post(new ReputationTierReachedEvent(player, award.villageId(),
+        NeoForge.EVENT_BUS.post(new ReputationTierReachedEvent(player, award.villageId(),
                 ReputationTiers.DEFAULT_ID, reached.id(), newIndex));
     }
 

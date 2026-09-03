@@ -22,7 +22,7 @@ class FtbqProgressRewardTest {
     private static final String HEX = "F00DF00DF00DF00D";
 
     private static boolean parses(String json) {
-        var result = FtbqProgressReward.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json));
+        var result = FtbqProgressReward.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString(json));
         result.error().ifPresent(e -> System.out.println("[FtbqProgressRewardTest] parse error: " + e.message()));
         return result.result().isPresent();
     }
@@ -87,7 +87,7 @@ class FtbqProgressRewardTest {
 
     @Test
     void describeCompleteTask() {
-        var result = FtbqProgressReward.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
+        var result = FtbqProgressReward.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString(
                 "{\"action\":\"complete_task\",\"id\":\"" + HEX + "\"}"));
         assertTrue(result.result().isPresent());
         var reward = result.result().get();
@@ -97,7 +97,7 @@ class FtbqProgressRewardTest {
 
     @Test
     void describeCompleteQuest() {
-        var result = FtbqProgressReward.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
+        var result = FtbqProgressReward.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString(
                 "{\"action\":\"complete_quest\",\"id\":\"" + HEX + "\"}"));
         assertTrue(result.result().isPresent());
         var reward = result.result().get();
@@ -107,7 +107,7 @@ class FtbqProgressRewardTest {
 
     @Test
     void describeResetTask() {
-        var result = FtbqProgressReward.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
+        var result = FtbqProgressReward.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString(
                 "{\"action\":\"reset_task\",\"id\":\"" + HEX + "\"}"));
         assertTrue(result.result().isPresent());
         var reward = result.result().get();

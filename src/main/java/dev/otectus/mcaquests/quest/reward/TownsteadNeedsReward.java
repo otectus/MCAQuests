@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.NeedMutation;
@@ -65,7 +66,7 @@ public record TownsteadNeedsReward(TownsteadTarget target, NeedMutation.Need nee
             },
             mode -> DataResult.success(mode.name().toLowerCase(Locale.ROOT)));
 
-    public static final Codec<TownsteadNeedsReward> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadNeedsReward> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadNeedsReward::target),

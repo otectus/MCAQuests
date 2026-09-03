@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.McaConditionCodecs;
@@ -21,15 +22,15 @@ import java.util.OptionalInt;
 public record MoodCondition(Optional<Integer> min, Optional<Integer> max, Optional<List<String>> moods)
         implements QuestCondition {
 
-    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
-    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
-    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // Validate on the MapCodec, never on a Codec chained off create(...): the dispatch registry
+    // takes a MapCodec so the fields stay inline beside "type" rather than under a nested
+    // "value" key, which optionalFieldOf would then swallow silently.
     // See DispatchedCodecInlinesTest.
-    public static final Codec<MoodCondition> CODEC = RecordCodecBuilder.<MoodCondition>mapCodec(instance -> instance.group(
+    public static final MapCodec<MoodCondition> CODEC = RecordCodecBuilder.<MoodCondition>mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("min").forGetter(MoodCondition::min),
             Codec.INT.optionalFieldOf("max").forGetter(MoodCondition::max),
             McaConditionCodecs.lowercaseNonEmptyList("mood").optionalFieldOf("moods").forGetter(MoodCondition::moods)
-    ).apply(instance, MoodCondition::new)).flatXmap(MoodCondition::validate, MoodCondition::validate).codec();
+    ).apply(instance, MoodCondition::new)).flatXmap(MoodCondition::validate, MoodCondition::validate);
 
     private static DataResult<MoodCondition> validate(MoodCondition condition) {
         if (condition.min.isEmpty() && condition.max.isEmpty() && condition.moods.isEmpty()) {

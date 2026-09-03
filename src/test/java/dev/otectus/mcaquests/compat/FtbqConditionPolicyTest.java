@@ -222,7 +222,7 @@ class FtbqConditionPolicyTest {
     @Test
     void codecDefaultsWhenMissingToNotMet() {
         DataResult<FtbqQuestCompletedCondition> result =
-                parse(FtbqQuestCompletedCondition.CODEC, "{\"quest\":\"" + HEX + "\"}");
+                parse(FtbqQuestCompletedCondition.CODEC.codec(), "{\"quest\":\"" + HEX + "\"}");
         assertTrue(result.result().isPresent(), "expected parse success");
         assertTrue(result.result().get().whenMissing() == FtbqWhenMissing.NOT_MET, "default is not_met");
     }
@@ -230,7 +230,7 @@ class FtbqConditionPolicyTest {
     @Test
     void codecAcceptsExplicitMet() {
         DataResult<FtbqTaskCompletedCondition> result =
-                parse(FtbqTaskCompletedCondition.CODEC, "{\"task\":\"" + HEX + "\",\"when_missing\":\"met\"}");
+                parse(FtbqTaskCompletedCondition.CODEC.codec(), "{\"task\":\"" + HEX + "\",\"when_missing\":\"met\"}");
         assertTrue(result.result().isPresent(), "expected parse success");
         assertTrue(result.result().get().whenMissing() == FtbqWhenMissing.MET);
     }
@@ -238,7 +238,7 @@ class FtbqConditionPolicyTest {
     @Test
     void codecAcceptsLeadingHash() {
         DataResult<FtbqChapterCompletedCondition> result =
-                parse(FtbqChapterCompletedCondition.CODEC, "{\"chapter\":\"#" + HEX + "\"}");
+                parse(FtbqChapterCompletedCondition.CODEC.codec(), "{\"chapter\":\"#" + HEX + "\"}");
         assertTrue(result.result().isPresent(), "leading '#' must be tolerated");
         assertTrue(result.result().get().chapter().equals("#" + HEX));
     }
@@ -246,15 +246,15 @@ class FtbqConditionPolicyTest {
     @Test
     void codecRejectsBadHexFormat() {
         DataResult<FtbqQuestCompletedCondition> tooLong =
-                parse(FtbqQuestCompletedCondition.CODEC, "{\"quest\":\"1A2B3C4D5E6F70812\"}");
+                parse(FtbqQuestCompletedCondition.CODEC.codec(), "{\"quest\":\"1A2B3C4D5E6F70812\"}");
         assertTrue(tooLong.error().isPresent(), "17 hex chars must be rejected");
 
         DataResult<FtbqChapterCompletedCondition> badChars =
-                parse(FtbqChapterCompletedCondition.CODEC, "{\"chapter\":\"not-hex\"}");
+                parse(FtbqChapterCompletedCondition.CODEC.codec(), "{\"chapter\":\"not-hex\"}");
         assertTrue(badChars.error().isPresent(), "non-hex characters must be rejected");
 
         DataResult<FtbqTaskCompletedCondition> missingField =
-                parse(FtbqTaskCompletedCondition.CODEC, "{}");
+                parse(FtbqTaskCompletedCondition.CODEC.codec(), "{}");
         assertTrue(missingField.error().isPresent(), "the id field is required");
     }
 

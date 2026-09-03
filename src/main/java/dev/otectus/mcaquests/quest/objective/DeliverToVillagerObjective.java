@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
@@ -34,7 +35,7 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     /** {@code progress.extra()}: the transfer committed. Written before anything downstream fires. */
     private static final String K_TRANSFERRED = "delivered_to_inventory";
 
-    public static final Codec<DeliverToVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<DeliverToVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.MAP_CODEC.fieldOf("recipient").forGetter(DeliverToVillagerObjective::recipient),
             ItemTarget.MAP_CODEC.forGetter(DeliverToVillagerObjective::item),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(DeliverToVillagerObjective::itemCount),

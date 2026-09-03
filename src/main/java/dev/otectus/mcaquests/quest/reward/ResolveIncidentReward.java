@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.IncidentSelector;
@@ -48,7 +49,7 @@ import java.util.Optional;
 public record ResolveIncidentReward(Optional<ResourceLocation> incident, List<String> status,
                                     List<String> tags, String resolution) implements QuestReward {
 
-    public static final Codec<ResolveIncidentReward> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<ResolveIncidentReward> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     ResourceLocation.CODEC.optionalFieldOf("incident")
                             .forGetter(ResolveIncidentReward::incident),

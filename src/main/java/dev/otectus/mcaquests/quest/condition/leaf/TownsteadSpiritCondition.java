@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
@@ -41,7 +42,7 @@ public record TownsteadSpiritCondition(Optional<String> spirit, OptionalInt mini
                                        Optional<String> primary,
                                        Optional<Double> minimumShare) implements QuestCondition {
 
-    public static final Codec<TownsteadSpiritCondition> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadSpiritCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(Codec.STRING, "spirit")
                             .forGetter(TownsteadSpiritCondition::spirit),

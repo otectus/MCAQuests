@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
@@ -34,7 +35,7 @@ import net.minecraft.world.entity.Entity;
 public record TownsteadSkillCondition(TownsteadTarget target, ResourceLocation skill,
                                       boolean has) implements QuestCondition {
 
-    public static final Codec<TownsteadSkillCondition> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadSkillCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadSkillCondition::target),

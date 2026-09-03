@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -60,7 +61,7 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
      */
     private static final int UNDERGROUND_THRESHOLD = 8;
 
-    public static final Codec<FindMissingRelativeObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<FindMissingRelativeObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.fieldOf("relative").forGetter(FindMissingRelativeObjective::relative),
             BiomeTarget.MAP_CODEC.codec().optionalFieldOf("biome").forGetter(FindMissingRelativeObjective::biome),
             StructureTarget.MAP_CODEC.codec().optionalFieldOf("structure").forGetter(FindMissingRelativeObjective::structure),

@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import net.minecraft.network.chat.Component;
@@ -13,7 +14,7 @@ import javax.annotation.Nullable;
 /** Gives raw experience points (spec section 15). */
 public record XpReward(int amount) implements QuestReward {
 
-    public static final Codec<XpReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<XpReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ExtraCodecs.POSITIVE_INT.fieldOf("amount").forGetter(XpReward::amount)
     ).apply(instance, XpReward::new));
 

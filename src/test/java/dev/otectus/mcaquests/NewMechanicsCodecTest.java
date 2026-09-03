@@ -31,37 +31,37 @@ class NewMechanicsCodecTest {
     @Test
     void escortEntityAcceptsLeadAndWaitDistance() {
         // legacy follow-mode (no lead field) still parses — backward compatible
-        assertTrue(parses(EscortEntityObjective.CODEC,
+        assertTrue(parses(EscortEntityObjective.CODEC.codec(),
                 "{\"destination\":{\"anchor\":\"home_village\"},\"radius\":8}"));
         // lead-mode with explicit wait_distance
-        assertTrue(parses(EscortEntityObjective.CODEC,
+        assertTrue(parses(EscortEntityObjective.CODEC.codec(),
                 "{\"villager\":{\"mode\":\"self\"},\"destination\":{\"anchor\":\"bed\"},"
                         + "\"radius\":4,\"lead\":true,\"wait_distance\":6}"));
         // lead a family member to the village
-        assertTrue(parses(EscortEntityObjective.CODEC,
+        assertTrue(parses(EscortEntityObjective.CODEC.codec(),
                 "{\"villager\":{\"mode\":\"family\",\"relation\":\"child\"},"
                         + "\"destination\":{\"anchor\":\"home_village\"},\"radius\":8,\"lead\":true}"));
         // staged escort with an explicit stage_until_near override
-        assertTrue(parses(EscortEntityObjective.CODEC,
+        assertTrue(parses(EscortEntityObjective.CODEC.codec(),
                 "{\"villager\":{\"mode\":\"family\",\"relation\":\"parent\"},"
                         + "\"destination\":{\"anchor\":\"bed\"},\"radius\":4,\"lead\":true,\"stage_until_near\":true}"));
     }
 
     @Test
     void reachLocationParses() {
-        assertTrue(parses(ReachLocationObjective.CODEC,
+        assertTrue(parses(ReachLocationObjective.CODEC.codec(),
                 "{\"location\":{\"anchor\":\"home_village\"},\"radius\":12}"));
-        assertTrue(parses(ReachLocationObjective.CODEC,
+        assertTrue(parses(ReachLocationObjective.CODEC.codec(),
                 "{\"location\":{\"anchor\":\"nearest_village\",\"radius\":160}}"));
     }
 
     @Test
     void giverDistanceFromVillageParsesAndValidates() {
-        assertTrue(parses(GiverDistanceFromVillageCondition.CODEC, "{\"min_distance\":80}"));
-        assertTrue(parses(GiverDistanceFromVillageCondition.CODEC,
+        assertTrue(parses(GiverDistanceFromVillageCondition.CODEC.codec(), "{\"min_distance\":80}"));
+        assertTrue(parses(GiverDistanceFromVillageCondition.CODEC.codec(),
                 "{\"min_distance\":24,\"require_outside_border\":true}"));
-        assertTrue(parses(GiverDistanceFromVillageCondition.CODEC, "{}"), "min_distance defaults to 0");
+        assertTrue(parses(GiverDistanceFromVillageCondition.CODEC.codec(), "{}"), "min_distance defaults to 0");
         // a negative distance is rejected at parse time
-        assertFalse(parses(GiverDistanceFromVillageCondition.CODEC, "{\"min_distance\":-5}"));
+        assertFalse(parses(GiverDistanceFromVillageCondition.CODEC.codec(), "{\"min_distance\":-5}"));
     }
 }

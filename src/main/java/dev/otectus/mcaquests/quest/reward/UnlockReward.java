@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -16,7 +17,7 @@ import javax.annotation.Nullable;
  */
 public record UnlockReward(ResourceLocation target) implements QuestReward {
 
-    public static final Codec<UnlockReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<UnlockReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("target").forGetter(UnlockReward::target)
     ).apply(instance, UnlockReward::new));
 

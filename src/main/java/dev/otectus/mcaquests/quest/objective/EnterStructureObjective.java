@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.StructureTarget;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
@@ -20,7 +20,7 @@ import java.util.List;
  */
 public record EnterStructureObjective(StructureTarget structure) implements QuestObjective {
 
-    public static final Codec<EnterStructureObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<EnterStructureObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             StructureTarget.MAP_CODEC.forGetter(EnterStructureObjective::structure)
     ).apply(instance, EnterStructureObjective::new));
 

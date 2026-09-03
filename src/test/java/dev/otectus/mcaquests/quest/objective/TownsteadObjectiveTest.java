@@ -116,7 +116,7 @@ class TownsteadObjectiveTest {
     @DisplayName("with Townstead absent")
     class Suspension {
 
-        private final TownsteadStateObjective objective = ok(TownsteadStateObjective.CODEC, """
+        private final TownsteadStateObjective objective = ok(TownsteadStateObjective.CODEC.codec(), """
                 {"source":"villager","path":"schedule.currentActivity","operator":"eq","value":"work",
                  "hold_ticks":600}""");
 
@@ -153,7 +153,7 @@ class TownsteadObjectiveTest {
                     "a schedule query must not claim needs or profession, or one missing accessor would "
                             + "suspend quests that never touched it");
 
-            TownsteadStateObjective hunger = ok(TownsteadStateObjective.CODEC, """
+            TownsteadStateObjective hunger = ok(TownsteadStateObjective.CODEC.codec(), """
                     {"source":"villager","path":"needs.hunger","operator":"gte","value":60}""");
             assertEquals(java.util.Set.of(TownsteadCapability.READ_VILLAGER,
                     TownsteadCapability.READ_NEEDS), hunger.requiredCapabilities());
@@ -169,27 +169,27 @@ class TownsteadObjectiveTest {
         @Test
         @DisplayName("parse with Townstead absent, so a pack always loads")
         void parseWithoutTownstead() {
-            ok(TownsteadChangeObjective.CODEC, """
+            ok(TownsteadChangeObjective.CODEC.codec(), """
                     {"source":"villager","path":"needs.hunger","operator":"gte","value":0,
                      "direction":"increase","amount":45,"minimum_final":70}""");
-            ok(TownsteadBuildingRegisteredObjective.CODEC, """
+            ok(TownsteadBuildingRegisteredObjective.CODEC.codec(), """
                     {"building_type":"dock","minimum_level":2,"count":1}""");
-            ok(TownsteadHealthyResidentsObjective.CODEC, """
+            ok(TownsteadHealthyResidentsObjective.CODEC.codec(), """
                     {"minimum_observed":4,"minimum_fraction":0.75,"hunger_min":60,"hold_ticks":1200}""");
-            ok(TownsteadSpiritProgressObjective.CODEC, """
+            ok(TownsteadSpiritProgressObjective.CODEC.codec(), """
                     {"spirit":"industrious","points_delta":60}""");
         }
 
         @Test
         @DisplayName("reject a goal that says two contradictory things")
         void rejectContradictoryGoals() {
-            assertTrue(parse(TownsteadProfessionProgressObjective.CODEC, """
+            assertTrue(parse(TownsteadProfessionProgressObjective.CODEC.codec(), """
                     {"profession":"minecraft:farmer","xp_delta":100,"target_tier":3}""")
                     .error().isPresent(), "a relative and an absolute goal cannot both apply");
-            assertTrue(parse(TownsteadProfessionProgressObjective.CODEC, """
+            assertTrue(parse(TownsteadProfessionProgressObjective.CODEC.codec(), """
                     {"profession":"minecraft:farmer"}""")
                     .error().isPresent(), "a profession objective with no goal is meaningless");
-            assertTrue(parse(TownsteadSpiritProgressObjective.CODEC, """
+            assertTrue(parse(TownsteadSpiritProgressObjective.CODEC.codec(), """
                     {"points_delta":10,"target_tier":2}""")
                     .error().isPresent());
         }
@@ -198,7 +198,7 @@ class TownsteadObjectiveTest {
         @DisplayName("carry sensible defaults")
         void carryDefaults() {
             TownsteadBuildingRegisteredObjective building =
-                    ok(TownsteadBuildingRegisteredObjective.CODEC, """
+                    ok(TownsteadBuildingRegisteredObjective.CODEC.codec(), """
                             {"building_type":"wool_shed"}""");
 
             assertEquals(1, building.count());
@@ -207,7 +207,7 @@ class TownsteadObjectiveTest {
                     "\"build us one\" is the common case; merely having one completes instantly");
 
             TownsteadProfessionProgressObjective profession =
-                    ok(TownsteadProfessionProgressObjective.CODEC, """
+                    ok(TownsteadProfessionProgressObjective.CODEC.codec(), """
                             {"profession":"minecraft:farmer","xp_delta":120}""");
             assertTrue(profession.requireCurrentProfession());
             assertEquals(120, profession.required());
@@ -222,13 +222,13 @@ class TownsteadObjectiveTest {
         @Test
         @DisplayName("a profession objective may leave the trade unnamed")
         void professionMayBeUnnamed() {
-            TownsteadProfessionProgressObjective any = ok(TownsteadProfessionProgressObjective.CODEC, """
+            TownsteadProfessionProgressObjective any = ok(TownsteadProfessionProgressObjective.CODEC.codec(), """
                     {"xp_delta":150,"require_current_profession":true}""");
 
             assertTrue(any.profession().isEmpty(), "no trade named means whatever they practise");
             assertEquals(150, any.required());
 
-            TownsteadProfessionProgressObjective named = ok(TownsteadProfessionProgressObjective.CODEC, """
+            TownsteadProfessionProgressObjective named = ok(TownsteadProfessionProgressObjective.CODEC.codec(), """
                     {"profession":"minecraft:farmer","target_tier":3}""");
             assertEquals("minecraft:farmer", named.profession().orElseThrow());
         }
@@ -236,7 +236,7 @@ class TownsteadObjectiveTest {
         @Test
         @DisplayName("hold progress reads in seconds, not ticks")
         void holdIsCountedInSeconds() {
-            TownsteadStateObjective objective = ok(TownsteadStateObjective.CODEC, """
+            TownsteadStateObjective objective = ok(TownsteadStateObjective.CODEC.codec(), """
                     {"source":"villager","path":"needs.hunger","operator":"gte","value":60,
                      "hold_ticks":1200}""");
 

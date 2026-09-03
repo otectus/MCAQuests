@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -54,7 +55,7 @@ public record TownsteadBuildingRegisteredObjective(String buildingType, int mini
     /** {@code progress.extra()} sub-tag: building id -> the tier it was at when the quest was accepted. */
     private static final String K_PRE_EXISTING = "townstead_buildings_at_accept";
 
-    public static final Codec<TownsteadBuildingRegisteredObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadBuildingRegisteredObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     Codec.STRING.fieldOf("building_type")
                             .forGetter(TownsteadBuildingRegisteredObjective::buildingType),

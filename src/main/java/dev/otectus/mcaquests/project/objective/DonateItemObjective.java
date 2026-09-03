@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.project.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.project.state.SharedObjectiveProgress;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
@@ -18,7 +18,7 @@ import net.minecraft.world.item.ItemStack;
  */
 public record DonateItemObjective(ItemTarget target, int count, int perPlayerCap) implements ProjectObjective {
 
-    public static final Codec<DonateItemObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<DonateItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(DonateItemObjective::target),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(DonateItemObjective::count),
             ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("per_player_cap", 0).forGetter(DonateItemObjective::perPlayerCap)

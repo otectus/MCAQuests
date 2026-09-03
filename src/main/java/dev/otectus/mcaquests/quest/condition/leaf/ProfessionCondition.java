@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
@@ -14,7 +15,7 @@ import java.util.List;
 /** Requires the giver villager to have one of the listed professions (spec section 13). */
 public record ProfessionCondition(List<ResourceLocation> professions) implements QuestCondition {
 
-    public static final Codec<ProfessionCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<ProfessionCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.listOf().fieldOf("professions").forGetter(ProfessionCondition::professions)
     ).apply(instance, ProfessionCondition::new));
 

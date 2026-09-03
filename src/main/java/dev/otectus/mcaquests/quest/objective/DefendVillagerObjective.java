@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
@@ -27,7 +28,7 @@ import java.util.Optional;
 public record DefendVillagerObjective(VillagerTarget villager, EntityTarget threat,
                                       int radius, int count) implements QuestObjective, VillagerTargeted {
 
-    public static final Codec<DefendVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<DefendVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(DefendVillagerObjective::villager),
             EntityTarget.MAP_CODEC.fieldOf("threat").forGetter(DefendVillagerObjective::threat),
             Codec.intRange(1, 64).optionalFieldOf("radius", 16).forGetter(DefendVillagerObjective::radius),

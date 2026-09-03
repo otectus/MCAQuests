@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadPeriod;
 import dev.otectus.mcaquests.data.StrictCodecs;
@@ -35,7 +36,7 @@ import java.util.Optional;
 public record TownsteadCalendarTransitionTrigger(TownsteadPeriod transition, Optional<String> from,
                                                  Optional<String> to) implements SituationTrigger {
 
-    public static final Codec<TownsteadCalendarTransitionTrigger> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadCalendarTransitionTrigger> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     TownsteadPeriod.TRANSITION_CODEC.fieldOf("transition")
                             .forGetter(TownsteadCalendarTransitionTrigger::transition),

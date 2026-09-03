@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -15,7 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 /** Enter a specified dimension (spec section 14). Checked on a throttled player tick; sticky once visited. */
 public record VisitDimensionObjective(ResourceLocation dimension) implements QuestObjective {
 
-    public static final Codec<VisitDimensionObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<VisitDimensionObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("dimension").forGetter(VisitDimensionObjective::dimension)
     ).apply(instance, VisitDimensionObjective::new));
 

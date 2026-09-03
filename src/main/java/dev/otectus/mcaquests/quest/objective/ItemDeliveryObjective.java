@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.data.StrictCodecs;
@@ -17,7 +18,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
 
@@ -57,7 +58,7 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
     /** {@code progress.extra()} flag: the transfer has been committed and must never run again. */
     private static final String K_DELIVERED = "delivered";
 
-    public static final Codec<ItemDeliveryObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<ItemDeliveryObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemDeliveryObjective::item),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
             Codec.BOOL.optionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume),

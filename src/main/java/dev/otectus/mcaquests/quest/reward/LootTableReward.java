@@ -1,9 +1,11 @@
 package dev.otectus.mcaquests.quest.reward;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,7 +15,7 @@ import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
 
@@ -23,7 +25,7 @@ import javax.annotation.Nullable;
  */
 public record LootTableReward(ResourceLocation lootTable) implements QuestReward {
 
-    public static final Codec<LootTableReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<LootTableReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("loot_table").forGetter(LootTableReward::lootTable)
     ).apply(instance, LootTableReward::new));
 
@@ -43,7 +45,8 @@ public record LootTableReward(ResourceLocation lootTable) implements QuestReward
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
-        LootTable table = level.getServer().getLootData().getLootTable(lootTable);
+        ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE, lootTable);
+        LootTable table = level.getServer().reloadableRegistries().getLootTable(key);
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, player.position())
                 .withParameter(LootContextParams.THIS_ENTITY, player)

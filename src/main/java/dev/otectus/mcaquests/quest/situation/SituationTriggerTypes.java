@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.situation;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.quest.situation.trigger.HostilesNearHomeTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.InfectionTrigger;
@@ -82,7 +83,7 @@ public final class SituationTriggerTypes {
     private SituationTriggerTypes() {
     }
 
-    public static <T extends SituationTrigger> SituationTriggerType<T> register(ResourceLocation id, Codec<T> codec) {
+    public static <T extends SituationTrigger> SituationTriggerType<T> register(ResourceLocation id, MapCodec<T> codec) {
         SituationTriggerType<T> type = new SituationTriggerType<>(id, codec);
         if (BY_ID.putIfAbsent(id, type) != null) {
             throw new IllegalArgumentException("Duplicate situation trigger type id: " + id);
@@ -90,8 +91,8 @@ public final class SituationTriggerTypes {
         return type;
     }
 
-    public static <T extends SituationTrigger> SituationTriggerType<T> register(String path, Codec<T> codec) {
-        return register(new ResourceLocation(McaQuests.MOD_ID, path), codec);
+    public static <T extends SituationTrigger> SituationTriggerType<T> register(String path, MapCodec<T> codec) {
+        return register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, path), codec);
     }
 
     public static boolean exists(ResourceLocation id) {

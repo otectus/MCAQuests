@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
@@ -31,7 +31,7 @@ import java.util.Optional;
  */
 public record TownsteadAvailableCondition(List<TownsteadCapability> capabilities) implements QuestCondition {
 
-    public static final Codec<TownsteadAvailableCondition> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadAvailableCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadCapability.CODEC, "capability")
                             .forGetter(condition -> condition.capabilities.size() == 1

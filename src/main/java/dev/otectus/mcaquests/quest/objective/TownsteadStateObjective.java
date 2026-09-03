@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
@@ -48,7 +49,7 @@ public record TownsteadStateObjective(TownsteadQuery query, int holdTicks,
 
     private static final int TICKS_PER_SECOND = 20;
 
-    public static final Codec<TownsteadStateObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadStateObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     TownsteadQuery.MAP_CODEC.forGetter(TownsteadStateObjective::query),
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "hold_ticks", TICKS_PER_SECOND)

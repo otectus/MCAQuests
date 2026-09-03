@@ -116,7 +116,7 @@ class DeliveryDestinationTest {
     // ------------------------------------------------------------------------------------- parsing
 
     private static DataResult<ItemDeliveryObjective> parse(String json) {
-        return ItemDeliveryObjective.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json));
+        return ItemDeliveryObjective.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString(json));
     }
 
     @Test

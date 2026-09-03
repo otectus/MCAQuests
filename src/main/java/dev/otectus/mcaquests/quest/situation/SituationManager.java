@@ -28,8 +28,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -248,7 +248,7 @@ public final class SituationManager {
      */
     private static void postResolved(SituationInstance instance, SituationResolvedEvent.Resolution resolution,
                                      @Nullable ServerPlayer resolvingPlayer) {
-        MinecraftForge.EVENT_BUS.post(new SituationResolvedEvent(instance.defId(), instance.villageId(), resolution,
+        NeoForge.EVENT_BUS.post(new SituationResolvedEvent(instance.defId(), instance.villageId(), resolution,
                 Set.copyOf(instance.participants()), resolvingPlayer));
     }
 

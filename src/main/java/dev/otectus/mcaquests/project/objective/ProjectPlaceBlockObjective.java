@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.project.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.BlockTarget;
 import net.minecraft.network.chat.Component;
@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public record ProjectPlaceBlockObjective(BlockTarget target, int count) implements ProjectObjective {
 
-    public static final Codec<ProjectPlaceBlockObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<ProjectPlaceBlockObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(ProjectPlaceBlockObjective::target),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ProjectPlaceBlockObjective::count)
     ).apply(instance, ProjectPlaceBlockObjective::new));

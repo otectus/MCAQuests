@@ -52,15 +52,15 @@ class ProgressionCodecTest {
     void reputationTierConditionRoundTrip() {
         ReputationTierCondition cond = new ReputationTierCondition("friend", Optional.of("honored"),
                 Optional.of(new ResourceLocation("mcaquests", "default")));
-        DataResult<JsonElement> encoded = ReputationTierCondition.CODEC.encodeStart(JsonOps.INSTANCE, cond);
-        ReputationTierCondition decoded = ReputationTierCondition.CODEC
+        DataResult<JsonElement> encoded = ReputationTierCondition.CODEC.codec().encodeStart(JsonOps.INSTANCE, cond);
+        ReputationTierCondition decoded = ReputationTierCondition.CODEC.codec()
                 .parse(JsonOps.INSTANCE, encoded.result().orElseThrow()).result().orElseThrow();
         assertEquals(cond, decoded);
     }
 
     @Test
     void reputationTierConditionDecodesMinimalJson() {
-        ReputationTierCondition cond = ReputationTierCondition.CODEC
+        ReputationTierCondition cond = ReputationTierCondition.CODEC.codec()
                 .parse(JsonOps.INSTANCE, JsonParser.parseString("{ \"min_tier\": \"friend\" }"))
                 .result().orElseThrow();
         assertEquals("friend", cond.minTier());

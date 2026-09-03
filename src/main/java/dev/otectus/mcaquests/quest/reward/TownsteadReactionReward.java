@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
@@ -38,7 +39,7 @@ import javax.annotation.Nullable;
 public record TownsteadReactionReward(TownsteadTarget target, ResourceLocation task,
                                       String phase) implements TownsteadReward {
 
-    public static final Codec<TownsteadReactionReward> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadReactionReward> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadReactionReward::target),

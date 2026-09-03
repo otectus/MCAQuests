@@ -1,6 +1,8 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
@@ -56,7 +58,7 @@ public record FtbqProgressReward(ProgressAction action, String id) implements Qu
         }
     }
 
-    public static final Codec<FtbqProgressReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<FtbqProgressReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ProgressAction.CODEC.fieldOf("action").forGetter(FtbqProgressReward::action),
             FtbqIds.hexIdCodec(TYPE_ID, "id").fieldOf("id").forGetter(FtbqProgressReward::id)
     ).apply(instance, FtbqProgressReward::new));

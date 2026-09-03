@@ -16,16 +16,16 @@ import java.util.Set;
  */
 public final class ReputationTiers {
 
-    public static final ResourceLocation DEFAULT_ID = new ResourceLocation(McaQuests.MOD_ID, "default");
+    public static final ResourceLocation DEFAULT_ID = ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "default");
 
     public static final ReputationTierSet BUILTIN_DEFAULT = new ReputationTierSet(List.of(
             new ReputationTier("stranger", 0, "Stranger", Optional.empty()),
             new ReputationTier("acquaintance", 25, "Acquaintance", Optional.empty()),
             new ReputationTier("friend", 75, "Friend", Optional.empty()),
             new ReputationTier("honored", 150, "Honored",
-                    Optional.of(new ResourceLocation(McaQuests.MOD_ID, "honored_of_village"))),
+                    Optional.of(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "honored_of_village"))),
             new ReputationTier("revered", 300, "Revered",
-                    Optional.of(new ResourceLocation(McaQuests.MOD_ID, "revered_of_village")))));
+                    Optional.of(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "revered_of_village")))));
 
     private static volatile Map<ResourceLocation, ReputationTierSet> ladders = Map.of();
 

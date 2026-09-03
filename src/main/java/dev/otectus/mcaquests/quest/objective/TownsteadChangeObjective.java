@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
@@ -92,7 +93,7 @@ public record TownsteadChangeObjective(TownsteadQuery query, Direction direction
         }
     }
 
-    public static final Codec<TownsteadChangeObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadChangeObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     TownsteadQuery.MAP_CODEC.forGetter(TownsteadChangeObjective::query),
                     Direction.CODEC.fieldOf("direction").forGetter(TownsteadChangeObjective::direction),

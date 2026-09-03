@@ -7,9 +7,9 @@ import dev.otectus.mcaquests.project.ProjectManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Decides what counts as <em>talking to</em> an MCA villager, and credits it to both quest and project
@@ -30,7 +30,7 @@ import net.minecraftforge.fml.common.Mod;
  * {@link #creditConversation}, and both quest- and project-side credit dedupe by villager UUID, so a
  * doubled notification (base hook <em>and</em> MCA: Conversations) can never count twice.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class QuestEventHandlers {
 
     private QuestEventHandlers() {

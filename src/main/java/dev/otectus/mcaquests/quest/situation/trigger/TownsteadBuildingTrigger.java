@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -22,7 +23,7 @@ import java.util.Optional;
 public record TownsteadBuildingTrigger(Optional<String> buildingType, int minimumLevel)
         implements SituationTrigger {
 
-    public static final Codec<TownsteadBuildingTrigger> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadBuildingTrigger> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(Codec.STRING, "building_type")
                             .forGetter(TownsteadBuildingTrigger::buildingType),

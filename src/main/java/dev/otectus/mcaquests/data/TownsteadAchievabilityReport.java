@@ -2,9 +2,9 @@ package dev.otectus.mcaquests.data;
 
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
 import dev.otectus.mcaquests.quest.situation.SituationRegistry;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.List;
 
@@ -20,7 +20,7 @@ import java.util.List;
  * <p>Silent when everything is reachable, and silent when Townstead is absent. An operator should hear
  * from this exactly when something they installed cannot be finished.
  */
-@Mod.EventBusSubscriber(modid = dev.otectus.mcaquests.McaQuests.MOD_ID)
+@EventBusSubscriber(modid = dev.otectus.mcaquests.McaQuests.MOD_ID)
 public final class TownsteadAchievabilityReport {
 
     private TownsteadAchievabilityReport() {

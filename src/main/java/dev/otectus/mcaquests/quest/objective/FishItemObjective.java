@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
 import net.minecraft.network.chat.Component;
@@ -26,7 +26,7 @@ public record FishItemObjective(ItemTarget target, int count,
         this(target, count, Optional.empty());
     }
 
-    public static final Codec<FishItemObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<FishItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(FishItemObjective::target),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(FishItemObjective::count),
             SourceHint.FIELD.forGetter(FishItemObjective::source)

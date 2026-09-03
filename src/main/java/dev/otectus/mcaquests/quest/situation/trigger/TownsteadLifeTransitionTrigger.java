@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -82,7 +83,7 @@ public record TownsteadLifeTransitionTrigger(Axis transition, Optional<String> f
             either -> either.map(String::valueOf, value -> value.toLowerCase(Locale.ROOT)),
             com.mojang.datafixers.util.Either::right);
 
-    public static final Codec<TownsteadLifeTransitionTrigger> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadLifeTransitionTrigger> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     Axis.CODEC.fieldOf("transition").forGetter(TownsteadLifeTransitionTrigger::transition),
                     StrictCodecs.strictOptional(VALUE_CODEC, "from")

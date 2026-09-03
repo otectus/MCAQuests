@@ -78,7 +78,7 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
             if (!tag.contains("project")) {
                 return Optional.empty();
             }
-            return Optional.of(ofPhase(new ResourceLocation(tag.getString("project")),
+            return Optional.of(ofPhase(ResourceLocation.parse(tag.getString("project")),
                     tag.getInt("phase"), tag.getInt("reward")));
         }
         if ("banked".equals(tag.getString("kind"))) {

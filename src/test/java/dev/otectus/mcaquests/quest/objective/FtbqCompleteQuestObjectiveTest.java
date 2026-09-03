@@ -32,7 +32,7 @@ class FtbqCompleteQuestObjectiveTest {
 
     private static DataResult<FtbqCompleteQuestObjective> parse(String json) {
         JsonElement element = JsonParser.parseString(json);
-        return FtbqCompleteQuestObjective.CODEC.parse(JsonOps.INSTANCE, element);
+        return FtbqCompleteQuestObjective.CODEC.codec().parse(JsonOps.INSTANCE, element);
     }
 
     @Test

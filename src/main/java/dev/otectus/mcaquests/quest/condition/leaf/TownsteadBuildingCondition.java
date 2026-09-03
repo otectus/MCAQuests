@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadVillageBuilding;
@@ -37,7 +38,7 @@ import java.util.OptionalInt;
 public record TownsteadBuildingCondition(String buildingType, int minimumLevel, int count,
                                          OptionalInt minimumSize) implements QuestCondition {
 
-    public static final Codec<TownsteadBuildingCondition> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadBuildingCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     Codec.STRING.fieldOf("building_type").forGetter(TownsteadBuildingCondition::buildingType),
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "minimum_level", 1)

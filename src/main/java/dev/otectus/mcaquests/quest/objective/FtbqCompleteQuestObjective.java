@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.api.PollingObjective;
@@ -39,7 +39,7 @@ public record FtbqCompleteQuestObjective(String quest, AlreadyCompleteMode alrea
 
     private static final String TYPE_ID = "mcaquests:ftbq_complete_quest";
 
-    public static final Codec<FtbqCompleteQuestObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<FtbqCompleteQuestObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             FtbqIds.hexIdCodec(TYPE_ID, "quest").fieldOf("quest").forGetter(FtbqCompleteQuestObjective::quest),
             AlreadyCompleteMode.CODEC.optionalFieldOf("already_complete", AlreadyCompleteMode.SATISFY)
                     .forGetter(FtbqCompleteQuestObjective::alreadyComplete),

@@ -4,13 +4,13 @@ import dev.otectus.mcaquests.quest.QuestDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.Event;
 
 import javax.annotation.Nullable;
 
 /**
  * Base class for MCA: Quests lifecycle events, fired server-side on the Forge event bus
- * ({@code MinecraftForge.EVENT_BUS}) so other mods can react (spec section 28). These are
+ * ({@code NeoForge.EVENT_BUS}) so other mods can react (spec section 28). These are
  * notifications — they expose immutable data + live entities, never the mod's internal mutable state.
  */
 public abstract class QuestEvent extends Event {

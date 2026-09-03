@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -47,7 +48,7 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
                                     Optional<Boolean> stageUntilNear, Optional<Integer> minJourney)
         implements QuestObjective, VillagerTargeted {
 
-    public static final Codec<EscortEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<EscortEntityObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(EscortEntityObjective::villager),
             LocationAnchor.MAP_CODEC.fieldOf("destination").forGetter(EscortEntityObjective::destination),
             Codec.intRange(1, 64).optionalFieldOf("radius", 6).forGetter(EscortEntityObjective::radius),

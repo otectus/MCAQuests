@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -11,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 /** Requires the player to be in a given dimension (spec section 13). */
 public record DimensionCondition(ResourceLocation dimension) implements QuestCondition {
 
-    public static final Codec<DimensionCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<DimensionCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("dimension").forGetter(DimensionCondition::dimension)
     ).apply(instance, DimensionCondition::new));
 

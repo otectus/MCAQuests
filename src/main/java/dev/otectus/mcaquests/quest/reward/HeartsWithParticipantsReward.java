@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import net.minecraft.network.chat.Component;
@@ -19,7 +20,7 @@ import javax.annotation.Nullable;
  */
 public record HeartsWithParticipantsReward(int amount, boolean includeResidents) implements QuestReward {
 
-    public static final Codec<HeartsWithParticipantsReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<HeartsWithParticipantsReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.fieldOf("amount").forGetter(HeartsWithParticipantsReward::amount),
             Codec.BOOL.optionalFieldOf("include_residents", false).forGetter(HeartsWithParticipantsReward::includeResidents)
     ).apply(instance, HeartsWithParticipantsReward::new));

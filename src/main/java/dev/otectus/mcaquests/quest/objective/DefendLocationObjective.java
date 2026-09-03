@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
@@ -26,7 +27,7 @@ import java.util.Optional;
 public record DefendLocationObjective(LocationAnchor location, EntityTarget threat,
                                       int radius, int count) implements QuestObjective {
 
-    public static final Codec<DefendLocationObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<DefendLocationObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(DefendLocationObjective::location),
             EntityTarget.MAP_CODEC.fieldOf("threat").forGetter(DefendLocationObjective::threat),
             Codec.intRange(1, 64).optionalFieldOf("radius", 16).forGetter(DefendLocationObjective::radius),

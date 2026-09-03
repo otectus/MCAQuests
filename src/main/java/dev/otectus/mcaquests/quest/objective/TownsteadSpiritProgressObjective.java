@@ -64,11 +64,11 @@ public record TownsteadSpiritProgressObjective(Optional<String> spirit, Optional
                     new TownsteadSpiritProgressObjective(spirit, unbox(delta), unbox(tier))));
 
     /** Validated at parse time, so a contradictory goal fails the reload rather than a quest. */
-    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
-    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
-    // beside "type". See DispatchedCodecInlinesTest.
-    public static final Codec<TownsteadSpiritProgressObjective> CODEC =
-            BASE.flatXmap(TownsteadSpiritProgressObjective::validateGoal, DataResult::success).codec();
+    // Validate on the MapCodec, never on a Codec chained off create(...): the dispatch registry
+    // takes a MapCodec so the fields stay inline beside "type" rather than under a nested
+    // "value" key. See DispatchedCodecInlinesTest.
+    public static final MapCodec<TownsteadSpiritProgressObjective> CODEC =
+            BASE.flatXmap(TownsteadSpiritProgressObjective::validateGoal, DataResult::success);
 
     private static DataResult<TownsteadSpiritProgressObjective> validateGoal(
             TownsteadSpiritProgressObjective objective) {

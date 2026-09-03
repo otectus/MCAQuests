@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.DisplayNames;
@@ -24,7 +24,7 @@ import java.util.Optional;
 public record TradeWithVillagerObjective(Optional<VillagerTarget> villager,
                                          Optional<ResourceLocation> profession, int count) implements QuestObjective {
 
-    public static final Codec<TradeWithVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<TradeWithVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.optionalFieldOf("villager").forGetter(TradeWithVillagerObjective::villager),
             ResourceLocation.CODEC.optionalFieldOf("profession").forGetter(TradeWithVillagerObjective::profession),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(TradeWithVillagerObjective::count)

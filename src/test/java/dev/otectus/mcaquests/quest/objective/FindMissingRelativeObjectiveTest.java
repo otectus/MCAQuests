@@ -29,7 +29,7 @@ class FindMissingRelativeObjectiveTest {
 
     private static FindMissingRelativeObjective parse(String json) {
         DataResult<FindMissingRelativeObjective> result =
-                FindMissingRelativeObjective.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json));
+                FindMissingRelativeObjective.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString(json));
         return result.result().orElseThrow(() ->
                 new AssertionError("expected " + json + " to parse: " + result.error().orElseThrow().message()));
     }
@@ -58,10 +58,10 @@ class FindMissingRelativeObjectiveTest {
                      "structure":{"structure_tag":"minecraft:mineshaft"},
                      "min_distance":64,"discover_radius":16,"spawn_distance":8}""");
 
-            JsonElement encoded = FindMissingRelativeObjective.CODEC
+            JsonElement encoded = FindMissingRelativeObjective.CODEC.codec()
                     .encodeStart(JsonOps.INSTANCE, original).result().orElseThrow();
 
-            assertEquals(original, FindMissingRelativeObjective.CODEC
+            assertEquals(original, FindMissingRelativeObjective.CODEC.codec()
                             .parse(JsonOps.INSTANCE, encoded).result().orElseThrow(),
                     "a datapack value must survive being written back out and re-read");
         }
@@ -69,7 +69,7 @@ class FindMissingRelativeObjectiveTest {
         @Test
         @DisplayName("the relative is required")
         void relativeIsRequired() {
-            assertTrue(FindMissingRelativeObjective.CODEC
+            assertTrue(FindMissingRelativeObjective.CODEC.codec()
                             .parse(JsonOps.INSTANCE, JsonParser.parseString("{\"min_distance\":64}"))
                             .error().isPresent(),
                     "with nobody to look for the objective could never complete, so it must fail at load");

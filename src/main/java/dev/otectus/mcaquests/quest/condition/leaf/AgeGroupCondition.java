@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.McaConditionCodecs;
@@ -16,7 +17,7 @@ import java.util.List;
  */
 public record AgeGroupCondition(List<String> groups) implements QuestCondition {
 
-    public static final Codec<AgeGroupCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<AgeGroupCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             McaConditionCodecs.validatedNonEmptyList("age group", McaConditionCodecs.AGE_GROUPS)
                     .fieldOf("groups").forGetter(AgeGroupCondition::groups)
     ).apply(instance, AgeGroupCondition::new));

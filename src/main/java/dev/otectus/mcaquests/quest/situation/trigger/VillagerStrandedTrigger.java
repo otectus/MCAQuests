@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -29,7 +30,7 @@ import net.minecraft.util.ExtraCodecs;
 public record VillagerStrandedTrigger(int minimumDistance, int holdTicks,
                                       boolean requireNight) implements SituationTrigger {
 
-    public static final Codec<VillagerStrandedTrigger> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<VillagerStrandedTrigger> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "minimum_distance", 96)
                             .forGetter(VillagerStrandedTrigger::minimumDistance),

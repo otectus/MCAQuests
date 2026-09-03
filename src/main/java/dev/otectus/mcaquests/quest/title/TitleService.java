@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -88,7 +88,7 @@ public final class TitleService {
      * itself does not post; it only delegates, so delegation cannot double-post.
      */
     private static void postGranted(ServerPlayer player, ResourceLocation title, TitleScope scope, OptionalInt villageId) {
-        MinecraftForge.EVENT_BUS.post(new TitleGrantedEvent(player, title, scope, villageId));
+        NeoForge.EVENT_BUS.post(new TitleGrantedEvent(player, title, scope, villageId));
     }
 
     private static OptionalInt resolveVillage(ServerPlayer player, @Nullable Entity giver) {

@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
@@ -18,7 +19,7 @@ import javax.annotation.Nullable;
  */
 public record CommandReward(String command) implements QuestReward {
 
-    public static final Codec<CommandReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<CommandReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.STRING.fieldOf("command").forGetter(CommandReward::command)
     ).apply(instance, CommandReward::new));
 

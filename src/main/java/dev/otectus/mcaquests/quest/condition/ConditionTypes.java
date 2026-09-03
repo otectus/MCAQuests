@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.condition;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.DynamicOps;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
@@ -69,7 +70,7 @@ public final class ConditionTypes {
      * Reputation the condition is simply never met (see the class docs).
      */
     public static final QuestConditionType<dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition>
-            HAS_INCIDENT = register(new net.minecraft.resources.ResourceLocation("mcareputation",
+            HAS_INCIDENT = register(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mcareputation",
                     "has_incident"),
             dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition.CODEC);
 
@@ -218,7 +219,7 @@ public final class ConditionTypes {
     private ConditionTypes() {
     }
 
-    public static <T extends QuestCondition> QuestConditionType<T> register(ResourceLocation id, Codec<T> codec) {
+    public static <T extends QuestCondition> QuestConditionType<T> register(ResourceLocation id, MapCodec<T> codec) {
         QuestConditionType<T> type = new QuestConditionType<>(id, codec);
         if (BY_ID.putIfAbsent(id, type) != null) {
             throw new IllegalArgumentException("Duplicate condition type id: " + id);
@@ -226,8 +227,8 @@ public final class ConditionTypes {
         return type;
     }
 
-    public static <T extends QuestCondition> QuestConditionType<T> register(String path, Codec<T> codec) {
-        return register(new ResourceLocation(McaQuests.MOD_ID, path), codec);
+    public static <T extends QuestCondition> QuestConditionType<T> register(String path, MapCodec<T> codec) {
+        return register(ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, path), codec);
     }
 
     public static boolean exists(ResourceLocation id) {

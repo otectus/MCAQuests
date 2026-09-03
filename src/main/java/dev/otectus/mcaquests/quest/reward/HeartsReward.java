@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -19,7 +20,7 @@ import javax.annotation.Nullable;
  */
 public record HeartsReward(int amount) implements QuestReward {
 
-    public static final Codec<HeartsReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<HeartsReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.fieldOf("amount").forGetter(HeartsReward::amount)
     ).apply(instance, HeartsReward::new));
 

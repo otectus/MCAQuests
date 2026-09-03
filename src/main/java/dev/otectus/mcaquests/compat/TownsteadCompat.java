@@ -2,7 +2,7 @@ package dev.otectus.mcaquests.compat;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 /**
  * The optional-classloading seam for Townstead (Townstead spec §3.2), built to the discipline

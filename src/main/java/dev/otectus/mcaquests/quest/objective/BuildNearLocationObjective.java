@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.BlockTarget;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
@@ -26,7 +27,7 @@ import java.util.Optional;
 public record BuildNearLocationObjective(BlockTarget block, LocationAnchor location,
                                          int radius, int count) implements QuestObjective {
 
-    public static final Codec<BuildNearLocationObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<BuildNearLocationObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(BuildNearLocationObjective::block),
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(BuildNearLocationObjective::location),
             Codec.intRange(1, 64).optionalFieldOf("radius", 8).forGetter(BuildNearLocationObjective::radius),

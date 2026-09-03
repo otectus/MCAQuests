@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -14,14 +15,14 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
  */
 public record HealthBelowCondition(double threshold) implements QuestCondition {
 
-    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
-    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
-    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // Validate on the MapCodec, never on a Codec chained off create(...): the dispatch registry
+    // takes a MapCodec so the fields stay inline beside "type" rather than under a nested
+    // "value" key, which optionalFieldOf would then swallow silently.
     // See DispatchedCodecInlinesTest.
-    public static final Codec<HealthBelowCondition> CODEC = RecordCodecBuilder.<HealthBelowCondition>mapCodec(
+    public static final MapCodec<HealthBelowCondition> CODEC = RecordCodecBuilder.<HealthBelowCondition>mapCodec(
             instance -> instance.group(
                     Codec.DOUBLE.fieldOf("threshold").forGetter(HealthBelowCondition::threshold)
-            ).apply(instance, HealthBelowCondition::new)).flatXmap(HealthBelowCondition::validate, HealthBelowCondition::validate).codec();
+            ).apply(instance, HealthBelowCondition::new)).flatXmap(HealthBelowCondition::validate, HealthBelowCondition::validate);
 
     private static DataResult<HealthBelowCondition> validate(HealthBelowCondition condition) {
         if (condition.threshold <= 0.0D || condition.threshold > 1.0D) {

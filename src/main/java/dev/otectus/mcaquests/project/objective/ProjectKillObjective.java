@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.project.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
 import net.minecraft.network.chat.Component;
@@ -14,7 +14,7 @@ import net.minecraft.world.entity.Entity;
  */
 public record ProjectKillObjective(EntityTarget target, int count) implements ProjectObjective {
 
-    public static final Codec<ProjectKillObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<ProjectKillObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(ProjectKillObjective::target),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ProjectKillObjective::count)
     ).apply(instance, ProjectKillObjective::new));

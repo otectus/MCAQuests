@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.TownsteadCalendarView;
@@ -93,7 +94,7 @@ public record TownsteadScheduleStreakObjective(TownsteadTarget target, String ac
     private static final String K_STREAK = "ss_streak";
     private static final String K_PROFILE = "ss_profile";
 
-    public static final Codec<TownsteadScheduleStreakObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadScheduleStreakObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadScheduleStreakObjective::target),

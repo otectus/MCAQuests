@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
@@ -33,7 +33,7 @@ public record CureVillagerObjective(VillagerTarget villager, ItemTarget cureItem
     private static final ItemTarget DEFAULT_CURE_ITEM =
             new ItemTarget(Optional.of(Items.GOLDEN_APPLE), Optional.empty());
 
-    public static final Codec<CureVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<CureVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(CureVillagerObjective::villager),
             ItemTarget.MAP_CODEC.codec().optionalFieldOf("cure_item", DEFAULT_CURE_ITEM).forGetter(CureVillagerObjective::cureItem)
     ).apply(instance, CureVillagerObjective::new));

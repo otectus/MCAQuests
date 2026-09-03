@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.DisplayNames;
@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
  */
 public record TalkToProfessionObjective(ResourceLocation profession, int count) implements QuestObjective {
 
-    public static final Codec<TalkToProfessionObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<TalkToProfessionObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("profession").forGetter(TalkToProfessionObjective::profession),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(TalkToProfessionObjective::count)
     ).apply(instance, TalkToProfessionObjective::new));

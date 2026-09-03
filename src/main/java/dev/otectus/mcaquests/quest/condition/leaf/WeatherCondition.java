@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -38,7 +39,7 @@ public record WeatherCondition(Weather weather) implements QuestCondition {
                 weather -> DataResult.success(weather.name().toLowerCase(Locale.ROOT)));
     }
 
-    public static final Codec<WeatherCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<WeatherCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Weather.CODEC.fieldOf("weather").forGetter(WeatherCondition::weather)
     ).apply(instance, WeatherCondition::new));
 

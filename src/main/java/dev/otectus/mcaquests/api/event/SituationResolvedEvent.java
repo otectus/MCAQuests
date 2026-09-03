@@ -2,7 +2,7 @@ package dev.otectus.mcaquests.api.event;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.Event;
 
 import javax.annotation.Nullable;
 import java.util.Set;

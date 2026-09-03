@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
@@ -56,7 +57,7 @@ public record TownsteadProfessionTrackCondition(TownsteadTarget target, Optional
                                                 OptionalInt minimumRemainingXp,
                                                 boolean missing) implements QuestCondition {
 
-    public static final Codec<TownsteadProfessionTrackCondition> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadProfessionTrackCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadProfessionTrackCondition::target),

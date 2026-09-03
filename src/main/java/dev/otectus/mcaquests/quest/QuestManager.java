@@ -68,8 +68,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -279,7 +279,7 @@ public final class QuestManager {
     }
 
     /** The card shown when a villager has nothing and no quest of theirs explains why. */
-    private static final ResourceLocation NO_QUESTS_CARD = new ResourceLocation(McaQuests.MOD_ID, "no_quests");
+    private static final ResourceLocation NO_QUESTS_CARD = ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "no_quests");
 
     /**
      * The villager's own explanation for having nothing to offer.
@@ -577,7 +577,7 @@ public final class QuestManager {
         if (situationLink != null && player.getServer() != null) {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
         }
-        MinecraftForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, accepted));
+        NeoForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, accepted));
         TownsteadLifecycle.dispatch(player, active, villager, TownsteadLifecycle.Phase.ACCEPTED);
         McaCompat.setQuestGiverFollow(player, villager, McaQuestsConfig.COMMON.followGiverAfterAccept.get());
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
@@ -633,7 +633,7 @@ public final class QuestManager {
             player.sendSystemMessage(QuestDialogueHooks.resolve(player, villager, def,
                     QuestDefinition.DECLINE, declineLine));
         }
-        MinecraftForge.EVENT_BUS.post(new QuestDeclinedEvent(player, villager, def));
+        NeoForge.EVENT_BUS.post(new QuestDeclinedEvent(player, villager, def));
         return true;
     }
 
@@ -921,7 +921,7 @@ public final class QuestManager {
         }
         releaseEscortMovement(player, def, active);
         data.remove(active);
-        MinecraftForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
+        NeoForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             PlaceholderResolver resolver = active.textResolver(player);
             Component completeLine = def.dialogueOr(QuestDefinition.COMPLETE,
@@ -1100,7 +1100,7 @@ public final class QuestManager {
         QuestDefinitions.resolve(active.questId()).ifPresent(def -> {
             releaseEscortMovement(player, active.resolve(def), active);
             data.history().recordOutcome(def.id(), active.villagerUuid(), QuestHistory.Outcome.ABANDONED);
-            MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
+            NeoForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
         });
         return true;
     }
@@ -1148,7 +1148,7 @@ public final class QuestManager {
         syncLog(player);
 
         TownsteadLifecycle.dispatch(player, active, resolvedGiver, TownsteadLifecycle.Phase.FAILED);
-        MinecraftForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
+        NeoForge.EVENT_BUS.post(new QuestFailedEvent(player, resolvedGiver, def, reason));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             PlaceholderResolver failResolver = active.textResolver(player);
             Component failLine = def.dialogueOr(QuestDefinition.FAILED,
@@ -1757,7 +1757,7 @@ public final class QuestManager {
                     boolean complete = isComplete(player, def, active);
                     if (complete && !active.readyNotified()) {
                         active.setReadyNotified(true);
-                        MinecraftForge.EVENT_BUS.post(new QuestReadyEvent(player, def));
+                        NeoForge.EVENT_BUS.post(new QuestReadyEvent(player, def));
                         TownsteadLifecycle.dispatch(player, active, resolveGiver(player, active),
                                 TownsteadLifecycle.Phase.READY);
                         // Resolve the MCA name only here (rare ready transition), not once per tick per player.

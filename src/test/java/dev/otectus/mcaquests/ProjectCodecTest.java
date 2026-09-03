@@ -68,20 +68,20 @@ class ProjectCodecTest {
 
     @Test
     void newRewardAndConditionCodecsParse() {
-        ok(VillageReputationReward.CODEC, "{\"amount\":5}");
-        ok(UnlockReward.CODEC, "{\"target\":\"mcaquests:other_project\"}");
-        ok(HeartsWithParticipantsReward.CODEC, "{\"amount\":12}");
-        ok(HeartsWithParticipantsReward.CODEC, "{\"amount\":12,\"include_residents\":true}");
-        ok(VillageReputationCondition.CODEC, "{\"min\":10}");
-        ok(VillageReputationCondition.CODEC, "{\"min\":10,\"max\":50}");
-        ok(VillageReputationCondition.CODEC, "{}");
+        ok(VillageReputationReward.CODEC.codec(), "{\"amount\":5}");
+        ok(UnlockReward.CODEC.codec(), "{\"target\":\"mcaquests:other_project\"}");
+        ok(HeartsWithParticipantsReward.CODEC.codec(), "{\"amount\":12}");
+        ok(HeartsWithParticipantsReward.CODEC.codec(), "{\"amount\":12,\"include_residents\":true}");
+        ok(VillageReputationCondition.CODEC.codec(), "{\"min\":10}");
+        ok(VillageReputationCondition.CODEC.codec(), "{\"min\":10,\"max\":50}");
+        ok(VillageReputationCondition.CODEC.codec(), "{}");
     }
 
     @Test
     void talkObjectiveParses() {
-        ok(ProjectTalkObjective.CODEC, "{\"profession\":\"minecraft:librarian\",\"count\":3}");
-        ok(ProjectTalkObjective.CODEC, "{\"profession\":\"minecraft:librarian\"}"); // count defaults to 1
-        fails(ProjectTalkObjective.CODEC, "{\"count\":3}"); // missing required profession
+        ok(ProjectTalkObjective.CODEC.codec(), "{\"profession\":\"minecraft:librarian\",\"count\":3}");
+        ok(ProjectTalkObjective.CODEC.codec(), "{\"profession\":\"minecraft:librarian\"}"); // count defaults to 1
+        fails(ProjectTalkObjective.CODEC.codec(), "{\"count\":3}"); // missing required profession
     }
 
     // The full ProjectDefinition.CODEC pulls in the item/entity/block-target codecs (via the donate/

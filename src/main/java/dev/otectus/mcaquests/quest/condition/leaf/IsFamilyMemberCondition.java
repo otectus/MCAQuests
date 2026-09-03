@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.McaConditionCodecs;
@@ -21,14 +22,14 @@ import java.util.Locale;
  */
 public record IsFamilyMemberCondition(String relation) implements QuestCondition {
 
-    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
-    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
-    // beside "type", and optionalFieldOf then swallows the mismatch silently.
+    // Validate on the MapCodec, never on a Codec chained off create(...): the dispatch registry
+    // takes a MapCodec so the fields stay inline beside "type" rather than under a nested
+    // "value" key, which optionalFieldOf would then swallow silently.
     // See DispatchedCodecInlinesTest.
-    public static final Codec<IsFamilyMemberCondition> CODEC = RecordCodecBuilder.<IsFamilyMemberCondition>mapCodec(
+    public static final MapCodec<IsFamilyMemberCondition> CODEC = RecordCodecBuilder.<IsFamilyMemberCondition>mapCodec(
             instance -> instance.group(
                     Codec.STRING.optionalFieldOf("relation", "any").forGetter(IsFamilyMemberCondition::relation)
-            ).apply(instance, IsFamilyMemberCondition::new)).flatXmap(IsFamilyMemberCondition::validate, IsFamilyMemberCondition::validate).codec();
+            ).apply(instance, IsFamilyMemberCondition::new)).flatXmap(IsFamilyMemberCondition::validate, IsFamilyMemberCondition::validate);
 
     private static DataResult<IsFamilyMemberCondition> validate(IsFamilyMemberCondition condition) {
         String value = condition.relation.toLowerCase(Locale.ROOT);

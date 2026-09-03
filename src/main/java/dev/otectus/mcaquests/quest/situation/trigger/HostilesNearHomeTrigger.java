@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -27,7 +28,7 @@ import net.minecraft.util.ExtraCodecs;
  */
 public record HostilesNearHomeTrigger(int count, int radius, int holdTicks) implements SituationTrigger {
 
-    public static final Codec<HostilesNearHomeTrigger> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<HostilesNearHomeTrigger> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 3)
                             .forGetter(HostilesNearHomeTrigger::count),

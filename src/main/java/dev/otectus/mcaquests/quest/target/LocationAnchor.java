@@ -152,7 +152,7 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
      * runs at most once per objective.
      */
     private static TagKey<Structure> vanillaVillages() {
-        return TagKey.create(Registries.STRUCTURE, new ResourceLocation("minecraft", "village"));
+        return TagKey.create(Registries.STRUCTURE, ResourceLocation.withDefaultNamespace("village"));
     }
 
     public String fingerprint() {

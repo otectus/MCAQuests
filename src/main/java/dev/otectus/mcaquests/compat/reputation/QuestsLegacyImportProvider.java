@@ -43,7 +43,7 @@ public final class QuestsLegacyImportProvider implements LegacyImportProvider {
     /** The marker written on success; the same string forever, since it means "v1 has been read". */
     public static final String SOURCE_ID = "mcaquests:legacy_reputation_v1";
 
-    private static final ResourceLocation LEGACY_DIMENSION = new ResourceLocation("minecraft", "overworld");
+    private static final ResourceLocation LEGACY_DIMENSION = ResourceLocation.withDefaultNamespace("overworld");
 
     @Override
     public String providerName() {

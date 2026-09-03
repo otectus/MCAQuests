@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -39,7 +40,7 @@ public record TimeCondition(TimePeriod period, Optional<Integer> minTick, Option
                 period -> DataResult.success(period.name().toLowerCase(Locale.ROOT)));
     }
 
-    public static final Codec<TimeCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<TimeCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             TimePeriod.CODEC.optionalFieldOf("period", TimePeriod.ANY).forGetter(TimeCondition::period),
             Codec.INT.optionalFieldOf("min").forGetter(TimeCondition::minTick),
             Codec.INT.optionalFieldOf("max").forGetter(TimeCondition::maxTick)

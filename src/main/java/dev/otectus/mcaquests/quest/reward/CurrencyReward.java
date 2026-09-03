@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
@@ -11,7 +12,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -38,7 +39,7 @@ import java.util.Optional;
 public record CurrencyReward(Optional<Integer> min, Optional<Integer> max,
                              Optional<QuestDifficulty> difficulty) implements QuestReward {
 
-    public static final Codec<CurrencyReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<CurrencyReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("min").forGetter(CurrencyReward::min),
             Codec.INT.optionalFieldOf("max").forGetter(CurrencyReward::max),
             QuestDifficulty.CODEC.optionalFieldOf("difficulty").forGetter(CurrencyReward::difficulty)

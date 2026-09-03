@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.McaConditionCodecs;
@@ -15,7 +15,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
  */
 public record RelatedVillagerStatusCondition(String relation, String status) implements QuestCondition {
 
-    public static final Codec<RelatedVillagerStatusCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<RelatedVillagerStatusCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             McaConditionCodecs.validated("related relation", McaConditionCodecs.RELATED_RELATIONS)
                     .fieldOf("relation").forGetter(RelatedVillagerStatusCondition::relation),
             McaConditionCodecs.validated("related status", McaConditionCodecs.RELATED_STATUSES)

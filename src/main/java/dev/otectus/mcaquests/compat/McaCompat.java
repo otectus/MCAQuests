@@ -18,6 +18,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -886,7 +887,7 @@ public final class McaCompat {
             }
             int food = 0;
             for (ItemStack stack : McaHandles.villageStorage(village)) {
-                if (stack != null && stack.isEdible()) {
+                if (stack != null && stack.has(DataComponents.FOOD)) {
                     food += stack.getCount();
                 }
             }

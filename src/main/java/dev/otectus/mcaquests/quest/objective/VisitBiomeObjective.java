@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.objective;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.BiomeTarget;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
@@ -15,7 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 /** Enter a matching biome (spec section 14). Checked on a throttled player tick; sticky once visited. */
 public record VisitBiomeObjective(BiomeTarget target) implements QuestObjective {
 
-    public static final Codec<VisitBiomeObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<VisitBiomeObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BiomeTarget.MAP_CODEC.forGetter(VisitBiomeObjective::target)
     ).apply(instance, VisitBiomeObjective::new));
 

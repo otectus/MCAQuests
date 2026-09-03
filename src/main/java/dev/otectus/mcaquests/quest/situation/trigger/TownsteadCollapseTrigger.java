@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -15,8 +15,8 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
  */
 public record TownsteadCollapseTrigger() implements SituationTrigger {
 
-    public static final Codec<TownsteadCollapseTrigger> CODEC =
-            Codec.unit(TownsteadCollapseTrigger::new);
+    public static final MapCodec<TownsteadCollapseTrigger> CODEC =
+            MapCodec.unit(TownsteadCollapseTrigger::new);
 
     @Override
     public SituationTriggerType<?> type() {

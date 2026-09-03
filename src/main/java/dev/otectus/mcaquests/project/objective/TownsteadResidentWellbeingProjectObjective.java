@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
@@ -47,7 +48,7 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
     /** Spec 5.7. Matches the personal objective, so the two cannot disagree about the same village. */
     private static final double DEFAULT_LOADED_FRACTION = 0.50D;
 
-    public static final Codec<TownsteadResidentWellbeingProjectObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadResidentWellbeingProjectObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "minimum_observed", 3)
                             .forGetter(TownsteadResidentWellbeingProjectObjective::minimumObserved),

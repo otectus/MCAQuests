@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
@@ -58,7 +59,7 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
     /** The share of the village that must be observable before the hold timer may run (spec 5.7). */
     private static final double DEFAULT_LOADED_FRACTION = 0.50D;
 
-    public static final Codec<TownsteadHealthyResidentsObjective> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadHealthyResidentsObjective> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "minimum_observed", 3)
                             .forGetter(TownsteadHealthyResidentsObjective::minimumObserved),

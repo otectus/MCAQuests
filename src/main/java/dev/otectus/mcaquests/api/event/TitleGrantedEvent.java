@@ -3,7 +3,7 @@ package dev.otectus.mcaquests.api.event;
 import dev.otectus.mcaquests.quest.title.TitleScope;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.Event;
 
 import java.util.OptionalInt;
 

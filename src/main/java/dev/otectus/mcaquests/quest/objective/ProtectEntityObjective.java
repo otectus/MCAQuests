@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -24,7 +25,7 @@ public record ProtectEntityObjective(VillagerTarget villager, int durationTicks,
                                      boolean requireNearPlayer, int nearRadius,
                                      boolean failOnDeath) implements QuestObjective, VillagerTargeted {
 
-    public static final Codec<ProtectEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<ProtectEntityObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(ProtectEntityObjective::villager),
             Codec.intRange(20, Integer.MAX_VALUE).optionalFieldOf("duration_ticks", 2400)
                     .forGetter(ProtectEntityObjective::durationTicks),

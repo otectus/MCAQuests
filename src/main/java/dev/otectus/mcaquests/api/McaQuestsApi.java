@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.api;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import dev.otectus.mcaquests.event.QuestEventHandlers;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
@@ -20,7 +20,7 @@ import net.minecraft.world.entity.Entity;
  *
  * <p>Register your own objective / reward / condition types during your mod's setup
  * (e.g. {@code FMLCommonSetupEvent.enqueueWork}) using your own namespace for {@code id}; the JSON
- * {@code "type"} field then dispatches to your {@link Codec}. To react to quest progress, subscribe
+ * {@code "type"} field then dispatches to your {@link MapCodec}. To react to quest progress, subscribe
  * to the events in {@code dev.otectus.mcaquests.api.event} on the Forge event bus.
  */
 public final class McaQuestsApi {
@@ -28,15 +28,15 @@ public final class McaQuestsApi {
     private McaQuestsApi() {
     }
 
-    public static <T extends QuestObjective> QuestObjectiveType<T> registerObjective(ResourceLocation id, Codec<T> codec) {
+    public static <T extends QuestObjective> QuestObjectiveType<T> registerObjective(ResourceLocation id, MapCodec<T> codec) {
         return ObjectiveTypes.register(id, codec);
     }
 
-    public static <T extends QuestReward> QuestRewardType<T> registerReward(ResourceLocation id, Codec<T> codec) {
+    public static <T extends QuestReward> QuestRewardType<T> registerReward(ResourceLocation id, MapCodec<T> codec) {
         return RewardTypes.register(id, codec);
     }
 
-    public static <T extends QuestCondition> QuestConditionType<T> registerCondition(ResourceLocation id, Codec<T> codec) {
+    public static <T extends QuestCondition> QuestConditionType<T> registerCondition(ResourceLocation id, MapCodec<T> codec) {
         return ConditionTypes.register(id, codec);
     }
 

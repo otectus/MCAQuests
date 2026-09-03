@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.reward;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.title.TitleScope;
 import dev.otectus.mcaquests.quest.title.TitleService;
@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
  */
 public record GrantTitleReward(ResourceLocation title, TitleScope scope) implements QuestReward {
 
-    public static final Codec<GrantTitleReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<GrantTitleReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("title").forGetter(GrantTitleReward::title),
             TitleScope.CODEC.optionalFieldOf("scope", TitleScope.VILLAGE).forGetter(GrantTitleReward::scope)
     ).apply(instance, GrantTitleReward::new));

@@ -38,7 +38,8 @@ public record StructureTarget(Optional<ResourceLocation> structure, Optional<Tag
         try {
             if (structure.isPresent()) {
                 ResourceKey<Structure> key = ResourceKey.create(Registries.STRUCTURE, structure.get());
-                if (level.structureManager().getStructureWithPieceAt(pos, key).isValid()) {
+                // 1.21 dropped the ResourceKey overload; the predicate form is the same lookup.
+                if (level.structureManager().getStructureWithPieceAt(pos, holder -> holder.is(key)).isValid()) {
                     return true;
                 }
             }

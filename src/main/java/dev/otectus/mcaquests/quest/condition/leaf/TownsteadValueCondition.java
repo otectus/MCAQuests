@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadQuery;
 import dev.otectus.mcaquests.quest.TownsteadNames;
@@ -33,11 +33,11 @@ import net.minecraft.world.entity.Entity;
  */
 public record TownsteadValueCondition(TownsteadQuery query) implements QuestCondition {
 
-    // mapCodec(...)...codec(), never create(...) chained: a Codec that is not a MapCodecCodec
-    // makes DFU's dispatch look for the fields under a nested "value" key instead of inline
-    // beside "type". See DispatchedCodecInlinesTest.
-    public static final Codec<TownsteadValueCondition> CODEC =
-            TownsteadQuery.MAP_CODEC.xmap(TownsteadValueCondition::new, TownsteadValueCondition::query).codec();
+    // Validate on the MapCodec, never on a Codec chained off create(...): the dispatch registry
+    // takes a MapCodec so the fields stay inline beside "type" rather than under a nested
+    // "value" key. See DispatchedCodecInlinesTest.
+    public static final MapCodec<TownsteadValueCondition> CODEC =
+            TownsteadQuery.MAP_CODEC.xmap(TownsteadValueCondition::new, TownsteadValueCondition::query);
 
     @Override
     public QuestConditionType<?> type() {

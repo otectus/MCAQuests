@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
 import dev.otectus.mcaquests.quest.situation.SituationTrigger;
@@ -14,7 +15,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
  */
 public record LowFoodTrigger(int threshold) implements SituationTrigger {
 
-    public static final Codec<LowFoodTrigger> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<LowFoodTrigger> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.optionalFieldOf("threshold", 16).forGetter(LowFoodTrigger::threshold)
     ).apply(instance, LowFoodTrigger::new));
 

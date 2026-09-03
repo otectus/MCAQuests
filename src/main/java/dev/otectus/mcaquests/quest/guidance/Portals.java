@@ -31,7 +31,7 @@ public final class Portals {
     /** Chunks a stronghold search may walk. Vanilla's own {@code /locate} reach. */
     private static final int STRONGHOLD_SEARCH_CHUNKS = 100;
 
-    private static final ResourceLocation STRONGHOLD = new ResourceLocation("minecraft", "stronghold");
+    private static final ResourceLocation STRONGHOLD = ResourceLocation.withDefaultNamespace("stronghold");
 
     private Portals() {
     }

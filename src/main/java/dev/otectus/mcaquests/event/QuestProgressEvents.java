@@ -62,18 +62,19 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.AnimalTameEvent;
-import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.ItemFishedEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.entity.player.TradeWithVillagerEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.SleepFinishedTimeEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.living.AnimalTameEvent;
+import net.neoforged.neoforge.event.entity.living.BabyEntitySpawnEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.entity.player.TradeWithVillagerEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -90,7 +91,7 @@ import java.util.function.BiConsumer;
  * Server-side progress tracking for event-driven objectives (spec section 19). Only credits the
  * player who earned it; runs only for players who actually have an active quest of the matching type.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class QuestProgressEvents {
 
     private QuestProgressEvents() {
@@ -441,10 +442,7 @@ public final class QuestProgressEvents {
      * is unchanged, because this runs exactly the pass the once-a-second poll runs.
      */
     @SubscribeEvent
-    public static void onServerTickFlushGuidance(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public static void onServerTickFlushGuidance(ServerTickEvent.Post event) {
         Set<UUID> dirty = GuidanceService.drainDirty();
         if (dirty.isEmpty()) {
             return;
@@ -488,8 +486,8 @@ public final class QuestProgressEvents {
     }
 
     @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) {
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();

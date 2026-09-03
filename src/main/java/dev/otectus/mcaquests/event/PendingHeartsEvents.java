@@ -6,10 +6,10 @@ import dev.otectus.mcaquests.state.PendingHeartsData;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.Map;
 import java.util.UUID;
@@ -27,7 +27,7 @@ import java.util.UUID;
  * non-villagers with a constant-folded type check before it ever touches saved data, and the login
  * path returns immediately when the ledger is empty.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
+@EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class PendingHeartsEvents {
 
     private PendingHeartsEvents() {

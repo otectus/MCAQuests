@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -36,7 +37,7 @@ public record TownsteadSpiritTrigger(Optional<String> spirit, int minimumTier,
                                      Optional<String> toClassification,
                                      boolean transitionOnly) implements SituationTrigger {
 
-    public static final Codec<TownsteadSpiritTrigger> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadSpiritTrigger> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(Codec.STRING, "spirit")
                             .forGetter(TownsteadSpiritTrigger::spirit),

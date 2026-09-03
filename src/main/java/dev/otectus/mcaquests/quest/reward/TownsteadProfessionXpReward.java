@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
@@ -36,7 +37,7 @@ import javax.annotation.Nullable;
 public record TownsteadProfessionXpReward(TownsteadTarget target, String profession, int amount,
                                           boolean respectDailyCap) implements TownsteadReward {
 
-    public static final Codec<TownsteadProfessionXpReward> CODEC = RecordCodecBuilder.create(
+    public static final MapCodec<TownsteadProfessionXpReward> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
                     StrictCodecs.strictOptional(TownsteadTarget.CODEC, "target", TownsteadTarget.GIVER)
                             .forGetter(TownsteadProfessionXpReward::target),
