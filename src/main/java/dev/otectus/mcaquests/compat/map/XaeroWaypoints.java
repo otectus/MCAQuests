@@ -1,18 +1,33 @@
 package dev.otectus.mcaquests.compat.map;
 
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.client.marker.MarkerColours;
+import dev.otectus.mcaquests.compat.BindingState;
+import dev.otectus.mcaquests.compat.ClearCause;
+import dev.otectus.mcaquests.compat.MapBackendCapabilities;
+import dev.otectus.mcaquests.compat.MapBackendStatus;
+import dev.otectus.mcaquests.compat.MapMutationResult;
+import dev.otectus.mcaquests.compat.MapWaypointBackend;
+import dev.otectus.mcaquests.compat.PinSupport;
+import dev.otectus.mcaquests.compat.ProbeStep;
+import dev.otectus.mcaquests.compat.WaypointSpec;
 import dev.otectus.mcaquests.compat.map.MapBinding.Member;
 import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.fml.ModList;
 
 import javax.annotation.Nullable;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -27,26 +42,35 @@ import java.util.Set;
  * is exactly the ownership this feature wants: the waypoints belong to the quest, and a player who
  * uninstalls this mod is not left tidying up somebody else's markers.
  *
+ * <h2>Two origins</h2>
+ *
+ * <p>{@code mcaquests:quests} holds the automatic points and only those, so
+ * {@link #clearAutomatic(ClearCause)} can empty it wholesale — which is the cheapest correct cleanup
+ * Xaero offers — without touching anything the player asked for. {@code mcaquests:pins} holds what
+ * they asked for. The third-party store is not saved, so a pin here lasts the session and
+ * {@link PinSupport#SESSION} says so rather than the interface promising something Xaero cannot keep.
+ *
  * <h2>Re-fetched, never cached</h2>
  *
  * <p>The store hangs off the session's <em>current world container</em>, and that object is replaced
  * when the player changes world. Holding on to one would leave waypoints being written into a
  * container nothing renders any more — a bug that would look exactly like "the integration stopped
- * working after I went to the Nether". So the five-call chain down to the store is walked on every
- * publish. It is five virtual calls against objects the game already has in hand.
+ * working after I went to the Nether". So the chain down to the store is walked on every mutation, and
+ * the object that comes back is compared by identity: a different store is a new world, and everything
+ * this class believed about what is on the map is discarded so the reconciler can fill it again.
  *
- * <h2>Colour</h2>
+ * <h2>Dimensions are somebody else's problem</h2>
  *
- * <p>Xaero has twenty-one named colours where JourneyMap takes RGB, so the mapping from
- * {@link GuidanceKind} is made here by hand rather than by finding the nearest neighbour to the beam's
- * colour. It is a seven-entry table; a nearest-colour search would be more code, no more accurate, and
- * would need the colour enum bound to read its hex values.
+ * <p>A Xaero waypoint has no dimension field, so publishing an overworld coordinate while the player
+ * is in the Nether would put a marker somewhere they have no reason to go. This backend cannot check
+ * that itself — it may not import a client class to ask where the player is — so it declares
+ * {@link MapBackendCapabilities#currentDimensionOnly()} and the reconciler withholds the rest.
  */
-final class XaeroWaypoints {
+public final class XaeroWaypoints implements MapWaypointBackend {
 
     /**
      * Xaero's package root, stored <em>dotted</em>, never in internal slash form — that is what lets
-     * {@code NoXaeroStaticLinkTest} byte-scan for slash-form references and treat any hit as a
+     * {@code NoMinimapStaticLinkTest} byte-scan for slash-form references and treat any hit as a
      * regression, with no exemption for this file.
      */
     private static final String ROOT = "xaero.";
@@ -91,191 +115,403 @@ final class XaeroWaypoints {
             int.class, int.class, boolean.class, boolean.class);
     static final Member SET_ORIGIN = Member.virtual(WAYPOINT, "setThirdPartyOrigin", void.class, 1,
             ResourceLocation.class);
-    static final Member SET_NAME = Member.virtual(WAYPOINT, "setName", void.class, 1, String.class);
 
-    /** Everything the integration needs. Replayed against a real jar by {@code MapBindingProbeTest}. */
-    static final List<Member> MANIFEST = List.of(CURRENT_SESSION, WAYPOINTS_MANAGER, WORLD_MANAGER_OF,
+    /** Everything the integration cannot work without. Replayed against a real jar by the probe test. */
+    static final List<Member> ESSENTIAL = List.of(CURRENT_SESSION, WAYPOINTS_MANAGER, WORLD_MANAGER_OF,
             ROOT_CONTAINER, THIRD_PARTY_MANAGER_OF, ORIGIN, ADD, REMOVE, CLEAR_ORIGIN, NEW_WAYPOINT,
-            SET_ORIGIN, SET_NAME);
+            SET_ORIGIN);
 
-    /** {@code WaypointPurpose.NORMAL}. A quest destination is not a death point. */
-    private static final int PURPOSE_NORMAL = 0;
+    static final Member COLOUR_ENUM = Member.cls("hud.minimap.waypoint.WaypointColor");
+    static final Member PURPOSE_ENUM = Member.cls("hud.minimap.waypoint.WaypointPurpose");
 
-    private final MapBinding.Resolution binding;
-    private final ResourceLocation origin;
-    /** Keys we believe are on the map, so an unchanged destination costs no work. */
-    private final Set<String> published = new HashSet<>();
+    /**
+     * The two enums the primitive constructor takes indexes into.
+     *
+     * <p>Optional because the constructor takes {@code int}s and will accept any of them: without
+     * these every quest waypoint is the first colour in Xaero's palette, which is worse-looking and
+     * entirely functional. Reading the ordinals off the live enums by <em>name</em> is what replaced a
+     * hard-coded table that happened to match one Xaero build and would have silently recoloured every
+     * waypoint on the day the palette gained an entry.
+     */
+    static final List<Member> OPTIONAL = List.of(COLOUR_ENUM, PURPOSE_ENUM);
 
-    private XaeroWaypoints(MapBinding.Resolution binding, ResourceLocation origin) {
+    /** {@code WaypointPurpose.NORMAL}: a quest destination is not a death point. */
+    private static final String PURPOSE_NORMAL = "NORMAL";
+
+    /** Index 0 is what an unresolved palette falls back to — a wrong colour, never a missing waypoint. */
+    private static final int FALLBACK_ORDINAL = 0;
+
+    private static final String MOD_ID = "xaerominimap";
+    private static final ResourceLocation QUESTS = new ResourceLocation(McaQuests.MOD_ID, "quests");
+    private static final ResourceLocation PINS = new ResourceLocation(McaQuests.MOD_ID, "pins");
+
+    private static final MapBackendCapabilities CAPABILITIES =
+            new MapBackendCapabilities(true, PinSupport.SESSION, true);
+
+    /** One automatic waypoint we have proof of: the object Xaero holds, and what we asked it to be. */
+    private record Applied(Object waypoint, WaypointSpec spec) {
+    }
+
+    private final BindingState binding;
+    private final List<String> missingMembers;
+    private final Calls calls;
+
+    private final Map<String, Applied> applied = new LinkedHashMap<>();
+    private final Set<String> pinned = new HashSet<>();
+    /** The store the {@link #applied} map is about; a different object means a different world. */
+    private WeakReference<Object> automaticStore = new WeakReference<>(null);
+
+    XaeroWaypoints(BindingState binding, List<String> missingMembers, Calls calls) {
         this.binding = binding;
-        this.origin = origin;
-    }
-
-    /** Resolves Xaero's Minimap, or {@code null} when it is absent. */
-    @Nullable
-    static XaeroWaypoints resolve(ResourceLocation origin) {
-        MapBinding.Resolution binding = MapBinding.resolve("Xaero's Minimap", ROOT, PROBE, MANIFEST,
-                XaeroWaypoints.class.getClassLoader());
-        if (!binding.isBound() && !binding.isPartial()) {
-            return null;
-        }
-        return new XaeroWaypoints(binding, origin);
-    }
-
-    MapBinding.Resolution binding() {
-        return binding;
-    }
-
-    boolean isUsable() {
-        return binding.isBound();
-    }
-
-    void publish(String key, BlockPos pos, ResourceKey<Level> dimension, Component label,
-                 GuidanceKind kind) {
-        Object store = store();
-        if (store == null) {
-            return;
-        }
-        Object waypoint = create(pos, label, kind, false);
-        if (waypoint == null) {
-            return;
-        }
-        // add() is a map put, so this both creates and moves. That is also what makes the integration
-        // survive a world change: the container is new and empty, and the next pass simply fills it.
-        invoke(ADD, store, key, waypoint);
-        published.add(key);
-    }
-
-    void withdraw(String key) {
-        if (!published.remove(key)) {
-            return;
-        }
-        Object store = store();
-        if (store != null) {
-            invoke(REMOVE, store, key);
-        }
-    }
-
-    void clear() {
-        published.clear();
-        Object store = store();
-        if (store != null) {
-            invoke(CLEAR_ORIGIN, store);
-        }
+        this.missingMembers = List.copyOf(missingMembers);
+        this.calls = calls;
     }
 
     /**
-     * A waypoint the player keeps.
+     * Resolves Xaero's Minimap, or {@code null} when it is absent.
      *
-     * <p>Third-party waypoints are not saved, so "keeps" here means "for this session, and this mod
-     * will not take it away". Writing into the player's own saved set instead would mean editing and
-     * re-serialising their waypoint file, which is a heavier promise than a quest log button should
-     * make.
-     */
-    boolean pin(BlockPos pos, ResourceKey<Level> dimension, Component label, GuidanceKind kind) {
-        Object store = store();
-        Object waypoint = store == null ? null : create(pos, label, kind, false);
-        if (waypoint == null) {
-            return false;
-        }
-        invoke(ADD, store, "pin/" + pos.getX() + '/' + pos.getY() + '/' + pos.getZ(), waypoint);
-        return true;
-    }
-
-    /** Adds a waypoint and looks the store up again, so a chain that silently broke is visible. */
-    String probe() {
-        Object store = store();
-        if (store == null) {
-            return "could not reach the third-party waypoint store (no minimap session yet, or this "
-                    + "Xaero build moved it)";
-        }
-        return "third-party waypoint store reached, " + published.size() + " waypoint(s) published";
-    }
-
-    /**
-     * The third-party waypoint store for our origin, walked fresh from the session every call.
-     *
-     * <p>{@code null} whenever any link is missing — before the player has joined a world there is no
-     * session at all, which is an ordinary state rather than an error.
+     * <p>Called reflectively by {@code client.map.MapWaypointCompat}, which is why it is public and
+     * takes nothing: no first-party class outside this package may name this one.
      */
     @Nullable
-    private Object store() {
-        Object session = invokeReturning(CURRENT_SESSION);
-        if (session == null) {
+    public static XaeroWaypoints resolve() {
+        MapBinding.Resolution resolution = MapBinding.resolve("Xaero's Minimap", ROOT, PROBE,
+                ESSENTIAL, OPTIONAL, XaeroWaypoints.class.getClassLoader());
+        if (!resolution.isBound() && !resolution.isPartial()) {
             return null;
         }
-        Object waypointsManager = invokeReturning(WAYPOINTS_MANAGER, session);
-        if (waypointsManager == null) {
-            return null;
-        }
-        Object worldManager = invokeReturning(WORLD_MANAGER_OF, waypointsManager);
-        if (worldManager == null) {
-            return null;
-        }
-        Object container = invokeReturning(ROOT_CONTAINER, worldManager);
-        if (container == null) {
-            return null;
-        }
-        Object manager = invokeReturning(THIRD_PARTY_MANAGER_OF, container);
-        return manager == null ? null : invokeReturning(ORIGIN, manager, origin);
+        BindingState state = resolution.isBound() ? BindingState.BOUND : BindingState.PARTIAL;
+        return new XaeroWaypoints(state, resolution.missing(), new Reflective(resolution));
     }
 
-    @Nullable
-    private Object create(BlockPos pos, Component label, GuidanceKind kind, boolean temporary) {
-        String name = label.getString();
-        Object waypoint = invokeReturning(NEW_WAYPOINT, pos.getX(), pos.getY(), pos.getZ(),
-                name, initials(name), colour(kind), PURPOSE_NORMAL, temporary, true);
-        if (waypoint != null) {
-            invoke(SET_ORIGIN, waypoint, origin);
-        }
-        return waypoint;
+    @Override
+    public String id() {
+        return "xaero";
     }
 
-    /**
-     * The one or two letters Xaero draws on the minimap edge when the label will not fit.
-     *
-     * <p>Taken from the destination's own name, so "Nether Fortress" reads as NF and "Anna's home" as
-     * AH — which is enough to tell two markers apart at a glance, and is what a player would write
-     * themselves.
-     */
-    private static String initials(String name) {
-        StringBuilder out = new StringBuilder(2);
-        for (String word : name.split("\\s+")) {
-            if (!word.isEmpty() && Character.isLetterOrDigit(word.charAt(0))) {
-                out.append(Character.toUpperCase(word.charAt(0)));
-            }
-            if (out.length() == 2) {
-                break;
-            }
-        }
-        return out.length() == 0 ? "Q" : out.toString();
-    }
-
-    /** {@code WaypointColor} ordinals, chosen to sit as close to the beam's colours as the palette allows. */
-    private static int colour(GuidanceKind kind) {
-        return switch (kind) {
-            case VILLAGER -> 17;             // LIGHT_BLUE, the tracker's direction blue
-            case HOME, WORKSTATION -> 6;     // GOLD
-            case VILLAGE -> 18;              // LIME
-            case STRUCTURE -> 12;            // RED
-            case BIOME -> 11;                // AQUA
-            case PORTAL -> 13;               // PURPLE
-            case LOCATION -> 15;             // WHITE
-        };
-    }
-
-    private void invoke(Member member, Object... args) {
-        invokeReturning(member, args);
-    }
-
-    @Nullable
-    private Object invokeReturning(Member member, Object... args) {
+    @Override
+    public Optional<String> modVersion() {
         try {
-            return binding.handle(member).invokeWithArguments(args);
-        } catch (Throwable t) {
+            return ModList.get().getModContainerById(MOD_ID)
+                    .map(container -> container.getModInfo().getVersion().toString());
+        } catch (Throwable ignored) {
+            // No mod list at all: a unit test, or a game that has not got that far yet.
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public MapBackendCapabilities capabilities() {
+        return CAPABILITIES;
+    }
+
+    @Override
+    public boolean isUsable() {
+        return binding == BindingState.BOUND;
+    }
+
+    @Override
+    public Set<String> appliedKeys() {
+        return Set.copyOf(applied.keySet());
+    }
+
+    @Override
+    public MapMutationResult apply(WaypointSpec spec) {
+        Object store = automaticStore();
+        if (store == null) {
+            return MapMutationResult.RETRY_LATER;
+        }
+        Applied existing = applied.get(spec.key());
+        if (existing != null && existing.spec().equals(spec)) {
+            return MapMutationResult.UNCHANGED;
+        }
+        Object waypoint = calls.waypoint(QUESTS, spec);
+        if (waypoint == null) {
+            return MapMutationResult.FAILED;
+        }
+        // add() is a map put, so this both creates and moves. Nothing is recorded until it returns:
+        // believing a waypoint exists is what stopped the old code from ever trying again.
+        if (!calls.add(store, spec.key(), waypoint)) {
+            return MapMutationResult.FAILED;
+        }
+        applied.put(spec.key(), new Applied(waypoint, spec));
+        return MapMutationResult.APPLIED;
+    }
+
+    @Override
+    public MapMutationResult withdraw(String key) {
+        Object store = automaticStore();
+        if (!applied.containsKey(key)) {
+            return MapMutationResult.UNCHANGED;
+        }
+        if (store == null) {
+            return MapMutationResult.RETRY_LATER;
+        }
+        if (!calls.remove(store, key)) {
+            // Kept in the applied map on purpose, so the reconciler withdraws it again next pass.
+            return MapMutationResult.FAILED;
+        }
+        applied.remove(key);
+        return MapMutationResult.APPLIED;
+    }
+
+    @Override
+    public void clearAutomatic(ClearCause cause) {
+        Object store = calls.store(QUESTS);
+        if (store != null) {
+            calls.clear(store);
+        }
+        applied.clear();
+        automaticStore = new WeakReference<>(null);
+        McaQuests.LOGGER.debug("[MCA: Quests] Xaero quest waypoints cleared ({})", cause);
+    }
+
+    @Override
+    public MapMutationResult pin(WaypointSpec spec) {
+        Object store = calls.store(PINS);
+        if (store == null) {
+            return MapMutationResult.RETRY_LATER;
+        }
+        Object waypoint = calls.waypoint(PINS, spec);
+        if (waypoint == null) {
+            return MapMutationResult.FAILED;
+        }
+        String key = pinKey(spec);
+        if (!calls.add(store, key, waypoint)) {
+            return MapMutationResult.FAILED;
+        }
+        pinned.add(key);
+        return MapMutationResult.APPLIED;
+    }
+
+    /**
+     * The store key for a pin, dimension first.
+     *
+     * <p>Derived here rather than taken from {@link WaypointSpec#key()} because the store is shared
+     * across dimensions and the old key was coordinates alone: the same block in the overworld and the
+     * Nether collided, and one of the two pins was silently the other.
+     */
+    static String pinKey(WaypointSpec spec) {
+        BlockPos pos = spec.pos();
+        return "pin/" + spec.dimension().location() + '/' + pos.getX() + '/' + pos.getY() + '/'
+                + pos.getZ();
+    }
+
+    @Override
+    public MapBackendStatus status() {
+        BindingState state = binding;
+        if (state == BindingState.BOUND && calls.store(QUESTS) == null) {
+            // Before the player has joined a world there is no session at all, which is an ordinary
+            // state rather than an error, and reads to an operator as "wait a moment" rather than
+            // "your Xaero build is unsupported".
+            state = BindingState.NOT_READY;
+        }
+        return new MapBackendStatus(id(), state, modVersion(), CAPABILITIES, missingMembers,
+                applied.size(), calls.lastFailure());
+    }
+
+    @Override
+    public List<ProbeStep> probe() {
+        List<ProbeStep> steps = new ArrayList<>();
+        steps.add(binding == BindingState.BOUND
+                ? ProbeStep.passed("binding")
+                : ProbeStep.failed("binding", String.join(", ", missingMembers)));
+        Object store = calls.store(QUESTS);
+        if (store == null) {
+            steps.add(ProbeStep.failed("store", "no minimap session"));
+            return steps;
+        }
+        steps.add(ProbeStep.passed("store", Integer.toString(applied.size())));
+
+        // The write half. Both mods can decline a waypoint without throwing and neither says so, and
+        // from inside the game that silence is indistinguishable from having no minimap installed —
+        // so the only honest answer is to add one and take it away again.
+        String key = McaQuests.MOD_ID + "/probe";
+        WaypointSpec spec = new WaypointSpec(key, BlockPos.ZERO, Level.OVERWORLD, "MCA: Quests",
+                GuidanceKind.LOCATION, WaypointSpec.Ownership.AUTOMATIC);
+        Object waypoint = calls.waypoint(QUESTS, spec);
+        if (waypoint == null) {
+            steps.add(ProbeStep.failed("create", failureDetail()));
+            return steps;
+        }
+        steps.add(ProbeStep.passed("create"));
+        steps.add(calls.add(store, key, waypoint)
+                ? ProbeStep.passed("add") : ProbeStep.failed("add", failureDetail()));
+        steps.add(calls.remove(store, key)
+                ? ProbeStep.passed("remove") : ProbeStep.failed("remove", failureDetail()));
+        return steps;
+    }
+
+    @Override
+    public void resetEpoch() {
+        applied.clear();
+        pinned.clear();
+        automaticStore = new WeakReference<>(null);
+    }
+
+    private String failureDetail() {
+        return calls.lastFailure().map(MapBackendStatus.Failure::fingerprint).orElse("unknown");
+    }
+
+    /**
+     * The automatic origin's store, with the identity check that makes a world change survivable.
+     *
+     * <p>A store object we have not seen before belongs to a container Xaero built for a different
+     * world; everything published into the old one went with it. Dropping the applied map is what
+     * turns that from "the integration stopped working" into one reconciliation pass.
+     */
+    @Nullable
+    private Object automaticStore() {
+        Object store = calls.store(QUESTS);
+        if (store == null) {
+            return null;
+        }
+        if (automaticStore.get() != store) {
+            applied.clear();
+            automaticStore = new WeakReference<>(store);
+        }
+        return store;
+    }
+
+    /**
+     * Every reflective call this backend makes, behind one seam.
+     *
+     * <p>Package-private so a test can supply a double: the alternative is a manifest resolved against
+     * a real Xaero jar, which is a file nobody can put on a Maven and therefore not a thing the normal
+     * suite may need. {@code MapBindingProbeTest} covers the other half — that the names in the
+     * manifest are the names Xaero actually has.
+     *
+     * <p>Every method reports success as "did not throw", because the store's methods return
+     * {@code void} and a null out of a void handle says nothing at all.
+     */
+    interface Calls {
+
+        /** The third-party waypoint store for {@code origin}, or null when there is no session yet. */
+        @Nullable
+        Object store(ResourceLocation origin);
+
+        /** A Xaero waypoint carrying this spec, already stamped with {@code origin}. */
+        @Nullable
+        Object waypoint(ResourceLocation origin, WaypointSpec spec);
+
+        boolean add(Object store, String key, Object waypoint);
+
+        boolean remove(Object store, String key);
+
+        boolean clear(Object store);
+
+        /** The last call that threw, fingerprinted by member and exception type. */
+        Optional<MapBackendStatus.Failure> lastFailure();
+    }
+
+    /** {@link Calls} over the resolved manifest. The only part of this class that touches Xaero. */
+    private static final class Reflective implements Calls {
+
+        private final MapBinding.Resolution binding;
+        private final int purpose;
+        private final Map<GuidanceKind, Integer> colours = new EnumMap<>(GuidanceKind.class);
+
+        @Nullable
+        private MapBackendStatus.Failure lastFailure;
+
+        private Reflective(MapBinding.Resolution binding) {
+            this.binding = binding;
+            this.purpose = ordinalOf(binding, PURPOSE_ENUM, PURPOSE_NORMAL);
+            for (GuidanceKind kind : GuidanceKind.values()) {
+                colours.put(kind, ordinalOf(binding, COLOUR_ENUM, MarkerColours.xaeroColourName(kind)));
+            }
+        }
+
+        /** A named constant's own ordinal, read off the live enum. Falls back to the first entry. */
+        private static int ordinalOf(MapBinding.Resolution binding, Member enumClass, String constant) {
+            Object value = binding.enumConstant(enumClass, constant);
+            return value instanceof Enum<?> e ? e.ordinal() : FALLBACK_ORDINAL;
+        }
+
+        @Override
+        @Nullable
+        public Object store(ResourceLocation origin) {
+            Object session = call(CURRENT_SESSION);
+            if (session == null) {
+                return null;
+            }
+            Object waypointsManager = call(WAYPOINTS_MANAGER, session);
+            if (waypointsManager == null) {
+                return null;
+            }
+            Object worldManager = call(WORLD_MANAGER_OF, waypointsManager);
+            if (worldManager == null) {
+                return null;
+            }
+            Object container = call(ROOT_CONTAINER, worldManager);
+            if (container == null) {
+                return null;
+            }
+            Object manager = call(THIRD_PARTY_MANAGER_OF, container);
+            return manager == null ? null : call(ORIGIN, manager, origin);
+        }
+
+        @Override
+        @Nullable
+        public Object waypoint(ResourceLocation origin, WaypointSpec spec) {
+            BlockPos pos = spec.pos();
+            Object waypoint = call(NEW_WAYPOINT, pos.getX(), pos.getY(), pos.getZ(), spec.label(),
+                    MarkerColours.initials(spec.kind()),
+                    colours.getOrDefault(spec.kind(), FALLBACK_ORDINAL), purpose, false, true);
+            if (waypoint == null) {
+                return null;
+            }
+            return invoke(SET_ORIGIN, waypoint, origin) ? waypoint : null;
+        }
+
+        @Override
+        public boolean add(Object store, String key, Object waypoint) {
+            return invoke(ADD, store, key, waypoint);
+        }
+
+        @Override
+        public boolean remove(Object store, String key) {
+            return invoke(REMOVE, store, key);
+        }
+
+        @Override
+        public boolean clear(Object store) {
+            return invoke(CLEAR_ORIGIN, store);
+        }
+
+        @Override
+        public Optional<MapBackendStatus.Failure> lastFailure() {
+            return Optional.ofNullable(lastFailure);
+        }
+
+        /** A call whose answer is the value it returned; null covers both "threw" and "returned null". */
+        @Nullable
+        private Object call(Member member, Object... args) {
+            try {
+                return binding.handle(member).invokeWithArguments(args);
+            } catch (Throwable t) {
+                record(member, t);
+                return null;
+            }
+        }
+
+        /** A call whose answer is only whether it completed, which is all a void method can say. */
+        private boolean invoke(Member member, Object... args) {
+            try {
+                binding.handle(member).invokeWithArguments(args);
+                return true;
+            } catch (Throwable t) {
+                record(member, t);
+                return false;
+            }
+        }
+
+        private void record(Member member, Throwable t) {
+            lastFailure = new MapBackendStatus.Failure(
+                    member.describe() + '/' + t.getClass().getSimpleName(),
+                    MapMutationResult.FAILED, Optional.ofNullable(t.getMessage()));
             McaQuests.LOGGER.debug("[MCA: Quests] Xaero {} failed; ignoring",
                     member.describe().toLowerCase(Locale.ROOT), t);
-            return null;
         }
     }
 }

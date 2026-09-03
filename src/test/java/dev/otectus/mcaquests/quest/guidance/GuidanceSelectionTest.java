@@ -42,7 +42,8 @@ class GuidanceSelectionTest {
 
     private static ActiveGuidance quest(String id) {
         GuidanceTarget target = new GuidanceTarget(GuidanceKind.STRUCTURE, OptionalInt.empty(),
-                new BlockPos(100, 64, 100), Level.OVERWORLD, Component.literal(id), 24, true, false);
+                new BlockPos(100, 64, 100), Level.OVERWORLD, Component.literal(id), 24, true, false,
+                0.0F);
         return new ActiveGuidance(new ResourceLocation("mcaquests", id), UUID.randomUUID(), target);
     }
 

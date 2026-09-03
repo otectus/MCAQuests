@@ -1,11 +1,13 @@
 package dev.otectus.mcaquests.client;
 
+import dev.otectus.mcaquests.client.map.MapSyncDirtyFlag;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
 import dev.otectus.mcaquests.quest.guidance.GuidanceSnapshot;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -24,12 +26,37 @@ import net.minecraft.resources.ResourceLocation;
 public final class ClientGuidanceData {
 
     private static volatile GuidanceSnapshot snapshot = GuidanceSnapshot.EMPTY;
+    /**
+     * Counts replacements of {@link #snapshot}, so a reader can tell one apart from the next.
+     *
+     * <p>Atomic rather than a {@code volatile long}: the writer is the network thread's work queue and
+     * the readers are the render and client threads, and {@code revision++} on a volatile field is a
+     * read and a write with a gap in the middle — two snapshots landing in one tick could leave the
+     * number where it started and a cached anchor believing it was still current.
+     */
+    private static final AtomicLong REVISION = new AtomicLong();
 
     private ClientGuidanceData() {
     }
 
     public static void update(GuidanceSnapshot updated) {
         snapshot = updated == null ? GuidanceSnapshot.EMPTY : updated;
+        REVISION.incrementAndGet();
+        MapSyncDirtyFlag.set();
+    }
+
+    /**
+     * How many snapshots have arrived, as a cheap "has this changed" signal.
+     *
+     * <p>The marker resolves a fixed target's support surface by reading the world, which is far too
+     * much work to do every frame and wrong to cache forever. Comparing this number is how it knows
+     * the answer it cached is still about the same target.
+     *
+     * <p>The map layer is told rather than left to compare: every write here sets
+     * {@link MapSyncDirtyFlag}, which is what replaced twenty diffs a second with one per packet.
+     */
+    public static long revision() {
+        return REVISION.get();
     }
 
     /** Every quest that can say where it is sending the player, in quest-log order. */
@@ -55,5 +82,7 @@ public final class ClientGuidanceData {
     /** Drops it all — on disconnect, so a marker cannot survive into the next world. */
     public static void clear() {
         snapshot = GuidanceSnapshot.EMPTY;
+        REVISION.incrementAndGet();
+        MapSyncDirtyFlag.set();
     }
 }

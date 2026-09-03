@@ -22,6 +22,7 @@ import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.dialogue.VoicePool;
 import dev.otectus.mcaquests.quest.dialogue.VoicePools;
+import dev.otectus.mcaquests.quest.guidance.GuidanceService;
 import dev.otectus.mcaquests.network.CardObjective;
 import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
@@ -1770,8 +1771,18 @@ public final class QuestManager {
         });
     }
 
-    /** Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker. */
+    /**
+     * Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker.
+     *
+     * <p>Also the one place quest mutations are marked as needing new guidance. Every path that can
+     * change where a player is being sent ends here — accept, turn-in, abandon, failure, follow, and
+     * {@link #settleProgress} for everything that advances an objective — so marking here covers all of
+     * them without six calls that could each be forgotten by the next path added. The recompute itself
+     * runs once at end of tick ({@code QuestProgressEvents}), and the once-a-second pass stays as the
+     * safety net for objectives nothing can mark on.
+     */
     public static void syncLog(ServerPlayer player) {
+        GuidanceService.markDirty(player);
         if (!(player.level() instanceof ServerLevel level)) {
             return;
         }

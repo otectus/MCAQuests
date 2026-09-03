@@ -30,7 +30,6 @@ import dev.otectus.mcaquests.quest.title.TitleService;
 import dev.otectus.mcaquests.quest.OfferSessionService;
 import dev.otectus.mcaquests.state.OfferSession;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
-import dev.otectus.mcaquests.compat.MapWaypointBridge;
 import dev.otectus.mcaquests.quest.guidance.GuidanceService;
 import dev.otectus.mcaquests.quest.guidance.GuidanceSnapshot;
 import net.minecraftforge.api.distmarker.Dist;
@@ -857,36 +856,16 @@ public final class McaQuestsCommand {
     }
 
     /**
-     * What the minimap integration bound to, and whether it actually works.
+     * Points the operator at the client command that can actually answer this.
      *
-     * <p>Both supported mods can decline a waypoint without throwing, and neither reports anything
-     * when it does. Without this, "no waypoints appear" would be indistinguishable from inside the
-     * game from "the feature is off", "no minimap is installed" and "this JourneyMap build moved a
-     * method" — which is exactly the shape of silence the world marker shipped with.
-     *
-     * <p>Waypoints are a client feature, so on a dedicated server there is nothing here to read. The
-     * report says so rather than reporting an empty bridge as a broken one.
+     * <p>Waypoints are drawn by one player's own minimap, so this diagnostic never belonged on the
+     * server dispatcher: a dedicated server has nothing to read, and in single-player it reached
+     * client map APIs from the server command thread, which neither integration is documented as
+     * tolerating.
      */
     private static int debugWaypoints(CommandContext<CommandSourceStack> ctx) {
-        List<Component> lines = new ArrayList<>();
-        lines.add(Component.literal("Quest map waypoints").withStyle(ChatFormatting.GOLD));
-        if (FMLEnvironment.dist != Dist.CLIENT) {
-            lines.add(Component.literal("  Waypoints are drawn by the player's own minimap, so a "
-                            + "dedicated server has nothing to report. Run this in single-player, or "
-                            + "read the client log for the \"Minimap —\" lines written at startup.")
-                    .withStyle(ChatFormatting.GRAY));
-            lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
-            return 1;
-        }
-        MapWaypointBridge bridge = MapWaypointBridge.Holder.get();
-        lines.add(Component.literal("  Available: " + bridge.isAvailable())
-                .withStyle(bridge.isAvailable() ? ChatFormatting.GREEN : ChatFormatting.YELLOW));
-        for (String line : bridge.probe()) {
-            lines.add(Component.literal("  " + line));
-        }
-        lines.add(Component.literal("  mapWaypoints and mapWaypointsFollowedOnly are CLIENT settings "
-                + "and are not visible here.").withStyle(ChatFormatting.GRAY));
-        lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+        ctx.getSource().sendSuccess(
+                () -> Component.translatable("mcaquests.command.debug.waypoints.redirect"), false);
         return 1;
     }
 

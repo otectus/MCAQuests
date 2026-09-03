@@ -14,7 +14,11 @@ import net.minecraft.client.gui.components.Tooltip;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
-import dev.otectus.mcaquests.compat.MapWaypointBridge;
+import dev.otectus.mcaquests.client.map.ClientMapWaypointRegistry;
+import dev.otectus.mcaquests.compat.MapMutationResult;
+import dev.otectus.mcaquests.compat.MapWaypointBackend;
+import dev.otectus.mcaquests.compat.PinSupport;
+import dev.otectus.mcaquests.compat.WaypointSpec;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -129,7 +133,7 @@ public class QuestLogScreen extends McaQuestsScreen {
         if (destination(entry).isEmpty()) {
             return 0;
         }
-        return MapWaypointBridge.Holder.get().isAvailable() ? 2 : 1;
+        return ClientMapWaypointRegistry.bestPinSupport() != PinSupport.NONE ? 2 : 1;
     }
 
     @Override
@@ -188,16 +192,21 @@ public class QuestLogScreen extends McaQuestsScreen {
 
                 // Only where there is a map to add one to. A button that silently does nothing is
                 // worse than no button.
-                if (!MapWaypointBridge.Holder.get().isAvailable()) {
+                if (ClientMapWaypointRegistry.bestPinSupport() == PinSupport.NONE) {
                     continue;
                 }
                 sideX -= TRACK_GAP + SIDE_W;
+                // Xaero's third-party store is rebuilt on every world load, so a pin dropped there is
+                // honestly a pin for this session. The button says which one it is offering rather
+                // than promising something that quietly disappears at the next login.
+                Component pinTooltip = Component.translatable(
+                        ClientMapWaypointRegistry.bestPinSupport() == PinSupport.PERSISTENT
+                                ? "mcaquests.tooltip.add_waypoint"
+                                : "mcaquests.tooltip.add_session_waypoint");
                 IconButton waypoint = new IconButton(sideX, view.screenY(buttonY), SIDE_W, ABANDON_H,
-                        Component.translatable("mcaquests.tooltip.add_waypoint"),
-                        GuiTextures.ICON_STAR, IconButton.Look.BUTTON,
+                        pinTooltip, GuiTextures.ICON_STAR, IconButton.Look.BUTTON,
                         b -> addWaypoint(guidance));
-                waypoint.setTooltip(
-                        Tooltip.create(Component.translatable("mcaquests.tooltip.add_waypoint")));
+                waypoint.setTooltip(Tooltip.create(pinTooltip));
                 addControl(entry, Control.WAYPOINT, waypoint, buttonY);
             }
             y += entryHeight(entry) + CARD_GAP;
@@ -241,7 +250,7 @@ public class QuestLogScreen extends McaQuestsScreen {
      */
     private List<String> layoutSignature() {
         List<String> signature = new ArrayList<>(rendered.size() + 1);
-        signature.add("map=" + MapWaypointBridge.Holder.get().isAvailable());
+        signature.add("map=" + ClientMapWaypointRegistry.bestPinSupport());
         for (QuestLogEntry entry : rendered) {
             signature.add(entry.villagerUuid() + "/" + entry.questId() + "="
                     + destination(entry).isPresent());
@@ -349,15 +358,40 @@ public class QuestLogScreen extends McaQuestsScreen {
      * <p>Deliberately separate from the automatic ones the tracker publishes: those belong to the
      * quest and are taken away when it ends, which is right for a marker and wrong for a place
      * somebody has decided is worth remembering.
+     *
+     * <p>The pin goes only to the backends that offer the <em>best</em> durability installed: with
+     * JourneyMap present it is saved, and sending it to Xaero as well would put a second marker on the
+     * same spot that disappears when the player logs out.
      */
     private void addWaypoint(ActiveGuidance guidance) {
-        boolean added = MapWaypointBridge.Holder.get().pin(guidance.target().pos(),
-                guidance.target().dimension(), guidance.target().label(), guidance.target().kind());
-        if (added && this.minecraft.player != null) {
-            this.minecraft.player.displayClientMessage(
-                    Component.translatable("mcaquests.message.waypoint_added",
-                            GuidanceText.coordinates(guidance.target().pos())), true);
+        PinSupport wanted = ClientMapWaypointRegistry.bestPinSupport();
+        if (wanted == PinSupport.NONE) {
+            return;
         }
+        WaypointSpec spec = new WaypointSpec(
+                guidance.questId() + "/" + guidance.villagerUuid() + "/pin",
+                guidance.target().pos(), guidance.target().dimension(),
+                guidance.target().label().getString(), guidance.target().kind(),
+                WaypointSpec.Ownership.PIN);
+        boolean added = false;
+        for (MapWaypointBackend backend : ClientMapWaypointRegistry.backends()) {
+            if (!backend.isUsable() || backend.capabilities().pins() != wanted) {
+                continue;
+            }
+            added |= backend.pin(spec) == MapMutationResult.APPLIED;
+        }
+        if (this.minecraft.player == null) {
+            return;
+        }
+        // A map that declined the pin used to say nothing at all, which reads exactly like a button
+        // that does nothing. Every outcome is now reported, and the success says how long it lasts.
+        Component message = added
+                ? Component.translatable(wanted == PinSupport.PERSISTENT
+                        ? "mcaquests.message.waypoint_added"
+                        : "mcaquests.message.session_waypoint_added",
+                        GuidanceText.coordinates(guidance.target().pos()))
+                : Component.translatable("mcaquests.message.waypoint_failed");
+        this.minecraft.player.displayClientMessage(message, true);
     }
 
     /** A bar is worth drawing only for an objective that is counted and can actually advance. */

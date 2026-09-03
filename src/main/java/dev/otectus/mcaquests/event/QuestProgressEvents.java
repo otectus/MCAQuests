@@ -82,6 +82,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -407,6 +408,54 @@ public final class QuestProgressEvents {
     public static void onChangedDimensionClearHighlights(PlayerEvent.PlayerChangedDimensionEvent event) {
         HighlightService.forget(event.getEntity().getUUID());
         GuidanceService.forget(event.getEntity().getUUID());
+        if (event.getEntity() instanceof ServerPlayer player) {
+            // Forgetting alone only stops the next send being suppressed; something still has to make
+            // one happen, and a player who has just walked through a portal should not spend a second
+            // in the Nether with the overworld's waypoints on their map.
+            GuidanceService.markDirty(player);
+        }
+    }
+
+    /**
+     * Resends guidance after a death.
+     *
+     * <p>Both halves are needed. The respawned player's destinations are usually identical to the ones
+     * they had when they died, so the equality suppression would drop the first snapshot after the
+     * respawn — and the client cleared everything it had when the level was replaced. Forgetting makes
+     * the send possible; marking makes it happen this tick rather than at the next poll.
+     */
+    @SubscribeEvent
+    public static void onRespawnResendGuidance(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            GuidanceService.forget(player.getUUID());
+            GuidanceService.markDirty(player);
+        }
+    }
+
+    /**
+     * Recomputes guidance for the players a mutation marked, once, at the end of the tick.
+     *
+     * <p>The counterpart of {@code QuestManager.syncLog} marking them: a turn-in that completes a chain
+     * and starts its next quest marks the same player several times in one tick and is answered here
+     * once. Everything else about a guidance recompute — the search budget, the equality suppression —
+     * is unchanged, because this runs exactly the pass the once-a-second poll runs.
+     */
+    @SubscribeEvent
+    public static void onServerTickFlushGuidance(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+        Set<UUID> dirty = GuidanceService.drainDirty();
+        if (dirty.isEmpty()) {
+            return;
+        }
+        for (UUID id : dirty) {
+            ServerPlayer player = event.getServer().getPlayerList().getPlayer(id);
+            // A player who logged out between the mutation and the flush has nothing to be told.
+            if (player != null && player.level() instanceof ServerLevel level) {
+                highlightTargets(player, level);
+            }
+        }
     }
 
     /** Opens a {@code villager_death} situation when an MCA villager with a home village dies (0.8.0). */

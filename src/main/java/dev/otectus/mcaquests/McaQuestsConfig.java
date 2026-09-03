@@ -529,8 +529,16 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.IntValue questTrackerY;
         public final ForgeConfigSpec.BooleanValue showQuestMarker;
         public final ForgeConfigSpec.IntValue questMarkerMaxDistance;
+        public final ForgeConfigSpec.EnumValue<MarkerStyle> questMarkerStyle;
+        public final ForgeConfigSpec.EnumValue<MarkerOcclusion> questMarkerOcclusion;
+        public final ForgeConfigSpec.BooleanValue questMarkerEdgeIndicator;
+        public final ForgeConfigSpec.EnumValue<MarkerLabels> questMarkerLabels;
+        public final ForgeConfigSpec.BooleanValue questMarkerHighContrast;
+        public final ForgeConfigSpec.BooleanValue questMarkerReducedMotion;
         public final ForgeConfigSpec.BooleanValue mapWaypoints;
         public final ForgeConfigSpec.BooleanValue mapWaypointsFollowedOnly;
+        public final ForgeConfigSpec.BooleanValue journeyMapWaypoints;
+        public final ForgeConfigSpec.BooleanValue xaeroWaypoints;
         public final ForgeConfigSpec.BooleanValue showProjectTrackerHud;
         public final ForgeConfigSpec.IntValue projectTrackerMaxEntries;
         public final ForgeConfigSpec.BooleanValue showSituationToast;
@@ -583,14 +591,46 @@ public final class McaQuestsConfig {
                     .defineInRange("questTrackerY", 4, 0, 10000);
             showQuestMarker = b.comment(
                     "Draw a marker in the world at the place your tracked quest is currently sending you --",
-                    "a beam and an icon, visible through walls, which fades out as you arrive. Only ever one",
-                    "at a time, for the objective you are actually on. Turn it off for the tracker text alone.")
+                    "a small glyph on the target itself, with a ring on the ground under it, which fades out",
+                    "as you arrive. Only ever one at a time, for the objective you are actually on. Turn it",
+                    "off for the tracker text alone.")
                     .define("showQuestMarker", true);
             questMarkerMaxDistance = b.comment(
                     "How far away, in blocks, the world marker is still drawn. Past this only the tracker",
-                    "line names the target, which keeps a beam from standing on the horizon for a destination",
-                    "two thousand blocks away.")
+                    "line names the target, which keeps a marker from standing on the horizon for a",
+                    "destination two thousand blocks away.")
                     .defineInRange("questMarkerMaxDistance", 256, 16, 4096);
+            questMarkerStyle = b.comment(
+                    "How much of the marker is drawn: COMPACT for the glyph, its ground ring and its label,",
+                    "ICON_ONLY for the glyph alone -- the quietest thing that still says where to go --",
+                    "and HIGH_VISIBILITY to add a short translucent column over the target for finding it",
+                    "across a crowded village.")
+                    .defineEnum("questMarkerStyle", MarkerStyle.COMPACT);
+            questMarkerOcclusion = b.comment(
+                    "What the marker looks like when the target is behind terrain: DIM_OUTLINE leaves a",
+                    "faint hollow diamond, so a wall reads as a wall; HIDDEN shows nothing at all; FULL",
+                    "draws the whole marker through the wall the way versions before 1.5.3 did.")
+                    .defineEnum("questMarkerOcclusion", MarkerOcclusion.DIM_OUTLINE);
+            questMarkerEdgeIndicator = b.comment(
+                    "When the target is off the edge of the screen or behind you, show a small arrow at the",
+                    "edge pointing at it, with the distance. Without it a target you are not facing is",
+                    "simply not drawn, and there is nothing to turn towards.")
+                    .define("questMarkerEdgeIndicator", true);
+            questMarkerLabels = b.comment(
+                    "When the marker carries its target's name and distance: NEARBY within 48 blocks,",
+                    "ALWAYS at any distance it is drawn at, NEVER for the glyph alone. The tracker line",
+                    "names the target either way.")
+                    .defineEnum("questMarkerLabels", MarkerLabels.NEARBY);
+            questMarkerHighContrast = b.comment(
+                    "Draw the marker in white on a thick black outline instead of its kind's colour, and",
+                    "darken the label background. The glyph still says what the target is, so nothing is",
+                    "lost by not being able to tell the colours apart.")
+                    .define("questMarkerHighContrast", false);
+            questMarkerReducedMotion = b.comment(
+                    "Skip the marker's fade in and its cross-fade between targets, so it simply appears.",
+                    "Only ever affects opacity over time -- the marker never moves, scales or spins either",
+                    "way.")
+                    .define("questMarkerReducedMotion", false);
             mapWaypoints = b.comment(
                     "Put your quest destinations on JourneyMap and Xaero's Minimap, where either is",
                     "installed. One waypoint per quest that has somewhere to send you, created when it",
@@ -602,6 +642,16 @@ public final class McaQuestsConfig {
                     "time rather than one per quest. The in-world marker beam has always worked this way;",
                     "this makes the map match it.")
                     .define("mapWaypointsFollowedOnly", false);
+            journeyMapWaypoints = b.comment(
+                    "Put quest destinations on JourneyMap, when it is installed. With both minimaps",
+                    "installed the same destination is on both maps, and this is how you keep it on only",
+                    "the one you actually read. mapWaypoints=false turns both off regardless.")
+                    .define("journeyMapWaypoints", true);
+            xaeroWaypoints = b.comment(
+                    "Put quest destinations on Xaero's Minimap, when it is installed. Xaero's third-party",
+                    "waypoints carry no dimension of their own, so only destinations in the dimension you",
+                    "are standing in appear there. mapWaypoints=false turns both off regardless.")
+                    .define("xaeroWaypoints", true);
             showProjectTrackerHud = b.comment("Show participating community projects in the HUD tracker.")
                     .define("showProjectTrackerHud", true);
             projectTrackerMaxEntries = b.comment("How many community projects the tracker HUD shows at once.")
@@ -609,6 +659,43 @@ public final class McaQuestsConfig {
             showSituationToast = b.comment("Show a toast when the village opens a new situation that needs help (0.8.0).")
                     .define("showSituationToast", true);
             b.pop();
+        }
+
+        /**
+         * How much of the world marker is drawn.
+         *
+         * <p>Nested here, and not beside {@code HudBackground}, because these three are read only by
+         * the marker renderer and the HUD indicator. The enums themselves stay in the common config
+         * class for the usual reason: common code must never import anything under {@code client/},
+         * and a config value's type is part of the common config.
+         */
+        public enum MarkerStyle {
+            /** Glyph, ground ring, stem and label: the default. */
+            COMPACT,
+            /** The glyph alone, with nothing drawn around it. */
+            ICON_ONLY,
+            /** COMPACT plus a short translucent column standing on the target. */
+            HIGH_VISIBILITY
+        }
+
+        /** What remains of the marker when the target is behind terrain. */
+        public enum MarkerOcclusion {
+            /** A faint hollow diamond, visibly different from the marker in the open. */
+            DIM_OUTLINE,
+            /** Nothing. */
+            HIDDEN,
+            /** The whole marker, through the wall, as it was drawn before 1.5.3. */
+            FULL
+        }
+
+        /** When the marker carries its target's name and distance. */
+        public enum MarkerLabels {
+            /** Within 48 blocks, where the text is legible and the target is close enough to matter. */
+            NEARBY,
+            /** At every distance the marker is drawn at. */
+            ALWAYS,
+            /** Never; the glyph alone. */
+            NEVER
         }
     }
 

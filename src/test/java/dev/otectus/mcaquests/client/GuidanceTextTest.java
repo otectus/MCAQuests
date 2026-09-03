@@ -47,7 +47,7 @@ class GuidanceTextTest {
     private static GuidanceTarget target(boolean approximate, boolean lastKnown) {
         return new GuidanceTarget(GuidanceKind.STRUCTURE, OptionalInt.empty(),
                 new BlockPos(1024, 68, -330), Level.OVERWORLD, Component.literal("Fortress"),
-                24, approximate, lastKnown);
+                24, approximate, lastKnown, 0.0F);
     }
 
     @Test

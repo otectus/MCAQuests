@@ -2,6 +2,9 @@ package dev.otectus.mcaquests.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.client.map.MapSyncDirtyFlag;
+import dev.otectus.mcaquests.client.marker.MarkerSettings;
 import net.minecraft.client.KeyMapping;
 import org.lwjgl.glfw.GLFW;
 import net.minecraftforge.api.distmarker.Dist;
@@ -9,6 +12,7 @@ import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 /**
@@ -59,13 +63,42 @@ public final class QuestClientSetup {
     }
 
     /**
-     * Binds JourneyMap and Xaero's Minimap, if either is installed.
+     * Binds Xaero's Minimap, if it is installed.
      *
-     * <p>Client setup rather than common: a waypoint is a thing on one player's map, both mods are
-     * client mods, and a dedicated server has no business loading either binding.
+     * <p>Client setup rather than common: a waypoint is a thing on one player's map, both supported
+     * mods are client mods, and a dedicated server has no business loading either binding. JourneyMap
+     * is not looked for here at all — it discovers its own plugin and registers itself.
      */
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(dev.otectus.mcaquests.compat.MapWaypointCompat::init);
+        event.enqueueWork(dev.otectus.mcaquests.client.map.MapWaypointCompat::init);
+    }
+
+    /**
+     * Throws away the client's cached view of its own config whenever that config is (re)loaded.
+     *
+     * <p>The marker reads eight keys and would otherwise read them every frame; caching them means
+     * something has to say when the cache is wrong, and this is the only event that knows. The map
+     * layer is told the same way, so turning a waypoint toggle off clears its waypoints on the next
+     * tick instead of at the next quest update.
+     *
+     * <p>Config events can fire off the client thread, so the body touches nothing but an atomic —
+     * no {@code Minecraft}, no render state, no collections.
+     */
+    @SubscribeEvent
+    public static void onConfigLoad(ModConfigEvent.Loading event) {
+        invalidateClientCaches(event);
+    }
+
+    @SubscribeEvent
+    public static void onConfigReload(ModConfigEvent.Reloading event) {
+        invalidateClientCaches(event);
+    }
+
+    private static void invalidateClientCaches(ModConfigEvent event) {
+        if (event.getConfig().getSpec() == McaQuestsConfig.CLIENT_SPEC) {
+            MarkerSettings.invalidate();
+            MapSyncDirtyFlag.set();
+        }
     }
 }

@@ -204,10 +204,18 @@ See [TOWNSTEAD.md](TOWNSTEAD.md) for the full condition/objective/reward referen
 | `questTrackerAnchor` | `TOP_LEFT` | Screen corner the tracker anchors to: `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`. |
 | `questTrackerX` | `4` | Horizontal pixel offset from the anchored corner. |
 | `questTrackerY` | `4` | Vertical pixel offset from the anchored corner. |
-| `showQuestMarker` | `true` | Draw a marker in the world at the place the quest you are following is currently sending you: a beam and an icon, visible through walls, fading out as you arrive. Only ever one at a time, for the objective you are actually on. Turn it off for the tracker text alone. |
-| `questMarkerMaxDistance` | `256` | How far away the world marker is still drawn, in blocks. Past this only the tracker line names the target, which keeps a beam off the horizon for a destination two thousand blocks away. Range `16`–`4096`. |
-| `mapWaypoints` | `true` | Put your quest destinations on **JourneyMap** and **Xaero's Minimap**, where either is installed. One waypoint per quest that has somewhere to send you, created when it resolves, moved as the quest advances, and taken away when it is done. They are not saved into your own waypoint list — they belong to the quest, not to you — so uninstalling this mod leaves nothing behind. A destination in another dimension gets no waypoint: the Nether's coordinates are the overworld's divided by eight, so the raw number would sit somewhere you have no reason to go. Run `/mcaquests debug waypoints` to see what bound. |
-| `mapWaypointsFollowedOnly` | `false` | Restrict those waypoints to the quest you are following, so the map carries one at a time rather than one per quest. The in-world marker beam has always worked this way; this makes the map match it. |
+| `showQuestMarker` | `true` | Draw a marker in the world at the place the quest you are following is currently sending you: a diamond frame with a glyph, visible through walls, fading out as you arrive. Only ever one at a time, for the objective you are actually on. Turn it off for the tracker text alone. |
+| `questMarkerMaxDistance` | `256` | How far away the world marker is still drawn, in blocks. Past this only the tracker line names the target. Range `16`–`4096`. |
+| `questMarkerStyle` | `COMPACT` | Marker appearance: `COMPACT` (24 px diamond frame, glyph, ring, label), `ICON_ONLY` (glyph and ring only), `HIGH_VISIBILITY` (6-block solid column). |
+| `questMarkerOcclusion` | `DIM_OUTLINE` | When behind terrain: `DIM_OUTLINE` (faint outline only), `HIDDEN` (disappear), `FULL` (see through). |
+| `questMarkerEdgeIndicator` | `true` | Show HUD indicator (18 px diamond + chevron with distance/angle) when the quest is off-screen or behind the camera. |
+| `questMarkerLabels` | `NEARBY` | When to show marker labels: `NEARBY` (within 48 blocks), `ALWAYS` (always show), `NEVER` (never show). |
+| `questMarkerHighContrast` | `false` | Apply extra contrast to marker shapes for improved visibility in bright environments. |
+| `questMarkerReducedMotion` | `false` | Disable opacity fades on acquire/clear/retarget for accessibility. |
+| `mapWaypoints` | `true` | Put your quest destinations on **JourneyMap** and **Xaero's Minimap**, where either is installed. One waypoint per quest that has somewhere to send you, created when it resolves, moved as the quest advances, and taken away when it is done. They are not saved into your own waypoint list — they belong to the quest, not to you — so uninstalling this mod leaves nothing behind. A destination in another dimension gets no waypoint. Master switch; overrides `journeyMapWaypoints` and `xaeroWaypoints` below. |
+| `journeyMapWaypoints` | `true` | Put quest destinations on **JourneyMap** (if installed). Only matters when `mapWaypoints=true`. |
+| `xaeroWaypoints` | `true` | Put quest destinations on **Xaero's Minimap** (if installed). Only matters when `mapWaypoints=true`. |
+| `mapWaypointsFollowedOnly` | `false` | Restrict those waypoints to the quest you are following, so the map carries one at a time rather than one per quest. The in-world marker shows only one quest at a time; this makes the map match it. |
 
 > The anchor + X/Y offset together make any on-screen tracker position reachable. Example: `TOP_RIGHT` with `questTrackerX = 4`, `questTrackerY = 28` tucks it under the top-right corner.
 

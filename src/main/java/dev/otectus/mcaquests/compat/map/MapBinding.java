@@ -135,13 +135,15 @@ public final class MapBinding {
         private final boolean present;
         private final Map<Member, Object> resolved;
         private final List<String> missing;
+        private final List<String> missingOptional;
 
         private Resolution(String modName, boolean present, Map<Member, Object> resolved,
-                           List<String> missing) {
+                           List<String> missing, List<String> missingOptional) {
             this.modName = modName;
             this.present = present;
             this.resolved = resolved;
             this.missing = List.copyOf(missing);
+            this.missingOptional = List.copyOf(missingOptional);
         }
 
         /** The mod is installed and every member of its manifest bound. */
@@ -158,9 +160,21 @@ public final class MapBinding {
             return modName;
         }
 
-        /** Members that did not bind, for {@code /mcaquests debug waypoints}. */
+        /** Members that did not bind, for the waypoint diagnostic. */
         public List<String> missing() {
             return missing;
+        }
+
+        /**
+         * Optional members that did not bind, which is a report rather than a fault.
+         *
+         * <p>Kept apart from {@link #missing()} because the two mean opposite things: an essential
+         * member that did not bind disables the integration, and an optional one only costs whatever
+         * it was for. Xaero's colour palette is the example — without it every quest waypoint is the
+         * first colour in the list, which is worse-looking and entirely functional.
+         */
+        public List<String> missingOptional() {
+            return missingOptional;
         }
 
         /** The resolved handle, or a stub returning the member's default. Never null. */
@@ -214,33 +228,59 @@ public final class MapBinding {
      */
     public static Resolution resolve(String modName, String root, String probeRelative,
                                      List<Member> manifest, ClassLoader loader) {
+        return resolve(modName, root, probeRelative, manifest, List.of(), loader);
+    }
+
+    /**
+     * As {@link #resolve(String, String, String, List, ClassLoader)}, with members whose absence is
+     * survivable.
+     *
+     * <p>Every member used to be essential, which made the manifest a list of reasons to disable the
+     * whole integration — and one of them, a setter nothing ever called, was exactly that: a Xaero
+     * build that renamed it would have taken the waypoints with it for no reason at all. An optional
+     * member does not appear in {@link Resolution#missing()} and so does not clear
+     * {@link Resolution#isBound()}; its handle is the usual do-nothing stub, and the caller decides
+     * what to do without it.
+     */
+    public static Resolution resolve(String modName, String root, String probeRelative,
+                                     List<Member> essential, List<Member> optional,
+                                     ClassLoader loader) {
         Class<?> probe = loadOrNull(loader, root + probeRelative);
         if (probe == null) {
-            return new Resolution(modName, false, Map.of(), List.of());
+            return new Resolution(modName, false, Map.of(), List.of(), List.of());
         }
         Map<Member, Object> resolved = new IdentityHashMap<>();
         List<String> missing = new ArrayList<>();
-        for (Member member : manifest) {
-            Object value = null;
-            try {
-                value = bind(root, member, loader);
-            } catch (Throwable ignored) {
-                // Enumerating a class's methods resolves their descriptors, so a mod built against a
-                // dependency this game does not have throws from getMethods() itself. Caught per
-                // member, that reads as "this did not bind" rather than taking the game down.
-            }
-            if (value == null) {
-                missing.add(member.describe());
-            } else {
-                resolved.put(member, value);
-            }
+        List<String> missingOptional = new ArrayList<>();
+        for (Member member : essential) {
+            bindInto(root, member, loader, resolved, missing);
         }
-        return new Resolution(modName, true, resolved, missing);
+        for (Member member : optional) {
+            bindInto(root, member, loader, resolved, missingOptional);
+        }
+        return new Resolution(modName, true, resolved, missing, missingOptional);
     }
 
     /** A resolution for a mod that is not installed. */
     public static Resolution absent(String modName) {
-        return new Resolution(modName, false, Map.of(), List.of());
+        return new Resolution(modName, false, Map.of(), List.of(), List.of());
+    }
+
+    private static void bindInto(String root, Member member, ClassLoader loader,
+                                 Map<Member, Object> resolved, List<String> missing) {
+        Object value = null;
+        try {
+            value = bind(root, member, loader);
+        } catch (Throwable ignored) {
+            // Enumerating a class's methods resolves their descriptors, so a mod built against a
+            // dependency this game does not have throws from getMethods() itself. Caught per member,
+            // that reads as "this did not bind" rather than taking the game down.
+        }
+        if (value == null) {
+            missing.add(member.describe());
+        } else {
+            resolved.put(member, value);
+        }
     }
 
     @Nullable

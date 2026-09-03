@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -74,6 +75,9 @@ public final class GuidanceService {
 
     /** Last snapshot sent to each player, so an unchanged answer costs nothing. Cleared on logout. */
     private static final Map<UUID, GuidanceSnapshot> LAST_SENT = new ConcurrentHashMap<>();
+
+    /** Players whose guidance a mutation has invalidated, recomputed once at end of tick. */
+    private static final GuidanceDirtySet DIRTY = new GuidanceDirtySet();
 
     private GuidanceService() {
     }
@@ -251,13 +255,49 @@ public final class GuidanceService {
 
     /** Sends {@code snapshot} to {@code player} if it differs from what they were last sent. */
     public static void send(ServerPlayer player, GuidanceSnapshot snapshot) {
-        GuidanceSnapshot previous = LAST_SENT.get(player.getUUID());
-        if (previous != null && previous.equals(snapshot)) {
+        if (!shouldSend(player.getUUID(), snapshot)) {
             return;
         }
-        LAST_SENT.put(player.getUUID(), snapshot);
+        remember(player.getUUID(), snapshot);
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new QuestGuidanceS2CPacket(snapshot));
+    }
+
+    /**
+     * Whether {@code snapshot} is news to this player.
+     *
+     * <p>The suppression rule on its own, because it is the one thing in the recompute path that can
+     * silently swallow a legitimate update: after a death the destinations are recomputed from scratch
+     * and can be byte-identical to the ones the player had before dying, which is exactly when the
+     * client has nothing left and most needs to be told. {@link #forget} is the counterpart, and the
+     * respawn hook calls it for this reason.
+     */
+    public static boolean shouldSend(UUID playerId, GuidanceSnapshot snapshot) {
+        GuidanceSnapshot previous = LAST_SENT.get(playerId);
+        return previous == null || !previous.equals(snapshot);
+    }
+
+    /** Records what a player was last sent. The counterpart of {@link #shouldSend}, and its only writer. */
+    static void remember(UUID playerId, GuidanceSnapshot snapshot) {
+        LAST_SENT.put(playerId, snapshot);
+    }
+
+    /**
+     * Notes that {@code player}'s destinations may have changed, for the recompute at end of tick.
+     *
+     * <p>Called from the mutations that can change where a player is being sent, so a quest accepted,
+     * turned in, abandoned or followed moves the marker and the map on the same tick as the click
+     * rather than up to a second later. The once-a-second pass stays as the safety net for the
+     * objectives that are inherently polled — an escort walking, a location being reached — since
+     * nothing about those is an event anybody could mark on.
+     */
+    public static void markDirty(ServerPlayer player) {
+        DIRTY.mark(player.getUUID());
+    }
+
+    /** Every player marked since the last drain; empty on the overwhelming majority of ticks. */
+    public static Set<UUID> drainDirty() {
+        return DIRTY.drain();
     }
 
     /**

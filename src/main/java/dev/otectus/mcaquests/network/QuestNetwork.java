@@ -11,11 +11,14 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 13 — a destination for every quest, not just the marked one. QuestGuidanceS2CPacket
+    // Bumped to 14 — GuidanceTarget carries the target entity's bounding-box height, so the marker
+    // can anchor its glyph on the body of an entity the client cannot currently see rather than at
+    // the transmitted feet position.
+    // (13 was a destination for every quest, not just the marked one. QuestGuidanceS2CPacket
     // now carries a GuidanceSnapshot (one ActiveGuidance per quest, plus the index of the one the
     // marker stands on) rather than a single optional target, GuidanceTarget says whether a position
     // is somebody's last known whereabouts, and QuestLogEntry.TargetHint is gone — it was a second,
-    // dimensionless way of saying the same thing and only ever named a villager.
+    // dimensionless way of saying the same thing and only ever named a villager.)
     // (12 was objective guidance. QuestGuidanceS2CPacket and QuestTrackC2SPacket were new,
     // CardObjective carries an objective's state as an enum rather than a single "unavailable" flag,
     // and QuestLogEntry says which quest the player is following.) (11 was v1.5.0's interface: cards
@@ -32,7 +35,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "13";
+    private static final String PROTOCOL_VERSION = "14";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),

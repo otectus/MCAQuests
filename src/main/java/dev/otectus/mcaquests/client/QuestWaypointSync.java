@@ -2,11 +2,18 @@ package dev.otectus.mcaquests.client;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
-import dev.otectus.mcaquests.compat.MapWaypointBridge;
+import dev.otectus.mcaquests.client.map.ClientMapWaypointRegistry;
+import dev.otectus.mcaquests.client.map.MapSyncDirtyFlag;
+import dev.otectus.mcaquests.client.map.SyncGate;
+import dev.otectus.mcaquests.client.map.SyncReport;
+import dev.otectus.mcaquests.client.map.WaypointReconciler;
+import dev.otectus.mcaquests.compat.ClearCause;
+import dev.otectus.mcaquests.compat.MapWaypointBackend;
+import dev.otectus.mcaquests.compat.WaypointSpec;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
 import dev.otectus.mcaquests.quest.guidance.GuidanceTarget;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
@@ -16,125 +23,116 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 
 /**
  * Keeps the player's minimap in step with where their quests are sending them.
  *
  * <p>One waypoint per active quest that has somewhere to point, created when it resolves, moved when
  * the quest advances to its next objective, and taken away when the quest ends. The in-world marker
- * beam stays exactly one, for the quest the server marked primary; the map is where <em>all</em> of
- * them can be seen at once without the world filling up with beacons.
+ * stays exactly one, for the quest the server marked primary; the map is where <em>all</em> of them can
+ * be seen at once without the world filling up with beacons.
  *
- * <h2>Only this dimension</h2>
+ * <h2>What this class decides, and what it does not</h2>
  *
- * <p>A destination in another dimension is not published, for the reason the marker is not drawn
- * there: the Nether's coordinates are the overworld's divided by eight, so a waypoint at the raw
- * number would sit somewhere the player has no reason to go. The tracker still names the place, the
- * dimension and the coordinates in words, which is the honest form of that answer.
+ * <p>It decides what <em>should</em> be on the map. When that is worth asking at all is
+ * {@link SyncGate}'s answer; applying it, retrying it and reporting on it belongs to
+ * {@link WaypointReconciler}, which is pure and testable; the backends own what they have actually
+ * managed to publish. In particular, a destination in another dimension is no longer filtered out
+ * here: JourneyMap can show one in its true dimension and Xaero cannot, so the question is answered
+ * per backend by {@code MapBackendCapabilities.currentDimensionOnly()}.
  *
- * <h2>Diffed, and re-published when the world changes</h2>
+ * <h2>The quiet tick allocates nothing</h2>
  *
- * <p>The server only sends guidance when it changes, so in the steady state this compares a handful of
- * records and does nothing. The one thing it cannot detect by comparison is the player changing world:
- * Xaero's third-party waypoint store hangs off the current world container and is replaced along with
- * it, so what was published into the old one is simply gone. Watching the client level and starting
- * over is what stops the integration reading as "it stopped working after I went to the Nether".
+ * <p>Guidance changes when a packet arrives, when the player changes world, or when they change a
+ * setting — never on its own, and certainly not twenty times a second. So the tick reads a flag and a
+ * clock and returns; the desired set is built only on the ticks where one of those three things
+ * actually happened, or where a failing backend has asked to be tried again.
  */
 @Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class QuestWaypointSync {
 
-    /** What we last published for a key, so an unchanged destination costs nothing. */
-    private record Published(BlockPos pos, ResourceKey<Level> dimension, String label) {
-    }
+    private static final WaypointReconciler RECONCILER = new WaypointReconciler();
+    private static final SyncGate GATE = new SyncGate();
 
-    private static final Map<String, Published> PUBLISHED = new HashMap<>();
-
-    /** The level we published against, so a world change starts over instead of drifting. */
-    private static ResourceKey<Level> publishedDimension;
+    private static SyncReport lastReport = SyncReport.empty();
+    /** Wall clock of the last pass that no backend failed, or 0 when there has not been one. */
+    private static long lastSyncMillis;
 
     private QuestWaypointSync() {
     }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
+        if (event.phase != TickEvent.Phase.END || ClientMapWaypointRegistry.isEmpty()) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null || minecraft.player == null) {
+        ClientLevel level = minecraft.level;
+        if (level == null || minecraft.player == null) {
             return;
         }
-        MapWaypointBridge bridge = MapWaypointBridge.Holder.get();
-        if (!bridge.isAvailable()) {
+        // Consumed on every tick rather than only on the ticks that reconcile: a change that arrives
+        // in the same tick as a world change must not be left set for the next world.
+        boolean dirty = MapSyncDirtyFlag.consume();
+        long now = System.currentTimeMillis();
+        ResourceKey<Level> dimension = level.dimension();
+        SyncGate.Decision decision = GATE.evaluate(level, dimension, dirty, now);
+        if (decision.clear() != null) {
+            RECONCILER.clearAutomatic(ClientMapWaypointRegistry.backends(), decision.clear());
+        }
+        if (!decision.reconcile()) {
             return;
         }
-        if (!McaQuestsConfig.CLIENT.mapWaypoints.get()) {
-            if (!PUBLISHED.isEmpty()) {
-                forget(bridge);
+        lastReport = RECONCILER.reconcile(ClientMapWaypointRegistry.backends(), desired(),
+                QuestWaypointSync::enabled, dimension, decision.worldEpoch(),
+                ClientGuidanceData.revision(), now);
+        long retryAt = 0L;
+        boolean failed = false;
+        for (SyncReport.BackendReport report : lastReport.backends()) {
+            if (report.nextRetryAtMillis().isPresent()) {
+                failed = true;
+                long next = report.nextRetryAtMillis().get();
+                retryAt = retryAt == 0L ? next : Math.min(retryAt, next);
             }
-            return;
         }
-        ResourceKey<Level> dimension = minecraft.level.dimension();
-        if (!dimension.equals(publishedDimension)) {
-            // A new world: whatever we published lives in a container nothing renders any more.
-            PUBLISHED.clear();
-            publishedDimension = dimension;
+        GATE.retryAt(retryAt);
+        if (!failed) {
+            lastSyncMillis = now;
         }
-        sync(bridge, wanted(dimension));
     }
 
-    /** Every destination worth a waypoint right now, keyed the way the map files them. */
-    private static Map<String, Published> wanted(ResourceKey<Level> dimension) {
+    /**
+     * Whether one backend may be reconciled at all.
+     *
+     * <p>{@code mapWaypoints} is the master switch and the per-backend keys refine it, so a player with
+     * both mods can put quest destinations on the one they actually read. A backend turned off here is
+     * cleared by the reconciler rather than merely skipped, which is what makes the toggle take effect
+     * the moment the config is saved.
+     */
+    private static boolean enabled(MapWaypointBackend backend) {
+        if (!McaQuestsConfig.CLIENT.mapWaypoints.get()) {
+            return false;
+        }
+        return switch (backend.id()) {
+            case "journeymap" -> McaQuestsConfig.CLIENT.journeyMapWaypoints.get();
+            case "xaero" -> McaQuestsConfig.CLIENT.xaeroWaypoints.get();
+            default -> true;
+        };
+    }
+
+    /** Every destination worth a waypoint right now, in the shape the map layer compares. */
+    private static List<WaypointSpec> desired() {
         List<ActiveGuidance> source = McaQuestsConfig.CLIENT.mapWaypointsFollowedOnly.get()
                 ? ClientGuidanceData.primary().map(List::of).orElseGet(List::of)
                 : ClientGuidanceData.all();
-        Map<String, Published> wanted = new HashMap<>();
+        List<WaypointSpec> desired = new ArrayList<>(source.size());
         for (ActiveGuidance guidance : source) {
             GuidanceTarget target = guidance.target();
-            if (!dimension.equals(target.dimension())) {
-                continue;
-            }
-            wanted.put(key(guidance), new Published(target.pos(), target.dimension(),
-                    target.label().getString()));
+            desired.add(new WaypointSpec(key(guidance), target.pos(), target.dimension(),
+                    target.label().getString(), target.kind(), WaypointSpec.Ownership.AUTOMATIC));
         }
-        return wanted;
-    }
-
-    private static void sync(MapWaypointBridge bridge, Map<String, Published> wanted) {
-        Set<String> stale = new HashSet<>(PUBLISHED.keySet());
-        stale.removeAll(wanted.keySet());
-        for (String key : stale) {
-            bridge.withdraw(key);
-            PUBLISHED.remove(key);
-        }
-        for (Map.Entry<String, Published> entry : wanted.entrySet()) {
-            if (entry.getValue().equals(PUBLISHED.get(entry.getKey()))) {
-                continue;
-            }
-            Optional<ActiveGuidance> guidance = find(entry.getKey());
-            if (guidance.isEmpty()) {
-                continue;
-            }
-            GuidanceTarget target = guidance.get().target();
-            bridge.publish(entry.getKey(), target.pos(), target.dimension(), target.label(),
-                    target.kind());
-            PUBLISHED.put(entry.getKey(), entry.getValue());
-        }
-    }
-
-    private static Optional<ActiveGuidance> find(String key) {
-        for (ActiveGuidance guidance : new ArrayList<>(ClientGuidanceData.all())) {
-            if (key.equals(key(guidance))) {
-                return Optional.of(guidance);
-            }
-        }
-        return Optional.empty();
+        return desired;
     }
 
     /**
@@ -148,15 +146,55 @@ public final class QuestWaypointSync {
         return guidance.questId() + "/" + guidance.villagerUuid();
     }
 
-    /** Takes back every waypoint this mod published and forgets them. */
-    private static void forget(MapWaypointBridge bridge) {
-        bridge.clear();
-        PUBLISHED.clear();
-        publishedDimension = null;
+    /** The last pass, for the client waypoint diagnostic. */
+    public static SyncReport lastReport() {
+        return lastReport;
+    }
+
+    /** When the last pass finished with nothing failing, or 0 when none has. */
+    public static long lastSyncMillis() {
+        return lastSyncMillis;
+    }
+
+    /** Asks for a reconcile on the next tick — for the config listener and the client command. */
+    public static void markDirty() {
+        MapSyncDirtyFlag.set();
+    }
+
+    /**
+     * A world is about to begin.
+     *
+     * <p>Nothing is cleared here: there is no world yet to clear anything from, and the backends were
+     * already told the previous one had ended. The epoch moves so a report cannot be mistaken for one
+     * about the world before it.
+     */
+    @SubscribeEvent
+    public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+        GATE.nextEpoch();
+        MapSyncDirtyFlag.set();
+    }
+
+    /**
+     * The player object was replaced — a respawn, or a dimension change carried out by the server.
+     *
+     * <p>The waypoints go and come back rather than being left in place, because the snapshot that
+     * follows a clone is recomputed from scratch on the server and this is the one moment where the
+     * client's idea of the desired set is guaranteed stale.
+     */
+    @SubscribeEvent
+    public static void onClone(ClientPlayerNetworkEvent.Clone event) {
+        RECONCILER.clearAutomatic(ClientMapWaypointRegistry.backends(), ClearCause.CLONE);
+        GATE.nextEpoch();
+        MapSyncDirtyFlag.set();
     }
 
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        forget(MapWaypointBridge.Holder.get());
+        RECONCILER.clearAutomatic(ClientMapWaypointRegistry.backends(), ClearCause.LOGOUT);
+        ClientMapWaypointRegistry.backends().forEach(MapWaypointBackend::resetEpoch);
+        GATE.reset();
+        lastReport = SyncReport.empty();
+        lastSyncMillis = 0L;
+        MapSyncDirtyFlag.set();
     }
 }

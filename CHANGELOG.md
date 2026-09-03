@@ -4,7 +4,103 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.2] - Unreleased
+## [1.5.3] - Unreleased
+
+A comprehensive marker and map-layer rework: the in-world marker is redesigned as a compact diamond, its position corrected, its appearance made configurable and colorblind-safe; JourneyMap now integrates through its documented plugin API instead of reflection; Xaero pins are now explicitly labelled as session-only on Xaero-alone installs; waypoint reconciliation is event-driven and recoverable from failures; the marker's per-quest destinations are shown in the quest log and HUD. Network protocol 14 required (EntityHeight added to `GuidanceTarget`).
+
+### Fixed — marker
+
+- **Icon float-away bug:** the glyph was drawn 25–27 blocks above the target entity because its translation included `MarkerGeometry.labelHeight()` (the sky beam's apex). The beam is gone; only the glyph and ground ring remain. Fixed targets sit just above their block's collision/visual shape. Unloaded entities now use a last-known height sent by the server instead of being pushed 25 blocks up the y-axis.
+- **Marker twitch:** `Entity#getY(double)` was called as though its argument were a render partial tick, sweeping a full entity-height per frame. X and Z were not interpolated at all. All three axes now use the partial tick from `RenderLevelStageEvent.getRenderTick()`. Glyph sits at 72% of the entity's bounding-box height.
+
+### Fixed — map waypoints
+
+- **Dimension changes left stale waypoints:** JourneyMap stores each waypoint's true dimension; Xaero only shows current-dimension waypoints. Changing dimensions now explicitly clears automatic points and recreates them on arrival instead of leaving the old ones stranded.
+- **Automatic cleanup deleted pinned waypoints:** `/mcaquests clear()` called JourneyMap's `removeAllWaypoints(modId)` unconditionally. Only automatic points are now removed; player pins stay. Xaero's session store is cleared and rebuilt per dimension.
+- **Backend failures were never retried:** a failed write was recorded as success and never attempted again. Failures now carry backoff (1,2,4,8,16,32,60 s) and are logged with their fingerprint, once per unique failure.
+- **Colour and icon changes didn't update:** a target that changed kind at the same position kept the old colours and icon. Points are now removed and recreated on kind change. Colourblind-safe palette applied to both map waypoints and in-world glyphs.
+- **Reconciliation ran every tick:** the waypoint sync checked the desired state every client tick even when nothing changed. Changes now trigger on guidance updates, config changes, world/dimension transitions, and login/logout/clone.
+
+### Changed — marker
+
+- **New compact style:** 24 px diamond frame with a 20 px kind glyph, ground ring, and label within 48 blocks (default). The old 24-block sky beam is gone. Behind terrain only a faint hollow outline shows (default). Depth-tested. Opacity fades on acquire/clear/retarget (reduced-motion option).
+- **Palette change:** colorblind-safe Deuteranopia-compatible colours. This also changes JourneyMap waypoint and Xaero waypoint colours.
+- **HIGH_VISIBILITY style:** a depth-tested 6-block solid column instead of the old beam. Glyph never moves. Configurable in `questMarkerStyle`.
+- **Screen-edge indicator:** marked quests that are off-screen or behind the camera show an 18 px diamond + 8 px chevron in an 18 px safe inset on the HUD, with distance and angle. Toggled via `questMarkerEdgeIndicator`.
+
+### Added — marker configuration
+
+Eight new client config keys in `mcaquests-client.toml`, all documented in `CONFIG.md`:
+
+| Option | Default | What it does |
+|---|---|---|
+| `questMarkerStyle` | `COMPACT` | Marker appearance: `COMPACT` (new default), `ICON_ONLY`, `HIGH_VISIBILITY`. |
+| `questMarkerOcclusion` | `DIM_OUTLINE` | When behind terrain: `DIM_OUTLINE` (faint outline), `HIDDEN` (vanish), `FULL` (see through). |
+| `questMarkerEdgeIndicator` | `true` | Show HUD indicator when the quest is off-screen or behind the camera. |
+| `questMarkerLabels` | `NEARBY` | When to show labels: `NEARBY` (within 48 blocks), `ALWAYS`, `NEVER`. |
+| `questMarkerHighContrast` | `false` | Apply extra contrast to marker shapes for visibility in bright environments. |
+| `questMarkerReducedMotion` | `false` | Disable opacity fades and retain instant cutover (accessibility). |
+
+Existing `showQuestMarker`, `questMarkerMaxDistance` and `mapWaypoints` / `mapWaypointsFollowedOnly` remain. `mapWaypoints=false` now overrides both `journeyMapWaypoints` and `xaeroWaypoints`.
+
+### Added — map configuration
+
+Two new client config keys for per-backend toggling:
+
+| Option | Default | What it does |
+|---|---|---|
+| `journeyMapWaypoints` | `true` | Put quest destinations on **JourneyMap** (if installed). |
+| `xaeroWaypoints` | `true` | Put quest destinations on **Xaero's Minimap** (if installed). |
+
+`mapWaypoints=false` disables both regardless of these values.
+
+### Added — client command
+
+New `/mcaquestsclient waypoints [status|probe]` command, fully localized:
+- `status` renders the last reconciliation report, showing each backend's state, capability, and version.
+- `probe` runs every backend's self-test and reports what bound and what failed.
+
+### Changed — JourneyMap
+
+- **Plugin API 2.0:** JourneyMap's documented entry point (`@JourneyMapPlugin(apiVersion = "2.0.0")`, `IClientPlugin`) is now used instead of reflection against the internal `ClientAPI.INSTANCE` singleton. The plugin is discovered and initialized by JourneyMap's own classloader before or after MCA: Quests' client setup (no ordering guarantee).
+- **In-world icon/beacon suppressed:** automatic quest waypoints are created with `showOnMap=true`, `showInWorld=false`, `showBeacon=false`, so MCA: Quests' own marker is the only in-world visual. JourneyMap no longer draws a duplicate.
+- **Pinned waypoints are persistent:** the quest log's **add waypoint** button now uses `persistent=true`, and waypoints are read back after creation to confirm their id. They live in JourneyMap's player data and survive mod uninstall like any other player waypoint.
+
+### Changed — Xaero
+
+- **Session waypoint labelled:** on Xaero-only installs (no JourneyMap), the quest log's star button now explicitly offers a **session waypoint** that exists only while the instance is running, with distinct tooltip and success message. With JourneyMap installed, pins go there instead (persistent). This fixes the previous false claim of permanence while keeping the button visible.
+- **Named palette and origin:** waypoint colour/purpose are resolved by enum name (`WaypointColor`, `WaypointPurpose`) instead of hard-coded ordinals. Automatic points use origin `mcaquests:quests`, pinned waypoints use `mcaquests:pins`. Pin keys now include the dimension.
+- **Store identity tracking:** the backend now tracks Xaero's session identity via `WeakReference` and catches when the session changes (e.g., `/reload`) by comparing references, resetting applied state and rebuilding on next sync. `getCurrentSession()==null` → `RETRY_LATER`.
+
+### Changed — guidance updates
+
+Guidance (the marker and map waypoints) is now recomputed immediately when a quest changes: when a quest is accepted, turned in, abandoned, failed, followed (pinned), or progresses (`GuidanceService.markDirty` from `QuestManager.syncLog`). The recompute happens at the end of the server tick, coalescing multiple mutations to one player into one pass. On respawn and dimension change, guidance is reset and resent, so the first snapshot after death is not suppressed by the equality check that would normally drop an unchanged state. The once-per-second pass remains as a safety net for objectives no event can mark (like a passive timer objective reaching its deadline). This removes most of the one-second latency between a quest action and the marker/waypoint updating.
+
+### Compatibility
+
+- **Network protocol 14:** `GuidanceTarget` gained a trailing `float entityHeight` (clamped 0–64) used when the target entity is unloaded. Strict channel version requires exact match; old clients and servers cannot communicate.
+- **`MapWaypointBridge` and `Holder` removed:** add-ons that referenced `compat.MapWaypointBridge` must migrate to the new `compat.MapWaypointBackend` + `client.map.ClientMapWaypointRegistry` contract. See README.md for the extension API.
+- **`/mcaquests debug waypoints` redirect:** use the new `/mcaquestsclient waypoints` command instead.
+- **JourneyMap API 2.0 required:** `mods.toml` declares JourneyMap `[1.20.1-6.0.0,)`. JourneyMap 6.0.0+ is the minimum for API 2.0 support. Older 5.x builds will not load the plugin and will fall back to the no-op backend (waypoints disabled, no warning).
+
+### Translations
+
+New translation keys for marker, map configuration, and diagnostics (both `en_us.json` and `pt_br.json`):
+- `mcaquests.marker.edge_distance`
+- `mcaquests.tooltip.add_session_waypoint`
+- `mcaquests.message.session_waypoint_added`
+- `mcaquests.message.waypoint_failed`
+- `mcaquests.command.debug.waypoints.redirect`
+- `mcaquests.command.waypoints.{header, none_installed, backend, version_unknown, state.usable, state.not_bound, state.retry_pending, disabled, capabilities, yes, no, pins.none, pins.session, pins.persistent, last_sync, last_sync.never, pending_retry, last_failure, probe.step, probe.step_detail, probe.passed, probe.failed}`
+
+### Build
+
+- **JourneyMap API compiled against:** `build.gradle` declares `compileOnly 'info.journeymap:journeymap-api-forge:1.20.1-2.0.0'` (from `gradle.properties`), sourced from modmaven.dev (the reachable mirror of the artifact JourneyMap 1.20.1-6.0.x embeds; byte-for-byte identical, verified by new `journeyMapEmbeddedApiMatchesCompiledApi` probe). The API jar is never shipped; it is used at compile time only for type checking. Runtime plugin discovery is handled by JourneyMap's own plugin loader.
+- **Fallback:** if the official API jar is unavailable, pass `-PjourneymapApiJar=<path>` to use a git-ignored `libs/` copy instead.
+- **Map probe test hardened:** `mapProbeTest` accepts `-PrequireMapJars=true` to fail the build if a jar is missing instead of skipping silently.
+- **Static link test:** `NoMinimapStaticLinkTest` restricts `journeymap/` type references to the dedicated `compat/journeymap/` package (typed against the compile-only API, loaded only via plugin discovery). XaeroMinimap type references remain banned everywhere.
+
+## [1.5.2] - 2026-09-03
 
 A patch release from a static audit of the bundled quest pack (`docs/audit/QUEST_AUDIT.md`): eight
 logic fixes, a pack the audit found offering one quest that could never be finished, and three new

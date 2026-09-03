@@ -101,6 +101,26 @@ repositories {
         url = 'https://maven.ftb.dev/releases'
         content { includeGroup 'dev.ftb.mods' }
     }
+
+    // JourneyMap's client plugin API — scoped to info.journeymap only.
+    //
+    // Not JourneyMap's own Nexus (jm.gserv.me). That host publishes journeymap-api for 1.19-1.20.6
+    // and journeymap-api-forge for 1.21+/26.x, and neither set contains a 1.20.1 build of API 2.0:
+    // the closest, `journeymap-api:2.0+1.20-forge`, is a June 2023 snapshot of the *old*
+    // journeymap.client.api.* surface, with no @JourneyMapPlugin, no WaypointFactory and no
+    // per-waypoint visibility flags. What JourneyMap 1.20.1-6.0.x actually loads is
+    // journeymap-api-forge:1.20.1-2.0.0, and modmaven.dev is the reachable mirror carrying it —
+    // byte-for-byte the same API surface as the jar-in-jar inside the mod, which mapProbeTest
+    // re-checks against a real JourneyMap jar on demand.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'ModMaven'
+                url = 'https://modmaven.dev'
+            }
+        }
+        filter { includeGroup 'info.journeymap' }
+    }
 }
 
 // Which MCA build dev runs launch with. Overridable per invocation so both MCA package layouts can
@@ -188,6 +208,24 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // JourneyMap optional integration — compile-time only. NEVER shipped, NEVER 'implementation'.
+    //
+    // The one exception to this mod's "all third-party access is reflective" rule, and it is forced:
+    // JourneyMap's entry point is a class carrying @JourneyMapPlugin and implementing IClientPlugin,
+    // and neither an annotation nor an implements clause can be produced reflectively. Only
+    // compat/journeymap/ names these types, and NoMinimapStaticLinkTest fails the build if anything
+    // else does — so a dedicated server, or a client without JourneyMap, never loads that package.
+    //
+    // Plain compileOnly, not fg.deobf: API 2.0's own signatures use official Minecraft class names
+    // (BlockPos, ResourceKey<Level>), which are the same in a production jar, and nothing here calls
+    // a Minecraft member through it.
+    //
+    // testImplementation as well -- compile *and* test runtime, since JourneyMapWaypointBackendTest
+    // hands the backend a stub IClientAPI and has to load the real interface to implement it. Test
+    // scope only; nothing about this reaches the jar.
+    compileOnly "info.journeymap:journeymap-api-forge:${journeymap_api_version}"
+    testImplementation "info.journeymap:journeymap-api-forge:${journeymap_api_version}"
+
     // FTB Quests optional integration — compile-time only. NEVER shipped, NEVER 'implementation'.
     compileOnly fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
     compileOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
@@ -255,18 +293,25 @@ tasks.register('townsteadProbeTest', Test) {
     }
 }
 
-// Resolves the JourneyMap and Xaero binding manifests against real jars, in their own JVM and their
-// own class loader. Separate from `test` because both mods are CurseForge-only -- there is no Maven
-// to resolve them from and libs/ is gitignored, so the paths are supplied by whoever runs it.
+// Checks both map integrations against real mod jars, in their own JVM and their own class loader.
+// Separate from `test` because the mod jars cannot be resolved from a Maven: both are CurseForge-only
+// (libs/ is gitignored), so the paths are supplied by whoever runs it.
 //
 //     ./gradlew mapProbeTest -PjourneymapJar=libs/journeymap-forge-1.20.1-6.0.4.jar //                            -PxaeroJar=libs/xaerominimap-forge-1.20.1-26.4.2.jar
 //
-// Either may be given alone; a mod with no jar is skipped rather than failed. The test unpacks
-// JourneyMap's jar-in-jar API for itself -- the outer jar carries none of IClientAPI, Waypoint or
-// WaypointFactory, so probing it alone would pass while proving nothing.
+// The two halves ask different questions, because the two integrations are bound differently. Xaero
+// ships no API, so its manifest is resolved by name and this is the only thing that can prove the
+// names are right. JourneyMap is compiled against, so its members are already pinned by javac -- what
+// this checks there is *drift*: the runtime API is the journeymap-api-forge jar-in-jar inside the mod
+// jar, the compile API is journeymap_api_version from a Maven mirror, and nothing but this task
+// notices the day those two stop agreeing.
+//
+// Either may be given alone; a mod with no jar is skipped rather than failed -- unless
+// -PrequireMapJars=true, which turns every missing jar into a failure so a release gate cannot pass
+// on a run that silently probed nothing.
 tasks.register('mapProbeTest', Test) {
     group = 'verification'
-    description = 'Verifies the JourneyMap and Xaero binding manifests against supplied jars.'
+    description = 'Verifies the Xaero binding manifest and the JourneyMap API against supplied jars.'
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform()
@@ -278,6 +323,8 @@ tasks.register('mapProbeTest', Test) {
                 project.findProperty('journeymapJar')?.toString() ?: ''
         systemProperty 'mcaquests.map.probe.xaero',
                 project.findProperty('xaeroJar')?.toString() ?: ''
+        systemProperty 'mcaquests.map.probe.require',
+                project.findProperty('requireMapJars')?.toString() ?: 'false'
     }
 }
 

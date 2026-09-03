@@ -39,38 +39,47 @@ import java.util.OptionalInt;
  *                    the tracker has said both since before guidance existed. It arrived here when
  *                    {@code QuestLogEntry.TargetHint} — which carried a {@code lastKnown} flag, a
  *                    position and no dimension at all — was folded into this record
+ * @param entityHeight the target's bounding-box height in blocks when it is an entity, zero otherwise.
+ *                    Only the marker reads it, and only when {@code entityId} names an entity the
+ *                    client cannot see: without it the fallback has no way to put the glyph on a body
+ *                    rather than at its feet. Clamped on decode, since it arrives over a network
  */
 public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos pos,
                              ResourceKey<Level> dimension, Component label,
-                             int arriveRadius, boolean approximate, boolean lastKnown) {
+                             int arriveRadius, boolean approximate, boolean lastKnown,
+                             float entityHeight) {
 
     /** How close a person counts as found. Deliberately small: you have to actually reach them. */
     public static final int ENTITY_ARRIVE_RADIUS = 3;
 
+    /** The tallest height the wire will carry. Above this the value is corrupt, not a big entity. */
+    public static final float MAX_ENTITY_HEIGHT = 64.0F;
+
     /** A loaded entity, followed live by the client. */
     public static GuidanceTarget ofEntity(Entity entity, GuidanceKind kind, Component label) {
         return new GuidanceTarget(kind, OptionalInt.of(entity.getId()), entity.blockPosition(),
-                entity.level().dimension(), label, ENTITY_ARRIVE_RADIUS, false, false);
+                entity.level().dimension(), label, ENTITY_ARRIVE_RADIUS, false, false,
+                entity.getBbHeight());
     }
 
     /** A fixed position in {@code level}. */
     public static GuidanceTarget ofPos(BlockPos pos, ServerLevel level, GuidanceKind kind,
                                        Component label, int arriveRadius, boolean approximate) {
         return new GuidanceTarget(kind, OptionalInt.empty(), pos, level.dimension(), label,
-                Math.max(1, arriveRadius), approximate, false);
+                Math.max(1, arriveRadius), approximate, false, 0.0F);
     }
 
     /** A fixed position in a dimension the player may not currently be in. */
     public static GuidanceTarget ofPos(BlockPos pos, ResourceKey<Level> dimension, GuidanceKind kind,
                                        Component label, int arriveRadius, boolean approximate) {
         return new GuidanceTarget(kind, OptionalInt.empty(), pos, dimension, label,
-                Math.max(1, arriveRadius), approximate, false);
+                Math.max(1, arriveRadius), approximate, false, 0.0F);
     }
 
     /** The same target relabelled — used when a caller knows a better name than the objective did. */
     public GuidanceTarget withLabel(Component newLabel) {
         return new GuidanceTarget(kind, entityId, pos, dimension, newLabel, arriveRadius, approximate,
-                lastKnown);
+                lastKnown, entityHeight);
     }
 
     /**
@@ -82,7 +91,7 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
      */
     public GuidanceTarget asLastKnown() {
         return new GuidanceTarget(kind, entityId, pos, dimension, label, arriveRadius, approximate,
-                true);
+                true, entityHeight);
     }
 
     public static void encode(FriendlyByteBuf buf, GuidanceTarget target) {
@@ -94,6 +103,7 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
         buf.writeVarInt(target.arriveRadius);
         buf.writeBoolean(target.approximate);
         buf.writeBoolean(target.lastKnown);
+        buf.writeFloat(target.entityHeight);
     }
 
     public static GuidanceTarget decode(FriendlyByteBuf buf) {
@@ -107,6 +117,17 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
                 buf.readComponent(),
                 buf.readVarInt(),
                 buf.readBoolean(),
-                buf.readBoolean());
+                buf.readBoolean(),
+                // Clamped rather than trusted: a NaN or a negative would propagate straight into the
+                // marker's anchor arithmetic, and the glyph would land somewhere unrepresentable.
+                clampHeight(buf.readFloat()));
+    }
+
+    /** A transmitted height reduced to something the marker can safely multiply. */
+    private static float clampHeight(float height) {
+        if (!Float.isFinite(height) || height <= 0.0F) {
+            return 0.0F;
+        }
+        return Math.min(height, MAX_ENTITY_HEIGHT);
     }
 }
