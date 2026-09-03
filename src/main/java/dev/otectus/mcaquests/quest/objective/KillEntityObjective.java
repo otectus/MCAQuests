@@ -28,7 +28,7 @@ public record KillEntityObjective(EntityTarget target, int count,
 
     public static final MapCodec<KillEntityObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(KillEntityObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(KillEntityObjective::count),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(KillEntityObjective::count),
             SourceHint.FIELD.forGetter(KillEntityObjective::source)
     ).apply(instance, KillEntityObjective::new));
 

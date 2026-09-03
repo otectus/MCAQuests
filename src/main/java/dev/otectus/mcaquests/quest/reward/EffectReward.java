@@ -18,8 +18,8 @@ public record EffectReward(Holder<MobEffect> effect, int duration, int amplifier
 
     public static final MapCodec<EffectReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BuiltInRegistries.MOB_EFFECT.holderByNameCodec().fieldOf("effect").forGetter(EffectReward::effect),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("duration", 600).forGetter(EffectReward::duration),
-            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("amplifier", 0).forGetter(EffectReward::amplifier)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("duration", 600).forGetter(EffectReward::duration),
+            ExtraCodecs.NON_NEGATIVE_INT.lenientOptionalFieldOf("amplifier", 0).forGetter(EffectReward::amplifier)
     ).apply(instance, EffectReward::new));
 
     @Override

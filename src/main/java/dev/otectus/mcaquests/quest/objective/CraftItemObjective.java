@@ -28,7 +28,7 @@ public record CraftItemObjective(ItemTarget target, int count,
 
     public static final MapCodec<CraftItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(CraftItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(CraftItemObjective::count),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(CraftItemObjective::count),
             SourceHint.FIELD.forGetter(CraftItemObjective::source)
     ).apply(instance, CraftItemObjective::new));
 

@@ -34,8 +34,8 @@ public record CureVillagerObjective(VillagerTarget villager, ItemTarget cureItem
             new ItemTarget(Optional.of(Items.GOLDEN_APPLE), Optional.empty());
 
     public static final MapCodec<CureVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(CureVillagerObjective::villager),
-            ItemTarget.MAP_CODEC.codec().optionalFieldOf("cure_item", DEFAULT_CURE_ITEM).forGetter(CureVillagerObjective::cureItem)
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager", VillagerTarget.SELF).forGetter(CureVillagerObjective::villager),
+            ItemTarget.MAP_CODEC.codec().lenientOptionalFieldOf("cure_item", DEFAULT_CURE_ITEM).forGetter(CureVillagerObjective::cureItem)
     ).apply(instance, CureVillagerObjective::new));
 
     @Override

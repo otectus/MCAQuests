@@ -14,8 +14,9 @@ import java.util.stream.Stream;
  * Optional datapack fields that <b>report</b> a malformed value instead of quietly substituting the
  * default.
  *
- * <p>DataFixerUpper's {@code Codec.optionalFieldOf} cannot tell "absent" from "present but invalid" —
- * both yield the default. For a datapack format that is the wrong trade. A pack author who writes
+ * <p>DataFixerUpper's {@code Codec.lenientOptionalFieldOf} cannot tell "absent" from "present but
+ * invalid" — both yield the default. For a datapack format that is the wrong trade. A pack author
+ * who writes
  *
  * <pre>{@code "recipients": "phase_contributers"}</pre>
  *
@@ -23,8 +24,9 @@ import java.util.stream.Stream;
  * symptom would be players saying the project "did not pay". Making absence lenient and malformation
  * loud is the whole point.
  *
- * <p>Minecraft 1.20.1 has no {@code ExtraCodecs.strictOptionalField}; later versions ship an
- * equivalent and this class can be retired against them.
+ * <p>PORT: DFU 8 (1.21) turned {@code optionalFieldOf} strict and moved the old forgiving behaviour
+ * to {@code lenientOptionalFieldOf}. This mod's fields default to the forgiving form, so
+ * {@code strictOptional} stays the deliberate opt-in wherever malformation should be loud.
  */
 public final class StrictCodecs {
 

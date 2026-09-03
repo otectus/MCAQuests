@@ -45,7 +45,7 @@ public record TemplateSpec(Map<String, TemplateVariable> variables, JsonElement 
                     Codec.unboundedMap(Codec.STRING, TemplateVariable.CODEC).fieldOf("variables")
                             .forGetter(TemplateSpec::variables),
                     JSON.fieldOf("objectives").forGetter(TemplateSpec::objectives),
-                    JSON.optionalFieldOf("rewards", new JsonArray()).forGetter(TemplateSpec::rewards)
+                    JSON.lenientOptionalFieldOf("rewards", new JsonArray()).forGetter(TemplateSpec::rewards)
             ).apply(instance, TemplateSpec::new));
 
     /** The concrete objectives/rewards produced by substituting a {@link ResolvedTemplate}. */

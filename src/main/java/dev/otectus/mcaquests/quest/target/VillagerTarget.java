@@ -93,10 +93,10 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
 
     public static final MapCodec<VillagerTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             MODE_CODEC.fieldOf("mode").forGetter(VillagerTarget::mode),
-            ResourceLocation.CODEC.optionalFieldOf("profession").forGetter(VillagerTarget::profession),
-            Codec.STRING.optionalFieldOf("relation").forGetter(VillagerTarget::relation),
-            UUIDUtil.STRING_CODEC.optionalFieldOf("uuid").forGetter(VillagerTarget::uuid),
-            Codec.STRING.optionalFieldOf("require").forGetter(VillagerTarget::require)
+            ResourceLocation.CODEC.lenientOptionalFieldOf("profession").forGetter(VillagerTarget::profession),
+            Codec.STRING.lenientOptionalFieldOf("relation").forGetter(VillagerTarget::relation),
+            UUIDUtil.STRING_CODEC.lenientOptionalFieldOf("uuid").forGetter(VillagerTarget::uuid),
+            Codec.STRING.lenientOptionalFieldOf("require").forGetter(VillagerTarget::require)
     ).apply(instance, VillagerTarget::new));
 
     public static final Codec<VillagerTarget> CODEC = MAP_CODEC.codec();

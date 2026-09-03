@@ -28,7 +28,7 @@ public record PlaceBlockObjective(BlockTarget target, int count,
 
     public static final MapCodec<PlaceBlockObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(PlaceBlockObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(PlaceBlockObjective::count),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(PlaceBlockObjective::count),
             SourceHint.FIELD.forGetter(PlaceBlockObjective::source)
     ).apply(instance, PlaceBlockObjective::new));
 

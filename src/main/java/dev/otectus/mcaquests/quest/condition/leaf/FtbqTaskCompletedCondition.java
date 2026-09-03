@@ -29,7 +29,7 @@ public record FtbqTaskCompletedCondition(String task, FtbqWhenMissing whenMissin
 
     public static final MapCodec<FtbqTaskCompletedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             FtbqIds.hexIdCodec(TYPE_ID, "task").fieldOf("task").forGetter(FtbqTaskCompletedCondition::task),
-            FtbqWhenMissing.CODEC.optionalFieldOf("when_missing", FtbqWhenMissing.NOT_MET)
+            FtbqWhenMissing.CODEC.lenientOptionalFieldOf("when_missing", FtbqWhenMissing.NOT_MET)
                     .forGetter(FtbqTaskCompletedCondition::whenMissing)
     ).apply(instance, FtbqTaskCompletedCondition::new));
 

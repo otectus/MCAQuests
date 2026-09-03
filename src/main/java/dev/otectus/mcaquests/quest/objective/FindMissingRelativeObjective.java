@@ -63,11 +63,11 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
 
     public static final MapCodec<FindMissingRelativeObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.fieldOf("relative").forGetter(FindMissingRelativeObjective::relative),
-            BiomeTarget.MAP_CODEC.codec().optionalFieldOf("biome").forGetter(FindMissingRelativeObjective::biome),
-            StructureTarget.MAP_CODEC.codec().optionalFieldOf("structure").forGetter(FindMissingRelativeObjective::structure),
-            Codec.intRange(0, 4096).optionalFieldOf("min_distance", 96).forGetter(FindMissingRelativeObjective::minDistance),
-            Codec.intRange(1, 64).optionalFieldOf("discover_radius", 24).forGetter(FindMissingRelativeObjective::discoverRadius),
-            Codec.intRange(1, 64).optionalFieldOf("spawn_distance", 12).forGetter(FindMissingRelativeObjective::spawnDistance)
+            BiomeTarget.MAP_CODEC.codec().lenientOptionalFieldOf("biome").forGetter(FindMissingRelativeObjective::biome),
+            StructureTarget.MAP_CODEC.codec().lenientOptionalFieldOf("structure").forGetter(FindMissingRelativeObjective::structure),
+            Codec.intRange(0, 4096).lenientOptionalFieldOf("min_distance", 96).forGetter(FindMissingRelativeObjective::minDistance),
+            Codec.intRange(1, 64).lenientOptionalFieldOf("discover_radius", 24).forGetter(FindMissingRelativeObjective::discoverRadius),
+            Codec.intRange(1, 64).lenientOptionalFieldOf("spawn_distance", 12).forGetter(FindMissingRelativeObjective::spawnDistance)
     ).apply(instance, FindMissingRelativeObjective::new));
 
     @Override

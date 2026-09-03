@@ -49,14 +49,14 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         implements QuestObjective, VillagerTargeted {
 
     public static final MapCodec<EscortEntityObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(EscortEntityObjective::villager),
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager", VillagerTarget.SELF).forGetter(EscortEntityObjective::villager),
             LocationAnchor.MAP_CODEC.fieldOf("destination").forGetter(EscortEntityObjective::destination),
-            Codec.intRange(1, 64).optionalFieldOf("radius", 6).forGetter(EscortEntityObjective::radius),
-            Codec.BOOL.optionalFieldOf("follow", true).forGetter(EscortEntityObjective::follow),
-            Codec.BOOL.optionalFieldOf("lead", false).forGetter(EscortEntityObjective::lead),
-            Codec.intRange(1, 64).optionalFieldOf("wait_distance", 6).forGetter(EscortEntityObjective::waitDistance),
-            Codec.BOOL.optionalFieldOf("stage_until_near").forGetter(EscortEntityObjective::stageUntilNear),
-            Codec.intRange(0, 512).optionalFieldOf("min_journey").forGetter(EscortEntityObjective::minJourney)
+            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 6).forGetter(EscortEntityObjective::radius),
+            Codec.BOOL.lenientOptionalFieldOf("follow", true).forGetter(EscortEntityObjective::follow),
+            Codec.BOOL.lenientOptionalFieldOf("lead", false).forGetter(EscortEntityObjective::lead),
+            Codec.intRange(1, 64).lenientOptionalFieldOf("wait_distance", 6).forGetter(EscortEntityObjective::waitDistance),
+            Codec.BOOL.lenientOptionalFieldOf("stage_until_near").forGetter(EscortEntityObjective::stageUntilNear),
+            Codec.intRange(0, 512).lenientOptionalFieldOf("min_journey").forGetter(EscortEntityObjective::minJourney)
     ).apply(instance, EscortEntityObjective::new));
 
     /** How far the escortee must start from the destination, defaulting to {@code minEscortJourney}. */

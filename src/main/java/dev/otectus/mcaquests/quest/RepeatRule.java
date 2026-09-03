@@ -97,11 +97,11 @@ public record RepeatRule(RepeatType type, Optional<Integer> declaredCooldownTick
     }
 
     public static final Codec<RepeatRule> BASE_CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            RepeatType.CODEC.optionalFieldOf("type", RepeatType.COOLDOWN).forGetter(RepeatRule::type),
-            Codec.INT.optionalFieldOf("cooldown_ticks").forGetter(RepeatRule::declaredCooldownTicks),
-            TownsteadPeriod.CODEC.optionalFieldOf("period").forGetter(RepeatRule::period),
-            RepeatScope.CODEC.optionalFieldOf("scope", RepeatScope.GIVER).forGetter(RepeatRule::scope),
-            Codec.INT.optionalFieldOf("fallback_cooldown_ticks", 24000)
+            RepeatType.CODEC.lenientOptionalFieldOf("type", RepeatType.COOLDOWN).forGetter(RepeatRule::type),
+            Codec.INT.lenientOptionalFieldOf("cooldown_ticks").forGetter(RepeatRule::declaredCooldownTicks),
+            TownsteadPeriod.CODEC.lenientOptionalFieldOf("period").forGetter(RepeatRule::period),
+            RepeatScope.CODEC.lenientOptionalFieldOf("scope", RepeatScope.GIVER).forGetter(RepeatRule::scope),
+            Codec.INT.lenientOptionalFieldOf("fallback_cooldown_ticks", 24000)
                     .forGetter(RepeatRule::fallbackCooldownTicks)
     ).apply(instance, RepeatRule::new));
 

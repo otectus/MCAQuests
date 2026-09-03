@@ -22,7 +22,7 @@ public record HeartsWithParticipantsReward(int amount, boolean includeResidents)
 
     public static final MapCodec<HeartsWithParticipantsReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.fieldOf("amount").forGetter(HeartsWithParticipantsReward::amount),
-            Codec.BOOL.optionalFieldOf("include_residents", false).forGetter(HeartsWithParticipantsReward::includeResidents)
+            Codec.BOOL.lenientOptionalFieldOf("include_residents", false).forGetter(HeartsWithParticipantsReward::includeResidents)
     ).apply(instance, HeartsWithParticipantsReward::new));
 
     @Override

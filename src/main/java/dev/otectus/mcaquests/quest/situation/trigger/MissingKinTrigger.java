@@ -22,7 +22,7 @@ import java.util.UUID;
 public record MissingKinTrigger(String relation) implements SituationTrigger {
 
     public static final MapCodec<MissingKinTrigger> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("relation", "any").forGetter(MissingKinTrigger::relation)
+            Codec.STRING.lenientOptionalFieldOf("relation", "any").forGetter(MissingKinTrigger::relation)
     ).apply(instance, MissingKinTrigger::new));
 
     @Override

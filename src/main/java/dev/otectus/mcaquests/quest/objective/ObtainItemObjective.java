@@ -32,7 +32,7 @@ public record ObtainItemObjective(ItemTarget target, int count,
 
     public static final MapCodec<ObtainItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(ObtainItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ObtainItemObjective::count),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ObtainItemObjective::count),
             SourceHint.FIELD.forGetter(ObtainItemObjective::source)
     ).apply(instance, ObtainItemObjective::new));
 

@@ -40,9 +40,9 @@ public record CurrencyReward(Optional<Integer> min, Optional<Integer> max,
                              Optional<QuestDifficulty> difficulty) implements QuestReward {
 
     public static final MapCodec<CurrencyReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(CurrencyReward::min),
-            Codec.INT.optionalFieldOf("max").forGetter(CurrencyReward::max),
-            QuestDifficulty.CODEC.optionalFieldOf("difficulty").forGetter(CurrencyReward::difficulty)
+            Codec.INT.lenientOptionalFieldOf("min").forGetter(CurrencyReward::min),
+            Codec.INT.lenientOptionalFieldOf("max").forGetter(CurrencyReward::max),
+            QuestDifficulty.CODEC.lenientOptionalFieldOf("difficulty").forGetter(CurrencyReward::difficulty)
     ).apply(instance, CurrencyReward::new));
 
     @Override

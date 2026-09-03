@@ -16,8 +16,8 @@ import java.util.Optional;
 public record EntityTarget(Optional<EntityType<?>> entity, Optional<TagKey<EntityType<?>>> tag) {
 
     public static final MapCodec<EntityTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BuiltInRegistries.ENTITY_TYPE.byNameCodec().optionalFieldOf("entity").forGetter(EntityTarget::entity),
-            TagKey.codec(Registries.ENTITY_TYPE).optionalFieldOf("tag").forGetter(EntityTarget::tag)
+            BuiltInRegistries.ENTITY_TYPE.byNameCodec().lenientOptionalFieldOf("entity").forGetter(EntityTarget::entity),
+            TagKey.codec(Registries.ENTITY_TYPE).lenientOptionalFieldOf("tag").forGetter(EntityTarget::tag)
     ).apply(instance, EntityTarget::new));
 
     public boolean matches(Entity target) {

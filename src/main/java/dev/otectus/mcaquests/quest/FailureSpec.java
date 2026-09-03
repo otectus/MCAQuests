@@ -56,16 +56,16 @@ public record FailureSpec(Optional<Integer> deadlineTicks,
     private static final long DAY_LENGTH = 24000L;
 
     public static final Codec<FailureSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("deadline_ticks").forGetter(FailureSpec::deadlineTicks),
-            Codec.intRange(0, (int) DAY_LENGTH).optionalFieldOf("deadline_time").forGetter(FailureSpec::deadlineTimeOfDay),
-            WeatherCondition.Weather.CODEC.optionalFieldOf("require_weather").forGetter(FailureSpec::requireWeather),
-            Codec.BOOL.optionalFieldOf("fail_on_giver_death", false).forGetter(FailureSpec::failOnGiverDeath),
-            Codec.INT.optionalFieldOf("failure_hearts", 0).forGetter(FailureSpec::failureHearts),
-            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("retry_after").forGetter(FailureSpec::retryAfterTicks),
-            Codec.BOOL.optionalFieldOf("block_retry", false).forGetter(FailureSpec::blockRetry),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("deadline_ticks").forGetter(FailureSpec::deadlineTicks),
+            Codec.intRange(0, (int) DAY_LENGTH).lenientOptionalFieldOf("deadline_time").forGetter(FailureSpec::deadlineTimeOfDay),
+            WeatherCondition.Weather.CODEC.lenientOptionalFieldOf("require_weather").forGetter(FailureSpec::requireWeather),
+            Codec.BOOL.lenientOptionalFieldOf("fail_on_giver_death", false).forGetter(FailureSpec::failOnGiverDeath),
+            Codec.INT.lenientOptionalFieldOf("failure_hearts", 0).forGetter(FailureSpec::failureHearts),
+            ExtraCodecs.NON_NEGATIVE_INT.lenientOptionalFieldOf("retry_after").forGetter(FailureSpec::retryAfterTicks),
+            Codec.BOOL.lenientOptionalFieldOf("block_retry", false).forGetter(FailureSpec::blockRetry),
             // Default false: 1.4.0's contract is that a quest you cannot currently play is suspended, not
             // taken away. A pack that would rather close the story than leave it open says so here.
-            Codec.BOOL.optionalFieldOf("fail_on_target_lost", false).forGetter(FailureSpec::failOnTargetLost)
+            Codec.BOOL.lenientOptionalFieldOf("fail_on_target_lost", false).forGetter(FailureSpec::failOnTargetLost)
     ).apply(instance, FailureSpec::new));
 
 

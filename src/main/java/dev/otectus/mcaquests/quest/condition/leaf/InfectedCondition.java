@@ -21,7 +21,7 @@ public record InfectedCondition(double minProgress) implements QuestCondition {
     // See DispatchedCodecInlinesTest.
     public static final MapCodec<InfectedCondition> CODEC = RecordCodecBuilder.<InfectedCondition>mapCodec(
             instance -> instance.group(
-                    Codec.DOUBLE.optionalFieldOf("min_progress", 0.0D).forGetter(InfectedCondition::minProgress)
+                    Codec.DOUBLE.lenientOptionalFieldOf("min_progress", 0.0D).forGetter(InfectedCondition::minProgress)
             ).apply(instance, InfectedCondition::new)).flatXmap(InfectedCondition::validate, InfectedCondition::validate);
 
     private static DataResult<InfectedCondition> validate(InfectedCondition condition) {

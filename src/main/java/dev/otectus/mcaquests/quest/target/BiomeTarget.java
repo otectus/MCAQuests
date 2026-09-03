@@ -26,8 +26,8 @@ import java.util.Optional;
 public record BiomeTarget(Optional<ResourceLocation> biome, Optional<TagKey<Biome>> tag) {
 
     public static final MapCodec<BiomeTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceLocation.CODEC.optionalFieldOf("biome").forGetter(BiomeTarget::biome),
-            TagKey.codec(Registries.BIOME).optionalFieldOf("tag").forGetter(BiomeTarget::tag)
+            ResourceLocation.CODEC.lenientOptionalFieldOf("biome").forGetter(BiomeTarget::biome),
+            TagKey.codec(Registries.BIOME).lenientOptionalFieldOf("tag").forGetter(BiomeTarget::tag)
     ).apply(instance, BiomeTarget::new));
 
     public boolean matches(Holder<Biome> holder) {

@@ -24,8 +24,8 @@ public record ProjectScopeSpec(ProjectScope scope, List<ResourceLocation> profes
 
     private static final Codec<ProjectScopeSpec> RECORD_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ProjectScope.CODEC.fieldOf("scope").forGetter(ProjectScopeSpec::scope),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("professions", List.of()).forGetter(ProjectScopeSpec::professions),
-            Codec.INT.optionalFieldOf("fallback_radius").forGetter(ProjectScopeSpec::fallbackRadius)
+            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("professions", List.of()).forGetter(ProjectScopeSpec::professions),
+            Codec.INT.lenientOptionalFieldOf("fallback_radius").forGetter(ProjectScopeSpec::fallbackRadius)
     ).apply(instance, ProjectScopeSpec::new));
 
     public static final Codec<ProjectScopeSpec> CODEC = Codec.either(ProjectScope.CODEC, RECORD_CODEC).xmap(

@@ -31,8 +31,8 @@ public record RegistryVariable(RegistryKind kind, List<ResourceLocation> ids,
      * {@link TemplateVariable#CODEC} on encode, so it is not a field here. */
     public static Codec<RegistryVariable> codec(RegistryKind kind) {
         return RecordCodecBuilder.<RegistryVariable>create(instance -> instance.group(
-                ResourceLocation.CODEC.listOf().optionalFieldOf("ids", List.of()).forGetter(RegistryVariable::ids),
-                ResourceLocation.CODEC.listOf().optionalFieldOf("tags", List.of()).forGetter(RegistryVariable::tags)
+                ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("ids", List.of()).forGetter(RegistryVariable::ids),
+                ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("tags", List.of()).forGetter(RegistryVariable::tags)
         ).apply(instance, (ids, tags) -> new RegistryVariable(kind, ids, tags))).flatXmap(
                 var -> validate(kind, var), var -> validate(kind, var));
     }

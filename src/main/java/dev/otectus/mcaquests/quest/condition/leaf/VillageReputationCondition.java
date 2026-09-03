@@ -23,8 +23,8 @@ import java.util.OptionalInt;
 public record VillageReputationCondition(Optional<Integer> min, Optional<Integer> max) implements QuestCondition {
 
     public static final MapCodec<VillageReputationCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(VillageReputationCondition::min),
-            Codec.INT.optionalFieldOf("max").forGetter(VillageReputationCondition::max)
+            Codec.INT.lenientOptionalFieldOf("min").forGetter(VillageReputationCondition::min),
+            Codec.INT.lenientOptionalFieldOf("max").forGetter(VillageReputationCondition::max)
     ).apply(instance, VillageReputationCondition::new));
 
     @Override

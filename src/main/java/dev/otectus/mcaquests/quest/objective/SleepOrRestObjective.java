@@ -21,7 +21,7 @@ import java.util.Optional;
 public record SleepOrRestObjective(boolean requireMorning) implements QuestObjective {
 
     public static final MapCodec<SleepOrRestObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.BOOL.optionalFieldOf("require_morning", true).forGetter(SleepOrRestObjective::requireMorning)
+            Codec.BOOL.lenientOptionalFieldOf("require_morning", true).forGetter(SleepOrRestObjective::requireMorning)
     ).apply(instance, SleepOrRestObjective::new));
 
     @Override

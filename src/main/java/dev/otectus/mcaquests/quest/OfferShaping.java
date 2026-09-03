@@ -30,10 +30,10 @@ public record OfferShaping(Optional<Integer> priority, List<WeightBonus> weightB
             new OfferShaping(Optional.empty(), List.of(), Optional.empty(), Optional.empty());
 
     public static final MapCodec<OfferShaping> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.INT.optionalFieldOf("priority").forGetter(OfferShaping::priority),
-            WeightBonus.CODEC.listOf().optionalFieldOf("weight_bonus", List.of()).forGetter(OfferShaping::weightBonus),
-            QuestDifficulty.CODEC.optionalFieldOf("difficulty").forGetter(OfferShaping::difficulty),
-            Codec.STRING.optionalFieldOf("offer_group").forGetter(OfferShaping::offerGroup)
+            Codec.INT.lenientOptionalFieldOf("priority").forGetter(OfferShaping::priority),
+            WeightBonus.CODEC.listOf().lenientOptionalFieldOf("weight_bonus", List.of()).forGetter(OfferShaping::weightBonus),
+            QuestDifficulty.CODEC.lenientOptionalFieldOf("difficulty").forGetter(OfferShaping::difficulty),
+            Codec.STRING.lenientOptionalFieldOf("offer_group").forGetter(OfferShaping::offerGroup)
     ).apply(instance, OfferShaping::new));
 
     /** The pre-1.4.1 shape, for callers and tests that predate {@code offer_group}. */

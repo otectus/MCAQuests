@@ -38,9 +38,9 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     public static final MapCodec<DeliverToVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.MAP_CODEC.fieldOf("recipient").forGetter(DeliverToVillagerObjective::recipient),
             ItemTarget.MAP_CODEC.forGetter(DeliverToVillagerObjective::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(DeliverToVillagerObjective::itemCount),
-            Codec.BOOL.optionalFieldOf("consume", true).forGetter(DeliverToVillagerObjective::consume),
-            DeliveryDestination.CODEC.optionalFieldOf("destination").forGetter(DeliverToVillagerObjective::destination)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(DeliverToVillagerObjective::itemCount),
+            Codec.BOOL.lenientOptionalFieldOf("consume", true).forGetter(DeliverToVillagerObjective::consume),
+            DeliveryDestination.CODEC.lenientOptionalFieldOf("destination").forGetter(DeliverToVillagerObjective::destination)
     ).apply(instance, DeliverToVillagerObjective::new));
 
     /** The pre-1.4.1 shape, for callers and tests that predate {@code destination}. */

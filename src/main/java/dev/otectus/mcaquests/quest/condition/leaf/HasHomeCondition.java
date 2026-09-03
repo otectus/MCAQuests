@@ -15,7 +15,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 public record HasHomeCondition(boolean value) implements QuestCondition {
 
     public static final MapCodec<HasHomeCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.BOOL.optionalFieldOf("value", true).forGetter(HasHomeCondition::value)
+            Codec.BOOL.lenientOptionalFieldOf("value", true).forGetter(HasHomeCondition::value)
     ).apply(instance, HasHomeCondition::new));
 
     @Override

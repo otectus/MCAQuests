@@ -27,9 +27,9 @@ public record MoodCondition(Optional<Integer> min, Optional<Integer> max, Option
     // "value" key, which optionalFieldOf would then swallow silently.
     // See DispatchedCodecInlinesTest.
     public static final MapCodec<MoodCondition> CODEC = RecordCodecBuilder.<MoodCondition>mapCodec(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(MoodCondition::min),
-            Codec.INT.optionalFieldOf("max").forGetter(MoodCondition::max),
-            McaConditionCodecs.lowercaseNonEmptyList("mood").optionalFieldOf("moods").forGetter(MoodCondition::moods)
+            Codec.INT.lenientOptionalFieldOf("min").forGetter(MoodCondition::min),
+            Codec.INT.lenientOptionalFieldOf("max").forGetter(MoodCondition::max),
+            McaConditionCodecs.lowercaseNonEmptyList("mood").lenientOptionalFieldOf("moods").forGetter(MoodCondition::moods)
     ).apply(instance, MoodCondition::new)).flatXmap(MoodCondition::validate, MoodCondition::validate);
 
     private static DataResult<MoodCondition> validate(MoodCondition condition) {

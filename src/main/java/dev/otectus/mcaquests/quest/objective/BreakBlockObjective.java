@@ -28,7 +28,7 @@ public record BreakBlockObjective(BlockTarget target, int count,
 
     public static final MapCodec<BreakBlockObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(BreakBlockObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(BreakBlockObjective::count),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(BreakBlockObjective::count),
             SourceHint.FIELD.forGetter(BreakBlockObjective::source)
     ).apply(instance, BreakBlockObjective::new));
 

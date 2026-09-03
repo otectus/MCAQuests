@@ -23,9 +23,9 @@ import java.util.Optional;
 public record QuestText(Optional<String> text, Optional<String> translate, List<String> with) {
 
     public static final MapCodec<QuestText> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("text").forGetter(QuestText::text),
-            Codec.STRING.optionalFieldOf("translate").forGetter(QuestText::translate),
-            Codec.STRING.listOf().optionalFieldOf("with", List.of()).forGetter(QuestText::with)
+            Codec.STRING.lenientOptionalFieldOf("text").forGetter(QuestText::text),
+            Codec.STRING.lenientOptionalFieldOf("translate").forGetter(QuestText::translate),
+            Codec.STRING.listOf().lenientOptionalFieldOf("with", List.of()).forGetter(QuestText::with)
     ).apply(instance, QuestText::new));
 
     public static final Codec<QuestText> CODEC = MAP_CODEC.codec();

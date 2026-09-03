@@ -24,9 +24,9 @@ import java.util.Optional;
 public record VoiceLine(Optional<QuestCondition> when, QuestText text, int weight) {
 
     public static final Codec<VoiceLine> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ConditionTypes.CODEC.optionalFieldOf("when").forGetter(VoiceLine::when),
+            ConditionTypes.CODEC.lenientOptionalFieldOf("when").forGetter(VoiceLine::when),
             QuestText.MAP_CODEC.forGetter(VoiceLine::text),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("weight", 1).forGetter(VoiceLine::weight)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("weight", 1).forGetter(VoiceLine::weight)
     ).apply(instance, VoiceLine::new));
 
     /** Whether this line is one the villager would say right now. */

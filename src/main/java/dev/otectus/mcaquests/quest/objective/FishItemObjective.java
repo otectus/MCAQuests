@@ -28,7 +28,7 @@ public record FishItemObjective(ItemTarget target, int count,
 
     public static final MapCodec<FishItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(FishItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(FishItemObjective::count),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(FishItemObjective::count),
             SourceHint.FIELD.forGetter(FishItemObjective::source)
     ).apply(instance, FishItemObjective::new));
 

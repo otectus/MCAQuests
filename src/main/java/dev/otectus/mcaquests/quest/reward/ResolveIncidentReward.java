@@ -51,13 +51,13 @@ public record ResolveIncidentReward(Optional<ResourceLocation> incident, List<St
 
     public static final MapCodec<ResolveIncidentReward> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
-                    ResourceLocation.CODEC.optionalFieldOf("incident")
+                    ResourceLocation.CODEC.lenientOptionalFieldOf("incident")
                             .forGetter(ResolveIncidentReward::incident),
-                    Codec.STRING.listOf().optionalFieldOf("status", List.of())
+                    Codec.STRING.listOf().lenientOptionalFieldOf("status", List.of())
                             .forGetter(ResolveIncidentReward::status),
-                    Codec.STRING.listOf().optionalFieldOf("tags", List.of())
+                    Codec.STRING.listOf().lenientOptionalFieldOf("tags", List.of())
                             .forGetter(ResolveIncidentReward::tags),
-                    Codec.STRING.optionalFieldOf("resolution", "atoned")
+                    Codec.STRING.lenientOptionalFieldOf("resolution", "atoned")
                             .forGetter(ResolveIncidentReward::resolution)
             ).apply(instance, ResolveIncidentReward::new));
 

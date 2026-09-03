@@ -36,17 +36,17 @@ public record ProjectDefinition(
 
     public static final Codec<ProjectDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("id").forGetter(ProjectDefinition::id),
-            Codec.BOOL.optionalFieldOf("enabled", true).forGetter(ProjectDefinition::enabled),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("weight", 1).forGetter(ProjectDefinition::weight),
-            QuestText.CODEC.optionalFieldOf("title").forGetter(ProjectDefinition::title),
-            Codec.STRING.optionalFieldOf("category").forGetter(ProjectDefinition::category),
+            Codec.BOOL.lenientOptionalFieldOf("enabled", true).forGetter(ProjectDefinition::enabled),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("weight", 1).forGetter(ProjectDefinition::weight),
+            QuestText.CODEC.lenientOptionalFieldOf("title").forGetter(ProjectDefinition::title),
+            Codec.STRING.lenientOptionalFieldOf("category").forGetter(ProjectDefinition::category),
             ProjectScopeSpec.CODEC.fieldOf("scope").forGetter(ProjectDefinition::scope),
-            SponsorSpec.CODEC.optionalFieldOf("sponsor", SponsorSpec.ANY).forGetter(ProjectDefinition::sponsor),
-            ProjectPhase.CODEC.listOf().optionalFieldOf("phases", List.of()).forGetter(ProjectDefinition::phases),
-            ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(ProjectDefinition::conditions),
-            ReputationSpec.CODEC.optionalFieldOf("reputation", ReputationSpec.NONE).forGetter(ProjectDefinition::reputation),
-            ResourceLocation.CODEC.optionalFieldOf("follow_up").forGetter(ProjectDefinition::followUp),
-            FailureSpec.CODEC.optionalFieldOf("failure").forGetter(ProjectDefinition::failure)
+            SponsorSpec.CODEC.lenientOptionalFieldOf("sponsor", SponsorSpec.ANY).forGetter(ProjectDefinition::sponsor),
+            ProjectPhase.CODEC.listOf().lenientOptionalFieldOf("phases", List.of()).forGetter(ProjectDefinition::phases),
+            ConditionTypes.CODEC.lenientOptionalFieldOf("conditions").forGetter(ProjectDefinition::conditions),
+            ReputationSpec.CODEC.lenientOptionalFieldOf("reputation", ReputationSpec.NONE).forGetter(ProjectDefinition::reputation),
+            ResourceLocation.CODEC.lenientOptionalFieldOf("follow_up").forGetter(ProjectDefinition::followUp),
+            FailureSpec.CODEC.lenientOptionalFieldOf("failure").forGetter(ProjectDefinition::failure)
     ).apply(instance, ProjectDefinition::new));
 
     /** Translation key for this project's display title, e.g. {@code mcaquests.project.<path>.title}. */

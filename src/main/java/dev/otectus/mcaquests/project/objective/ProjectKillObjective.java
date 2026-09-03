@@ -16,7 +16,7 @@ public record ProjectKillObjective(EntityTarget target, int count) implements Pr
 
     public static final MapCodec<ProjectKillObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(ProjectKillObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ProjectKillObjective::count)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ProjectKillObjective::count)
     ).apply(instance, ProjectKillObjective::new));
 
     @Override

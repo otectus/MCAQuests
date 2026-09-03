@@ -72,17 +72,17 @@ public record SourceHint(Optional<ResourceLocation> structure, Optional<TagKey<S
     private static final int BLOCK_ARRIVE_RADIUS = 3;
 
     public static final Codec<SourceHint> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.optionalFieldOf("structure").forGetter(SourceHint::structure),
-            TagKey.codec(Registries.STRUCTURE).optionalFieldOf("structure_tag").forGetter(SourceHint::structureTag),
-            ResourceLocation.CODEC.optionalFieldOf("biome").forGetter(SourceHint::biome),
-            TagKey.codec(Registries.BIOME).optionalFieldOf("biome_tag").forGetter(SourceHint::biomeTag),
-            BuiltInRegistries.BLOCK.byNameCodec().optionalFieldOf("block").forGetter(SourceHint::block),
-            TagKey.codec(Registries.BLOCK).optionalFieldOf("block_tag").forGetter(SourceHint::blockTag),
-            ResourceLocation.CODEC.optionalFieldOf("dimension").forGetter(SourceHint::dimension),
-            LocationAnchor.CODEC.optionalFieldOf("anchor").forGetter(SourceHint::anchor)
+            ResourceLocation.CODEC.lenientOptionalFieldOf("structure").forGetter(SourceHint::structure),
+            TagKey.codec(Registries.STRUCTURE).lenientOptionalFieldOf("structure_tag").forGetter(SourceHint::structureTag),
+            ResourceLocation.CODEC.lenientOptionalFieldOf("biome").forGetter(SourceHint::biome),
+            TagKey.codec(Registries.BIOME).lenientOptionalFieldOf("biome_tag").forGetter(SourceHint::biomeTag),
+            BuiltInRegistries.BLOCK.byNameCodec().lenientOptionalFieldOf("block").forGetter(SourceHint::block),
+            TagKey.codec(Registries.BLOCK).lenientOptionalFieldOf("block_tag").forGetter(SourceHint::blockTag),
+            ResourceLocation.CODEC.lenientOptionalFieldOf("dimension").forGetter(SourceHint::dimension),
+            LocationAnchor.CODEC.lenientOptionalFieldOf("anchor").forGetter(SourceHint::anchor)
     ).apply(instance, SourceHint::new));
 
-    public static final MapCodec<Optional<SourceHint>> FIELD = CODEC.optionalFieldOf("source");
+    public static final MapCodec<Optional<SourceHint>> FIELD = CODEC.lenientOptionalFieldOf("source");
 
     private Optional<StructureTarget> structureTarget() {
         return structure.isPresent() || structureTag.isPresent()

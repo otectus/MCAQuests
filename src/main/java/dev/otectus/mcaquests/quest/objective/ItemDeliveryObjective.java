@@ -60,8 +60,8 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
 
     public static final MapCodec<ItemDeliveryObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemDeliveryObjective::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
-            Codec.BOOL.optionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
+            Codec.BOOL.lenientOptionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume),
             StrictCodecs.strictOptional(DeliveryDestination.CODEC, "destination",
                     DeliveryDestination.CONSUMED).forGetter(ItemDeliveryObjective::destination),
             SourceHint.FIELD.forGetter(ItemDeliveryObjective::source)

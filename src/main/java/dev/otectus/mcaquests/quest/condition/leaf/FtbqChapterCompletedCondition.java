@@ -29,7 +29,7 @@ public record FtbqChapterCompletedCondition(String chapter, FtbqWhenMissing when
 
     public static final MapCodec<FtbqChapterCompletedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             FtbqIds.hexIdCodec(TYPE_ID, "chapter").fieldOf("chapter").forGetter(FtbqChapterCompletedCondition::chapter),
-            FtbqWhenMissing.CODEC.optionalFieldOf("when_missing", FtbqWhenMissing.NOT_MET)
+            FtbqWhenMissing.CODEC.lenientOptionalFieldOf("when_missing", FtbqWhenMissing.NOT_MET)
                     .forGetter(FtbqChapterCompletedCondition::whenMissing)
     ).apply(instance, FtbqChapterCompletedCondition::new));
 

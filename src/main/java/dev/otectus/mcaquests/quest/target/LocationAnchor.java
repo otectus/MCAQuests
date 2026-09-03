@@ -99,11 +99,11 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
 
     public static final MapCodec<LocationAnchor> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             TYPE_CODEC.fieldOf("anchor").forGetter(LocationAnchor::type),
-            Codec.INT.optionalFieldOf("radius").forGetter(LocationAnchor::radius),
-            VillagerTarget.CODEC.optionalFieldOf("villager").forGetter(LocationAnchor::villager),
-            BlockPos.CODEC.optionalFieldOf("pos").forGetter(LocationAnchor::pos),
-            Codec.STRING.optionalFieldOf("building_type").forGetter(LocationAnchor::buildingType),
-            Codec.INT.optionalFieldOf("minimum_level").forGetter(LocationAnchor::minimumLevel),
+            Codec.INT.lenientOptionalFieldOf("radius").forGetter(LocationAnchor::radius),
+            VillagerTarget.CODEC.lenientOptionalFieldOf("villager").forGetter(LocationAnchor::villager),
+            BlockPos.CODEC.lenientOptionalFieldOf("pos").forGetter(LocationAnchor::pos),
+            Codec.STRING.lenientOptionalFieldOf("building_type").forGetter(LocationAnchor::buildingType),
+            Codec.INT.lenientOptionalFieldOf("minimum_level").forGetter(LocationAnchor::minimumLevel),
             StrictCodecs.strictOptional(Selection.CODEC, "selection", Selection.NEAREST_TO_GIVER)
                     .forGetter(LocationAnchor::selection)
     ).apply(instance, LocationAnchor::new));

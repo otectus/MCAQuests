@@ -50,7 +50,7 @@ public record VoicePool(String state, int priority, List<VoiceLine> lines) {
 
     public static final Codec<VoicePool> CODEC = RecordCodecBuilder.<VoicePool>create(instance -> instance.group(
             Codec.STRING.fieldOf("state").forGetter(VoicePool::state),
-            Codec.INT.optionalFieldOf("priority", 0).forGetter(VoicePool::priority),
+            Codec.INT.lenientOptionalFieldOf("priority", 0).forGetter(VoicePool::priority),
             VoiceLine.CODEC.listOf().fieldOf("lines").forGetter(VoicePool::lines)
     ).apply(instance, VoicePool::new)).flatXmap(VoicePool::validate, VoicePool::validate);
 

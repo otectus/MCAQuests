@@ -18,6 +18,6 @@ public record ReputationTier(String id, int threshold, String name, Optional<Res
             Codec.STRING.fieldOf("id").forGetter(ReputationTier::id),
             Codec.INT.fieldOf("threshold").forGetter(ReputationTier::threshold),
             Codec.STRING.fieldOf("name").forGetter(ReputationTier::name),
-            ResourceLocation.CODEC.optionalFieldOf("grants_title").forGetter(ReputationTier::grantsTitle)
+            ResourceLocation.CODEC.lenientOptionalFieldOf("grants_title").forGetter(ReputationTier::grantsTitle)
     ).apply(instance, ReputationTier::new));
 }

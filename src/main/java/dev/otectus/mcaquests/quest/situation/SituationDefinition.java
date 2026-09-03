@@ -35,12 +35,12 @@ public record SituationDefinition(
 
     public static final Codec<SituationDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("id").forGetter(SituationDefinition::id),
-            Codec.BOOL.optionalFieldOf("enabled", true).forGetter(SituationDefinition::enabled),
-            SituationScope.CODEC.optionalFieldOf("scope", SituationScope.VILLAGE).forGetter(SituationDefinition::scope),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("duration_ticks", 24000).forGetter(SituationDefinition::durationTicks),
-            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("cooldown_ticks", 24000).forGetter(SituationDefinition::cooldownTicks),
+            Codec.BOOL.lenientOptionalFieldOf("enabled", true).forGetter(SituationDefinition::enabled),
+            SituationScope.CODEC.lenientOptionalFieldOf("scope", SituationScope.VILLAGE).forGetter(SituationDefinition::scope),
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("duration_ticks", 24000).forGetter(SituationDefinition::durationTicks),
+            ExtraCodecs.NON_NEGATIVE_INT.lenientOptionalFieldOf("cooldown_ticks", 24000).forGetter(SituationDefinition::cooldownTicks),
             SituationTriggerTypes.CODEC.fieldOf("trigger").forGetter(SituationDefinition::trigger),
-            SituationOutcomes.CODEC.optionalFieldOf("outcomes", SituationOutcomes.NONE).forGetter(SituationDefinition::outcomes),
+            SituationOutcomes.CODEC.lenientOptionalFieldOf("outcomes", SituationOutcomes.NONE).forGetter(SituationDefinition::outcomes),
             SituationOffer.CODEC.fieldOf("offer").forGetter(SituationDefinition::offer)
     ).apply(instance, SituationDefinition::new));
 

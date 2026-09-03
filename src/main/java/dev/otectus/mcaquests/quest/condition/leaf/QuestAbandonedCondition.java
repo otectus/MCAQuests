@@ -18,7 +18,7 @@ public record QuestAbandonedCondition(ResourceLocation quest, HistoryScope scope
 
     public static final MapCodec<QuestAbandonedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("quest").forGetter(QuestAbandonedCondition::quest),
-            HistoryScope.CODEC.optionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestAbandonedCondition::scope)
+            HistoryScope.CODEC.lenientOptionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestAbandonedCondition::scope)
     ).apply(instance, QuestAbandonedCondition::new));
 
     @Override

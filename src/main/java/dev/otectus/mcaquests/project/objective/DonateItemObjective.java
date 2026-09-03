@@ -20,8 +20,8 @@ public record DonateItemObjective(ItemTarget target, int count, int perPlayerCap
 
     public static final MapCodec<DonateItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(DonateItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(DonateItemObjective::count),
-            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("per_player_cap", 0).forGetter(DonateItemObjective::perPlayerCap)
+            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(DonateItemObjective::count),
+            ExtraCodecs.NON_NEGATIVE_INT.lenientOptionalFieldOf("per_player_cap", 0).forGetter(DonateItemObjective::perPlayerCap)
     ).apply(instance, DonateItemObjective::new));
 
     @Override

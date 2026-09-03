@@ -39,11 +39,11 @@ public record ProjectPhase(Optional<String> key,
                            Optional<QuestCondition> unlock) {
 
     public static final Codec<ProjectPhase> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("key").forGetter(ProjectPhase::key),
-            Codec.unboundedMap(Codec.STRING, QuestText.CODEC).optionalFieldOf("dialogue", Map.of()).forGetter(ProjectPhase::dialogue),
-            ProjectObjectiveTypes.CODEC.listOf().optionalFieldOf("objectives", List.of()).forGetter(ProjectPhase::objectives),
-            SharedReward.CODEC.listOf().optionalFieldOf("rewards", List.of()).forGetter(ProjectPhase::rewards),
-            ConditionTypes.CODEC.optionalFieldOf("unlock").forGetter(ProjectPhase::unlock)
+            Codec.STRING.lenientOptionalFieldOf("key").forGetter(ProjectPhase::key),
+            Codec.unboundedMap(Codec.STRING, QuestText.CODEC).lenientOptionalFieldOf("dialogue", Map.of()).forGetter(ProjectPhase::dialogue),
+            ProjectObjectiveTypes.CODEC.listOf().lenientOptionalFieldOf("objectives", List.of()).forGetter(ProjectPhase::objectives),
+            SharedReward.CODEC.listOf().lenientOptionalFieldOf("rewards", List.of()).forGetter(ProjectPhase::rewards),
+            ConditionTypes.CODEC.lenientOptionalFieldOf("unlock").forGetter(ProjectPhase::unlock)
     ).apply(instance, ProjectPhase::new));
 
     public String keyOr(int index) {
