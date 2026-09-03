@@ -24,9 +24,10 @@ public final class ProjectProgressEvents {
         if (event.getEntity().level().isClientSide()) {
             return;
         }
-        if (event.getSource().getEntity() instanceof ServerPlayer player) {
-            ProjectManager.onProjectKill(player, event.getEntity());
-        }
+        // Same credit rule as the quest kill objectives use, so a project and a quest counting the same
+        // mob never disagree about whose kill it was (QuestProgressEvents.creditedPlayer).
+        QuestProgressEvents.creditedPlayer(event)
+                .ifPresent(player -> ProjectManager.onProjectKill(player, event.getEntity()));
     }
 
     @SubscribeEvent

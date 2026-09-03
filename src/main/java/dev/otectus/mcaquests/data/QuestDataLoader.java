@@ -72,7 +72,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         QuestChainValidator.validate(loaded, errors, warnings);
         TemplateValidator.validate(loaded, errors);
         FailureValidator.validate(loaded, errors);
-        ObjectiveValidator.validate(loaded, errors);
+        ObjectiveValidator.validate(loaded, errors, warnings);
         AgeEligibilityValidator.validate(loaded, warnings);
         // New in 1.4.3, and deliberately lenient for one release: it rejects third-party content that has
         // always loaded, so outside strict mode the author gets a loud line rather than a dead server.

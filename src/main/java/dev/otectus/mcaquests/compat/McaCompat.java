@@ -529,7 +529,8 @@ public final class McaCompat {
                 loaded && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR,
                 homeVillage.contains(uuid),
                 anywhere.contains(uuid),
-                canMaterialise(level, entry, uuid));
+                canMaterialise(level, entry, uuid),
+                loaded && isInfected(entity));
     }
 
     /** The giver's own village roll, or an empty set when they have no home village / on any error. */
@@ -668,7 +669,8 @@ public final class McaCompat {
                     loaded && giver != null && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR,
                     homeVillage.contains(uuid),
                     anywhere,
-                    canMaterialise(level, node, uuid)));
+                    canMaterialise(level, node, uuid),
+                    loaded && isInfected(entity)));
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA describeVillager failed; defaulting empty", t);
             return Optional.empty();

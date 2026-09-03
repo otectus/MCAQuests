@@ -68,6 +68,7 @@ public record FailureSpec(Optional<Integer> deadlineTicks,
             Codec.BOOL.optionalFieldOf("fail_on_target_lost", false).forGetter(FailureSpec::failOnTargetLost)
     ).apply(instance, FailureSpec::new));
 
+
     /** Whether this spec declares at least one trigger; a spec with none can never fire (a datapack error). */
     public boolean hasTrigger() {
         return deadlineTicks.isPresent() || deadlineTimeOfDay.isPresent()

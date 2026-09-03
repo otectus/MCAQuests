@@ -4,12 +4,27 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.TurnInMode;
+import dev.otectus.mcaquests.quest.objective.BreakBlockObjective;
+import dev.otectus.mcaquests.quest.objective.BreedAnimalsObjective;
+import dev.otectus.mcaquests.quest.objective.BuildNearLocationObjective;
+import dev.otectus.mcaquests.quest.objective.CraftItemObjective;
+import dev.otectus.mcaquests.quest.objective.CureVillagerObjective;
+import dev.otectus.mcaquests.quest.objective.DefendLocationObjective;
+import dev.otectus.mcaquests.quest.objective.DefendVillagerObjective;
+import dev.otectus.mcaquests.quest.objective.DeliverToVillagerObjective;
+import dev.otectus.mcaquests.quest.objective.FishItemObjective;
 import dev.otectus.mcaquests.quest.objective.FtbqCompleteQuestObjective;
+import dev.otectus.mcaquests.quest.objective.HealEntityObjective;
+import dev.otectus.mcaquests.quest.objective.KillEntityObjective;
+import dev.otectus.mcaquests.quest.objective.PlaceBlockObjective;
+import dev.otectus.mcaquests.quest.objective.TameAnimalObjective;
 import dev.otectus.mcaquests.quest.objective.ItemDeliveryObjective;
 import dev.otectus.mcaquests.quest.objective.ObtainItemObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.reward.CurrencyReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
+import dev.otectus.mcaquests.quest.template.RegistryKind;
+import net.minecraft.tags.TagKey;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModList;
@@ -44,7 +59,8 @@ public final class ObjectiveValidator {
     private ObjectiveValidator() {
     }
 
-    public static void validate(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors) {
+    public static void validate(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors,
+                                List<String> warnings) {
         boolean strict = McaQuestsConfig.COMMON.strictJsonValidation.get();
         // Computed lazily (at most once) and only if some quest actually uses the objective, so loading
         // a datapack with no ftbq_complete_quest objectives never touches ModList at all.
@@ -59,6 +75,7 @@ public final class ObjectiveValidator {
             for (int i = 0; i < objectives.size(); i++) {
                 QuestObjective objective = objectives.get(i);
                 objective.validate(def.id(), i, errors);
+                warnEmptyTags(def, i, objective, warnings);
                 usesFtbqCompleteQuest |= objective instanceof FtbqCompleteQuestObjective;
                 // Two objectives asking the player to hold the same item are both satisfied by one stack:
                 // the quest reads as "gather ten, then deliver ten" and completes on ten.
@@ -113,6 +130,60 @@ public final class ObjectiveValidator {
         }
 
         toSkip.forEach(loaded::remove);
+    }
+
+    /**
+     * Warns when an objective names an item/block/entity tag that nothing is in.
+     *
+     * <p>An empty tag is not a parse error — the id is well-formed and the codec is satisfied — but it
+     * matches nothing at all, so the objective can never advance and says nothing about why. Templates
+     * have checked their pools for exactly this since 1.2.0 ({@code TemplateValidator.validatePool});
+     * a plain quest could name the same misspelt tag and hear nothing. Guarded by {@code tagsBound()}
+     * for the same reason that check is: before the first tag bind, every tag reads empty.
+     */
+    private static void warnEmptyTags(QuestDefinition def, int index, QuestObjective objective,
+                                      List<String> warnings) {
+        String where = "Quest '" + def.id() + "': objective[" + index + "]";
+        if (objective instanceof ObtainItemObjective obtain) {
+            warnEmptyTag(where, RegistryKind.ITEM, obtain.target().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof CraftItemObjective craft) {
+            warnEmptyTag(where, RegistryKind.ITEM, craft.target().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof FishItemObjective fish) {
+            warnEmptyTag(where, RegistryKind.ITEM, fish.target().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof HealEntityObjective heal) {
+            warnEmptyTag(where, RegistryKind.ITEM, heal.item().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof CureVillagerObjective cure) {
+            warnEmptyTag(where, RegistryKind.ITEM, cure.cureItem().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof DeliverToVillagerObjective deliver) {
+            warnEmptyTag(where, RegistryKind.ITEM, deliver.item().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof BreakBlockObjective breakBlock) {
+            warnEmptyTag(where, RegistryKind.BLOCK, breakBlock.target().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof PlaceBlockObjective place) {
+            warnEmptyTag(where, RegistryKind.BLOCK, place.target().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof BuildNearLocationObjective build) {
+            warnEmptyTag(where, RegistryKind.BLOCK, build.block().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof KillEntityObjective kill) {
+            warnEmptyTag(where, RegistryKind.ENTITY, kill.target().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof DefendVillagerObjective defend) {
+            warnEmptyTag(where, RegistryKind.ENTITY, defend.threat().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof DefendLocationObjective defend) {
+            warnEmptyTag(where, RegistryKind.ENTITY, defend.threat().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof BreedAnimalsObjective breed) {
+            warnEmptyTag(where, RegistryKind.ENTITY, breed.animal().tag().map(TagKey::location), warnings);
+        } else if (objective instanceof TameAnimalObjective tame) {
+            warnEmptyTag(where, RegistryKind.ENTITY, tame.animal().tag().map(TagKey::location), warnings);
+        }
+    }
+
+    private static void warnEmptyTag(String where, RegistryKind kind, Optional<ResourceLocation> tag,
+                                     List<String> warnings) {
+        if (tag.isEmpty() || !kind.tagsBound()) {
+            return;
+        }
+        if (kind.staticMembers(tag.get()).isEmpty()) {
+            warnings.add(where + " uses " + kind.key() + " tag '" + tag.get()
+                    + "' which is empty or unknown, so it can never match.");
+        }
     }
 
     /**

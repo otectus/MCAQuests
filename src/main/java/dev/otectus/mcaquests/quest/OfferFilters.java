@@ -99,6 +99,20 @@ public final class OfferFilters {
      * As {@link #passes}, naming the first filter that refused. Drives {@code /mcaquests debug quest},
      * which previously answered from its own copy of the chain and so could disagree with the menu.
      */
+    /**
+     * Whether {@code def} is already held, at the scope the definition itself implies.
+     *
+     * <p>A quest with no {@code chain} is one job: offered by several professions or by any villager, it
+     * could be accepted from two givers at once and paid twice, because a kill or a craft credits every
+     * active copy. So a plain quest is "active" as soon as the player holds it anywhere. A chain stage is
+     * a per-villager arc by design ({@code DATAPACK.md}), and keeps the per-giver question.
+     */
+    public static boolean alreadyActive(PlayerQuestData data, QuestDefinition def, UUID villagerUuid) {
+        return def.chain().isEmpty()
+                ? data.hasActive(def.id())
+                : data.hasActive(def.id(), villagerUuid);
+    }
+
     public static Result explain(Pass pass, QuestDefinition def) {
         UUID villagerUuid = pass.villagerUuid();
         if (!def.enabled()) {
@@ -122,6 +136,9 @@ public final class OfferFilters {
         }
         if (pass.data().hasActive(def.id(), villagerUuid)) {
             return Result.fail("ALREADY_ACTIVE (with this villager)");
+        }
+        if (alreadyActive(pass.data(), def, villagerUuid)) {
+            return Result.fail("ALREADY_ACTIVE (with another villager)");
         }
         if (pass.data().history().onCooldown(def.id(), villagerUuid, pass.now())) {
             return Result.fail("ON_COOLDOWN");

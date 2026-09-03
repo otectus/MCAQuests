@@ -67,7 +67,7 @@ class ObjectiveValidatorTest {
     /** Validates one quest, returning the errors; the map is mutated exactly as it is at load. */
     private static List<String> validate(Map<ResourceLocation, QuestDefinition> quests) {
         List<String> errors = new ArrayList<>();
-        ObjectiveValidator.validate(quests, errors);
+        ObjectiveValidator.validate(quests, errors, new ArrayList<>());
         return errors;
     }
 

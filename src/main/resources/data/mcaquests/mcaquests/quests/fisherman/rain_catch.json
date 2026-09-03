@@ -51,10 +51,6 @@
     "type": "mcaquests:weather",
     "weather": "RAIN"
   },
-  "failure": {
-    "require_weather": "rain",
-    "retry_after": 12000
-  },
   "rewards": [
     {
       "type": "mcaquests:currency"

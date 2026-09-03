@@ -59,7 +59,7 @@ class BuiltinPackValidatesTest {
         QuestChainValidator.validate(quests, errors, warnings);
         TemplateValidator.validate(quests, errors);
         FailureValidator.validate(quests, errors);
-        ObjectiveValidator.validate(quests, errors);
+        ObjectiveValidator.validate(quests, errors, warnings);
 
         assertEquals(List.of(), realProblems(errors),
                 "the bundled quest pack does not survive its own validators");

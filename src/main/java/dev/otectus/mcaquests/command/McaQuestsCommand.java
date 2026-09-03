@@ -644,6 +644,10 @@ public final class McaQuestsCommand {
                 QuestRegistry.all(),
                 dev.otectus.mcaquests.project.data.ProjectRegistry.all(),
                 dev.otectus.mcaquests.quest.situation.SituationRegistry.all()));
+        // Biome / dimension / structure ids resolve against the running world's dynamic registries, which
+        // do not exist at parse time — so this is the earliest moment a typo'd id can be seen at all.
+        warnings.addAll(dev.otectus.mcaquests.data.RegistryIdValidator.collectWarnings(
+                ctx.getSource().getServer().registryAccess(), QuestRegistry.all()));
         // Also here rather than at reload: a translation key can only be checked against a loaded
         // language, which a dedicated server does not have.
         warnings.addAll(dev.otectus.mcaquests.data.TranslationKeyValidator.collectWarnings(

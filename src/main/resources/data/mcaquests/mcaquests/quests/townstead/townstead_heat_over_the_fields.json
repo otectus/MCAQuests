@@ -42,7 +42,7 @@
   "objectives": [
     {
       "type": "mcaquests:item_delivery",
-      "item": "minecraft:potion",
+      "item": "minecraft:honey_bottle",
       "count": 3,
       "destination": {
         "type": "townstead_villager_inventory",

@@ -326,7 +326,7 @@ public final class QuestManager {
             }
             if (locked == null
                     && !data.history().onCooldown(def.id(), pass.villagerUuid(), pass.now())
-                    && !data.hasActive(def.id(), pass.villagerUuid())
+                    && !OfferFilters.alreadyActive(data, def, pass.villagerUuid())
                     && !def.effectiveConditions().map(c -> c.test(pass.contextFor(def))).orElse(true)) {
                 locked = def;
             }
@@ -814,12 +814,26 @@ public final class QuestManager {
      * {@code rewardClaimed} is already set by the time rewards run, so a reward that throws — an add-on's,
      * most plausibly — used to strand the quest claimed but un-completable. The rest are still paid.
      */
-    private static void grantSafely(QuestReward reward, QuestDefinition def, Runnable grant) {
+    private static void grantSafely(ServerPlayer player, QuestReward reward, QuestDefinition def, Runnable grant) {
         try {
             grant.run();
         } catch (Throwable t) {
             McaQuests.LOGGER.error("[MCA: Quests] reward {} of '{}' threw; continuing with the rest",
-                    reward.type().id(), def.id(), t);
+                    rewardName(reward), def.id(), t);
+            // The quest has already been claimed and its delivery items consumed, so the player would
+            // otherwise see a turn-in that quietly paid less than it promised. Name the reward: only an
+            // admin can fix an add-on's broken grant, and only if someone tells them.
+            player.sendSystemMessage(Component.translatable("mcaquests.reward.failed",
+                    Component.literal(rewardName(reward))));
+        }
+    }
+
+    /** A reward's registered type id, or its class name when even asking for the id throws. */
+    private static String rewardName(QuestReward reward) {
+        try {
+            return reward.type().id().toString();
+        } catch (Throwable t) {
+            return reward.getClass().getSimpleName();
         }
     }
 
@@ -873,15 +887,15 @@ public final class QuestManager {
                 // guarded by the rewardClaimed flag above, so a retried turn-in packet pays nothing twice.
                 OptionalInt frozenAmount = active.frozenReward(i);
                 if (frozenAmount.isPresent()) {
-                    grantSafely(reward, def, () -> currency.grantAmount(player, frozenAmount.getAsInt()));
+                    grantSafely(player, reward, def, () -> currency.grantAmount(player, frozenAmount.getAsInt()));
                     continue;
                 }
             }
-            grantSafely(reward, def, () -> reward.grant(player, grantVillager, context));
+            grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
         }
         for (QuestReward reward : def.rewards()) {
             if (reward instanceof HeartsReward) {
-                grantSafely(reward, def, () -> reward.grant(player, grantVillager, context));
+                grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
             }
         }
         grantQuestReputation(player, grantVillager, def, active, "complete");
@@ -1825,7 +1839,8 @@ public final class QuestManager {
         out.add(line("adult ok", !def.giver().adultOnly() || McaCompat.isAdult(villager)));
         int hearts = McaCompat.getHearts(player, villager);
         out.add(line("hearts in range (" + hearts + ")", def.giver().acceptsHearts(hearts)));
-        out.add(line("not already active here", !data.hasActive(questId, villagerUuid)));
+        out.add(line(def.chain().isEmpty() ? "not already active with any villager" : "not already active here",
+                !OfferFilters.alreadyActive(data, def, villagerUuid)));
         out.add(line("off cooldown", !data.history().onCooldown(questId, villagerUuid, now)));
         out.add(line("not a finished once-quest", def.repeat().type() != RepeatRule.RepeatType.ONCE
                 || onceCompletionCount(data, def, villagerUuid) == 0));
@@ -1917,6 +1932,9 @@ public final class QuestManager {
                                       List<QuestDefinition> eligible, List<QuestDefinition> chosen) {
         if (data.hasActive(def.id(), villager.getUUID())) {
             return "ACTIVE (accepted from this villager)";
+        }
+        if (OfferFilters.alreadyActive(data, def, villager.getUUID())) {
+            return "ACTIVE (accepted from another villager)";
         }
         if (chosen.contains(def)) {
             return "OFFERED";

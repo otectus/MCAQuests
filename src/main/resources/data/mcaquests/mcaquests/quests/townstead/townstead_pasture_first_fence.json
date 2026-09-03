@@ -68,6 +68,13 @@
           "READ_VILLAGER",
           "READ_BUILDING"
         ]
+      },
+      {
+        "not": {
+          "type": "mcaquests:townstead_building",
+          "building_type": "pen",
+          "count": 1
+        }
       }
     ]
   },

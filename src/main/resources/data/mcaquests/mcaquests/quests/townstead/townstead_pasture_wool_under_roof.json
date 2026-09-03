@@ -86,6 +86,13 @@
           "READ_CALENDAR",
           "READ_BUILDING"
         ]
+      },
+      {
+        "not": {
+          "type": "mcaquests:townstead_building",
+          "building_type": "wool_shed",
+          "count": 1
+        }
       }
     ]
   },

@@ -7,6 +7,7 @@ import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.AnyOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.RelatedVillagerStatusCondition;
+import dev.otectus.mcaquests.quest.objective.CureVillagerObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.objective.VillagerTargeted;
 import dev.otectus.mcaquests.quest.situation.SituationDefinition;
@@ -53,12 +54,14 @@ public final class TargetGateValidator {
      * which is exactly why a missing-kin quest can be about them.
      */
     private static final Map<String, Set<String>> DISJOINT = Map.of(
-            "dead", Set.of("alive", "reachable", "nearby", "same_village", "missing"),
+            "dead", Set.of("alive", "reachable", "nearby", "same_village", "missing", "infected"),
             "alive", Set.of("dead"),
             "reachable", Set.of("dead", "missing"),
             "nearby", Set.of("dead", "missing"),
             "same_village", Set.of("dead", "missing"),
-            "missing", Set.of("dead", "reachable", "nearby", "same_village"));
+            "missing", Set.of("dead", "reachable", "nearby", "same_village", "infected"),
+            // Infection is read off a loaded body, so an infected relative is neither gone nor departed.
+            "infected", Set.of("dead", "missing"));
 
     /** The relations {@code any} is the union of. Grandparent is excluded, as it is in the walk itself. */
     private static final Set<String> IMMEDIATE = Set.of("spouse", "parent", "child", "sibling");
@@ -74,6 +77,9 @@ public final class TargetGateValidator {
      * impossible.
      */
     private static final Set<String> SINGLE_VALUED = Set.of("spouse");
+
+    /** The status that answers "is this relative actually turning?" — see {@link #checkCureGate}. */
+    private static final String INFECTED = "infected";
 
     private TargetGateValidator() {
     }
@@ -128,6 +134,8 @@ public final class TargetGateValidator {
                 }
             }
 
+            checkCureGate(where, objectives.get(index), target, relation, require, gates, errors);
+
             if (!target.requiresExistence()) {
                 continue; // "dead", "missing" and "any_known" assert nothing that needs establishing
             }
@@ -145,6 +153,37 @@ public final class TargetGateValidator {
                         + "spouse; name the relation you mean if it matters.");
             }
         }
+    }
+
+    /**
+     * A {@code cure_villager} objective about a relative has to establish that the relative is infected.
+     *
+     * <p>Nothing else can. Conditions are evaluated at offer time only, so the gate is the one moment
+     * anything asks about the kin's state; without an infection question the quest is offered about a
+     * perfectly healthy brother and its objective cannot advance until he happens to be zombified, which
+     * is how {@code relations_cure_infected_kin} shipped as the pack's one uncompletable quest.
+     * {@code cure_my_spouse} always got this right, with an {@code infected} gate on the giver.
+     *
+     * <p>Both halves of the gate are accepted: {@code require: "infected"} on the target itself (which the
+     * existence check above then insists is gated), or a {@code related_villager_status} of status
+     * {@code infected} covering the relation. Severity follows the caller, like everything else here.
+     */
+    private static void checkCureGate(String where, QuestObjective objective, VillagerTarget target,
+                                      String relation, String require,
+                                      List<RelatedVillagerStatusCondition> gates, List<String> errors) {
+        if (!(objective instanceof CureVillagerObjective) || target.mode() != VillagerTarget.Mode.FAMILY) {
+            return;
+        }
+        if (INFECTED.equals(require)
+                || gates.stream().anyMatch(gate -> INFECTED.equals(gate.status())
+                        && relationCovers(gate.relation(), relation))) {
+            return;
+        }
+        errors.add(where + " cures the giver's " + relation + ", but nothing in this definition requires "
+                + "that they are infected, so it can be offered about a healthy relative and then never "
+                + "advance. Set \"require\": \"infected\" on the villager target, or add: "
+                + "{\"type\": \"mcaquests:related_villager_status\", \"relation\": \"" + relation
+                + "\", \"status\": \"infected\"}.");
     }
 
     /**

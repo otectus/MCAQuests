@@ -47,6 +47,7 @@ import java.util.UUID;
  * @param sameVillage      on the giver's own home village resident roll
  * @param residentAnywhere on the resident roll of any village in the level
  * @param materialisable   {@code McaCompat.materializeRelative} would agree to bring them into the world
+ * @param infected         loaded and part-way through MCA's zombie infection right now
  */
 public record RelativeCandidate(UUID uuid,
                                 String relation,
@@ -60,7 +61,21 @@ public record RelativeCandidate(UUID uuid,
                                 boolean nearby,
                                 boolean sameVillage,
                                 boolean residentAnywhere,
-                                boolean materialisable) {
+                                boolean materialisable,
+                                boolean infected) {
+
+    /**
+     * The pre-{@code infected} shape, so every caller that describes a relative without reading MCA's
+     * infection progress keeps compiling. An absent value means "not infected", which is the answer that
+     * makes a cure quest ineligible rather than accidentally offered.
+     */
+    public RelativeCandidate(UUID uuid, String relation, @Nullable String name, boolean nodeKnown,
+                             boolean deceased, boolean generated, boolean player, boolean embodied,
+                             boolean loaded, boolean nearby, boolean sameVillage, boolean residentAnywhere,
+                             boolean materialisable) {
+        this(uuid, relation, name, nodeKnown, deceased, generated, player, embodied, loaded, nearby,
+                sameVillage, residentAnywhere, materialisable, false);
+    }
 
     /**
      * Every status a datapack may name, in {@code related_villager_status} or in a villager target's
@@ -68,14 +83,14 @@ public record RelativeCandidate(UUID uuid,
      * exactly the question its objective then asks.
      */
     public static final Set<String> STATUSES =
-            Set.of("alive", "reachable", "nearby", "missing", "dead", "same_village", "any_known");
+            Set.of("alive", "reachable", "nearby", "missing", "dead", "same_village", "any_known", "infected");
 
     /**
      * The statuses that assert the relative can actually be found. A target requiring one of these needs a
      * gate; a target requiring {@code dead}, {@code missing} or {@code any_known} deliberately does not.
      */
     public static final Set<String> EXISTENCE_STATUSES =
-            Set.of("alive", "reachable", "nearby", "same_village");
+            Set.of("alive", "reachable", "nearby", "same_village", "infected");
 
     /** The default {@code require} for a {@code mode: family} target: the safe answer, not the loose one. */
     public static final String DEFAULT_FAMILY_REQUIRE = "reachable";
@@ -141,6 +156,9 @@ public record RelativeCandidate(UUID uuid,
             // The roll alone is not enough: MCA leaves the dead on it forever, which is the whole bug.
             case "same_village" -> isAlive() && sameVillage;
             case "any_known" -> nodeKnown;
+            // Infection is only readable off a loaded body, so this is deliberately the narrowest
+            // existence status: a cure quest must not be offered about kin nobody can see turning.
+            case "infected" -> isAlive() && infected;
             default -> false;
         };
     }

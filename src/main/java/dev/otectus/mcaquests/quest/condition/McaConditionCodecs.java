@@ -46,7 +46,7 @@ public final class McaConditionCodecs {
     public static final Set<String> RELATED_RELATIONS = VillagerTarget.RELATIONS;
 
     /**
-     * Statuses {@code related_villager_status} may gate on — the same seven a villager target's
+     * Statuses {@code related_villager_status} may gate on — the same set a villager target's
      * {@code require} accepts, for the same reason: a gate has to be able to ask precisely the question
      * the objective will later ask.
      *
@@ -54,7 +54,8 @@ public final class McaConditionCodecs {
      * should almost always gate on ("a real person who can be found"), and it is the default a family
      * target requires; {@code any_known} is the old loose behaviour, kept so a pack that genuinely wants
      * "anyone in the family tree, dead or invented" can still say so — explicitly, rather than by
-     * accident.
+     * accident. {@code infected} is the gate a {@code cure_villager} objective about a relative needs:
+     * nothing else establishes that the kin the quest is about is actually turning.
      */
     public static final Set<String> RELATED_STATUSES = RelativeCandidate.STATUSES;
 

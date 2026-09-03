@@ -52,8 +52,8 @@
         "building_type": "armory"
       },
       "entity": "minecraft:pillager",
-      "radius": 32,
-      "count": 8
+      "radius": 40,
+      "count": 4
     },
     {
       "type": "mcaquests:build_near_location",

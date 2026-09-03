@@ -86,7 +86,8 @@
     }
   ],
   "failure": {
-    "fail_on_giver_death": true
+    "fail_on_giver_death": true,
+    "retry_after": 24000
   },
   "chain": {
     "chain": "the_broken_road",

@@ -42,6 +42,7 @@ import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.quest.situation.SituationDetectors;
 import dev.otectus.mcaquests.quest.situation.SituationManager;
 import dev.otectus.mcaquests.state.ActiveQuest;
+import dev.otectus.mcaquests.state.DeadGiversData;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.core.BlockPos;
@@ -56,6 +57,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.item.ItemStack;
@@ -96,10 +98,85 @@ public final class QuestProgressEvents {
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // Before the log is synced, so a quest whose giver died while this player was offline is
+            // already gone from it rather than appearing for a moment and then vanishing.
+            reconcileDeadGivers(player);
             QuestManager.syncLog(player);
             // Task M5.1: FTB editor known-ids sync (no-op unless FTB Quests is loaded + syncFtbqEditorIds).
             FtbqEditorIdsSync.maybeSend(player);
         }
+    }
+
+    /**
+     * Applies {@link #onGiverDeath}'s rule to the deaths this player was offline for.
+     *
+     * <p>Only givers {@link DeadGiversData} recorded as <em>dead</em> count. A giver who is merely
+     * unloaded — the usual state of a village nobody is standing in — is left exactly alone, because
+     * "not in memory" and "no longer exists" are the same empty from {@code ServerLevel#getEntity} and
+     * failing on it would take quests away for a chunk boundary.
+     */
+    private static void reconcileDeadGivers(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        DeadGiversData dead = DeadGiversData.get(server);
+        if (dead.isEmpty()) {
+            return;
+        }
+        boolean globalFail = McaQuestsConfig.COMMON.failQuestIfGiverDies.get();
+        QuestCapabilities.get(player).ifPresent(data -> {
+            List<ActiveQuest> failed = new ArrayList<>();
+            for (ActiveQuest active : data.active()) {
+                if (!dead.isDead(active.villagerUuid())) {
+                    continue;
+                }
+                QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
+                    QuestDefinition def = active.resolve(base);
+                    if (def.turnIn().mode().failsOnGiverDeath(def.failure(), globalFail)) {
+                        failed.add(active);
+                    }
+                });
+            }
+            for (ActiveQuest active : failed) {
+                QuestDefinitions.resolve(active.questId()).ifPresent(base ->
+                        QuestManager.failQuest(player, active, active.resolve(base),
+                                QuestFailedEvent.Reason.GIVER_DIED, null, data));
+            }
+            if (!failed.isEmpty()) {
+                player.sendSystemMessage(Component.translatable("mcaquests.message.giver_died"));
+            }
+        });
+    }
+
+    /**
+     * The player a kill belongs to, whether they struck the blow or merely arranged it.
+     *
+     * <p>Only {@code getSource().getEntity()} used to count, which is melee and player-fired projectiles
+     * and nothing else: a wolf's kill, a TNT kill, a lava or fall-damage kill after the player landed the
+     * first hit all read as nobody's, while the quest text says "kill". So this falls back to the
+     * tamed animal's owner, and then to the vanilla notion of credit
+     * ({@link LivingEntity#getKillCredit()} — the last player to hurt them, within the same window the
+     * death message uses).
+     *
+     * <p>A player who dies is never credited with their own death, and credit never crosses levels — the
+     * objectives all reason about one {@link ServerLevel}.
+     */
+    static Optional<ServerPlayer> creditedPlayer(LivingDeathEvent event) {
+        LivingEntity dead = event.getEntity();
+        ServerPlayer credited = null;
+        if (event.getSource().getEntity() instanceof ServerPlayer direct) {
+            credited = direct;
+        } else if (event.getSource().getEntity() instanceof OwnableEntity pet
+                && pet.getOwner() instanceof ServerPlayer owner) {
+            credited = owner;
+        } else if (dead.getKillCredit() instanceof ServerPlayer lastHurtBy) {
+            credited = lastHurtBy;
+        }
+        if (credited == null || credited == dead || credited.level() != dead.level()) {
+            return Optional.empty();
+        }
+        return Optional.of(credited);
     }
 
     @SubscribeEvent
@@ -107,8 +184,11 @@ public final class QuestProgressEvents {
         if (event.getEntity().level().isClientSide()) {
             return;
         }
-        // Credit the responsible player, whether melee or via a projectile they fired.
-        if (event.getSource().getEntity() instanceof ServerPlayer player) {
+        // Credit the responsible player: the one who struck, whose pet struck, or whose hit vanilla
+        // still remembers when something else finished the job.
+        Optional<ServerPlayer> credited = creditedPlayer(event);
+        if (credited.isPresent()) {
+            ServerPlayer player = credited.get();
             LivingEntity dead = event.getEntity();
             ServerLevel level = (ServerLevel) player.level();
             forActiveObjectives(player, KillEntityObjective.class,
@@ -652,15 +732,17 @@ public final class QuestProgressEvents {
         boolean globalFail = McaQuestsConfig.COMMON.failQuestIfGiverDies.get();
         Entity giverEntity = event.getEntity();
         UUID giver = giverEntity.getUUID();
+        // Written down for the players who are not here to see it: login reads this back and applies
+        // exactly the rule below (F-B03). Recorded unconditionally, because whether a quest cares about
+        // the death is a per-quest question this villager knows nothing about.
+        DeadGiversData.get(server).record(giver, giverEntity.level().getGameTime());
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             QuestCapabilities.get(player).ifPresent(data -> {
                 List<ActiveQuest> failed = new ArrayList<>();
                 for (ActiveQuest active : data.byVillager(giver)) {
                     QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                         QuestDefinition def = active.resolve(base);
-                        boolean perQuest = def.failure().map(FailureSpec::failOnGiverDeath).orElse(false);
-                        boolean globalApplies = globalFail && def.turnIn().mode() == TurnInMode.ORIGINAL_GIVER;
-                        if (perQuest || globalApplies) {
+                        if (def.turnIn().mode().failsOnGiverDeath(def.failure(), globalFail)) {
                             failed.add(active);
                         }
                     });

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest;
 
+import java.util.Optional;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 
@@ -22,4 +24,18 @@ public enum TurnInMode {
                 }
             },
             mode -> DataResult.success(mode.name().toLowerCase(Locale.ROOT)));
+
+    /**
+     * Whether a quest with this {@code failure} block (or none) must fail when its giver dies.
+     *
+     * <p>The whole rule in one pure place, because it is asked from two very different moments: the
+     * {@code LivingDeathEvent} for everyone online, and login for everyone who was not. Those two used to
+     * be one expression written out once, in the event handler, which is why the offline half of the rule
+     * did not exist. {@code globalFail} is the {@code failQuestIfGiverDies} config, which only applies to
+     * a quest handed back to the giver — there is nobody else to hand it to.
+     */
+    public boolean failsOnGiverDeath(Optional<FailureSpec> failure, boolean globalFail) {
+        return failure.map(FailureSpec::failOnGiverDeath).orElse(false)
+                || (globalFail && this == ORIGINAL_GIVER);
+    }
 }

@@ -61,8 +61,8 @@
         "building_type": "graveyard"
       },
       "entity": "minecraft:zombie",
-      "radius": 32,
-      "count": 8
+      "radius": 40,
+      "count": 4
     },
     {
       "type": "mcaquests:defend_location",
@@ -71,8 +71,8 @@
         "building_type": "graveyard"
       },
       "entity": "minecraft:skeleton",
-      "radius": 32,
-      "count": 4
+      "radius": 40,
+      "count": 2
     }
   ],
   "rewards": [

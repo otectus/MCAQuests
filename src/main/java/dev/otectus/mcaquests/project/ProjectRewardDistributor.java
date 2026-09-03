@@ -260,10 +260,41 @@ public final class ProjectRewardDistributor {
                                           QuestReward reward, @Nullable Entity sponsor, OptionalInt frozenAmount) {
         if (reward instanceof HeartsWithParticipantsReward hearts) {
             grantParticipantHearts(level, state, player, hearts);
+        } else if (reward instanceof HeartsWithSponsorReward hearts) {
+            grantSponsorHearts(level, state, player, hearts, sponsor);
         } else if (reward instanceof CurrencyReward currency && frozenAmount.isPresent()) {
             currency.grantAmount(player, frozenAmount.getAsInt());
         } else {
             reward.grant(player, sponsor);
+        }
+    }
+
+    /**
+     * Pays the sponsor hearts, and pays them <em>somewhere</em> when the sponsor is gone.
+     *
+     * <p>A project whose sponsor died before the phase completed — exactly the case {@code sponsor.on_death}
+     * turn-to-village exists for — resolved to a null villager, and {@code HeartsWithSponsorReward.grant}
+     * no-ops on null: the reward was silently dropped. It now falls back the way the other two hearts
+     * rewards do, banking against every villager who ever sponsored this instance (so an unloaded one is
+     * queued rather than lost, via {@code PendingHeartsData}).
+     */
+    private static void grantSponsorHearts(ServerLevel level, ProjectState state, ServerPlayer player,
+                                           HeartsWithSponsorReward reward, @Nullable Entity sponsor) {
+        if (sponsor != null) {
+            reward.grant(player, sponsor);
+            return;
+        }
+        Set<UUID> sponsors = new LinkedHashSet<>(state.sponsors());
+        if (sponsors.isEmpty()) {
+            McaQuests.LOGGER.debug("[MCA: Quests] project '{}' pays hearts_with_sponsor with no sponsor "
+                    + "recorded at all; nothing to credit", state.projectId());
+            return;
+        }
+        McaQuests.LOGGER.debug("[MCA: Quests] project '{}' has no loaded sponsor; banking "
+                + "hearts_with_sponsor against {} recorded sponsor(s)", state.projectId(), sponsors.size());
+        int amount = reward.effectiveAmount();
+        for (UUID sponsorUuid : sponsors) {
+            McaCompat.awardHearts(level, sponsorUuid, player, amount);
         }
     }
 

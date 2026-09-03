@@ -4,6 +4,118 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - Unreleased
+
+A patch release from a static audit of the bundled quest pack (`docs/audit/QUEST_AUDIT.md`): eight
+logic fixes, a pack the audit found offering one quest that could never be finished, and three new
+validator checks so the next one is caught before a player meets it. No network protocol change, and
+no save migration in either direction.
+
+### Fixed — a cure quest offered about a healthy relative
+
+`relations_cure_infected_kin` gated on "a relative in the same village" and then asked the player to
+cure them. Nothing required the relative to be infected, so the quest was offered about a perfectly
+well brother and its objective could not advance until he happened to be zombified — the pack's only
+uncompletable quest. There was no vocabulary to say what it meant, so there is one now: `infected`
+joins the seven statuses `related_villager_status` and a villager target's `require` share, meaning
+"alive and part-way through MCA's infection right now". The quest gates on it and targets it.
+(`DATAPACK.md`)
+
+### Fixed — a plain quest could be held from two villagers and paid twice
+
+"Already active" was asked per villager. A quest offered by several professions could be accepted from
+two givers at once, and because the progress events credit every active copy, one set of kills
+completed both and paid both. A definition with no `chain` is now active for the **player**: 115
+bundled quests were exposed to this. Chain stages keep the per-villager question, because an arc is
+per-villager by design. `/mcaquests debug quest` reports the new case as
+`ALREADY_ACTIVE (with another villager)`.
+
+### Fixed — a giver who died while you were offline was never reconciled
+
+`onGiverDeath` only walked players who were online. Anyone else kept an active quest pointing at a
+villager who no longer existed, and `fail_on_giver_death` never fired for them — in a chain, the
+failure branch never opened. Deaths of MCA villagers are now written to a small world store
+(`mcaquests_dead_givers`, pruned after twenty in-game days) and applied on login, using the same rule
+as the live handler. Only a **recorded death** counts: a giver whose chunk is merely unloaded is left
+strictly alone, since "not loaded" and "does not exist" are the same answer from the level.
+
+### Fixed — kills that vanished on their way to the objective
+
+`kill_entity` credited only `getSource().getEntity()`, so a kill by a tamed wolf, by TNT, by lava or
+by a fall after the player landed the first hit counted for nothing while the quest text said "kill".
+Credit now falls back to a pet's owner and then to vanilla's own kill credit — the rule the death
+message uses. `defend_villager`, `defend_location` and the project kill objectives share the one
+helper, so a project and a quest counting the same mob can never disagree. (`DATAPACK.md`)
+
+### Fixed — a defended villager who blinked out of a chunk lost you the kill
+
+`defend_villager` credited a kill only if the villager resolved at that instant, so a village-edge
+render-distance flicker dropped kills in silence. A kill now also counts within 200 ticks of where the
+villager was last seen, inside the objective's own radius. Outside that window the old rule stands.
+
+### Fixed — one project contribution locked you out of every other project
+
+The anti-spam gate was keyed by player alone, so contributing to the mill blocked the bridge and the
+granary for `projectContributeMinIntervalTicks`. It is now keyed by player **and** project instance;
+the interval config is unchanged.
+
+### Fixed — a project reward that quietly disappeared with its sponsor
+
+`hearts_with_sponsor` no-ops on a null villager, and a phase completing after the sponsor died passed
+exactly that. The reward now falls back to every sponsor recorded for the instance, banking hearts for
+the unloaded ones the way `hearts` already does, and logs the fallback at debug. No bundled project
+uses the reward; this closes it for packs that do.
+
+### Fixed — a reward that failed said nothing to the player
+
+`grantSafely` kept turn-in atomic by swallowing an add-on's exception, but the player saw a completed
+quest that had quietly paid less. The failure is still contained; it now also names the reward in
+chat (`mcaquests.reward.failed`).
+
+### Added — three new checks in `/mcaquests validate`
+
+- **Empty or unknown item/block/entity tags** on an objective, as a warning. Template pools have been
+  checked since 1.2.0; plain objectives now are too.
+- **Biome, dimension and structure ids this world does not have**, as warnings, including tags that
+  resolve to nothing. They live in dynamic registries, so a running world is the earliest anything can
+  check them (new `data/RegistryIdValidator`).
+- **A `cure_villager` objective about a relative with no infection gate**, an error under
+  `strictJsonValidation` and a warning otherwise, alongside the existing family-gate rules.
+
+### Changed — quests
+
+- `mcaquests:relations_cure_infected_kin` — gate is now `all_of(same_village, infected)` and the
+  objective requires `infected`.
+- `mcaquests:fisherman_rain_catch` — the `failure` block is gone. `require_weather` failed the quest
+  the moment the rain stopped, which is pure weather luck; rain remains an **offer** condition.
+- `mcaquests:bell_when_the_horns_answer`, `mcaquests:remedy_the_returning_voice`,
+  `mcaquests:road_caravan_through` — chain finales with `fail_on_giver_death` gain
+  `"retry_after": 24000`, so losing the giver no longer means restarting a four-stage arc.
+- `mcaquests:townstead_commission_bells_for_old_names` — `defend_location` counts 8→4 (zombie) and
+  4→2 (skeleton), radius 32→40.
+- `mcaquests:townstead_commission_watch_at_the_gate` — pillager count 8→4, radius 32→40.
+- `mcaquests:townstead_lanterns_for_the_departed` — zombie count 6→3, radius 24→32.
+- `mcaquests:townstead_heat_over_the_fields` — the delivery is three **honey bottles** rather than
+  three potions; item targets are NBT-blind, so three water bottles satisfied it.
+- `mcaquests:townstead_pasture_first_fence`, `mcaquests:townstead_pasture_wool_under_roof` — gain the
+  `not(townstead_building ...)` offer guard their sibling registration quests already use.
+- `mcaquests:last_banner_home`, `mcaquests:mercenary_witch_hunt`, `mcaquests:drowned_ledger` —
+  dialogue now hints where the quarry actually is (woodland mansion or raid; swamp hut; the ruin's own
+  sea lanterns), instead of leaving three hard finds unsignposted.
+
+### Translations
+
+New key `mcaquests.reward.failed`, and reworded `offer` / `in_progress` dialogue for
+`last_banner_home`, `mercenary_witch_hunt` and `drowned_ledger`. All present in `en_us` and `pt_br`.
+
+### Compatibility
+
+- `RelativeCandidate` gains an `infected` component. The previous 13-argument constructor is kept, so
+  code that builds a candidate without reading infection still compiles.
+- `data/ObjectiveValidator.validate` takes a third argument, the warnings list. Datapacks are
+  unaffected; only a mod calling the validator directly needs the extra list.
+- No network protocol bump: no packet's shape changed.
+
 ## [1.5.1] - 2026-09-02
 
 A patch release from a full audit of the quest lifecycle, rewards, persistence, multiplayer sync and

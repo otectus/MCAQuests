@@ -106,6 +106,17 @@ public final class PlayerQuestData {
         return find(questId, villager).isPresent();
     }
 
+    /**
+     * True when this quest is active with <em>any</em> villager. A quest with no chain is one job, and
+     * holding it from two givers at once used to pay it twice: the kill/craft/break events credit every
+     * active copy, so one set of kills completed both. Arcs stay per-villager (see
+     * {@code OfferFilters.alreadyActive}), which is why this is a second question rather than a change
+     * to the one above.
+     */
+    public boolean hasActive(ResourceLocation questId) {
+        return active.stream().anyMatch(q -> q.questId().equals(questId));
+    }
+
     public void add(ActiveQuest quest) {
         active.add(quest);
     }

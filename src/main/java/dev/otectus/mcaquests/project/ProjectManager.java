@@ -63,8 +63,16 @@ import java.util.UUID;
  */
 public final class ProjectManager {
 
-    /** Transient per-player anti-spam gate: last accepted contribution game-time. */
-    private static final Map<UUID, Long> lastContributeTick = new HashMap<>();
+    /**
+     * Transient anti-spam gate: last accepted contribution game-time, per player <em>and project
+     * instance</em>. Keyed by player alone, one contribution to the mill locked the player out of the
+     * bridge, the granary and every other project for {@code projectContributeMinIntervalTicks}.
+     */
+    private static final Map<ContributionGate, Long> lastContributeTick = new HashMap<>();
+
+    /** The scope one contribution rate-limit covers: this player, this project instance. */
+    private record ContributionGate(UUID player, ProjectInstanceKey project) {
+    }
 
     private ProjectManager() {
     }
@@ -108,17 +116,19 @@ public final class ProjectManager {
         if (scopeOpt.isEmpty()) {
             return;
         }
-        // Anti-spam: rate-limit accepted contributions per player.
         long now = level.getGameTime();
-        int interval = McaQuestsConfig.COMMON.projectContributeMinIntervalTicks.get();
-        Long last = lastContributeTick.get(player.getUUID());
-        if (interval > 0 && last != null && now - last < interval) {
-            return;
-        }
-
         ProjectSavedData data = ProjectSavedData.get(server);
         ScopeIdentity scope = scopeOpt.get();
         ProjectInstanceKey key = new ProjectInstanceKey(projectId, def.scopeType(), scope.identity());
+
+        // Anti-spam: rate-limit accepted contributions per player and project instance. Checked here
+        // rather than before the key is built, because the key is what the limit is about.
+        ContributionGate gate = new ContributionGate(player.getUUID(), key);
+        int interval = McaQuestsConfig.COMMON.projectContributeMinIntervalTicks.get();
+        Long last = lastContributeTick.get(gate);
+        if (interval > 0 && last != null && now - last < interval) {
+            return;
+        }
         ProjectState state = data.getInstance(key).orElse(null);
         if (state == null) {
             if (!conditionsPass(player, villager, def)) {
@@ -152,7 +162,7 @@ public final class ProjectManager {
             }
         }
         if (contributed) {
-            lastContributeTick.put(player.getUUID(), now);
+            lastContributeTick.put(gate, now);
         }
         checkPhaseAdvance(server, level, data, state, def, player, villager);
         data.setDirty();

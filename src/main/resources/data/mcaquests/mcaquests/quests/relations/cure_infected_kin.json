@@ -40,7 +40,7 @@
       "villager": {
         "mode": "family",
         "relation": "any",
-        "require": "same_village"
+        "require": "infected"
       },
       "cure_item": {
         "item": "minecraft:golden_apple"
@@ -48,9 +48,18 @@
     }
   ],
   "conditions": {
-    "type": "mcaquests:related_villager_status",
-    "relation": "any",
-    "status": "same_village"
+    "all_of": [
+      {
+        "type": "mcaquests:related_villager_status",
+        "relation": "any",
+        "status": "same_village"
+      },
+      {
+        "type": "mcaquests:related_villager_status",
+        "relation": "any",
+        "status": "infected"
+      }
+    ]
   },
   "rewards": [
     {

@@ -253,7 +253,7 @@ middle, or their progress shifts onto the wrong objective. "Targets" accept **ei
 | `mcaquests:obtain_item` | item target, `count` | Have the items in inventory. |
 | `mcaquests:craft_item` | item target, `count` | Craft that many. |
 | `mcaquests:fish_item` | item target, `count` | Fish up that many. |
-| `mcaquests:kill_entity` | entity target, `count` | Player-credited kills. |
+| `mcaquests:kill_entity` | entity target, `count` | Player-credited kills. Credit follows the blow, the player's **tamed animal**, or — when something else lands the last hit (TNT, lava, a fall after the player struck) — vanilla's own kill credit, the same rule the death message uses. `defend_villager`, `defend_location` and the project kill objectives all read the same answer. |
 | `mcaquests:break_block` | block target, `count` | Player-broken blocks. |
 | `mcaquests:place_block` | block target, `count` | Player-placed blocks. |
 | `mcaquests:visit_biome` | biome target | Enter a matching biome. |
@@ -336,8 +336,8 @@ that *deliberately* names someone dead or missing has to say so — `"require": 
 "anybody in the family tree at all".
 
 **A family target needs a gate, and the loader now says so.** A quest whose target requires the villager to
-be findable (`reachable`, `alive`, `nearby`, `same_village`) must establish that one exists, with a
-`related_villager_status` leaf on the same relation:
+be findable (`reachable`, `alive`, `nearby`, `same_village`, `infected`) must establish that one exists, with
+a `related_villager_status` leaf on the same relation:
 
 ```json
 "conditions": { "type": "mcaquests:related_villager_status", "relation": "sibling", "status": "same_village" }
@@ -641,6 +641,7 @@ gate and the target cannot disagree about who is in scope.
 | `same_village` | Alive **and** on the giver's own village roll. The "alive" half matters: MCA never removes the dead from a village's resident roll, so this used to be satisfied by relatives who had died. |
 | `missing` | Alive, with no body anywhere in the world and on no village's resident roll. That last part separates "genuinely vanished" from "merely outside render distance", and is what stops `find_missing_relative` spawning a duplicate of someone alive and well. |
 | `dead` | Flagged deceased in the family tree, and not one of MCA's invented ancestors — a villager the game made up to pad a family tree was never alive, so mourning them is not a thing. |
+| `infected` | Alive and part-way through MCA's zombie infection **right now**. Read off a loaded body, so an unloaded relative never satisfies it — which is the point: this is the gate a `cure_villager` objective about a relative needs, and a cure quest about kin nobody can see turning is a quest that cannot advance. |
 | `any_known` | Anyone with a family-tree node at all, dead or invented. The old unfiltered behaviour, available to a pack that deliberately wants it. |
 
 **Failure behavior.** A non-MCA giver, a missing/partly-loaded relationship or family graph, or any internal MCA error all evaluate to *not met* (debug-logged), never an exception. `health_below` and `related_villager_status` read live/persistent state, so a quest can appear or disappear as that state changes — reopen the menu to refresh.
@@ -738,7 +739,7 @@ worse than none.
 | `type` | Fields | Meaning |
 |---|---|---|
 | `cooldown` | `cooldown_ticks` | Repeatable after the cooldown (24000 ticks = 1 MC day). |
-| `once` | — | Completable a single time, ever. |
+| `once` | — | Completable a single time, ever (per villager for a chain stage, per player otherwise). |
 | `repeatable` | — | Available again immediately. |
 | `period` | `period`, `scope`, `fallback_cooldown_ticks` | Once per Townstead calendar period. |
 
@@ -810,7 +811,7 @@ re-accepted; only quests accepted from 1.5.1 on follow the world clock.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `failure_hearts` | int | `0` | Hearts applied to the giver on failure. Negative = a relationship penalty; `0` = non-punitive. |
-| `retry_after` | int (≥0) | — | Cooldown (ticks) before the quest can be offered again. Omit to follow the normal `repeat` rule. |
+| `retry_after` | int (≥0) | — | Cooldown (ticks) before the quest can be offered again after a **failure**. Omit to follow the normal `repeat` rule. Pairs well with `fail_on_giver_death` — without it, losing the giver of a chain finale means restarting the arc with somebody else. Contradicts `block_retry`. |
 | `block_retry` | bool | `false` | If true, the quest is locked permanently after a single failure. |
 
 The **failure dialogue** is the giver's `failed` entry in the quest's `dialogue` map (shown as the
@@ -840,6 +841,22 @@ It only becomes offerable after the player fails that quest. See
 configured hearts clamp, and `block_retry` combined with `retry_after` (contradictory). Numeric ranges
 are enforced at load time.
 
+It also reports, as **warnings** (they never stop a server starting):
+
+- **Empty or unknown item/block/entity tags** named by an objective. The id parses, but nothing is in the
+  tag, so the objective can never advance. Template pools have been checked for this since 1.2.0; plain
+  objectives now are too.
+- **Biome, dimension and structure ids this world does not have** (including `#tags` that resolve to
+  nothing). These live in datapack-driven dynamic registries, so they cannot be checked at load — only
+  against a running world, which is what `validate` has. A quest naming one is silently unfinishable.
+
+And as an **error** (a warning outside `strictJsonValidation`):
+
+- A **`cure_villager` objective about a relative with no infection gate**. Conditions are evaluated at offer
+  time only, so the gate is the one moment anything asks whether the kin is actually turning. Say either
+  `"require": "infected"` on the villager target or
+  `{"type": "mcaquests:related_villager_status", "relation": "...", "status": "infected"}`.
+
 ### Built-in examples
 
 - `guard/dawn_defense.json` — kill 6 zombies **before sunrise** (`deadline_time`), small heart penalty.
@@ -853,6 +870,12 @@ are enforced at load time.
 The optional `chain` block turns a set of standalone quests into a **relationship arc**: one quest
 unlocks the next, the UI shows "Part 2 of 4", and follow-ups can branch on whether you completed,
 failed, or abandoned an earlier step. Quests with no `chain` block are unaffected.
+
+**A quest with no `chain` can be active with only one villager at a time.** It is one job, and the progress
+events credit every active copy of it, so holding "bring me ten wheat" from two farmers would have completed
+and paid both from one harvest. Once the player accepts it anywhere, no other villager offers it until it is
+turned in, failed or abandoned (`/mcaquests debug quest` says `ALREADY_ACTIVE (with another villager)`).
+Chain stages are the deliberate exception, for the reason below.
 
 **Arcs are per-villager.** Chain progress is tracked against the individual villager you are dealing with: a
 prerequisite is satisfied only when you completed the earlier stage **with that same villager**, so the same
