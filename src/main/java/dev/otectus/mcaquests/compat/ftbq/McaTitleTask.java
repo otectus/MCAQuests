@@ -7,8 +7,9 @@ import dev.otectus.mcaquests.client.ClientKnownIds;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.PlayerTitles;
 import dev.otectus.mcaquests.state.QuestCapabilities;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -72,25 +73,25 @@ public class McaTitleTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("title_id", titleId);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         titleId = nbt.getString("title_id");
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(titleId, Short.MAX_VALUE);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         titleId = buffer.readUtf(Short.MAX_VALUE);
     }

@@ -10,10 +10,10 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
@@ -45,7 +45,7 @@ import java.util.UUID;
  * replacement: it re-places the button whenever the menu is showing MCA's top-level layout and our
  * button is not on it. In the steady state that costs one reference compare plus a short widget scan.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class McaScreenButtons {
 
     /**

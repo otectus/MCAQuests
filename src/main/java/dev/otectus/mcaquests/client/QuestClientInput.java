@@ -4,17 +4,17 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.network.QuestTrackC2SPacket;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 
 /** Opens the Quest Log when the keybind is pressed (spec section 21). */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class QuestClientInput {
 
     private QuestClientInput() {
@@ -66,10 +66,7 @@ public final class QuestClientInput {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         while (QuestClientSetup.OPEN_LOG.consumeClick()) {
             if (minecraft.player != null && minecraft.screen == null) {

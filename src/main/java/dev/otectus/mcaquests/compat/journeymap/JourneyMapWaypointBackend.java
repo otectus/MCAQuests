@@ -18,7 +18,7 @@ import journeymap.api.v2.common.waypoint.WaypointFactory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

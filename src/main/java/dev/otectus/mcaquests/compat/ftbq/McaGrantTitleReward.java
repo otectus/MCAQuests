@@ -12,8 +12,9 @@ import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.quest.title.TitleScope;
 import dev.otectus.mcaquests.quest.title.TitleService;
 import dev.otectus.mcaquests.quest.title.Titles;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -110,28 +111,28 @@ public class McaGrantTitleReward extends McaRewardBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("title_id", titleId);
         nbt.putString("scope", scope.name());
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         titleId = nbt.getString("title_id");
         scope = parseScope(nbt.getString("scope"));
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(titleId, Short.MAX_VALUE);
         SCOPE_NAME_MAP.write(buffer, scope);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         titleId = buffer.readUtf(Short.MAX_VALUE);
         scope = SCOPE_NAME_MAP.read(buffer);

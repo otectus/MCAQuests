@@ -11,8 +11,9 @@ import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcaquests.state.QuestHistory;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -72,8 +73,8 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("quest_id", questId);
         nbt.putString("profession", profession);
         nbt.putString("chain_id", chainId);
@@ -81,8 +82,8 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         questId = nbt.getString("quest_id");
         profession = nbt.getString("profession");
         chainId = nbt.getString("chain_id");
@@ -90,7 +91,7 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(questId, Short.MAX_VALUE);
         buffer.writeUtf(profession, Short.MAX_VALUE);
@@ -99,7 +100,7 @@ public class McaQuestCompletedTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         questId = buffer.readUtf(Short.MAX_VALUE);
         profession = buffer.readUtf(Short.MAX_VALUE);

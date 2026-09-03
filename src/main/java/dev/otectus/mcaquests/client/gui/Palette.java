@@ -92,7 +92,7 @@ public final class Palette {
     /** A button label on a control that cannot be used. Vanilla's own disabled grey. */
     public static final int BUTTON_LABEL_DISABLED = 0xA0A0A0;
 
-    /** Quest-ready toast heading. Toasts use vanilla's light {@code toasts.png} frame, so: dark ink. */
+    /** Quest-ready toast heading. Toasts use vanilla's light {@code toast/advancement} frame, so: dark ink. */
     public static final int TOAST_READY = 0x7A5A00;
     /** Situation-opened toast heading. */
     public static final int TOAST_SITUATION = 0x7A5A00;

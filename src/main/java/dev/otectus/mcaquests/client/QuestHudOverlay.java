@@ -11,14 +11,14 @@ import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
 import dev.otectus.mcaquests.quest.QuestLogEntry;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.client.gui.overlay.ForgeGui;
-import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -36,7 +36,7 @@ import java.util.List;
  * right edge, so heading, quest and objective all started in the same column and the hierarchy the
  * indents exist to show was visible in two corners out of four.
  */
-public class QuestHudOverlay implements IGuiOverlay {
+public class QuestHudOverlay implements LayeredDraw.Layer {
 
     private static final int LINE_HEIGHT = 12;
     /** A section heading's row, which is taller because it carries a 16px glyph. */
@@ -50,7 +50,7 @@ public class QuestHudOverlay implements IGuiOverlay {
     private static final long URGENT_TICKS = 1200L; // ~1 minute
 
     @Override
-    public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
+    public void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
         if (!ClientQuestData.isHudVisible() || minecraft.options.hideGui) {
             return;
@@ -154,8 +154,8 @@ public class QuestHudOverlay implements IGuiOverlay {
         boolean right = anchor == HudAnchor.TOP_RIGHT || anchor == HudAnchor.BOTTOM_RIGHT;
         boolean bottom = anchor == HudAnchor.BOTTOM_LEFT || anchor == HudAnchor.BOTTOM_RIGHT;
 
-        int originX = right ? screenWidth - offsetX - blockWidth : offsetX;
-        int originY = bottom ? screenHeight - offsetY - blockHeight : offsetY;
+        int originX = right ? graphics.guiWidth() - offsetX - blockWidth : offsetX;
+        int originY = bottom ? graphics.guiHeight() - offsetY - blockHeight : offsetY;
         int rightEdge = originX + blockWidth;
 
         if (McaQuestsConfig.CLIENT.questTrackerBackground.get()) {

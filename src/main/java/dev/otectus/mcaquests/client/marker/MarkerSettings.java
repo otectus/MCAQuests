@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * The marker's slice of the client config, read once and held.
  *
- * <p>Eight {@code ForgeConfigSpec} lookups per frame is eight map lookups and eight boxed values per
+ * <p>Eight {@code ModConfigSpec} lookups per frame is eight map lookups and eight boxed values per
  * frame, all to answer questions that change when a player opens a config screen and at no other
  * time. This is that answer, taken once and thrown away on
  * {@code ModConfigEvent} — see {@code QuestClientSetup}.

@@ -7,8 +7,9 @@ import dev.ftb.mods.ftbquests.quest.task.Task;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.FtbqBridge;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -106,25 +107,25 @@ public abstract class McaCounterTaskBase extends Task {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putLong("count", count);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         count = Math.max(1, nbt.getLong("count"));
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeVarLong(count);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         count = buffer.readVarLong();
     }

@@ -6,8 +6,9 @@ import dev.ftb.mods.ftbquests.quest.Quest;
 import dev.ftb.mods.ftbquests.quest.TeamData;
 import dev.ftb.mods.ftbquests.quest.task.TaskType;
 import dev.otectus.mcaquests.quest.reputation.ReputationService;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
@@ -78,28 +79,28 @@ public class McaReputationTask extends McaCounterTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putInt("reputation", reputation);
         nbt.putInt("village_count", villageCount);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         reputation = Math.max(1, nbt.getInt("reputation"));
         villageCount = Math.max(1, nbt.getInt("village_count"));
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeVarInt(reputation);
         buffer.writeVarInt(villageCount);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         reputation = buffer.readVarInt();
         villageCount = buffer.readVarInt();

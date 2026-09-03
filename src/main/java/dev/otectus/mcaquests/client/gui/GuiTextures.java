@@ -1,8 +1,11 @@
 package dev.otectus.mcaquests.client.gui;
 
+import com.mojang.math.Divisor;
 import dev.otectus.mcaquests.McaQuests;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 /**
  * Every sprite on the mod's two GUI sheets, named once.
@@ -14,10 +17,10 @@ import net.minecraft.resources.ResourceLocation;
  * agrees with that file, so a UV cannot be moved in the generator without the code that blits it
  * being updated too.
  *
- * <p>Both sheets are 256×256 because {@link GuiGraphics#blitRepeating} — which
- * {@link GuiGraphics#blitNineSliced} tiles the middle bands with — assumes that size in the overload
- * vanilla itself uses. The middle band of every nine-sliced sprite is a flat colour, so stretching a
- * panel to any size never shows a seam.
+ * <p>Both sheets are 256×256 because that is the size the nine-slice below assumes, as vanilla's
+ * own {@code blitRepeating} overload did before 1.20.2 removed the raw-texture nine-slice from
+ * {@code GuiGraphics} in favour of GUI-atlas sprite metadata. The middle band of every nine-sliced
+ * sprite is a flat colour, so stretching a panel to any size never shows a seam.
  *
  * <p>This package deliberately knows nothing about quests. It is chrome, and the screens are written
  * against it.
@@ -75,9 +78,83 @@ public final class GuiTextures {
                 graphics.blit(sheet, x, y, u, v, Math.min(w, width), Math.min(h, height));
                 return;
             }
-            graphics.blitNineSliced(sheet, x, y, Math.max(1, w), Math.max(1, h), sliceX, sliceY,
+            blitNineSliced(graphics, sheet, x, y, Math.max(1, w), Math.max(1, h), sliceX, sliceY,
                     width, height, u, v);
         }
+    }
+
+    /**
+     * Vanilla's pre-1.20.2 {@code GuiGraphics.blitNineSliced}, reimplemented over the blit overloads
+     * that survive.
+     *
+     * <p>1.20.2 moved nine-slicing onto the GUI sprite atlas: {@code blitSprite} reads the borders
+     * from a sprite's {@code .mcmeta}, and the raw-{@code ResourceLocation} form the mod's own two
+     * sheets need was deleted. These sheets are ordinary textures rather than atlas sprites, so the
+     * geometry is done here instead — same corners at natural size, same tiled (never stretched)
+     * edges and centre, same clamping of the insets to half the drawn size.
+     */
+    private static void blitNineSliced(GuiGraphics graphics, ResourceLocation sheet, int x, int y,
+                                       int w, int h, int sliceX, int sliceY,
+                                       int spriteW, int spriteH, int u, int v) {
+        int left = Math.min(sliceX, w / 2);
+        int right = Math.min(sliceX, w / 2);
+        int top = Math.min(sliceY, h / 2);
+        int bottom = Math.min(sliceY, h / 2);
+        if (w == spriteW && h == spriteH) {
+            graphics.blit(sheet, x, y, u, v, w, h);
+            return;
+        }
+        if (h == spriteH) {
+            graphics.blit(sheet, x, y, u, v, left, h);
+            repeat(graphics, sheet, x + left, y, w - right - left, h,
+                    u + left, v, spriteW - right - left, spriteH);
+            graphics.blit(sheet, x + w - right, y, u + spriteW - right, v, right, h);
+            return;
+        }
+        if (w == spriteW) {
+            graphics.blit(sheet, x, y, u, v, w, top);
+            repeat(graphics, sheet, x, y + top, w, h - bottom - top,
+                    u, v + top, spriteW, spriteH - bottom - top);
+            graphics.blit(sheet, x, y + h - bottom, u, v + spriteH - bottom, w, bottom);
+            return;
+        }
+        graphics.blit(sheet, x, y, u, v, left, top);
+        repeat(graphics, sheet, x + left, y, w - right - left, top,
+                u + left, v, spriteW - right - left, top);
+        graphics.blit(sheet, x + w - right, y, u + spriteW - right, v, right, top);
+        graphics.blit(sheet, x, y + h - bottom, u, v + spriteH - bottom, left, bottom);
+        repeat(graphics, sheet, x + left, y + h - bottom, w - right - left, bottom,
+                u + left, v + spriteH - bottom, spriteW - right - left, bottom);
+        graphics.blit(sheet, x + w - right, y + h - bottom, u + spriteW - right,
+                v + spriteH - bottom, right, bottom);
+        repeat(graphics, sheet, x, y + top, left, h - bottom - top,
+                u, v + top, left, spriteH - bottom - top);
+        repeat(graphics, sheet, x + left, y + top, w - right - left, h - bottom - top,
+                u + left, v + top, spriteW - right - left, spriteH - bottom - top);
+        repeat(graphics, sheet, x + w - right, y + top, right, h - bottom - top,
+                u + spriteW - right, v + top, right, spriteH - bottom - top);
+    }
+
+    /** Vanilla's pre-1.20.2 {@code blitRepeating}: tile a source band rather than stretch it. */
+    private static void repeat(GuiGraphics graphics, ResourceLocation sheet, int x, int y,
+                               int w, int h, int u, int v, int tileW, int tileH) {
+        int drawX = x;
+        for (IntIterator columns = slices(w, tileW); columns.hasNext(); ) {
+            int columnW = columns.nextInt();
+            int uInset = (tileW - columnW) / 2;
+            int drawY = y;
+            for (IntIterator rows = slices(h, tileH); rows.hasNext(); ) {
+                int rowH = rows.nextInt();
+                int vInset = (tileH - rowH) / 2;
+                graphics.blit(sheet, drawX, drawY, u + uInset, v + vInset, columnW, rowH, SHEET, SHEET);
+                drawY += rowH;
+            }
+            drawX += columnW;
+        }
+    }
+
+    private static IntIterator slices(int length, int tile) {
+        return new Divisor(length, Mth.positiveCeilDiv(length, tile));
     }
 
     // --- panel.png ---------------------------------------------------------------------------

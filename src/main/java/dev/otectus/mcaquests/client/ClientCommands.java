@@ -10,10 +10,10 @@ import dev.otectus.mcaquests.compat.ProbeStep;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterClientCommandsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.List;
 
@@ -30,7 +30,7 @@ import java.util.List;
  * so it is safe at any moment; {@code probe} proves the chain by using it, which means adding and
  * removing a real waypoint, and so happens only when somebody asks for it by name.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class ClientCommands {
 
     private ClientCommands() {

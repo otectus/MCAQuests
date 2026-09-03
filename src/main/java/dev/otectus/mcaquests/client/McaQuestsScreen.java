@@ -371,8 +371,9 @@ abstract class McaQuestsScreen extends Screen {
     // --- input ------------------------------------------------------------------------------
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        view.scrollBy(-(int) (delta * 12));
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        // 1.21 splits the wheel into two axes; only the vertical one ever scrolled these screens.
+        view.scrollBy(-(int) (scrollY * 12));
         return true;
     }
 

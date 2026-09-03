@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.client.gui.GuiTextures;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 
@@ -26,6 +27,14 @@ public final class MarkerRenderTypes extends RenderType {
      * Never called. The class exists only to be a subclass, which is the access this needs; it is
      * declared so that no compiler-generated public constructor suggests otherwise.
      */
+    /**
+     * 1.21 dropped {@code POSITION_COLOR_TEX}: the textured-and-tinted format is now
+     * {@code POSITION_TEX_COLOR}, and no public shard names its shader, so the marker declares its
+     * own over {@link GameRenderer#getPositionTexColorShader()}.
+     */
+    private static final RenderStateShard.ShaderStateShard POSITION_TEX_COLOR_SHADER =
+            new RenderStateShard.ShaderStateShard(GameRenderer::getPositionTexColorShader);
+
     private MarkerRenderTypes() {
         super("", DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS, 0, false, false,
                 () -> {
@@ -35,10 +44,10 @@ public final class MarkerRenderTypes extends RenderType {
 
     /** The glyph off {@code icons.png}, drawn where the target can actually be seen. */
     public static final RenderType VISIBLE_ICON = RenderType.create(
-            McaQuests.MOD_ID + ":marker_visible_icon", DefaultVertexFormat.POSITION_COLOR_TEX,
+            McaQuests.MOD_ID + ":marker_visible_icon", DefaultVertexFormat.POSITION_TEX_COLOR,
             VertexFormat.Mode.QUADS, 512, false, true,
             RenderType.CompositeState.builder()
-                    .setShaderState(RenderStateShard.POSITION_COLOR_TEX_SHADER)
+                    .setShaderState(POSITION_TEX_COLOR_SHADER)
                     .setTextureState(new RenderStateShard.TextureStateShard(
                             GuiTextures.ICON_SHEET, false, false))
                     .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
@@ -67,10 +76,10 @@ public final class MarkerRenderTypes extends RenderType {
      * default, so it lives here rather than in the normal path.
      */
     public static final RenderType OCCLUDED_ICON = RenderType.create(
-            McaQuests.MOD_ID + ":marker_occluded_icon", DefaultVertexFormat.POSITION_COLOR_TEX,
+            McaQuests.MOD_ID + ":marker_occluded_icon", DefaultVertexFormat.POSITION_TEX_COLOR,
             VertexFormat.Mode.QUADS, 512, false, true,
             RenderType.CompositeState.builder()
-                    .setShaderState(RenderStateShard.POSITION_COLOR_TEX_SHADER)
+                    .setShaderState(POSITION_TEX_COLOR_SHADER)
                     .setTextureState(new RenderStateShard.TextureStateShard(
                             GuiTextures.ICON_SHEET, false, false))
                     .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)

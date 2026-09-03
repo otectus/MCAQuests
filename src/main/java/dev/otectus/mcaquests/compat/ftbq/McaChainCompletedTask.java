@@ -9,8 +9,9 @@ import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -70,25 +71,25 @@ public class McaChainCompletedTask extends McaBooleanTaskBase {
     }
 
     @Override
-    public void writeData(CompoundTag nbt) {
-        super.writeData(nbt);
+    public void writeData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.writeData(nbt, provider);
         nbt.putString("chain_id", chainId);
     }
 
     @Override
-    public void readData(CompoundTag nbt) {
-        super.readData(nbt);
+    public void readData(CompoundTag nbt, HolderLookup.Provider provider) {
+        super.readData(nbt, provider);
         chainId = nbt.getString("chain_id");
     }
 
     @Override
-    public void writeNetData(FriendlyByteBuf buffer) {
+    public void writeNetData(RegistryFriendlyByteBuf buffer) {
         super.writeNetData(buffer);
         buffer.writeUtf(chainId, Short.MAX_VALUE);
     }
 
     @Override
-    public void readNetData(FriendlyByteBuf buffer) {
+    public void readNetData(RegistryFriendlyByteBuf buffer) {
         super.readNetData(buffer);
         chainId = buffer.readUtf(Short.MAX_VALUE);
     }

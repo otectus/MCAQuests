@@ -6,10 +6,10 @@ import dev.otectus.mcaquests.client.gui.Panel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * The part of the marker that is drawn flat on the screen: an arrow at the edge for a target that is
@@ -24,7 +24,7 @@ import net.minecraftforge.fml.common.Mod;
  * A frame the renderer did not publish draws nothing at all, so a marker cannot linger for a frame
  * after the quest that owned it ended.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class QuestMarkerHud {
 
     /** Half the indicator diamond, in GUI-scaled pixels. The diamond is 18 across. */

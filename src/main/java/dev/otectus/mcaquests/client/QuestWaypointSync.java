@@ -16,11 +16,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +49,7 @@ import java.util.List;
  * clock and returns; the desired set is built only on the ticks where one of those three things
  * actually happened, or where a failing backend has asked to be tried again.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class QuestWaypointSync {
 
     private static final WaypointReconciler RECONCILER = new WaypointReconciler();
@@ -63,8 +63,8 @@ public final class QuestWaypointSync {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || ClientMapWaypointRegistry.isEmpty()) {
+    public static void onClientTick(ClientTickEvent.Post event) {
+        if (ClientMapWaypointRegistry.isEmpty()) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();

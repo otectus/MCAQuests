@@ -205,16 +205,18 @@ public class JournalScreen extends McaQuestsScreen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics);
+        // Screen.render draws the menu background -- the full-screen blur pass and the tint -- itself
+        // since 1.20.2, and then the widgets, so it goes first and this screen's own chrome and
+        // content go on top of it. The 1.20.1 order (draw, then super.render) left everything drawn
+        // here to be blurred and dimmed a second time by the background pass.
+        applyScrolledVisibility();
+        super.render(graphics, mouseX, mouseY, partialTick);
         renderPanel(graphics);
 
         if (rows.isEmpty()) {
             renderEmptyState(graphics, Component.translatable("mcaquests.screen.journal.empty"));
-            super.render(graphics, mouseX, mouseY, partialTick);
             return;
         }
-
-        applyScrolledVisibility();
 
         beginContentClip(graphics);
         int y = 0;
@@ -224,7 +226,6 @@ public class JournalScreen extends McaQuestsScreen {
         }
         endContentClip(graphics);
         renderScrollbar(graphics, mouseX, mouseY);
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     private void renderRow(GuiGraphics graphics, Row row, int contentY) {

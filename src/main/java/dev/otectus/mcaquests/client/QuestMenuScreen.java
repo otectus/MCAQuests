@@ -274,14 +274,18 @@ public class QuestMenuScreen extends McaQuestsScreen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics);
+        // Screen.render draws the menu background -- the full-screen blur pass and the tint -- itself
+        // since 1.20.2, and then the widgets, so it goes first and this screen's own chrome and
+        // content go on top of it. The 1.20.1 order (draw, then super.render) left everything drawn
+        // here to be blurred and dimmed a second time by the background pass.
+        applyScrolledVisibility();
+        super.render(graphics, mouseX, mouseY, partialTick);
         renderPanel(graphics);
         renderVillagerHeader(graphics, mouseX, mouseY);
 
         if (data.cards().isEmpty()) {
             renderEmptyState(graphics, Component.translatable("mcaquests.status.no_quests"));
         } else {
-            applyScrolledVisibility();
             boolean ready = data.status() == QuestMenuStatus.READY;
             beginContentClip(graphics);
             for (int i = 0; i < data.cards().size(); i++) {
@@ -291,7 +295,6 @@ public class QuestMenuScreen extends McaQuestsScreen {
             endContentClip(graphics);
             renderScrollbar(graphics, mouseX, mouseY);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     /** Portrait, name, profession and hearts, between the title band and the cards. */
@@ -349,8 +352,15 @@ public class QuestMenuScreen extends McaQuestsScreen {
         int anchorX = x + PORTRAIT_W / 2;
         int anchorY = y + PORTRAIT_H - 3;
         graphics.enableScissor(x + 1, y + 1, x + PORTRAIT_W - 1, y + PORTRAIT_H - 1);
-        InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, anchorX, anchorY, PORTRAIT_SCALE,
-                (float) anchorX - mouseX, (float) (anchorY - PORTRAIT_H / 2) - mouseY, entity);
+        // 1.21 takes a box rather than an anchor and centres the entity in it, and it takes the look
+        // angles rather than the mouse offsets that used to be turned into them. The box is centred
+        // on the old anchor and is deliberately larger than the portrait, because the method scissors
+        // to it too and the scissor stack intersects -- so the clip above is still the one that bites.
+        float angleX = (float) Math.atan(((float) anchorX - mouseX) / 40.0F);
+        float angleY = (float) Math.atan(((float) (anchorY - PORTRAIT_H / 2) - mouseY) / 40.0F);
+        InventoryScreen.renderEntityInInventoryFollowsAngle(graphics,
+                anchorX - PORTRAIT_W, anchorY - PORTRAIT_H, anchorX + PORTRAIT_W, anchorY + PORTRAIT_H,
+                PORTRAIT_SCALE, 0.0625F, angleX, angleY, entity);
         graphics.disableScissor();
     }
 

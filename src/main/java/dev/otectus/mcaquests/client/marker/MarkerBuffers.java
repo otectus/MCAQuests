@@ -1,6 +1,6 @@
 package dev.otectus.mcaquests.client.marker;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import net.minecraft.client.renderer.MultiBufferSource;
 
 /**
@@ -12,13 +12,19 @@ import net.minecraft.client.renderer.MultiBufferSource;
  * it does not, and when it does not the symptom appears in somebody else's renderer.
  *
  * <p>Created on first use, which is on the render thread inside a
- * {@code RenderLevelStageEvent}: {@link BufferBuilder} is not thread-safe and there is no second
+ * {@code RenderLevelStageEvent}: {@link ByteBufferBuilder} is not thread-safe and there is no second
  * caller, so there is nothing here to synchronise.
  */
 public final class MarkerBuffers {
 
     /** Big enough for one marker's quads and its label, small enough to be nothing on the heap. */
     private static final int BUFFER_BYTES = 2048;
+
+    /**
+     * Held for the life of the client rather than closed: {@link ByteBufferBuilder} owns off-heap
+     * memory the buffer source keeps writing into, so closing it would free the source's backing.
+     */
+    private static ByteBufferBuilder buffer;
 
     private static MultiBufferSource.BufferSource source;
 
@@ -28,7 +34,8 @@ public final class MarkerBuffers {
     /** The renderer-owned source. Only ever called from the client render thread. */
     public static MultiBufferSource.BufferSource get() {
         if (source == null) {
-            source = MultiBufferSource.immediate(new BufferBuilder(BUFFER_BYTES));
+            buffer = new ByteBufferBuilder(BUFFER_BYTES);
+            source = MultiBufferSource.immediate(buffer);
         }
         return source;
     }

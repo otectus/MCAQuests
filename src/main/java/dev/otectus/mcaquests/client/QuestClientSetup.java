@@ -6,14 +6,15 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.client.map.MapSyncDirtyFlag;
 import dev.otectus.mcaquests.client.marker.MarkerSettings;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 
 /**
  * Client mod-bus setup: the keybinds and the HUD tracker overlay (spec section 21).
@@ -23,7 +24,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
  * villager menu and from each other's tab strip — so they are registered unbound, and a player who
  * wants a key for them says so in Controls.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class QuestClientSetup {
 
     /** Unbound by default so it never clashes; the player assigns it in Controls. */
@@ -58,8 +59,9 @@ public final class QuestClientSetup {
     }
 
     @SubscribeEvent
-    public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
-        event.registerAboveAll("quest_tracker", new QuestHudOverlay());
+    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAboveAll(
+                ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "quest_tracker"), new QuestHudOverlay());
     }
 
     /**

@@ -2,7 +2,7 @@ package dev.otectus.mcaquests.client.map;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.MapWaypointBackend;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import java.lang.reflect.Method;
 

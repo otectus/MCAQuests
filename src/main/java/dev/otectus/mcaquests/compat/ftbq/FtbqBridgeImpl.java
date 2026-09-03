@@ -166,10 +166,10 @@ public final class FtbqBridgeImpl implements FtbqBridge {
             if (ServerQuestFile.INSTANCE == null) {
                 return new int[]{0, 0};
             }
-            int taskCount = ServerQuestFile.INSTANCE.<Task>collect(o -> o instanceof Task task
-                    && McaQuests.MOD_ID.equals(task.getType().getTypeId().getNamespace())).size();
-            int rewardCount = ServerQuestFile.INSTANCE.<Reward>collect(o -> o instanceof Reward reward
-                    && McaQuests.MOD_ID.equals(reward.getType().getTypeId().getNamespace())).size();
+            int taskCount = ServerQuestFile.INSTANCE.collect(Task.class, task ->
+                    McaQuests.MOD_ID.equals(task.getType().getTypeId().getNamespace())).size();
+            int rewardCount = ServerQuestFile.INSTANCE.collect(Reward.class, reward ->
+                    McaQuests.MOD_ID.equals(reward.getType().getTypeId().getNamespace())).size();
             return new int[]{taskCount, rewardCount};
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("[MCA: Quests] FTBQ bridge {} failed", "integrationObjectCounts", t);
@@ -199,12 +199,12 @@ public final class FtbqBridgeImpl implements FtbqBridge {
                 return List.of();
             }
             List<FtbqBridge.BookReference> findings = new ArrayList<>();
-            for (Task task : ServerQuestFile.INSTANCE.<Task>collect(o -> o instanceof Task t
-                    && McaQuests.MOD_ID.equals(t.getType().getTypeId().getNamespace()))) {
+            for (Task task : ServerQuestFile.INSTANCE.collect(Task.class, t ->
+                    McaQuests.MOD_ID.equals(t.getType().getTypeId().getNamespace()))) {
                 checkTask(task, findings);
             }
-            for (Reward reward : ServerQuestFile.INSTANCE.<Reward>collect(o -> o instanceof Reward r
-                    && McaQuests.MOD_ID.equals(r.getType().getTypeId().getNamespace()))) {
+            for (Reward reward : ServerQuestFile.INSTANCE.collect(Reward.class, r ->
+                    McaQuests.MOD_ID.equals(r.getType().getTypeId().getNamespace()))) {
                 checkReward(reward, findings);
             }
             return findings;

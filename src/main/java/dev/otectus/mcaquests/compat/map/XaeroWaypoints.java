@@ -16,7 +16,7 @@ import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;

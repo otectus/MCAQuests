@@ -32,12 +32,10 @@ import java.util.List;
  *       accessibility setting. Turning that slider up did nothing to any toast this mod showed.</li>
  * </ul>
  *
- * <p>The frame stays vanilla's own {@code textures/gui/toasts.png} rather than becoming a mod texture,
+ * <p>The frame stays vanilla's own {@code toast/advancement} GUI sprite rather than becoming a mod texture,
  * so a resource pack restyles these along with every other toast on screen.
  */
 public abstract class McaToast implements Toast {
-
-    private static final ResourceLocation TEXTURE = ResourceLocation.parse("textures/gui/toasts.png");
 
     /** Vanilla's own display time, before the accessibility multiplier. */
     private static final long DISPLAY_TIME = 5000L;
@@ -65,7 +63,8 @@ public abstract class McaToast implements Toast {
 
     @Override
     public Visibility render(GuiGraphics graphics, ToastComponent toastComponent, long timeSinceLastVisible) {
-        graphics.blit(TEXTURE, 0, 0, 0, 0, this.width(), this.height());
+        graphics.blitSprite(ResourceLocation.withDefaultNamespace("toast/advancement"), 0, 0,
+                this.width(), this.height());
         Font font = toastComponent.getMinecraft().font;
         Panel.icon(graphics, icon, ICON_X, ICON_Y);
 

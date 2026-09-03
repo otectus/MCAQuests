@@ -24,10 +24,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -64,7 +64,7 @@ import java.util.Optional;
  * once-a-second recomputes rather than stepping twenty times a second. Nothing else here animates:
  * {@link MarkerVisualState} changes opacity over time and never position.
  */
-@Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class QuestMarkerRenderer {
 
     /** A sliver of daylight under a surface-aligned glyph, in logical pixels. */
@@ -172,6 +172,11 @@ public final class QuestMarkerRenderer {
             return;
         }
 
+        // 1.21 hands the stage event a DeltaTracker rather than a float. {@code ignoreFreeze=false}
+        // is the entity-rendering behaviour: while the world is frozen the tracker answers 1.0, so
+        // the marker sits on the entity's last tick position instead of gliding on without it.
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+
         long now = Util.getMillis();
         // The primary entry, never the whole list: the snapshot names a destination per quest so the
         // tracker can print them all, and the server marks exactly one of them as the marker's.
@@ -185,7 +190,7 @@ public final class QuestMarkerRenderer {
             // A marker for another dimension would be drawn at a coordinate that means nothing here --
             // the Nether's are the overworld's divided by eight. Objectives answer with a route.
             target = guidance.get().target();
-            anchor = anchor(minecraft.level, target, event.getPartialTick());
+            anchor = anchor(minecraft.level, target, partialTick);
             MarkerVisualState.Key key = new MarkerVisualState.Key(
                     guidance.get().questId(), guidance.get().villagerUuid(), identity(target));
             if (STATE.observe(key, now, settings.reducedMotion())) {
@@ -468,10 +473,10 @@ public final class QuestMarkerRenderer {
         int g = (colour >> 8) & 0xFF;
         int b = colour & 0xFF;
         int a = (int) (alpha * 255.0F);
-        builder.vertex(matrix, 0.0F, -half, 0.0F).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, half, 0.0F, 0.0F).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, 0.0F, half, 0.0F).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, -half, 0.0F, 0.0F).color(r, g, b, a).endVertex();
+        builder.addVertex(matrix, 0.0F, -half, 0.0F).setColor(r, g, b, a);
+        builder.addVertex(matrix, half, 0.0F, 0.0F).setColor(r, g, b, a);
+        builder.addVertex(matrix, 0.0F, half, 0.0F).setColor(r, g, b, a);
+        builder.addVertex(matrix, -half, 0.0F, 0.0F).setColor(r, g, b, a);
     }
 
     /** The ring between two diamonds, so the middle stays empty rather than being painted over. */
@@ -492,10 +497,10 @@ public final class QuestMarkerRenderer {
                                   float x0, float y0, float x1, float y1,
                                   float x2, float y2, float x3, float y3,
                                   int r, int g, int b, int a) {
-        builder.vertex(matrix, x0, y0, 0.0F).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, x1, y1, 0.0F).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, x2, y2, 0.0F).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, x3, y3, 0.0F).color(r, g, b, a).endVertex();
+        builder.addVertex(matrix, x0, y0, 0.0F).setColor(r, g, b, a);
+        builder.addVertex(matrix, x1, y1, 0.0F).setColor(r, g, b, a);
+        builder.addVertex(matrix, x2, y2, 0.0F).setColor(r, g, b, a);
+        builder.addVertex(matrix, x3, y3, 0.0F).setColor(r, g, b, a);
     }
 
     /** The kind's glyph off {@code icons.png}, inside the frame. */
@@ -511,10 +516,10 @@ public final class QuestMarkerRenderer {
         float v1 = (sprite.v() + sprite.height()) / (float) GuiTextures.SHEET;
         int a = (int) (alpha * 255.0F);
         // Pixel space runs the same way the sheet does -- +Y down -- so the V pair is not swapped.
-        builder.vertex(matrix, -GLYPH_HALF, -GLYPH_HALF, 0.0F).color(255, 255, 255, a).uv(u0, v0).endVertex();
-        builder.vertex(matrix, -GLYPH_HALF, GLYPH_HALF, 0.0F).color(255, 255, 255, a).uv(u0, v1).endVertex();
-        builder.vertex(matrix, GLYPH_HALF, GLYPH_HALF, 0.0F).color(255, 255, 255, a).uv(u1, v1).endVertex();
-        builder.vertex(matrix, GLYPH_HALF, -GLYPH_HALF, 0.0F).color(255, 255, 255, a).uv(u1, v0).endVertex();
+        builder.addVertex(matrix, -GLYPH_HALF, -GLYPH_HALF, 0.0F).setColor(255, 255, 255, a).setUv(u0, v0);
+        builder.addVertex(matrix, -GLYPH_HALF, GLYPH_HALF, 0.0F).setColor(255, 255, 255, a).setUv(u0, v1);
+        builder.addVertex(matrix, GLYPH_HALF, GLYPH_HALF, 0.0F).setColor(255, 255, 255, a).setUv(u1, v1);
+        builder.addVertex(matrix, GLYPH_HALF, -GLYPH_HALF, 0.0F).setColor(255, 255, 255, a).setUv(u1, v0);
     }
 
     /** The target's name and how far it is, above the frame, in vanilla's name-tag style. */
@@ -601,10 +606,10 @@ public final class QuestMarkerRenderer {
             float s0 = RING_SIN[i];
             float c1 = RING_COS[i + 1];
             float s1 = RING_SIN[i + 1];
-            builder.vertex(matrix, inner * c0, y, inner * s0).color(r, g, b, a).endVertex();
-            builder.vertex(matrix, outer * c0, y, outer * s0).color(r, g, b, a).endVertex();
-            builder.vertex(matrix, outer * c1, y, outer * s1).color(r, g, b, a).endVertex();
-            builder.vertex(matrix, inner * c1, y, inner * s1).color(r, g, b, a).endVertex();
+            builder.addVertex(matrix, inner * c0, y, inner * s0).setColor(r, g, b, a);
+            builder.addVertex(matrix, outer * c0, y, outer * s0).setColor(r, g, b, a);
+            builder.addVertex(matrix, outer * c1, y, outer * s1).setColor(r, g, b, a);
+            builder.addVertex(matrix, inner * c1, y, inner * s1).setColor(r, g, b, a);
         }
     }
 
@@ -642,10 +647,10 @@ public final class QuestMarkerRenderer {
         int a = (int) (alpha * 0.35F * 255.0F);
         float y0 = (float) RING_LIFT;
         float y1 = (float) glyphOffset;
-        builder.vertex(matrix, -px, y0, -pz).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, px, y0, pz).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, px, y1, pz).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, -px, y1, -pz).color(r, g, b, a).endVertex();
+        builder.addVertex(matrix, -px, y0, -pz).setColor(r, g, b, a);
+        builder.addVertex(matrix, px, y0, pz).setColor(r, g, b, a);
+        builder.addVertex(matrix, px, y1, pz).setColor(r, g, b, a);
+        builder.addVertex(matrix, -px, y1, -pz).setColor(r, g, b, a);
     }
 
     /**
@@ -672,9 +677,9 @@ public final class QuestMarkerRenderer {
     /** One vertical quad, at full strength on the ground and gone by the top. */
     private static void columnQuad(VertexConsumer builder, Matrix4f matrix, float x0, float z0,
                                    float x1, float z1, float top, int r, int g, int b, int a) {
-        builder.vertex(matrix, x0, 0.0F, z0).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, x1, 0.0F, z1).color(r, g, b, a).endVertex();
-        builder.vertex(matrix, x1, top, z1).color(r, g, b, 0).endVertex();
-        builder.vertex(matrix, x0, top, z0).color(r, g, b, 0).endVertex();
+        builder.addVertex(matrix, x0, 0.0F, z0).setColor(r, g, b, a);
+        builder.addVertex(matrix, x1, 0.0F, z1).setColor(r, g, b, a);
+        builder.addVertex(matrix, x1, top, z1).setColor(r, g, b, 0);
+        builder.addVertex(matrix, x0, top, z0).setColor(r, g, b, 0);
     }
 }
