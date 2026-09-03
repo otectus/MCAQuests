@@ -447,20 +447,21 @@ tasks.register('jarSmokeCheck') {
     inputs.file(builtJar)
     doLast {
         def jarFile = builtJar.get().asFile
-        def names = zipTree(jarFile).matching { include '**/*' }.files.collect {
-            it.absolutePath.replace('\\', '/')
-        }
-        // zipTree explodes into a staging directory, so entries are compared by their path suffix.
-        def contains = { String entry -> names.any { it.endsWith('/' + entry) } }
-        ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json'].each { required ->
+        // Jar-relative entry paths (zipTree explodes into a staging dir, so use relativePath).
+        def names = []
+        zipTree(jarFile).visit { details -> if (!details.directory) names << details.relativePath.pathString }
+        def contains = { String entry -> names.contains(entry) }
+        ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json', 'pack.mcmeta'].each { required ->
             if (!contains(required)) {
                 throw new GradleException("${jarFile.name} is missing ${required}.")
             }
         }
+        // Top-level package prefixes only: the mod's own dev/otectus/mcaquests/compat/journeymap/**
+        // must not be mistaken for a bundled JourneyMap.
         def forbidden = ['net/minecraftforge/', 'net/conczin/', 'net/mca/', 'forge/net/mca/',
                          'dev/ftb/', 'journeymap/', 'xaero/', 'dev/architectury/',
                          'dev/otectus/mcareputation/']
-        def bundled = names.findAll { name -> forbidden.any { name.contains('/' + it) } }
+        def bundled = names.findAll { name -> forbidden.any { name.startsWith(it) } }
         if (!bundled.isEmpty()) {
             throw new GradleException("${jarFile.name} bundles third-party classes: " +
                     "${bundled.take(10).join(', ')} (${bundled.size()} entries).")
