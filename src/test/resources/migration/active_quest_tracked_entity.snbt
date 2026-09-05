@@ -1,0 +1,54 @@
+{
+  active: [
+    {
+      quest: "mcaquests:road_caravan_through",
+      villager: [I; -1451712, 1204553041, -1442840576, -913226301],
+      villager_name: '{"text":"Bartholomew"}',
+      profession: "mca:guard",
+      dimension: "minecraft:overworld",
+      start: 480000L,
+      start_day: 6000L,
+      village: 3,
+      claimed: 0b,
+      ready_notified: 1b,
+      suspended_ticks: 2400L,
+      progress: [
+        {
+          count: 1,
+          target: [I; 305419896, -1412567278, 1985229328, -19088744]
+        },
+        {
+          count: 0,
+          elapsed: 1200L,
+          target: [I; 305419896, -1412567278, 1985229328, -19088744],
+          visited: [L; 1234567L, -98765432L],
+          talked_to: ["7b1c4b6e-1e5c-4a2f-9c3d-8a5f6e7d0b11", "0b9d6c5a-2f3e-4d1c-8b7a-6e5f4d3c2b1a"],
+          extra: { fail_armed: 1b }
+        }
+      ],
+      frozen_rewards: { "0": 61 },
+      frozen_locations: {
+        "other_village/2048/nearest_to_giver": {
+          schema: 1,
+          pos: 8589934690L,
+          dim: "minecraft:overworld",
+          village: 11
+        }
+      }
+    }
+  ],
+  history: {
+    cooldowns: {},
+    completions: {},
+    outcomes: {},
+    completions_by_giver: {},
+    outcomes_by_giver: {}
+  },
+  titles: {},
+  stats: {},
+  offers: {},
+  tracked: {
+    quest: "mcaquests:road_caravan_through",
+    villager: [I; -1451712, 1204553041, -1442840576, -913226301]
+  }
+}

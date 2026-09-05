@@ -1,0 +1,23 @@
+{
+  active: [
+    {
+      quest: "mcaquests:archer_cull_from_afar",
+      villager: [I; 55501, -55502, 55503, -55504],
+      villager_name: '{"text":"Delilah"}',
+      dimension: "minecraft:overworld",
+      start: 36000L,
+      claimed: 0b,
+      progress: [
+        { count: 5 }
+      ]
+    }
+  ],
+  history: {
+    cooldowns: {
+      "mcaquests:archer_cull_from_afar|7b1c4b6e-1e5c-4a2f-9c3d-8a5f6e7d0b11": 60000L
+    },
+    completions: {
+      "mcaquests:archer_cull_from_afar": 1
+    }
+  }
+}

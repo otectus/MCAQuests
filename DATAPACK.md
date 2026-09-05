@@ -253,9 +253,11 @@ middle, or their progress shifts onto the wrong objective. "Targets" accept **ei
 | `mcaquests:obtain_item` | item target, `count` | Have the items in inventory. |
 | `mcaquests:craft_item` | item target, `count` | Craft that many. |
 | `mcaquests:fish_item` | item target, `count` | Fish up that many. |
+| `mcaquests:use_item` | `item` (resource location), `count`, `require_success` (bool, default `false`), `source` (optional) | Use an item (right-click). `require_success:false` credits any use attempt; `require_success:true` credits only a finished use for items with a use duration (e.g., eating, drawing a bow). An item id that is not registered makes the quest unofferable/paused rather than failing to load. |
 | `mcaquests:kill_entity` | entity target, `count` | Player-credited kills. Credit follows the blow, the player's **tamed animal**, or — when something else lands the last hit (TNT, lava, a fall after the player struck) — vanilla's own kill credit, the same rule the death message uses. `defend_villager`, `defend_location` and the project kill objectives all read the same answer. |
 | `mcaquests:break_block` | block target, `count` | Player-broken blocks. |
 | `mcaquests:place_block` | block target, `count` | Player-placed blocks. |
+| `mcaquests:interact_block` | exactly one of `block` or `tag`, `count`, `source` (optional) | Right-click a block. The interaction is never cancelled and its result is never changed — credited only on server-side success. A block id that is not registered makes the quest unofferable/paused rather than failing to load; a tag is strict (a tag that resolves to nothing is always unmatched). |
 | `mcaquests:visit_biome` | biome target | Enter a matching biome. |
 | `mcaquests:visit_dimension` | `dimension` (resource location) | Enter that dimension, e.g. `minecraft:the_nether`. |
 | `mcaquests:talk_to_profession` | `profession` (resource location), `count` | Interact with that many villagers of a profession. |
@@ -271,6 +273,7 @@ dimension change, villager/chunk unload, and dedicated-server restart. They neve
 | `mcaquests:defend_villager` | `villager` (default self), `threat` (entity target, req.), `radius` (1–64, def 16), `count` (def 5) | Kill hostile threats near a villager. |
 | `mcaquests:defend_location` | `location` (anchor, req.), `threat` (entity target, req.), `radius` (1–64, def 16), `count` (def 5) | Kill hostile threats near a fixed place (a gate, well, village center) — the place-anchored sibling of `defend_villager`. |
 | `mcaquests:trade_with_villager` | `villager` **or** `profession` (both optional), `count` (def 1) | Complete trades with a villager / profession. |
+| `mcaquests:bountiful_bounties` | `count`, `min_rarity` (optional, one of `COMMON`/`UNCOMMON`/`RARE`/`EPIC`/`LEGENDARY`), `source` (optional) | Cash in Bountiful bounties (hand them to a bounty board). Requires the Bountiful cash-in hook capability; when absent, the quest is not offered / pauses. When `min_rarity` is set, it additionally requires the rarity-reading capability — an objective with an unreadable rarity is also unavailable. |
 | `mcaquests:heal_entity` | `villager` (default self), item target (req.), `below_health_fraction` (0–1, def 1.0), `count` (def 1), `consume` (bool, def false) | Use a remedy item on a hurt villager. |
 | `mcaquests:cure_villager` | `villager` (default self), `cure_item` (anchored item, def golden apple) | Cure an infected (zombifying) MCA villager. |
 | `mcaquests:breed_animals` | `animal` (entity target, req.), `near` (anchor, optional), `radius` (def 32), `count` (def 1) | Breed animals, optionally near a place. |
@@ -570,6 +573,7 @@ An extra gate on whether the quest is **offered**. A single condition object, wh
 | `mcaquests:quest_declined` | `quest` (resource location), `scope` — true once the player turned that offer down. Declining costs nothing, so branch on it as a preference ("offer the softer version instead"), not as a punishment |
 | `mcaquests:village_reputation` | `min`, `max` — raw reputation with the giver's village |
 | `mcaquests:reputation_tier` | `min_tier` (required), `max_tier`, `ladder` (default `mcaquests:default`) — tier with the giver's village (see Progression) |
+| `mcaquests:compat_capability` | `provider` (required), `capability` (required), `present` (bool, default `true`) | True when a registered optional-mod provider reports a capability as present (or absent, when `present: false`). Used to gate content on third-party mods: Ice & Fire, Bountiful, and built-in facilities like Townstead. An unknown provider or capability id is simply not present — it is not a parse error, because a pack may legitimately name a provider that an add-on registers. See Optional-mod compatibility below. |
 
 > **`scope`** on the four quest-state conditions chooses whose history they read. `global` (the default)
 > counts the quest across all villagers — the historical behaviour. `giver` counts only what the player did
@@ -711,6 +715,53 @@ Townstead is absent rather than suspending, because nothing about it has stopped
 `townstead_village_storage` is **not** implemented and never parses: Townstead exposes no registered
 storage API that could be written to safely, and a destination that silently ate a donation would be
 worse than none.
+
+---
+
+## Optional-mod compatibility
+
+Three optional mods have built-in integration with MCA: Quests: **Townstead**, **Ice & Fire**, and **Bountiful**. Content that uses them gates on the mod's availability via the `compat_capability` condition, and when the mod is absent the content is *paused* rather than *lost* — a player holding a quest that names absent content keeps it in their log, and it resumes when the mod returns.
+
+### Conditional compatibility packs
+
+MCA: Quests ships built-in quest and bounty content for these mods, mounted as datapacks only when their requirements are met. Requirements combine two things: a **capability probe** (is the mod and its content actually here?) and a **config switch** (does this server want our take on it?). When both are true the pack is loaded; when either is false it is skipped but can be overridden or re-authored by a datapack.
+
+| Pack ID | Mounted when | Contents |
+|---|---|---|
+| `mcaquests/iafce_quests` | Ice & Fire installed with dragons, and `compat.iceandfire.enableBuiltinContent` on | Quest ids: `mcaquests:compat/iceandfire/*` — dragon hunts, armor quests, structure expeditions |
+| `mcaquests/bountiful_core` | Bountiful installed with board registered, and `compat.bountiful.enableBuiltinContent` on | Quest ids: `mcaquests:compat/bountiful/*` — bounty board discovery, quest chains for contract specialties |
+| `mcaquests/bountiful_iafce` | Both mods above, and `compat.bountiful.enableIceAndFirePools` on | Bounty pools and decrees for Ice & Fire hunts (not quests), fed to Bountiful's own generator |
+
+A pack author can override or disable a quest by creating a datapack with an identical resource path. For example, to shadow `mcaquests:compat/iceandfire/dragon_seeker_trial` (which conventionally matches its quest id), create a datapack at `data/mcaquests/mcaquests/quests/compat/iceandfire/dragon_seeker_trial.json` — the merge resolves the override by resource path (which conventionally matches the quest id), so you can shadow a built-in quest completely or copy it and vary one field. An owner's datapack wins over the mounted compat pack at the same path.
+
+### How missing content behaves
+
+When a datapack or a player's active quest names an item, entity, block, or mod capability that is not available (a bounty rarity reader that is absent, an Ice & Fire creature that does not exist in this build):
+
+- **Parsing:** The quest still loads. An item/entity/block id that is not registered is kept as written (not silently dropped) so a round-trip through the codec on a world that cannot resolve it does not lose the data.
+- **Offering:** The quest is not offered to new players.
+- **Active copies:** A copy a player already holds is **paused**, not removed. The objective reads as unavailable rather than broken, and the quest cannot be turned in or completed.
+- **Recovery:** When the content returns (a mod is installed or re-enabled), the same save picks the quest straight back up and resumes progress.
+
+**Related settings:**
+
+- `compat.validation.logMissingOptionalContent` (default on) — warn when a quest names content that is not installed. Useful for development; turn off on a server that deliberately ships packs for mods it does not have.
+- `compat.iceandfire.enabled` — master switch for the Ice & Fire integration. When off, all iceandfire capabilities report unavailable and gated content pauses.
+- `compat.bountiful.mode` — how far the Bountiful integration goes (AUTO / DATA_ONLY / OFF). AUTO uses the full integration when Bountiful has the right hooks; DATA_ONLY reads pools and rarity but never tracks completions; OFF disables it entirely.
+
+When naming a capability in a `compat_capability` condition, the `capability` string must match exactly as listed below — some providers use bare ids (e.g. `read_needs`), while others prefix them with a namespace (e.g. `iceandfire.fire_dragon`). The wrong format never matches, because the string is compared byte-for-byte against the provider's registered id.
+
+### Available providers and capabilities
+
+The registry queried by `mcaquests:compat_capability` is populated at startup with these built-in providers. Add-ons may register additional ones. Query with `/mcaquests compat status` to see what is available in your installation.
+
+| `provider` | Loaded when | Capabilities | Example |
+|---|---|---|---|
+| `mca` | MCA Reborn is installed | `villagers` (MCA villagers are bindable) | `{"type": "mcaquests:compat_capability", "provider": "mca", "capability": "villagers"}` |
+| `townstead` | Townstead is installed | Data-driven; varies by configuration. Common: `read_schedule`, `read_building`, `read_needs`, `read_profession`, `read_spirit`, `mutate_needs`, `dispatch_reaction`. | `{"type": "mcaquests:compat_capability", "provider": "townstead", "capability": "read_needs"}` |
+| `iceandfire` | Ice & Fire is installed | `iceandfire.core` (at least one dragon); `iceandfire.fire_dragon`, `iceandfire.ice_dragon`, `iceandfire.lightning_dragon`, `iceandfire.myrmex` (absent from Community Edition), `iceandfire.dread_mobs`, `iceandfire.dragon_seekers`, `iceandfire.netherite_dragon_armor`, `iceandfire.netherite_hippogryph_armor`, `iceandfire.structures`, `iceandfire.brush_scales` (Community Edition only), `iceandfire.dragon_forge_blood` (Community Edition only). | `{"type": "mcaquests:compat_capability", "provider": "iceandfire", "capability": "iceandfire.fire_dragon"}` |
+| `bountiful` | Bountiful is installed | `bountiful.data_pack` (our pools can be mounted), `bountiful.board_registry` (the bounty board block exists), `bountiful.cash_in_hook` (cash-ins are observable), `bountiful.read_rarity` (bounty rarity can be read), `bountiful.read_objectives` (bounty objective lists can be read). | `{"type": "mcaquests:compat_capability", "provider": "bountiful", "capability": "bountiful.cash_in_hook"}` |
+| `ftbquests` | FTB Quests is installed | `book` (FTB Quests is reachable), `progress` (reads/writes to the book are allowed). | `{"type": "mcaquests:compat_capability", "provider": "ftbquests", "capability": "progress"}` |
 
 ---
 
@@ -1588,6 +1639,58 @@ otherwise compete with static quests, defaulting above them via `situationDefaul
 
 `/mcaquests situation list` (loaded definitions + open instances), `info <id>`, `debug` (open
 situations for the nearest villager's village), and `validate` (op 3) report problems from the last load.
+
+---
+
+## MCA: Reputation integration (optional)
+
+*(requires the optional [MCA: Reputation](https://www.curseforge.com/minecraft/mc-mods/mca-reputation) mod)*
+
+Two conditions read the player's standing and opinion within the MCA: Reputation system. They are registered whether or not MCA: Reputation is installed — a datapack using them parses and validates identically either way, and they simply never match when the mod is absent or the data cannot be read.
+
+### Conditions
+
+| `type` | Fields | True when |
+|---|---|---|
+| `mcareputation:has_incident` | `incident` (resource location, optional), `status` (list of strings, optional), `tags` (list of strings, optional), `known_to_giver` (boolean, optional), `negate` (boolean, optional) | A deed on the player's public record with the giver's village matches the selector. |
+| `mcareputation:villager_opinion` | `min_tier` (string, optional), `max_tier` (string, optional), `basis` (string or list, optional) | The giver's personal opinion of the player sits in the tier band and rests on how they came by it. |
+
+#### `has_incident` — public deeds on the village record
+
+The giver's **village** has recorded a deed on the player's account that matches your selector.
+
+```json
+{
+  "type": "mcareputation:has_incident",
+  "incident": "mcareputation:villager_assaulted",
+  "status": ["active", "apologized"],
+  "known_to_giver": true
+}
+```
+
+Fields:
+- `incident` (optional): A specific incident kind, e.g. `mcareputation:villager_assaulted`. Omit to match any incident.
+- `status` (optional list): Incident statuses to match. Valid values are `active`, `apologized`, `atoned`, `forgiven`, `disproven`, `expired` (case-insensitive). Omit to match any status.
+- `tags` (optional list): Incident tags to match. Omit to match any tags.
+- `known_to_giver` (optional boolean, default false): Only count incidents the quest giver actually knows about.
+- `negate` (optional boolean, default false): Invert the condition — the deed must not match the selector.
+
+Without MCA: Reputation, nothing is recorded and the condition is never met — the same honest degradation the complementary `villager_opinion` condition makes.
+
+#### `villager_opinion` — what the giver personally thinks
+
+The **giver themselves** holds an opinion of the player that differs from the village record. A villager who was directly involved in something (`involved` basis) is less swayed by village standing than one who only heard about it (`hearsay`). The five tiers ordered on the default Quests ladder are: `stranger`, `acquaintance`, `friend`, `honored`, `revered`.
+
+```json
+{ "type": "mcareputation:villager_opinion", "min_tier": "friend", "max_tier": "revered", "basis": ["involved", "witnessed"] }
+```
+
+Fields:
+- `min_tier` (optional): Minimum tier for the condition to pass.
+- `max_tier` (optional): Maximum tier.
+- `basis` (optional): A single basis string or a list, case-insensitive. Values: `involved` (directly involved), `witnessed` (saw it happen), `hearsay` (heard from someone else), `none` (no knowledge yet). Matches only opinions resting on one of these bases.
+
+Without MCA: Reputation, or without a build of MCA: Reputation that includes the per-villager opinion API, the condition is never met — answering "yes" to a question nobody can answer would have villagers reacting to things they never witnessed.
 
 ---
 

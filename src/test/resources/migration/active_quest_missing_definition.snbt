@@ -1,0 +1,29 @@
+{
+  active: [
+    {
+      quest: "mcaquests:compat/iceandfire/fire_dragon_hunt",
+      villager: [I; 2001, -2002, 2003, -2004],
+      villager_name: '{"text":"Cyrus"}',
+      profession: "mca:adventurer",
+      dimension: "minecraft:overworld",
+      start: 96000L,
+      start_day: 500L,
+      village: 2,
+      claimed: 0b,
+      ready_notified: 0b,
+      progress: [
+        { count: 1 }
+      ]
+    }
+  ],
+  history: {
+    cooldowns: {},
+    completions: {},
+    outcomes: {},
+    completions_by_giver: {},
+    outcomes_by_giver: {}
+  },
+  titles: {},
+  stats: {},
+  offers: {}
+}

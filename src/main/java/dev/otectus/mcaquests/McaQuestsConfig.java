@@ -105,6 +105,16 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue syncFtbqEditorIds;
 
         // Townstead optional integration (Townstead spec section 11, v1.4.0).
+        public final ForgeConfigSpec.BooleanValue logMissingOptionalContent;
+
+        // Ice & Fire optional integration (1.5.4 spec, WP2).
+        public final ForgeConfigSpec.BooleanValue iceAndFireEnabled;
+        public final ForgeConfigSpec.BooleanValue iceAndFireEnableBuiltinContent;
+
+        // Bountiful optional integration (1.5.4 spec, WP5).
+        public final ForgeConfigSpec.EnumValue<BountifulMode> bountifulMode;
+        public final ForgeConfigSpec.BooleanValue bountifulEnableBuiltinContent;
+        public final ForgeConfigSpec.BooleanValue bountifulEnableIceAndFirePools;
         public final ForgeConfigSpec.BooleanValue townsteadEnabled;
         public final ForgeConfigSpec.BooleanValue townsteadContentEnabled;
         public final ForgeConfigSpec.BooleanValue townsteadReactionsEnabled;
@@ -396,6 +406,58 @@ public final class McaQuestsConfig {
                     .defineInRange("situationDefaultPriority", 5, 0, 1000);
             b.pop();
 
+            b.push("compat.validation");
+            logMissingOptionalContent = b.comment(
+                    "Warn once per reload for each quest that could not be loaded because it names",
+                    "content from a mod that is not installed. Such a quest is quarantined either way:",
+                    "a copy a player already holds is paused rather than lost, and it comes back when",
+                    "the content does. Turn this off on a server that deliberately ships packs for mods",
+                    "it does not run.")
+                    .define("logMissingOptionalContent", true);
+            // Two levels pushed, two popped -- "compat.validation" must not leave "compat" behind for
+            // the sections that follow.
+            b.pop(2);
+
+            b.push("compat.iceandfire");
+            iceAndFireEnabled = b.comment(
+                    "Master switch for the optional Ice & Fire integration. When false, every",
+                    "iceandfire capability reports unavailable, so gated quests are never offered and",
+                    "any a player already holds pause rather than break. The registry probe still runs,",
+                    "so '/mcaquests compat iceandfire status' keeps telling the truth about what is",
+                    "installed.")
+                    .define("enabled", true);
+            iceAndFireEnableBuiltinContent = b.comment(
+                    "Whether MCA: Quests mounts its own Ice & Fire quest pack. Turn this off to keep the",
+                    "capability probing and the compat_capability condition, but author all Ice & Fire",
+                    "content yourself.")
+                    .define("enableBuiltinContent", true);
+            // Two levels pushed, two popped -- "compat.iceandfire" must not leave "compat" behind for
+            // the sections that follow.
+            b.pop(2);
+
+            b.push("compat.bountiful");
+            bountifulMode = b.comment(
+                    "How far the optional Bountiful integration goes. AUTO uses the completion hook when",
+                    "Bountiful's own cash-in method is present with the shape it needs, and falls back to",
+                    "data-only when it is not. DATA_ONLY mounts our bounty pools and reads bounty rarity",
+                    "but never observes a cash-in, so bounty-completion quests are not offered. OFF makes",
+                    "the integration behave exactly as if Bountiful were not installed.")
+                    .defineEnum("mode", BountifulMode.AUTO);
+            bountifulEnableBuiltinContent = b.comment(
+                    "Whether MCA: Quests mounts its own Bountiful quest pack. Turn this off to keep the",
+                    "capability probing and the compat_capability condition, but author all bounty-board",
+                    "content yourself.")
+                    .define("enableBuiltinContent", true);
+            bountifulEnableIceAndFirePools = b.comment(
+                    "Whether MCA: Quests offers its Ice & Fire bounty pools and decree to Bountiful's",
+                    "loader when both mods are installed. Separate from enableBuiltinContent because",
+                    "these become part of what a bounty board generates, which is Bountiful's economy to",
+                    "balance rather than ours.")
+                    .define("enableIceAndFirePools", true);
+            // Two levels pushed, two popped -- "compat.bountiful" must not leave "compat" behind for
+            // the sections that follow.
+            b.pop(2);
+
             b.push("compat.ftbquests");
             enableFtbQuestsIntegration = b.comment(
                     "Master behavior switch for the optional FTB Quests integration. When false (or FTB",
@@ -535,6 +597,14 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.EnumValue<MarkerLabels> questMarkerLabels;
         public final ForgeConfigSpec.BooleanValue questMarkerHighContrast;
         public final ForgeConfigSpec.BooleanValue questMarkerReducedMotion;
+        public final ForgeConfigSpec.EnumValue<EdgeIndicatorMode> markerEdgeMode;
+        public final ForgeConfigSpec.IntValue markerEdgeInset;
+        public final ForgeConfigSpec.IntValue markerEdgeSmoothingMs;
+        public final ForgeConfigSpec.IntValue markerEdgeEnterHysteresisPx;
+        public final ForgeConfigSpec.IntValue markerEdgeExitHysteresisPx;
+        public final ForgeConfigSpec.IntValue markerEdgeTransitionFrames;
+        public final ForgeConfigSpec.BooleanValue markerEdgeShowDistance;
+        public final ForgeConfigSpec.IntValue markerEdgeOcclusionSampleMs;
         public final ForgeConfigSpec.BooleanValue mapWaypoints;
         public final ForgeConfigSpec.BooleanValue mapWaypointsFollowedOnly;
         public final ForgeConfigSpec.BooleanValue journeyMapWaypoints;
@@ -612,9 +682,10 @@ public final class McaQuestsConfig {
                     "draws the whole marker through the wall the way versions before 1.5.3 did.")
                     .defineEnum("questMarkerOcclusion", MarkerOcclusion.DIM_OUTLINE);
             questMarkerEdgeIndicator = b.comment(
-                    "When the target is off the edge of the screen or behind you, show a small arrow at the",
-                    "edge pointing at it, with the distance. Without it a target you are not facing is",
-                    "simply not drawn, and there is nothing to turn towards.")
+                    "Deprecated compatibility input: read only when marker.edge.mode = AUTO. It said",
+                    "whether a target off the edge of the screen or behind you gets a small arrow at the",
+                    "edge pointing at it; marker.edge.mode now says that, and says more. Kept so an",
+                    "existing config keeps the behaviour it had, and left alone otherwise.")
                     .define("questMarkerEdgeIndicator", true);
             questMarkerLabels = b.comment(
                     "When the marker carries its target's name and distance: NEARBY within 48 blocks,",
@@ -658,6 +729,51 @@ public final class McaQuestsConfig {
                     .defineInRange("projectTrackerMaxEntries", 3, 1, 10);
             showSituationToast = b.comment("Show a toast when the village opens a new situation that needs help (0.8.0).")
                     .define("showSituationToast", true);
+
+            // Forge's builder splits a dotted path into one level per segment, so this pushes two.
+            b.push("marker.edge");
+            b.comment(
+                    "The arrow at the edge of the screen that points at a target you are not looking at.",
+                    "The defaults are the behaviour of 1.5.3 with its flicker taken out; the rest of these",
+                    "exist because a player on a 30 Hz laptop and one on a 144 Hz monitor do not want the",
+                    "same amount of smoothing.");
+            markerEdgeMode = b.comment(
+                    "When the edge arrow appears. AUTO follows the deprecated questMarkerEdgeIndicator",
+                    "above, so an existing config keeps its behaviour; DISABLED never shows it;",
+                    "OFFSCREEN_ONLY shows it when the target is outside the view or behind you;",
+                    "OFFSCREEN_OR_OCCLUDED also shows it when the target is on screen but hidden behind",
+                    "terrain and questMarkerOcclusion is HIDDEN -- which costs a rate-limited raycast.")
+                    .defineEnum("mode", EdgeIndicatorMode.AUTO);
+            markerEdgeInset = b.comment(
+                    "How far inside the screen the arrow stays, in GUI pixels. The icon's own half-size is",
+                    "added to this, so the whole arrow is inside the inset rather than its centre.")
+                    .defineInRange("inset", 18, 0, 128);
+            markerEdgeSmoothingMs = b.comment(
+                    "Time constant of the arrow's direction filter, in milliseconds; it settles in about",
+                    "three times this. Zero turns smoothing off, as does questMarkerReducedMotion.")
+                    .defineInRange("smoothingMs", 80, 0, 500);
+            markerEdgeEnterHysteresisPx = b.comment(
+                    "How far outside the screen the target must be before the world marker gives way to",
+                    "the arrow, in GUI pixels.")
+                    .defineInRange("enterHysteresisPx", 4, 0, 32);
+            markerEdgeExitHysteresisPx = b.comment(
+                    "How far back inside the screen it must come before the arrow gives way to the world",
+                    "marker. Smaller than the entry threshold on purpose: the gap between the two is what",
+                    "stops a target sitting on the frustum boundary flickering between them.")
+                    .defineInRange("exitHysteresisPx", 2, 0, 32);
+            markerEdgeTransitionFrames = b.comment(
+                    "How many consecutive frames either threshold must hold before the marker changes.")
+                    .defineInRange("transitionFrames", 2, 1, 10);
+            markerEdgeShowDistance = b.comment(
+                    "Write the distance next to the arrow. It is placed inward from the edge, so the",
+                    "number is never the thing that falls off the screen.")
+                    .define("showDistance", true);
+            markerEdgeOcclusionSampleMs = b.comment(
+                    "Shortest gap between the terrain raycasts OFFSCREEN_OR_OCCLUDED needs, in",
+                    "milliseconds. Ignored entirely in every other mode, which casts none at all.")
+                    .defineInRange("occlusionSampleMs", 50, 25, 1000);
+            b.pop(2);
+
             b.pop();
         }
 
@@ -688,6 +804,25 @@ public final class McaQuestsConfig {
             FULL
         }
 
+        /**
+         * When the edge indicator appears at all.
+         *
+         * <p>{@code AUTO} is not a behaviour, it is a migration: it means "whatever
+         * {@code questMarkerEdgeIndicator} said", so a config written before 1.5.4 keeps the answer it
+         * already had without anybody reading the TOML for whether a key was written explicitly.
+         * {@code MarkerSettings.resolveEdgeMode} is where it turns into one of the other three.
+         */
+        public enum EdgeIndicatorMode {
+            /** Follow the deprecated {@code questMarkerEdgeIndicator} boolean. */
+            AUTO,
+            /** Never; a target off screen is simply not drawn. */
+            DISABLED,
+            /** When the target is outside the view or behind the camera: the 1.5.3 behaviour. */
+            OFFSCREEN_ONLY,
+            /** That, and when the target is on screen but hidden behind terrain and drawn as nothing. */
+            OFFSCREEN_OR_OCCLUDED
+        }
+
         /** When the marker carries its target's name and distance. */
         public enum MarkerLabels {
             /** Within 48 blocks, where the text is legible and the target is close enough to matter. */
@@ -707,6 +842,16 @@ public final class McaQuestsConfig {
     }
 
     /** Which item the semantic {@code mcaquests:currency} reward pays out in (spec 1.1.0). */
+    /** How far the optional Bountiful integration goes; see {@code compat.bountiful.mode}. */
+    public enum BountifulMode {
+        /** Use the cash-in hook when Bountiful's bytes allow it; fall back to data-only when not. */
+        AUTO,
+        /** Mount pools and read rarity, but never observe a cash-in. */
+        DATA_ONLY,
+        /** Behave exactly as if Bountiful were not installed. */
+        OFF
+    }
+
     public enum CurrencyProviderMode {
         /** Vanilla emeralds. Always resolvable, so this is the default and the universal fallback. */
         VANILLA,

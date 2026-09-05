@@ -40,6 +40,7 @@ public final class MarkerFrameState {
     private long roundedDistance;
     private GuidanceKind kind = GuidanceKind.LOCATION;
     private float alpha;
+    private EdgeIndicatorState.EdgeSide edgeSide = EdgeIndicatorState.EdgeSide.NONE;
 
     /** A stamp nothing else this session will produce, for {@code renderTick}'s frame. */
     public long nextFrameId(int renderTick) {
@@ -54,10 +55,13 @@ public final class MarkerFrameState {
      * @param hudGlyph   true when the world glyph would be too small to read and the HUD draws it flat
      * @param screenX    where the target projects to, in GUI-scaled pixels; the edge point when
      *                   {@code edgeActive}
+     * @param edgeSide   which edge that point sits on, so the HUD can put the distance beside it and
+     *                   inward rather than working the direction out again from the angle
      */
     public void publish(long frameId, boolean edgeActive, boolean hudGlyph,
                         double screenX, double screenY, double angleRadians,
-                        int rgb, long roundedDistance, GuidanceKind kind, float alpha) {
+                        int rgb, long roundedDistance, GuidanceKind kind, float alpha,
+                        EdgeIndicatorState.EdgeSide edgeSide) {
         this.frameId = frameId;
         this.edgeActive = edgeActive;
         this.hudGlyph = hudGlyph;
@@ -68,6 +72,7 @@ public final class MarkerFrameState {
         this.roundedDistance = roundedDistance;
         this.kind = kind;
         this.alpha = alpha;
+        this.edgeSide = edgeSide;
     }
 
     /**
@@ -117,5 +122,9 @@ public final class MarkerFrameState {
 
     public float alpha() {
         return alpha;
+    }
+
+    public EdgeIndicatorState.EdgeSide edgeSide() {
+        return edgeSide;
     }
 }

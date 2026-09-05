@@ -27,18 +27,22 @@ dev.otectus.mcaquests.api.event                      11 files
 dev.otectus.mcaquests.client                         29 files
 dev.otectus.mcaquests.client.gui                     6 files
 dev.otectus.mcaquests.client.map                     8 files
-dev.otectus.mcaquests.client.marker                  13 files
-dev.otectus.mcaquests.command                        2 files
-dev.otectus.mcaquests.compat                         49 files
+dev.otectus.mcaquests.client.marker                  18 files
+dev.otectus.mcaquests.command                        5 files
+dev.otectus.mcaquests.compat                         60 files
+dev.otectus.mcaquests.compat.bountiful               15 files
 dev.otectus.mcaquests.compat.ftbq                    23 files
+dev.otectus.mcaquests.compat.iceandfire              5 files
 dev.otectus.mcaquests.compat.journeymap              2 files
 dev.otectus.mcaquests.compat.map                     2 files
 dev.otectus.mcaquests.compat.mca                     2 files
+dev.otectus.mcaquests.compat.pack                    3 files
 dev.otectus.mcaquests.compat.reputation              4 files
 dev.otectus.mcaquests.compat.townstead               3 files
 dev.otectus.mcaquests.data                           25 files
 dev.otectus.mcaquests.event                          6 files
 dev.otectus.mcaquests.mixin                          2 files
+dev.otectus.mcaquests.mixin.compat                   1 file
 dev.otectus.mcaquests.network                        30 files
 dev.otectus.mcaquests.profession                     1 file
 dev.otectus.mcaquests.project                        13 files
@@ -49,10 +53,10 @@ dev.otectus.mcaquests.project.state                  7 files
 dev.otectus.mcaquests.quest                          22 files
 dev.otectus.mcaquests.quest.condition                6 files
 dev.otectus.mcaquests.quest.condition.composite      3 files
-dev.otectus.mcaquests.quest.condition.leaf           40 files
+dev.otectus.mcaquests.quest.condition.leaf           42 files
 dev.otectus.mcaquests.quest.dialogue                 3 files
 dev.otectus.mcaquests.quest.guidance                 8 files
-dev.otectus.mcaquests.quest.objective                44 files
+dev.otectus.mcaquests.quest.objective                47 files
 dev.otectus.mcaquests.quest.reputation               8 files
 dev.otectus.mcaquests.quest.reward                   25 files
 dev.otectus.mcaquests.quest.situation                19 files
@@ -91,6 +95,7 @@ _No datagen providers detected — assets and data JSON are hand-written._
 Run `check_mod.py` for a full consistency check (missing models, lang keys, textures).
 
 <!-- MODMAP:AUTO:END — everything below is hand-maintained and preserved -->
+
 
 
 ## Current focus

@@ -25,6 +25,7 @@ import dev.otectus.mcaquests.quest.objective.EnterStructureObjective;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.FishItemObjective;
 import dev.otectus.mcaquests.quest.objective.HealEntityObjective;
+import dev.otectus.mcaquests.quest.objective.InteractBlockObjective;
 import dev.otectus.mcaquests.quest.objective.KillEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.objective.PlaceBlockObjective;
@@ -35,6 +36,7 @@ import dev.otectus.mcaquests.quest.objective.SleepOrRestObjective;
 import dev.otectus.mcaquests.quest.objective.TalkToProfessionObjective;
 import dev.otectus.mcaquests.quest.objective.TameAnimalObjective;
 import dev.otectus.mcaquests.quest.objective.TradeWithVillagerObjective;
+import dev.otectus.mcaquests.quest.objective.UseItemObjective;
 import dev.otectus.mcaquests.quest.objective.VillagerTargeted;
 import dev.otectus.mcaquests.quest.objective.VisitBiomeObjective;
 import dev.otectus.mcaquests.quest.objective.VisitDimensionObjective;
@@ -66,12 +68,15 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.AnimalTameEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.ItemFishedEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.TradeWithVillagerEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.SleepFinishedTimeEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -92,6 +97,15 @@ import java.util.function.BiConsumer;
  */
 @Mod.EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class QuestProgressEvents {
+
+    /**
+     * Recently credited block interactions, keyed by player, position and tick. See
+     * {@link #creditedInteraction} for why this is swept inline rather than on a tick event.
+     */
+    private static final Map<String, Long> RECENT_INTERACTIONS = new HashMap<>();
+
+    /** A ceiling on {@link #RECENT_INTERACTIONS}, so a misbehaving mod cannot grow it without bound. */
+    private static final int INTERACT_CAP = 512;
 
     private QuestProgressEvents() {
     }
@@ -203,6 +217,108 @@ public final class QuestProgressEvents {
             forActiveObjectives(player, DefendLocationObjective.class,
                     (objective, active, progress) -> objective.onKill(player, active, progress, dead, level));
         }
+    }
+
+    /**
+     * Credits {@code use_item} objectives that count a right-click, whether or not anything came of it.
+     *
+     * <p>This is the half that fires for an item with no use duration — a Dragon Seeker, a map, a
+     * thrown trinket — where "used it" is the click and there is nothing further to wait for. The
+     * event is never cancelled and never consumed: an objective observes the interaction, it does not
+     * take part in it.
+     */
+    @SubscribeEvent
+    public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        ItemStack used = event.getItemStack();
+        forActiveObjectives(player, UseItemObjective.class,
+                (objective, progress) -> {
+                    if (!objective.requireSuccess() && objective.matches(used)) {
+                        progress.add(1);
+                    }
+                });
+    }
+
+    /**
+     * Credits {@code use_item} objectives that asked for the use to be <em>finished</em>.
+     *
+     * <p>{@code require_success = true} only ever fires for an item that has a use duration — food,
+     * a potion, a drawn bow, a spyglass — because that is the only kind of use vanilla reports a
+     * completion for. An objective naming an instant-use item with this set would never advance, so
+     * a seeker-style item uses {@code false}.
+     */
+    @SubscribeEvent
+    public static void onUseItemFinish(LivingEntityUseItemEvent.Finish event) {
+        if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        ItemStack used = event.getItem();
+        forActiveObjectives(player, UseItemObjective.class,
+                (objective, progress) -> {
+                    if (objective.requireSuccess() && objective.matches(used)) {
+                        progress.add(1);
+                    }
+                });
+    }
+
+    /**
+     * Credits {@code interact_block} objectives from a server-side block use.
+     *
+     * <p>Three deliberate choices, each of them about staying out of the way of whatever mod owns the
+     * block:
+     *
+     * <ul>
+     *   <li>{@link EventPriority#LOWEST} with {@code receiveCanceled = false}, so every mod that
+     *       wanted to veto the interaction has already had its say and a vetoed click credits
+     *       nothing.</li>
+     *   <li>{@code getUseBlock() == DENY} is skipped for the same reason — the block will not be
+     *       used, so the player did not use it.</li>
+     *   <li>The event is only ever read. Nothing here cancels it or sets a result, so a bounty board
+     *       still opens its own screen and the objective simply notices.</li>
+     * </ul>
+     *
+     * <p>Vanilla fires this once per hand, so a single click on a block arrives twice on the same
+     * tick. {@link #creditedInteraction} collapses that to one credit.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
+    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (event.getUseBlock() == Event.Result.DENY) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) event.getLevel();
+        BlockPos pos = event.getPos();
+        if (!creditedInteraction(player.getUUID(), pos, level.getGameTime())) {
+            return;
+        }
+        BlockState state = level.getBlockState(pos);
+        forActiveObjectives(player, InteractBlockObjective.class,
+                (objective, progress) -> {
+                    if (objective.matches(state)) {
+                        progress.add(1);
+                    }
+                });
+    }
+
+    /**
+     * True the first time a (player, position, tick) triple is seen, false for the off-hand repeat.
+     *
+     * <p>The map is bounded and swept by age rather than by a tick handler, because it only ever holds
+     * the interactions of the current tick plus at most one tick of stragglers — a scheduled sweep
+     * would be a second moving part for state whose whole lifetime is two ticks. {@link #INTERACT_CAP}
+     * is a floor under pathological input (a mod firing the event in a loop), not an expected size.
+     */
+    private static synchronized boolean creditedInteraction(UUID playerId, BlockPos pos, long gameTime) {
+        RECENT_INTERACTIONS.values().removeIf(tick -> gameTime - tick > 1);
+        if (RECENT_INTERACTIONS.size() > INTERACT_CAP) {
+            RECENT_INTERACTIONS.clear();
+        }
+        return RECENT_INTERACTIONS.put(playerId.toString() + '@' + pos.asLong() + '@' + gameTime,
+                gameTime) == null;
     }
 
     /**
@@ -679,8 +795,16 @@ public final class QuestProgressEvents {
     private static void accrueSuspendedTime(ServerPlayer player) {
         QuestCapabilities.get(player).ifPresent(data -> {
             for (ActiveQuest active : data.active()) {
-                QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
+                QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base -> {
                     if (QuestManager.isSuspended(player, active.resolve(base), active)) {
+                        active.addSuspendedTicks(POLL_INTERVAL_TICKS);
+                    }
+                }, () -> {
+                    // A quest whose definition is quarantined, or whose compat pack is not mounted, is
+                    // exactly as unplayable as one whose objective reports unavailable — so its clock
+                    // must freeze too, or removing a mod for a week would expire every quest that
+                    // needed it (1.5.4).
+                    if (QuestManager.compatSuspensionSubject(active.questId()).isPresent()) {
                         active.addSuspendedTicks(POLL_INTERVAL_TICKS);
                     }
                 });
@@ -978,6 +1102,28 @@ public final class QuestProgressEvents {
         if (advanced[0]) {
             QuestManager.settleProgress(player);
         }
+    }
+
+    /**
+     * Credits every active objective of {@code type} that {@code matches}, by {@code amount}.
+     *
+     * <p>The one way in for progress that comes from outside this class -- today, a Bountiful cash-in
+     * observed by a guarded hook. It exists so such a source credits through exactly the path
+     * {@code kill_entity} does rather than reaching into a player's quest data itself: the suspension
+     * gate inside {@link #forActiveObjectives}, the template resolution, and the per-objective
+     * progress lookup are all things an outside caller would otherwise have to remember, and the one
+     * it would forget is the gate.
+     *
+     * <p>Like a kill, this does not settle: the credit lands on the client through the ordinary
+     * per-tick sweep, which is already the very next tick.
+     */
+    public static <T extends QuestObjective> void creditObjectives(
+            ServerPlayer player, Class<T> type, java.util.function.Predicate<T> matches, int amount) {
+        forActiveObjectives(player, type, (objective, progress) -> {
+            if (matches.test(objective)) {
+                progress.add(amount);
+            }
+        });
     }
 
     /** Applies {@code action} to each active-quest objective of {@code type} with its progress. */

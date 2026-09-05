@@ -50,6 +50,27 @@ public final class ObjectiveTypes {
             register(new ResourceLocation(McaQuests.MOD_ID, "obtain_item"), ObtainItemObjective.CODEC);
     public static final QuestObjectiveType<KillEntityObjective> KILL_ENTITY =
             register(new ResourceLocation(McaQuests.MOD_ID, "kill_entity"), KillEntityObjective.CODEC);
+    /**
+     * Use an item. Registered unconditionally like every other type, even though the content that
+     * needs it today is an optional mod's: the id in the JSON is tolerant, so a pack parses the same
+     * whether or not the item exists here.
+     */
+    public static final QuestObjectiveType<UseItemObjective> USE_ITEM =
+            register(new ResourceLocation(McaQuests.MOD_ID, "use_item"), UseItemObjective.CODEC);
+    /**
+     * Right-click a block. Registered unconditionally like every other type: the block id in the JSON
+     * is tolerant, so a pack naming a bounty board parses identically without Bountiful installed.
+     */
+    public static final QuestObjectiveType<InteractBlockObjective> INTERACT_BLOCK =
+            register(new ResourceLocation(McaQuests.MOD_ID, "interact_block"), InteractBlockObjective.CODEC);
+    /**
+     * Cash in Bountiful bounties. Registered unconditionally like every other type; what is gated is
+     * evaluation, through the objective's own capability check -- so a pack using it parses the same
+     * with or without Bountiful and the quest suspends rather than disappearing.
+     */
+    public static final QuestObjectiveType<BountifulBountiesObjective> BOUNTIFUL_BOUNTIES =
+            register(new ResourceLocation(McaQuests.MOD_ID, "bountiful_bounties"),
+                    BountifulBountiesObjective.CODEC);
     public static final QuestObjectiveType<BreakBlockObjective> BREAK_BLOCK =
             register(new ResourceLocation(McaQuests.MOD_ID, "break_block"), BreakBlockObjective.CODEC);
     public static final QuestObjectiveType<VisitBiomeObjective> VISIT_BIOME =

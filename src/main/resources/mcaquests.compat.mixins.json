@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "dev.otectus.mcaquests.mixin.compat",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "mcaquests.refmap.json",
+  "plugin": "dev.otectus.mcaquests.compat.bountiful.BountifulMixinPlugin",
+  "mixins": [
+    "BountyDataCashInMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

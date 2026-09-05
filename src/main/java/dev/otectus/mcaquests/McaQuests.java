@@ -35,6 +35,16 @@ public final class McaQuests {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, McaQuestsConfig.COMMON_SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, McaQuestsConfig.CLIENT_SPEC);
 
+        // The compat registry must exist before anything can ask it a question: a provider registered
+        // late would answer "absent" to every check made in the meantime, which is the one wrong answer
+        // a capability gate can give. Registration only stores three objects; nothing is probed here.
+        dev.otectus.mcaquests.compat.CompatRegistry.bootstrap();
+
+        // Listen for Bountiful bounty completions from here on. The listener list is owned by
+        // BountifulCompat rather than by whichever bridge is current, so registering once is enough:
+        // it survives every re-probe, and on an installation without Bountiful nothing ever calls it.
+        dev.otectus.mcaquests.compat.bountiful.BountifulProgressEvents.init();
+
         // Optional FTB Quests integration (spec §10.4). ordering="AFTER" in mods.toml sorts our
         // constructor after FTB Quests' own, so its built-in TaskTypes/RewardTypes already exist.
         // This fully-qualified call is the ONLY reference to compat.ftbq outside that package

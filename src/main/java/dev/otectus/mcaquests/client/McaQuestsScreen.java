@@ -289,11 +289,17 @@ abstract class McaQuestsScreen extends Screen {
     private static final int TAB_W = 26;
 
     /**
+     * How far the strip starts in from the inside of the window frame. Flush against it, the first
+     * tab's own bevel merged with the frame's corner bevel and read as a tab clipped by the panel.
+     */
+    private static final int TAB_INSET = 4;
+
+    /**
      * Adds the tab strip above the window. The current tab is drawn selected and does nothing when
      * pressed, the way vanilla's creative tabs behave.
      */
     protected void addBookTabs(BookTab active) {
-        int x = leftPos() + FRAME;
+        int x = leftPos() + FRAME + TAB_INSET;
         for (BookTab tab : BookTab.values()) {
             boolean selected = tab == active;
             // The tab is drawn taller than the strip it reserves so its bottom edge tucks under the

@@ -131,6 +131,24 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 | `maxSituationOffersPerMenu` | `2` | Cap on how many situation offers a single villager surfaces at once (they compete with static offers via the usual priority/weight shaping). |
 | `situationDefaultPriority` | `5` | Default offer-priority tier for situation offers that don't set their own, so the village's needs fill menu slots first. |
 
+### `[compat.validation]`
+| Option | Default | What it does |
+|---|---|---|
+| `logMissingOptionalContent` | `true` | Warn once per reload for each quest that could not be loaded because it names content from a mod that is not installed. Such a quest is quarantined either way — a copy a player already holds is paused rather than lost, and it comes back when the content does. Turn this off on a server that deliberately ships packs for mods it does not run. |
+
+### `[compat.iceandfire]`
+| Option | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch for the optional Ice & Fire integration. When false, every iceandfire capability reports unavailable, so gated quests are never offered and any a player already holds pause rather than break. The registry probe still runs, so `/mcaquests compat iceandfire status` keeps telling the truth about what is installed. |
+| `enableBuiltinContent` | `true` | Whether MCA: Quests mounts its own Ice & Fire quest pack. Turn this off to keep the capability probing and the `compat_capability` condition, but author all Ice & Fire content yourself. |
+
+### `[compat.bountiful]`
+| Option | Default | What it does |
+|---|---|---|
+| `mode` | `AUTO` | How far the optional Bountiful integration goes. `AUTO` uses the completion hook when Bountiful's own cash-in method is present with the shape it needs, and falls back to data-only when it is not. `DATA_ONLY` mounts our bounty pools and reads bounty rarity but never observes a cash-in, so bounty-completion quests are not offered. `OFF` makes the integration behave exactly as if Bountiful were not installed. |
+| `enableBuiltinContent` | `true` | Whether MCA: Quests mounts its own Bountiful quest pack. Turn this off to keep the capability probing and the `compat_capability` condition, but author all bounty-board content yourself. |
+| `enableIceAndFirePools` | `true` | Whether MCA: Quests offers its Ice & Fire bounty pools and decree to Bountiful's loader when both mods are installed. Separate from `enableBuiltinContent` because these become part of what a bounty board generates, which is Bountiful's economy to balance rather than ours. |
+
 ### `[compat.ftbquests]`
 | Option | Default | What it does |
 |---|---|---|
@@ -208,10 +226,27 @@ See [TOWNSTEAD.md](TOWNSTEAD.md) for the full condition/objective/reward referen
 | `questMarkerMaxDistance` | `256` | How far away the world marker is still drawn, in blocks. Past this only the tracker line names the target. Range `16`–`4096`. |
 | `questMarkerStyle` | `COMPACT` | Marker appearance: `COMPACT` (24 px diamond frame, glyph, ring, label), `ICON_ONLY` (glyph and ring only), `HIGH_VISIBILITY` (6-block solid column). |
 | `questMarkerOcclusion` | `DIM_OUTLINE` | When behind terrain: `DIM_OUTLINE` (faint outline only), `HIDDEN` (disappear), `FULL` (see through). |
-| `questMarkerEdgeIndicator` | `true` | Show HUD indicator (18 px diamond + chevron with distance/angle) when the quest is off-screen or behind the camera. |
 | `questMarkerLabels` | `NEARBY` | When to show marker labels: `NEARBY` (within 48 blocks), `ALWAYS` (always show), `NEVER` (never show). |
 | `questMarkerHighContrast` | `false` | Apply extra contrast to marker shapes for improved visibility in bright environments. |
 | `questMarkerReducedMotion` | `false` | Disable opacity fades on acquire/clear/retarget for accessibility. |
+
+### `[client.marker.edge]`
+
+The arrow at the edge of the screen that points at a target you are not looking at.
+
+| Option | Default | What it does |
+|---|---|---|
+| `mode` | `AUTO` | When the edge arrow appears: `AUTO` (follows deprecated `questMarkerEdgeIndicator` for backward compatibility), `DISABLED` (never show it), `OFFSCREEN_ONLY` (when the target is outside the view or behind you), `OFFSCREEN_OR_OCCLUDED` (also when on screen but hidden behind terrain and `questMarkerOcclusion` is `HIDDEN` — costs rate-limited raycasts). |
+| `inset` | `18` | How far inside the screen the arrow stays, in GUI pixels. The icon's own half-size is added to this, so the whole arrow is inside the inset rather than its centre. Range `0`–`128`. |
+| `smoothingMs` | `80` | Time constant of the arrow's direction filter, in milliseconds; it settles in about three times this. Zero turns smoothing off, as does `questMarkerReducedMotion`. Range `0`–`500`. |
+| `enterHysteresisPx` | `4` | How far outside the screen the target must be before the world marker gives way to the arrow, in GUI pixels. Range `0`–`32`. |
+| `exitHysteresisPx` | `2` | How far back inside the screen it must come before the arrow gives way to the world marker. Smaller than the entry threshold on purpose: the gap between the two is what stops a target sitting on the frustum boundary flickering between them. Range `0`–`32`. |
+| `transitionFrames` | `2` | How many consecutive frames either threshold must hold before the marker changes. Range `1`–`10`. |
+| `showDistance` | `true` | Write the distance next to the arrow. It is placed inward from the edge, so the number is never the thing that falls off the screen. |
+| `occlusionSampleMs` | `50` | Shortest gap between the terrain raycasts `OFFSCREEN_OR_OCCLUDED` needs, in milliseconds. Ignored entirely in every other mode, which casts none at all. Range `25`–`1000`. |
+
+**Backward compatibility:** `questMarkerEdgeIndicator` is now read only when `mode = AUTO`. The old boolean maps to `OFFSCREEN_ONLY` (true) or `DISABLED` (false); existing configs keep their behaviour, and new configs use `AUTO` which defaults to `OFFSCREEN_ONLY`.
+
 | `mapWaypoints` | `true` | Put your quest destinations on **JourneyMap** and **Xaero's Minimap**, where either is installed. One waypoint per quest that has somewhere to send you, created when it resolves, moved as the quest advances, and taken away when it is done. They are not saved into your own waypoint list — they belong to the quest, not to you — so uninstalling this mod leaves nothing behind. A destination in another dimension gets no waypoint. Master switch; overrides `journeyMapWaypoints` and `xaeroWaypoints` below. |
 | `journeyMapWaypoints` | `true` | Put quest destinations on **JourneyMap** (if installed). Only matters when `mapWaypoints=true`. |
 | `xaeroWaypoints` | `true` | Put quest destinations on **Xaero's Minimap** (if installed). Only matters when `mapWaypoints=true`. |

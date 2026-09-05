@@ -15,6 +15,8 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadContentGate;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.McaVillagerSnapshot;
+import dev.otectus.mcaquests.compat.CompatProvider;
+import dev.otectus.mcaquests.compat.CompatRegistry;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.project.ProjectManager;
@@ -1772,6 +1774,45 @@ public final class QuestManager {
     }
 
     /**
+     * Who to blame when an active quest has no definition, if a compat provider can be blamed.
+     *
+     * <p>Two ways that happens, and both mean "paused" rather than "gone". The file failed to parse at
+     * the last reload because it named content this world does not have, so {@code QuestDataLoader}
+     * quarantined it; or its id sits under {@code compat/<provider>/}, the layout the conditional packs
+     * use, and that pack is not mounted right now. Either way the quest keeps its progress and its
+     * frozen clock, and it comes back on the reload after the content does.
+     *
+     * <p>Empty for an ordinary missing definition — a pack author who deleted a quest has not created a
+     * compatibility problem, and calling it one would be a lie the player could not act on.
+     */
+    public static Optional<Component> compatSuspensionSubject(ResourceLocation questId) {
+        CompatRegistry registry = CompatRegistry.get();
+        Optional<CompatProvider> byPath = providerFromQuestPath(registry, questId);
+        if (byPath.isPresent()) {
+            return byPath.map(CompatProvider::displayName);
+        }
+        if (!QuestRegistry.isQuarantined(questId)) {
+            return Optional.empty();
+        }
+        String namespace = QuestRegistry.quarantinedNamespace(questId).orElse(questId.getNamespace());
+        return Optional.of(registry.forNamespace(namespace)
+                .<Component>map(CompatProvider::displayName)
+                .orElse(Component.literal(namespace)));
+    }
+
+    /** The provider owning a {@code compat/<provider>/…} quest path, when one is registered. */
+    private static Optional<CompatProvider> providerFromQuestPath(CompatRegistry registry,
+                                                                  ResourceLocation questId) {
+        String path = questId.getPath();
+        String prefix = "compat/";
+        if (!path.startsWith(prefix)) {
+            return Optional.empty();
+        }
+        int end = path.indexOf('/', prefix.length());
+        return end < 0 ? Optional.empty() : registry.provider(path.substring(prefix.length(), end));
+    }
+
+    /**
      * Pushes the player's active-quest snapshot to the client for the quest log + HUD tracker.
      *
      * <p>Also the one place quest mutations are marked as needing new guidance. Every path that can
@@ -1803,15 +1844,27 @@ public final class QuestManager {
                             isComplete(player, def, active), isSuspended(player, def, active),
                             data.isTracked(active), deadline,
                             TownsteadContextLines.forQuest(player, def, active)));
-                }, () ->
+                }, () -> {
                     // The definition disappeared on a datapack reload (spec section 36). Still list it, under
                     // its raw id — otherwise the quest is invisible in the log yet keeps occupying an active
                     // slot, leaving the player no way to abandon it.
+                    //
+                    // When we know *why* it disappeared — the file is quarantined because it names content
+                    // from a mod that is not installed, or it belongs to a compat pack that is not mounted —
+                    // say so and mark the quest suspended rather than unknown. Suspended is the truth: the
+                    // quest keeps its progress, its clock is frozen, and installing the mod brings it back.
+                    Optional<Component> compat = compatSuspensionSubject(active.questId());
+                    List<CardObjective> lines = compat
+                            .map(subject -> List.of(new CardObjective(
+                                    Component.translatable("mcaquests.quest.suspended.compat", subject),
+                                    0, 0, CardObjective.State.UNAVAILABLE, ItemStack.EMPTY)))
+                            .orElse(List.of());
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
                             Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
-                            active.villagerName(), Component.empty(), List.of(), false, false,
+                            active.villagerName(), Component.empty(), lines, false, compat.isPresent(),
                             data.isTracked(active), java.util.OptionalLong.empty(),
-                            List.of())));
+                            List.of()));
+                });
             }
             QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new QuestLogSyncS2CPacket(entries));
         });

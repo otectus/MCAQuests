@@ -4,7 +4,117 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.3] - Unreleased
+## [1.5.4] - Unreleased
+
+A compatibility framework for third-party mod integrations — **Ice & Fire** (original and Community Edition) and **Bountiful** — each with conditional built-in content, new objective and condition types to bind them, and a registry-probed capability system so quests suspend rather than fail when optional content is missing. The marker gains frame-rate-independent direction smoothing, behind-camera bearing in a screen-edge indicator, an occluded mode with rate-limited sampling, and `/mcaquestsclient debug marker`. Quest suspensions show why ("quest paused: missing Bountiful"), and an unregistered entity type in a target no longer fails to load. No network protocol change; `QuestNetwork.PROTOCOL_VERSION` unchanged.
+
+### Added — compatibility framework
+
+A new `compat/CompatProvider` system and `compat/CompatRegistry` let the mod detect and probe optional mods at startup and again at reload. Each mod has a `CompatProvider` that can be `absent`, `partial` (some features work), or `full` (all expected capabilities present). Probes run on `AddReloadListenerEvent` and `ServerAboutToStartEvent`, and dispatch to `CompatLifecycleEvents`. Conditional embedded datapacks are mounted via `AddPackFindersEvent` from resources under `src/main/resources/compatpacks/`, gated by `compat/pack/ConditionalCompatPack.isEnabled(registry)` evaluated by `compat/pack/CompatPackFinder.java` inside the event handler.
+
+### Added — Ice & Fire: Community Edition
+
+MCA: Quests detects which build of Ice & Fire is installed (original or Community Edition, they share mod id `iceandfire`) by probing the class path. The original has Myrmex hives; Community Edition dropped them for Seekers and netherite armors. A `compat/iceandfire/` bridge detects flavor by class presence and resolves registry capabilities (dragons, hippogryphes, Myrmex — the latter absent in Community Edition). Config keys (true by default):
+- `compat.iceandfire.enabled` — turn off Ice & Fire integration entirely
+- `compat.iceandfire.enableBuiltinContent` — load the built-in quest pack (`iafce_quests`, eight quests)
+
+A Myrmex-dependent quest objective is gated by a registry capability so a World using the mod can freely upgrade to Community Edition and back, the affected quests suspending through the absence. Godly Dragon Seeker titles are never required. Diagnostics and status available via `/mcaquests compat iceandfire status`.
+
+### Added — Bountiful
+
+A `compat/bountiful/` bridge reaches Bountiful through reflection, selecting one of three modes:
+- `AUTO` (default): hook the completion callback and observe cash-ins, or degrade if the method is unavailable or reshaped
+- `DATA_ONLY`: mount bounty pools and read rarity; bounty-completion objectives disabled
+- `OFF`: as if Bountiful were not installed
+
+Config keys (true by default):
+- `compat.bountiful.mode` — `AUTO`, `DATA_ONLY`, or `OFF`
+- `compat.bountiful.enableBuiltinContent` — load the built-in quest pack (`bountiful_core`, three quests)
+- `compat.bountiful.enableIceAndFirePools` — extend built-in pools with `bountiful_iafce` (two bounty pools and one decree, with placeholder `unitWorth` balance values)
+
+The second common (non-client) mixin, `mcaquests.compat.mixins.json`, holds `mixin/compat/BountyDataCashInMixin.java` targeting `io.ejekta.bountiful.bounty.BountyData.tryCashIn` — observes the return value only, never cancels or mutates, and is `required: false` with plugin-gating via `compat/bountiful/BountifulMixinPlugin`. It can only interact with other mods that also inject into `tryCashIn`. Diagnostics via `/mcaquests compat bountiful status`.
+
+### Added — objectives and conditions
+
+Three new objective types:
+- `mcaquests:use_item` — use a held item; gated internally so it works without Bountiful but can represent actions Bountiful defines
+- `mcaquests:interact_block` — right-click a block; likewise gated internally
+- `mcaquests:bountiful_bounties` — cash in Bountiful bounties with rarity filtering; evaluates to unavailable if Bountiful is absent
+
+One new condition type:
+- `mcaquests:compat_capability` — gate a quest on a registry capability being present, with optional negation; allows a pack to require a certain Myrmex or board implementation without naming the mod
+
+New Forge event handlers in `QuestProgressEvents`: `RightClickItem`, `LivingEntityUseItemEvent.Finish`, and `RightClickBlock` (LOWEST priority, never cancelling). A new public static method `creditObjectives` lets add-ons credit progress toward objectives.
+
+### Added — MCA: Reputation
+
+- **`mcareputation:villager_opinion` condition:** queries what an individual giver personally makes of the player, as opposed to their village's public standing, with optional filtering by tier and knowledge basis (involved, witnessed, hearsay, or none).
+
+### Changed — quests
+
+- **Unknown entity targets no longer fail to load.** A quest targeting an entity from an uninstalled mod now keeps the target id as unresolved, loads successfully, keeps its progress intact, and shows "objective unavailable" for that step. The quest suspends cleanly and resumes when the mod is installed again. A round-trip through the codec on such a world symmetrically encodes the id back, so datapack edits do not lose data.
+- **Quests with missing optional content quarantine and suspend.** A quest that names a provider (Ice & Fire, Bountiful) not currently installed is quarantined; the definition loads with placeholder entities/blocks, and the quest suspends with `mcaquests.quest.suspended.compat` saying which mod is missing. Installing the mod brings it back. Files that fail to parse are separately quarantined; validity warnings/errors no longer block a load.
+- **Objective validation**: `data/ObjectiveValidator.java` applies a warn-vs-error rule: an entity id in an optional mod's namespace yields a warning (the mod is likely not installed), while an id in `minecraft` or a loaded mod's namespace yields an error (a misspelling). This allows a quest pack to name content from missing optional mods without failing validation.
+- **Quarantine logging**: `compat.validation.logMissingOptionalContent` (true by default) gates warnings about quests that cannot load because they name missing optional content. Useful during development; turn off on a server that deliberately ships packs for uninstalled mods.
+- **Quest suspension accrual**: time a quest spends suspended (due to missing optional content) accrues separately in `suspendedTicks`, recorded per-objective; the quest log shows total *active* time, excluding suspensions.
+- **Giver UI reports suspension reason**: a quest that cannot be offered shows `mcaquests.quest.suspended.compat` naming the missing mod instead of "unknown quest".
+
+No breaking changes to `EntityTarget`: a third record component `unresolved` was added, but the original two-arg constructor is preserved for add-ons. The legacy constructor calls the canonical with `Optional.empty()` for unresolved.
+
+### Changed — marker
+
+Frame-rate-independent direction smoothing via a new `EdgeIndicatorSmoother`. Targets behind the camera now report bearing to the screen edge, not bearing to the camera, so a target behind-right points to the right edge of the screen. New classes: `EdgeSafeRect`, `EdgeIndicatorState`, `MarkerOcclusionSampler` (rate-limited raycast for visibility in occluded mode), and `EdgeIndicatorDebug`. `MarkerProjection.clamp` and `EdgePoint` removed in favour of `projectInto`. `MarkerFrameState.publish` adds an edge side parameter. Marker updates are rendered frame-per-frame without jumping.
+
+### Added — marker configuration
+
+A new client config section `[client.marker.edge]` (documented in `CONFIG.md`) with eight keys:
+- `mode` (enum: AUTO / DISABLED / OFFSCREEN_ONLY / OFFSCREEN_OR_OCCLUDED, default AUTO) — when the edge arrow appears. AUTO follows the deprecated `questMarkerEdgeIndicator` for compatibility.
+- `inset` (pixels, default 18, range 0–128) — how far inside the screen the arrow stays
+- `smoothingMs` (milliseconds, default 80, range 0–500) — time constant of the arrow's direction smoothing filter
+- `enterHysteresisPx` (pixels, default 4, range 0–32) — how far outside the screen the target must be before switching to the edge arrow
+- `exitHysteresisPx` (pixels, default 2, range 0–32) — how far back inside the screen it must come before switching back
+- `transitionFrames` (frames, default 2, range 1–10) — consecutive frames either threshold must hold before changing
+- `showDistance` (boolean, default true) — write the distance next to the arrow
+- `occlusionSampleMs` (milliseconds, default 50, range 25–1000) — shortest gap between terrain raycasts in OFFSCREEN_OR_OCCLUDED mode
+
+The deprecated `questMarkerEdgeIndicator` is honored only when `mode = AUTO`.
+
+### Added — client command
+
+New `/mcaquestsclient debug marker` shows raycast sampling state, target positions, and edge indicator smoothing state when `client.marker.edge.debugMode = true`.
+
+### Fixed — journal
+
+- **Journal screen looped requests:** `JournalScreen.init()` ran on every `rebuildWidgets()`, and `tick()` calls rebuild whenever the cached journal list references change — which every server reply does. This created a loop: request → reply → rebuild (which runs `init()` again) → request. Each pass recreated the tab buttons and reset their tooltip timers, making the "Journal" tab tooltip flicker and spamming the server with requests. A new `snapshotRequested` flag now makes `init()` request the snapshot only once per screen open.
+- **Tab inset for visual clarity:** `addBookTabs` placed the first tab button flush against the inside of the window frame, causing its bevel to merge with the frame's corner bevel and read as a tab clipped by the panel. A new `TAB_INSET` constant (value 4 pixels) offsets the tab strip inward, fixing the issue on both screens that use `addBookTabs` — the Journal and the Quest Log.
+
+### Compatibility
+
+- **Third-party mod integration:** Ice & Fire and Bountiful are reached by registry probing and reflection, never by static import. `NoIceAndFireStaticLinkTest` and `NoBountifulStaticLinkTest` enforce the ban.
+- **`EntityTarget` third component:** add-ons building a target in code use the two-arg constructor (`Optional<EntityType<?>>, Optional<TagKey<EntityType<?>>`), which is kept. The three-arg canonical is `(entity, tag, unresolved)`. Calling code is unaffected; wire-format changed only in padding — the id is always encoded/decoded.
+- **Bountiful completion hook:** A new functional interface `BountifulCompletionListener` with method `onBountyCompleted(ServerPlayer player, BountyCompletion completion)` lets add-ons observe bounty cash-ins. Listeners are registered via `BountifulCompat.addCompletionListener()` and persist across re-probes because `BountifulCompat` owns the listener list, not the bridge. `BountyCompletion` is a record carrying `(playerId, serverGameTime, rarity, objectiveCount, dedupeKey)`.
+- **Mixin configs:** `mcaquests.compat.mixins.json` is `required: false` and plugin-gated. No other mods can conflict (Bountiful's internals are unique to it).
+- **No network protocol change:** `QuestNetwork.PROTOCOL_VERSION` unchanged; clients and servers need not match on 1.5.4 exactly, but must be 1.5.4 or later and same Minecraft/Forge version.
+
+### Translations
+
+New translation keys (both `en_us.json` and `pt_br.json`):
+- Compat status and diagnostics: `mcaquests.command.compat.status.*`, `mcaquests.command.compat.iceandfire.*`, `mcaquests.command.compat.bountiful.*`, `mcaquests.compat.{iceandfire, bountiful, mca, townstead, ftbquests}.name`, `mcaquests.compat.iceandfire.{ce, original}`
+- Objective availability and details: `mcaquests.objective.{use_item, interact_block, bountiful_bounties}.{count, min_rarity}`, `mcaquests.objective.unavailable.{compat, bountiful_hook, bountiful_rarity}`, `mcaquests.objective.{use_item, interact_block, bountiful_bounties}`, `mcaquests.bountiful.rarity.{common, uncommon, rare, epic, legendary, unknown}`, `mcaquests.target.unavailable`
+- Quests: `mcaquests.quest.{bountiful_board_discovery, bountiful_contractor, bountiful_specialist, iceandfire_*}.dialogue.{offer, accept, decline, in_progress, ready, complete}`, `mcaquests.quest.suspended.compat`, `mcaquests.tag.mcaquests.iceandfire_dread`
+- Marker debug: `mcaquests.marker.debug.{off, on, state}`
+- Compatibility packs: `mcaquests.compatpack.{iafce_quests, bountiful_core, bountiful_iafce}`
+
+### Build
+
+- **New probe tests:** `iceAndFireProbeTest` (accepts `-PiceandfireCeJar=` and/or `-PiceandfireOriginalJar=`) and `bountifulProbeTest` (accepts `-PbountifulJar=`) verify the optional-mod bindings against supplied jars. Bytes-only parsing via class constant pools avoids load-time issues.
+- **Second mixin config:** `mixin { config }` now lists both `mcaquests.mixins.json` (client) and `mcaquests.compat.mixins.json` (common, Bountiful).
+- **Mixin annotation processor flag:** `-AMSG_MIXIN_SOFT_TARGET_NOT_FOUND=note` suppresses warnings about unreachable mixin targets in opt-mod jars.
+- **Second `[[mixins]]` entry:** `src/main/resources/META-INF/mods.toml` lists both configs.
+- **New tests:** `NoIceAndFireStaticLinkTest`, `NoBountifulStaticLinkTest`, `ClassConstantPoolTest`, and a save-fixture round-trip suite `SaveFixtureRoundTripTest` with five SNBT fixtures under `src/test/resources/migration/`.
+- **Regenerated:** `MODMAP.md`.
+
+## [1.5.3] - 2026-09-03
 
 A comprehensive marker and map-layer rework: the in-world marker is redesigned as a compact diamond, its position corrected, its appearance made configurable and colorblind-safe; JourneyMap now integrates through its documented plugin API instead of reflection; Xaero pins are now explicitly labelled as session-only on Xaero-alone installs; waypoint reconciliation is event-driven and recoverable from failures; the marker's per-quest destinations are shown in the quest log and HUD. Network protocol 14 required (EntityHeight added to `GuidanceTarget`).
 

@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.client.marker;
 
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.otectus.mcaquests.McaQuests;
@@ -20,8 +21,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.api.distmarker.Dist;
@@ -32,6 +36,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 /**
  * Draws the one place the tracked quest is sending the player: a small glyph on the target itself.
@@ -77,9 +82,6 @@ public final class QuestMarkerRenderer {
     private static final int LABEL_GAP = 4;
     /** How wide a label may get before it is cut, in logical pixels. */
     private static final int LABEL_MAX_WIDTH = 160;
-    /** How far inside the screen the edge indicator stays, in GUI-scaled pixels. */
-    public static final double EDGE_INSET = 18.0D;
-
     /** The dark the frame is outlined in. Not black: black on night sky is a hole. */
     private static final int OUTLINE = 0x101820;
     /** Label text, just off white so it does not vibrate against its own background. */
@@ -121,6 +123,23 @@ public final class QuestMarkerRenderer {
 
     /** How solid the marker is because of when it appeared, as opposed to where it is. */
     private static final MarkerVisualState STATE = new MarkerVisualState();
+
+    /** Where the one tracked target is on the screen, and whether it is on it at all. */
+    private static final EdgeIndicatorState EDGE = new EdgeIndicatorState();
+    /** Whether that target is behind a wall, asked at most twenty times a second and only on request. */
+    private static final MarkerOcclusionSampler OCCLUSION = new MarkerOcclusionSampler();
+    /** One reusable query object, so the sampler's callback costs no allocation per frame. */
+    private static final ClipQuery CLIP_QUERY = new ClipQuery();
+
+    // The tuning is eight config values in a record; the settings snapshot is itself rebuilt only when
+    // the config is reloaded, so deriving from it by identity means one record per reload rather than
+    // one per frame.
+    private static MarkerSettings tuningSource;
+    private static EdgeIndicatorState.EdgeTuning edgeTuning;
+
+    // Guidance revision the edge state was last driven with. A new revision is a new answer from the
+    // server about where the player is being sent, and the filter has nothing to interpolate across it.
+    private static long edgeRevision = -1L;
 
     // The support surface under a fixed target costs two block-state reads and two shape lookups, and
     // answers the same thing every frame for as long as the target stands still. Cached against the
@@ -164,12 +183,24 @@ public final class QuestMarkerRenderer {
             // Not a fade: the player turned the feature off, and a marker that lingers for a tenth of
             // a second afterwards looks like the setting did not take.
             STATE.reset();
+            forgetEdge();
             forgetFading();
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null || minecraft.options.hideGui) {
+            // No level is a disconnect or a world still loading, and the edge state must not survive
+            // it: the first frame of the next world would otherwise smooth across the gap between two
+            // worlds.
+            if (minecraft.level == null) {
+                forgetEdge();
+            }
             return;
+        }
+        long guidanceRevision = ClientGuidanceData.revision();
+        if (guidanceRevision != edgeRevision) {
+            edgeRevision = guidanceRevision;
+            forgetEdge();
         }
 
         long now = Util.getMillis();
@@ -224,6 +255,90 @@ public final class QuestMarkerRenderer {
                     m11, framebufferHeight, true);
         }
         MarkerBuffers.get().endBatch();
+    }
+
+    /** Throw away everything the edge indicator remembers between frames. */
+    private static void forgetEdge() {
+        EDGE.clear();
+        OCCLUSION.reset();
+    }
+
+    /**
+     * The tuning for these settings, rebuilt only when the settings themselves are.
+     *
+     * <p>The rectangle is inset by the configured amount <em>plus</em> the icon's own half-size,
+     * because an eighteen-pixel inset that puts the centre of an eighteen-pixel diamond on it leaves
+     * half the diamond outside the inset the player asked for.
+     */
+    private static EdgeIndicatorState.EdgeTuning tuning(MarkerSettings settings) {
+        if (settings != tuningSource || edgeTuning == null) {
+            edgeTuning = new EdgeIndicatorState.EdgeTuning(settings.edgeInset(),
+                    QuestMarkerHud.DIAMOND_HALF, QuestMarkerHud.DIAMOND_HALF,
+                    settings.edgeSmoothingMs(), settings.edgeEnterHysteresisPx(),
+                    settings.edgeExitHysteresisPx(), settings.edgeTransitionFrames(),
+                    settings.reducedMotion(), settings.edgeMode());
+            tuningSource = settings;
+        }
+        return edgeTuning;
+    }
+
+    /**
+     * Whether this frame is one where a terrain raycast could change what is drawn.
+     *
+     * <p>Three conditions, all of which have to hold: the player asked for the occluded mode, the
+     * marker is on screen (there is nothing to promote otherwise), and the occlusion setting is the
+     * one that draws nothing at all behind a wall. With DIM_OUTLINE the player can already see where
+     * the target is, so an arrow would answer a question that is already answered.
+     */
+    private static boolean occludedIndicatorWanted(MarkerSettings settings,
+                                                   EdgeIndicatorState.EdgeTuning tuning) {
+        return tuning.mode() == McaQuestsConfig.Client.EdgeIndicatorMode.OFFSCREEN_OR_OCCLUDED
+                && EDGE.mode() == EdgeIndicatorState.EdgeMode.WORLD
+                && settings.occlusion() == McaQuestsConfig.Client.MarkerOcclusion.HIDDEN;
+    }
+
+    /**
+     * One raycast from the camera to the target, in a reusable object.
+     *
+     * <p>A lambda would capture four locals and allocate one small object every frame, in the one
+     * mode that is already the expensive one.
+     */
+    private static final class ClipQuery implements BooleanSupplier {
+
+        private Minecraft minecraft;
+        private Camera camera;
+        private Vec3 eye;
+        private MarkerAnchor anchor;
+
+        private void set(Minecraft minecraft, Camera camera, Vec3 eye, MarkerAnchor anchor) {
+            this.minecraft = minecraft;
+            this.camera = camera;
+            this.eye = eye;
+            this.anchor = anchor;
+        }
+
+        private void clear() {
+            minecraft = null;
+            camera = null;
+            eye = null;
+            anchor = null;
+        }
+
+        @Override
+        public boolean getAsBoolean() {
+            if (minecraft == null || minecraft.level == null) {
+                return false;
+            }
+            Vec3 to = new Vec3(anchor.x(), anchor.glyphY(), anchor.z());
+            BlockHitResult hit = minecraft.level.clip(new ClipContext(eye, to,
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, camera.getEntity()));
+            if (hit.getType() == HitResult.Type.MISS) {
+                return false;
+            }
+            // A hit close to the target is the target's own block, not a wall in front of it.
+            return hit.getLocation().distanceTo(eye)
+                    < to.distanceTo(eye) * MarkerOcclusionSampler.OCCLUSION_FRACTION;
+        }
     }
 
     private static void forgetFading() {
@@ -335,17 +450,39 @@ public final class QuestMarkerRenderer {
 
         boolean edgeActive = false;
         if (primary) {
-            MarkerProjection.Projection projection = MarkerProjection.project(
-                    relX, anchor.glyphY() - eye.y, relZ,
-                    event.getPoseStack().last().pose(), event.getProjectionMatrix());
-            MarkerProjection.EdgePoint edge = MarkerProjection.clamp(projection,
-                    minecraft.getWindow().getGuiScaledWidth(),
-                    minecraft.getWindow().getGuiScaledHeight(), EDGE_INSET);
-            edgeActive = settings.edgeIndicator() && !edge.onScreen();
-            MarkerFrameState.CURRENT.publish(
-                    MarkerFrameState.CURRENT.nextFrameId(event.getRenderTick()),
-                    edgeActive, hudGlyph && !edgeActive, edge.x(), edge.y(), edge.angleRadians(),
-                    MarkerColours.of(target.kind()), Math.round(distance), target.kind(), alpha);
+            EdgeIndicatorState.EdgeTuning tuning = tuning(settings);
+            Window window = minecraft.getWindow();
+            int guiWidth = window.getGuiScaledWidth();
+            int guiHeight = window.getGuiScaledHeight();
+            Vector3f left = camera.getLeftVector();
+            Vector3f up = camera.getUpVector();
+            EDGE.update(identity(target), target.dimension(), minecraft.level.dimension(),
+                    anchor.x(), anchor.glyphY(), anchor.z(), eye.x, eye.y, eye.z,
+                    look.x(), look.y(), look.z(), left.x(), left.y(), left.z(),
+                    up.x(), up.y(), up.z(),
+                    event.getPoseStack().last().pose(), event.getProjectionMatrix(),
+                    guiWidth, guiHeight, window.getGuiScale(), System.nanoTime(), tuning);
+            if (occludedIndicatorWanted(settings, tuning)) {
+                CLIP_QUERY.set(minecraft, camera, eye, anchor);
+                if (OCCLUSION.sample(Util.getMillis(), settings.edgeOcclusionSampleMs(),
+                        eye.x, eye.y, eye.z, look.x(), look.y(), look.z(),
+                        anchor.x(), anchor.glyphY(), anchor.z(), CLIP_QUERY)) {
+                    EDGE.promoteToEdge(guiWidth, guiHeight, EDGE.lastDtSeconds(), tuning);
+                }
+                CLIP_QUERY.clear();
+            }
+            if (EdgeIndicatorDebug.ENABLED) {
+                EdgeIndicatorDebug.record(EDGE);
+            }
+            edgeActive = EDGE.mode() == EdgeIndicatorState.EdgeMode.EDGE;
+            if (EDGE.mode() != EdgeIndicatorState.EdgeMode.HIDDEN) {
+                MarkerFrameState.CURRENT.publish(
+                        MarkerFrameState.CURRENT.nextFrameId(event.getRenderTick()),
+                        edgeActive, hudGlyph && !edgeActive,
+                        EDGE.edgeX(), EDGE.edgeY(), EDGE.angleRadians(),
+                        MarkerColours.of(target.kind()), Math.round(distance), target.kind(), alpha,
+                        EDGE.edgeSide());
+            }
         }
         if (edgeActive) {
             // The billboard would be somewhere off the side of the screen, or behind the player. The

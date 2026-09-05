@@ -195,7 +195,7 @@ public final class McaQuestsCommand {
                                 .executes(McaQuestsCommand::ftbqRecheckSelf)
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .executes(McaQuestsCommand::ftbqRecheckPlayer))))
-                .then(TownsteadCompatCommands.node()));
+                .then(CompatCommands.build()));
     }
 
     /**

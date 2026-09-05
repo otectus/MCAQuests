@@ -1,0 +1,30 @@
+{
+  active: [
+    {
+      quest: "mcaquests:archer_cull_from_afar",
+      villager: [I; 1078575, -1698236459, -1291558912, 1443987139],
+      villager_name: '{"text":"Anna"}',
+      profession: "mca:archer",
+      dimension: "minecraft:overworld",
+      start: 124000L,
+      start_day: 13000L,
+      village: 7,
+      claimed: 0b,
+      ready_notified: 0b,
+      progress: [
+        { count: 3 }
+      ],
+      frozen_rewards: { "0": 42 }
+    }
+  ],
+  history: {
+    cooldowns: {},
+    completions: {},
+    outcomes: {},
+    completions_by_giver: {},
+    outcomes_by_giver: {}
+  },
+  titles: {},
+  stats: {},
+  offers: {}
+}

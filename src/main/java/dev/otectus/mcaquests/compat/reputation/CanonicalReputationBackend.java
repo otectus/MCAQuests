@@ -5,6 +5,7 @@ import dev.otectus.mcaquests.compat.IncidentSelector;
 import dev.otectus.mcaquests.compat.ReputationAward;
 import dev.otectus.mcaquests.compat.ReputationBackend;
 import dev.otectus.mcaquests.compat.ReputationBridge;
+import dev.otectus.mcaquests.compat.VillagerOpinionView;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcareputation.api.IncidentQuery;
 import dev.otectus.mcareputation.api.McaReputationApi;
@@ -258,6 +259,53 @@ public final class CanonicalReputationBackend implements ReputationBackend {
     @Override
     public boolean recordIncident(ReputationAward award) {
         return award(award) != 0 || award.delta() == 0;
+    }
+
+    // ------------------------------------------------------------------
+    // Per-villager opinion
+    // ------------------------------------------------------------------
+
+    /**
+     * Whether the installed MCA: Reputation has the opinion API at all, probed once and remembered.
+     *
+     * <p>{@code getVillagerOpinion} was added without moving the API version, because it is purely
+     * additive and refusing to run against it would be worse than not using it. That leaves reflection
+     * as the only honest test: a Reputation build from before it existed answers a
+     * {@code NoSuchMethodException} here, and every later call skips straight to empty rather than
+     * throwing {@code NoSuchMethodError} in the middle of an eligibility pass.
+     */
+    private static volatile Boolean opinionApiPresent;
+
+    private static boolean opinionApiPresent() {
+        Boolean known = opinionApiPresent;
+        if (known != null) {
+            return known;
+        }
+        boolean present;
+        try {
+            McaReputationApi.class.getMethod("getVillagerOpinion", MinecraftServer.class, UUID.class,
+                    UUID.class, CommunityKey.class);
+            present = true;
+        } catch (Throwable t) {
+            // Debug, and only once: an older Reputation is a supported installation, not a fault.
+            McaQuests.LOGGER.debug("[MCA: Quests] this MCA: Reputation has no per-villager opinion API; "
+                    + "opinion conditions will not be met", t);
+            present = false;
+        }
+        opinionApiPresent = present;
+        return present;
+    }
+
+    @Override
+    public Optional<VillagerOpinionView> villagerOpinion(MinecraftServer server, UUID player, UUID villager,
+                                                         ResourceLocation dimension, int villageId) {
+        if (!opinionApiPresent()) {
+            return Optional.empty();
+        }
+        return key(dimension, villageId)
+                .flatMap(community -> McaReputationApi.getVillagerOpinion(server, player, villager, community))
+                .map(opinion -> new VillagerOpinionView(opinion.opinion(), opinion.tierId(),
+                        opinion.basis().jsonName()));
     }
 
     private static IncidentQuery toQuery(IncidentSelector selector, boolean newestOnly) {

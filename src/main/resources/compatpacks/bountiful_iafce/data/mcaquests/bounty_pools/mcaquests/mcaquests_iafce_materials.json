@@ -1,0 +1,44 @@
+{
+  "content": {
+    "mcaquests_iafce_fire_dragon_blood": {
+      "type": "item",
+      "content": "iceandfire:fire_dragon_blood",
+      "amount": {
+        "min": 1,
+        "max": 2
+      },
+      "unitWorth": 4000,
+      "rarity": "RARE"
+    },
+    "mcaquests_iafce_ice_dragon_blood": {
+      "type": "item",
+      "content": "iceandfire:ice_dragon_blood",
+      "amount": {
+        "min": 1,
+        "max": 2
+      },
+      "unitWorth": 4000,
+      "rarity": "RARE"
+    },
+    "mcaquests_iafce_lightning_dragon_blood": {
+      "type": "item",
+      "content": "iceandfire:lightning_dragon_blood",
+      "amount": {
+        "min": 1,
+        "max": 2
+      },
+      "unitWorth": 4500,
+      "rarity": "RARE"
+    },
+    "mcaquests_iafce_dragonscales_red": {
+      "type": "item",
+      "content": "iceandfire:dragonscales_red",
+      "amount": {
+        "min": 4,
+        "max": 12
+      },
+      "unitWorth": 900,
+      "rarity": "UNCOMMON"
+    }
+  }
+}

@@ -328,10 +328,66 @@ tasks.register('mapProbeTest', Test) {
     }
 }
 
-// MixinGradle: generate the refmap for our mixin and register the config for reobfuscation.
+// Replays the Ice & Fire manifest against real Ice & Fire jars. Separate from `check` because neither
+// jar is resolvable from a Maven the build controls: Community Edition is on Modrinth and the original
+// on CurseForge, so the paths come from whoever runs it.
+//
+//     ./gradlew iceAndFireProbeTest -PiceandfireCeJar=<path> -PiceandfireOriginalJar=<path>
+//
+// Either may be given alone; the half with no jar skips itself. Unlike the Townstead and MCA probes
+// these are raw jar paths with no configuration and no deobfuscation: the test only reads bytes out of
+// a zip and parses a constant pool, and never loads a class from either jar.
+tasks.register('iceAndFireProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the Ice & Fire registry manifest against supplied Ice & Fire jars.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.iceandfire.IceAndFireJarProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    onlyIf { project.hasProperty('iceandfireCeJar') || project.hasProperty('iceandfireOriginalJar') }
+    doFirst {
+        systemProperty 'mcaquests.iceandfire.probe.ce',
+                project.findProperty('iceandfireCeJar')?.toString() ?: ''
+        systemProperty 'mcaquests.iceandfire.probe.original',
+                project.findProperty('iceandfireOriginalJar')?.toString() ?: ''
+    }
+}
+
+// Replays the Bountiful binding manifest against a real Bountiful jar. Separate from `check` because
+// the jar is CurseForge-only, so its path comes from whoever runs it.
+//
+//     ./gradlew bountifulProbeTest -PbountifulJar=<path>
+//
+// Bytes only: the test opens the jar as a zip and parses constant pools, and never loads a class from
+// it. That is not merely tidy -- Bountiful is Kotlin and needs kotlinforforge and Kambrik to load at
+// all, neither of which is on this build's classpath, so a probe that loaded anything could not run.
+tasks.register('bountifulProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the Bountiful binding manifest against a supplied Bountiful jar.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.bountiful.BountifulJarProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    onlyIf { project.hasProperty('bountifulJar') }
+    doFirst {
+        systemProperty 'mcaquests.bountiful.probe.jar',
+                project.findProperty('bountifulJar')?.toString() ?: ''
+    }
+}
+
+// MixinGradle: generate the refmap for our mixins and register both configs for reobfuscation.
 mixin {
     add sourceSets.main, 'mcaquests.refmap.json'
     config 'mcaquests.mixins.json'
+    // The optional-mod config. Its one mixin targets a class no build of this mod ever links
+    // against, so it carries remap = false throughout and its plugin decides at load time whether
+    // to apply it at all -- but it still has to be registered here, or its class would be missing
+    // from the reobfuscated jar's mixin refmap handling entirely.
+    config 'mcaquests.compat.mixins.json'
 }
 
 // Expand metadata placeholders into mods.toml / pack.mcmeta at build time.
@@ -366,6 +422,14 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // The Bountiful cash-in mixin names its target as a string, and that target is a class no build
+    // of this mod ever has on its compile classpath -- deliberately, since linking against Bountiful
+    // is the one thing the whole integration is built not to do. The Mixin annotation processor
+    // treats an unresolvable target as an error by default, so it is downgraded here. Everything the
+    // processor would have checked is instead checked at runtime by BountifulMixinPlugin, which reads
+    // the real class out of the installed mod file and refuses to apply the mixin unless the method
+    // is there with the exact descriptor.
+    options.compilerArgs += ['-AMSG_MIXIN_SOFT_TARGET_NOT_FOUND=note']
 }
 
 // ForgeGradle reobfuscates in place, so for the moment between `jar` and `reobfJar` the archive
