@@ -40,6 +40,11 @@ class LocaleParityTest {
 
     private static final Path LANG = TestPaths.of("src/main/resources/assets/mcaquests/lang");
     private static final Path DATA = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
+    /**
+     * The conditional compatibility packs. They are quest content in every sense a player can see, so
+     * the same rule applies to them; they merely live outside the always-mounted pack.
+     */
+    private static final Path COMPAT_PACKS = TestPaths.of("src/main/resources/compatpacks");
     private static final String SOURCE_LOCALE = "en_us";
 
     /** {@code %s}, {@code %d}, and the positional {@code %1$s} forms Minecraft's formatter accepts. */
@@ -196,7 +201,15 @@ class LocaleParityTest {
     }
 
     private static List<Path> dataFiles() {
-        try (Stream<Path> files = Files.walk(DATA)) {
+        List<Path> out = new ArrayList<>(walkJson(DATA));
+        if (Files.isDirectory(COMPAT_PACKS)) {
+            out.addAll(walkJson(COMPAT_PACKS));
+        }
+        return out;
+    }
+
+    private static List<Path> walkJson(Path root) {
+        try (Stream<Path> files = Files.walk(root)) {
             return files.filter(p -> p.toString().endsWith(".json")).sorted().toList();
         } catch (IOException e) {
             throw new UncheckedIOException(e);

@@ -2,6 +2,8 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.compat.CompatRegistry;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
 import net.minecraft.network.chat.Component;
 import dev.otectus.mcaquests.quest.target.SourceHint;
@@ -63,6 +65,25 @@ public record KillEntityObjective(EntityTarget target, int count,
     public void validate(ResourceLocation questId, int index, java.util.List<String> errors) {
         source.ifPresent(hint ->
                 hint.validate("Quest '" + questId + "': objective[" + index + "]", errors));
+    }
+
+    /**
+     * A creature this world has never heard of cannot be hunted, so the quest is never offered.
+     *
+     * <p>Since 1.5.4 an unknown entity id survives the parse ({@link EntityTarget}), which is what
+     * makes this check necessary and what makes it enough: the definition loads, the objective says
+     * plainly which mod's content is missing, and the pair of answers below keeps such a quest out of
+     * the offer pool while suspending — never failing — any copy already accepted.
+     */
+    @Override
+    public Optional<Component> unofferableReason(QuestContext context) {
+        return target.unresolved().map(id -> CompatRegistry.get().describeMissing(id));
+    }
+
+    @Override
+    public Optional<Component> unavailableReason(ServerPlayer player, ActiveQuest active,
+                                                 ObjectiveProgress progress, ServerLevel level) {
+        return target.unresolved().map(id -> CompatRegistry.get().describeMissing(id));
     }
 
     @Override

@@ -1,0 +1,69 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:compat/iceandfire/lightning_dragon_hunt",
+  "weight": 6,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "mca:mercenary"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.iceandfire_lightning_dragon_hunt.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.iceandfire_lightning_dragon_hunt.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.iceandfire_lightning_dragon_hunt.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.iceandfire_lightning_dragon_hunt.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.iceandfire_lightning_dragon_hunt.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.iceandfire_lightning_dragon_hunt.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.iceandfire_lightning_dragon_hunt.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "iceandfire:lightning_dragon",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:compat_capability",
+        "provider": "iceandfire",
+        "capability": "iceandfire.lightning_dragon"
+      }
+    ]
+  }
+}

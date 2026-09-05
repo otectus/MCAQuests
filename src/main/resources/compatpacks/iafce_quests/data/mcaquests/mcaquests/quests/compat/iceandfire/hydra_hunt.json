@@ -1,0 +1,69 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:compat/iceandfire/hydra_hunt",
+  "weight": 6,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:weaponsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.iceandfire_hydra_hunt.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.iceandfire_hydra_hunt.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.iceandfire_hydra_hunt.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.iceandfire_hydra_hunt.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.iceandfire_hydra_hunt.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.iceandfire_hydra_hunt.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.iceandfire_hydra_hunt.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "iceandfire:hydra",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:compat_capability",
+        "provider": "iceandfire",
+        "capability": "iceandfire.core"
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.data;
 
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.compat.CompatRegistry;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.TurnInMode;
@@ -23,6 +24,7 @@ import dev.otectus.mcaquests.quest.objective.ObtainItemObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.reward.CurrencyReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
+import dev.otectus.mcaquests.quest.target.EntityTarget;
 import dev.otectus.mcaquests.quest.template.RegistryKind;
 import net.minecraft.tags.TagKey;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -76,6 +78,7 @@ public final class ObjectiveValidator {
                 QuestObjective objective = objectives.get(i);
                 objective.validate(def.id(), i, errors);
                 warnEmptyTags(def, i, objective, warnings);
+                checkUnresolvedEntities(def, i, objective, errors, warnings);
                 usesFtbqCompleteQuest |= objective instanceof FtbqCompleteQuestObjective;
                 // Two objectives asking the player to hold the same item are both satisfied by one stack:
                 // the quest reads as "gather ten, then deliver ten" and completes on ten.
@@ -130,6 +133,66 @@ public final class ObjectiveValidator {
         }
 
         toSkip.forEach(loaded::remove);
+    }
+
+    /**
+     * Decides what an {@link EntityTarget} naming an entity type this world does not have is worth.
+     *
+     * <p>Since 1.5.4 such an id parses ({@code EntityTarget} keeps it instead of failing), which moves
+     * the judgement here — and it is a judgement, because the same shape means two opposite things. An
+     * id in an optional mod's namespace is content that is simply not installed: the pack is doing what
+     * conditional content is supposed to do, the quest is kept, and it is never offerable while the
+     * entity is missing. An id in {@code minecraft} or in the namespace of a mod that <em>is</em>
+     * loaded cannot be that — it is a misspelling, and reporting it as an error is the only way its
+     * author will ever find out.
+     */
+    private static void checkUnresolvedEntities(QuestDefinition def, int index, QuestObjective objective,
+                                                List<String> errors, List<String> warnings) {
+        for (EntityTarget target : entityTargets(objective)) {
+            ResourceLocation id = target.unresolved().orElse(null);
+            if (id == null) {
+                continue;
+            }
+            String where = "Quest '" + def.id() + "': objective[" + index + "] names entity '" + id + "'";
+            if (isOptionalContent(id.getNamespace())) {
+                warnings.add(where + ", which is not registered here; the quest loads but can never be "
+                        + "offered while that content is absent.");
+            } else {
+                errors.add(where + ", which does not exist. Check the spelling.");
+            }
+        }
+    }
+
+    /** Whether a namespace belongs to a known optional integration or to a mod that is not loaded. */
+    private static boolean isOptionalContent(String namespace) {
+        if (CompatRegistry.get().forNamespace(namespace).isPresent()) {
+            return true;
+        }
+        if ("minecraft".equals(namespace)) {
+            return false;
+        }
+        ModList list = ModList.get();
+        return list != null && !list.isLoaded(namespace);
+    }
+
+    /** Every {@link EntityTarget} an objective type carries. */
+    private static List<EntityTarget> entityTargets(QuestObjective objective) {
+        if (objective instanceof KillEntityObjective kill) {
+            return List.of(kill.target());
+        }
+        if (objective instanceof DefendVillagerObjective defend) {
+            return List.of(defend.threat());
+        }
+        if (objective instanceof DefendLocationObjective defend) {
+            return List.of(defend.threat());
+        }
+        if (objective instanceof BreedAnimalsObjective breed) {
+            return List.of(breed.animal());
+        }
+        if (objective instanceof TameAnimalObjective tame) {
+            return List.of(tame.animal());
+        }
+        return List.of();
     }
 
     /**

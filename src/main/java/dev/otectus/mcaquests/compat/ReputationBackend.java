@@ -117,6 +117,23 @@ public interface ReputationBackend {
     boolean recordIncident(ReputationAward award);
 
     // ------------------------------------------------------------------
+    // Per-villager opinion — only meaningful on the canonical backend
+    // ------------------------------------------------------------------
+
+    /**
+     * What this one villager personally makes of the player, as opposed to what the village records.
+     *
+     * <p>Empty on the legacy backend, and empty on a canonical backend talking to a MCA: Reputation
+     * that predates the opinion API — Quests only ever asks, it never assumes. A condition built on
+     * this degrades the same way the incident conditions do: unmet rather than unconditionally met, so
+     * a quest gated on "this villager saw it happen" never offers itself where nobody can tell.
+     */
+    default Optional<VillagerOpinionView> villagerOpinion(MinecraftServer server, UUID player, UUID villager,
+                                                          ResourceLocation dimension, int villageId) {
+        return Optional.empty();
+    }
+
+    // ------------------------------------------------------------------
     // Notification
     // ------------------------------------------------------------------
 

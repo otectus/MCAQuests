@@ -27,14 +27,28 @@ import net.neoforged.fml.common.EventBusSubscriber;
 @EventBusSubscriber(modid = McaQuests.MOD_ID, value = Dist.CLIENT)
 public final class QuestMarkerHud {
 
-    /** Half the indicator diamond, in GUI-scaled pixels. The diamond is 18 across. */
-    private static final int DIAMOND_HALF = 9;
+    /**
+     * Half the indicator diamond, in GUI-scaled pixels. The diamond is 18 across.
+     *
+     * <p>Public because the safe rectangle is inset by the configured amount plus this: an inset that
+     * places the centre of the diamond leaves half of it outside the inset the player asked for.
+     */
+    public static final int DIAMOND_HALF = 9;
     /** How thick its dark outline is. */
     private static final int OUTLINE_WIDTH = 2;
     /** How long the chevron inside it is. */
     private static final int CHEVRON = 8;
     /** How far in from the indicator the distance is written, in GUI-scaled pixels. */
     private static final int DISTANCE_GAP = 16;
+    /** The gap between the diamond and the distance beside it, in GUI-scaled pixels. */
+    private static final int LABEL_GAP = 3;
+    /** How close the label may come to the window's own edge, in GUI-scaled pixels. */
+    private static final int SCREEN_MARGIN = 2;
+    /** How long the debug direction lines are, in GUI-scaled pixels. */
+    private static final int DEBUG_LINE = 60;
+    /** The raw bearing, and the filtered one drawn over it. */
+    private static final int DEBUG_RAW = 0xFFFF5555;
+    private static final int DEBUG_FILTERED = 0xFF55FF55;
     /** The glyph the HUD fallback draws, in GUI-scaled pixels; the sheet's own art is 16. */
     private static final float HUD_GLYPH_SCALE = 18.0F / 16.0F;
 
@@ -58,8 +72,14 @@ public final class QuestMarkerHud {
             return;
         }
         GuiGraphics graphics = event.getGuiGraphics();
+        if (!Double.isFinite(state.screenX()) || !Double.isFinite(state.screenY())) {
+            return; // never turn a NaN into a cast integer coordinate
+        }
         int x = (int) Math.round(state.screenX());
         int y = (int) Math.round(state.screenY());
+        if (EdgeIndicatorDebug.ENABLED) {
+            debugOverlay(graphics, minecraft, state);
+        }
         if (state.edgeActive()) {
             indicator(graphics, minecraft, state, x, y);
         } else if (state.hudGlyph()) {
@@ -92,16 +112,93 @@ public final class QuestMarkerHud {
             graphics.pose().popPose();
         }
 
-        // Inward from the edge, so the number is never the thing that falls off the screen.
+        if (!MarkerSettings.current().edgeShowDistance()) {
+            return;
+        }
+        distance(graphics, minecraft, state, x, y);
+    }
+
+    /**
+     * How far away the target is, written inward from whichever edge the arrow is on.
+     *
+     * <p>Placed by the edge rather than by the angle back to the centre. The two agree in the middle
+     * of an edge and disagree in a corner, which is exactly where the old placement pushed half the
+     * number off the screen: an arrow in the top-right corner wants its label below it or to its left,
+     * not diagonally inward through the icon. The whole text box is then clamped inside the window, so
+     * a long number on a small GUI scale still reads.
+     */
+    private static void distance(GuiGraphics graphics, Minecraft minecraft, MarkerFrameState state,
+                                 int x, int y) {
         Component distance = Component.translatable("mcaquests.marker.edge_distance", state.roundedDistance());
         int width = minecraft.font.width(distance);
-        double toCentreX = minecraft.getWindow().getGuiScaledWidth() / 2.0D - x;
-        double toCentreY = minecraft.getWindow().getGuiScaledHeight() / 2.0D - y;
-        double length = Math.max(Math.sqrt(toCentreX * toCentreX + toCentreY * toCentreY), 1.0E-4D);
-        int textX = (int) Math.round(x + toCentreX / length * DISTANCE_GAP) - width / 2;
-        int textY = (int) Math.round(y + toCentreY / length * DISTANCE_GAP)
-                - minecraft.font.lineHeight / 2;
+        int height = minecraft.font.lineHeight;
+        int guiWidth = minecraft.getWindow().getGuiScaledWidth();
+        int guiHeight = minecraft.getWindow().getGuiScaledHeight();
+
+        int textX;
+        int textY;
+        switch (state.edgeSide()) {
+            case LEFT -> {
+                textX = x + DIAMOND_HALF + LABEL_GAP;
+                textY = y - height / 2;
+            }
+            case RIGHT -> {
+                textX = x - DIAMOND_HALF - LABEL_GAP - width;
+                textY = y - height / 2;
+            }
+            case TOP -> {
+                textX = x - width / 2;
+                textY = y + DIAMOND_HALF + LABEL_GAP;
+            }
+            case BOTTOM -> {
+                textX = x - width / 2;
+                textY = y - DIAMOND_HALF - LABEL_GAP - height;
+            }
+            default -> {
+                // No edge was named: the pre-1.5.4 placement, straight back toward the centre.
+                double toCentreX = guiWidth / 2.0D - x;
+                double toCentreY = guiHeight / 2.0D - y;
+                double length = Math.max(Math.sqrt(toCentreX * toCentreX + toCentreY * toCentreY), 1.0E-4D);
+                textX = (int) Math.round(x + toCentreX / length * DISTANCE_GAP) - width / 2;
+                textY = (int) Math.round(y + toCentreY / length * DISTANCE_GAP) - height / 2;
+            }
+        }
+        textX = Math.max(SCREEN_MARGIN, Math.min(textX, guiWidth - width - SCREEN_MARGIN));
+        textY = Math.max(SCREEN_MARGIN, Math.min(textY, guiHeight - height - SCREEN_MARGIN));
         graphics.drawString(minecraft.font, distance, textX, textY, 0xFFFFFFFF, true);
+    }
+
+    /**
+     * What the indicator was thinking, for {@code /mcaquestsclient debug marker}.
+     *
+     * <p>Two lines from the centre of the screen -- the raw bearing and the filtered one -- and the
+     * mode and edge in words. When they disagree the arrow is mid-swing; when the raw one jitters and
+     * the filtered one does not, the filter is doing its job.
+     */
+    private static void debugOverlay(GuiGraphics graphics, Minecraft minecraft,
+                                     MarkerFrameState state) {
+        int centreX = minecraft.getWindow().getGuiScaledWidth() / 2;
+        int centreY = minecraft.getWindow().getGuiScaledHeight() / 2;
+        ray(graphics, centreX, centreY, EdgeIndicatorDebug.rawX(), EdgeIndicatorDebug.rawY(), DEBUG_RAW);
+        ray(graphics, centreX, centreY, EdgeIndicatorDebug.filteredX(), EdgeIndicatorDebug.filteredY(),
+                DEBUG_FILTERED);
+        Component line = Component.translatable("mcaquests.marker.debug.state",
+                EdgeIndicatorDebug.mode().name(), EdgeIndicatorDebug.side().name(),
+                String.format("%.0f, %.0f", state.screenX(), state.screenY()));
+        graphics.drawString(minecraft.font, line, centreX + 8, centreY + 8, 0xFFFFFFFF, true);
+    }
+
+    /** A one-pixel line from the centre along a unit direction, drawn as its own points. */
+    private static void ray(GuiGraphics graphics, int centreX, int centreY,
+                            double dirX, double dirY, int colour) {
+        if (!Double.isFinite(dirX) || !Double.isFinite(dirY)) {
+            return;
+        }
+        for (int i = 0; i < DEBUG_LINE; i++) {
+            int px = centreX + (int) Math.round(dirX * i);
+            int py = centreY + (int) Math.round(dirY * i);
+            graphics.fill(px, py, px + 1, py + 1, colour);
+        }
     }
 
     /** A filled diamond centred on the current pose origin, drawn as its rows. */

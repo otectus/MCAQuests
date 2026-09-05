@@ -5,6 +5,7 @@ import dev.otectus.mcaquests.compat.IncidentSelector;
 import dev.otectus.mcaquests.compat.ReputationAward;
 import dev.otectus.mcaquests.compat.ReputationBackend;
 import dev.otectus.mcaquests.compat.ReputationBridge;
+import dev.otectus.mcaquests.compat.VillagerOpinionView;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcareputation.api.IncidentQuery;
 import dev.otectus.mcareputation.api.McaReputationApi;
@@ -22,13 +23,16 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Method;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The MCA: Reputation-backed implementation of {@link ReputationBackend} (spec §29.1).
@@ -258,6 +262,104 @@ public final class CanonicalReputationBackend implements ReputationBackend {
     @Override
     public boolean recordIncident(ReputationAward award) {
         return award(award) != 0 || award.delta() == 0;
+    }
+
+    // ------------------------------------------------------------------
+    // Per-villager opinion
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code McaReputationApi.getVillagerOpinion}, resolved once and remembered, or null when this
+     * MCA: Reputation has no such method.
+     *
+     * <p>PORT: the 1.21.1 MCA: Reputation sibling this class compiles against does not have the
+     * opinion API yet — neither the method nor the opinion and basis types it returns — so nothing
+     * here can be a static call. Everything is looked up by name instead, which makes the path inert
+     * (always {@link Optional#empty()}) today and makes it light up the moment a Reputation build
+     * carrying {@code getVillagerOpinion} is installed, with no Quests rebuild.
+     */
+    private static volatile Method opinionMethod;
+
+    /** Whether the probe above has run; separate from the result, which is legitimately null. */
+    private static volatile boolean opinionProbed;
+
+    /** The {@code opinion}/{@code tierId}/{@code basis} accessors of one opinion class, in that order. */
+    private static final Map<Class<?>, Method[]> OPINION_ACCESSORS = new ConcurrentHashMap<>();
+
+    @Nullable
+    private static Method opinionMethod() {
+        if (opinionProbed) {
+            return opinionMethod;
+        }
+        Method found = null;
+        try {
+            found = McaReputationApi.class.getMethod("getVillagerOpinion", MinecraftServer.class,
+                    UUID.class, UUID.class, CommunityKey.class);
+        } catch (NoSuchMethodException e) {
+            // Debug, and only once: a Reputation without the opinion API is a supported installation.
+            McaQuests.LOGGER.debug("[MCA: Quests] this MCA: Reputation has no per-villager opinion API; "
+                    + "opinion conditions will not be met");
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("[MCA: Quests] could not probe the per-villager opinion API", t);
+        }
+        opinionMethod = found;
+        opinionProbed = true;
+        return found;
+    }
+
+    /**
+     * Reads one opinion object through its own class, so the record's type never has to be named here.
+     *
+     * <p>Any failure — a missing accessor, a changed return type, an exception from the API itself —
+     * is one debug line and no opinion, which the condition reads as "not met" (§35.1).
+     */
+    @Override
+    public Optional<VillagerOpinionView> villagerOpinion(MinecraftServer server, UUID player, UUID villager,
+                                                         ResourceLocation dimension, int villageId) {
+        Method method = opinionMethod();
+        if (method == null) {
+            return Optional.empty();
+        }
+        Optional<CommunityKey> community = key(dimension, villageId);
+        if (community.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            Object result = method.invoke(null, server, player, villager, community.get());
+            if (result instanceof Optional<?> wrapped) {
+                result = wrapped.orElse(null);
+            }
+            if (result == null) {
+                return Optional.empty();
+            }
+            Method[] accessors = OPINION_ACCESSORS.computeIfAbsent(result.getClass(), type -> {
+                try {
+                    return new Method[] {type.getMethod("opinion"), type.getMethod("tierId"),
+                            type.getMethod("basis")};
+                } catch (Throwable t) {
+                    throw new IllegalStateException("unreadable opinion type " + type.getName(), t);
+                }
+            });
+            int opinion = ((Number) accessors[0].invoke(result)).intValue();
+            String tierId = String.valueOf(accessors[1].invoke(result));
+            return Optional.of(new VillagerOpinionView(opinion, tierId, basisName(accessors[2].invoke(result))));
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("[MCA: Quests] could not read this villager's opinion; "
+                    + "the condition is not met", t);
+            return Optional.empty();
+        }
+    }
+
+    /** The basis enum's own json name where it has one, and its constant name lower-cased otherwise. */
+    private static String basisName(@Nullable Object basis) throws Exception {
+        if (basis == null) {
+            return "none";
+        }
+        try {
+            return String.valueOf(basis.getClass().getMethod("jsonName").invoke(basis));
+        } catch (NoSuchMethodException e) {
+            return basis.toString().toLowerCase(Locale.ROOT);
+        }
     }
 
     private static IncidentQuery toQuery(IncidentSelector selector, boolean newestOnly) {

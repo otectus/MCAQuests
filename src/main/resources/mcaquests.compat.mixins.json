@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "dev.otectus.mcaquests.mixin.compat",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.otectus.mcaquests.compat.bountiful.BountifulMixinPlugin",
+  "mixins": [
+    "BountyStackCashInMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

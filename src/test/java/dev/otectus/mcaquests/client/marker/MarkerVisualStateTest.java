@@ -159,12 +159,14 @@ class MarkerVisualStateTest {
             assertFalse(state.consume(), "nothing has been published yet");
 
             state.publish(state.nextFrameId(4), true, false, 10.0D, 20.0D, 0.5D,
-                    0x56B4E9, 42L, GuidanceKind.VILLAGER, 1.0F);
+                    0x56B4E9, 42L, GuidanceKind.VILLAGER, 1.0F,
+                    EdgeIndicatorState.EdgeSide.RIGHT);
             assertTrue(state.consume());
             assertFalse(state.consume(), "the same frame is not drawn twice");
 
             state.publish(state.nextFrameId(4), true, false, 11.0D, 20.0D, 0.5D,
-                    0x56B4E9, 41L, GuidanceKind.VILLAGER, 1.0F);
+                    0x56B4E9, 41L, GuidanceKind.VILLAGER, 1.0F,
+                    EdgeIndicatorState.EdgeSide.RIGHT);
             assertTrue(state.consume(), "a second frame inside the same render tick is a new frame");
             assertEquals(41L, state.roundedDistance());
         }

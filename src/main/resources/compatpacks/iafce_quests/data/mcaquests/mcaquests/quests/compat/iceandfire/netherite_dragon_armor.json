@@ -1,0 +1,84 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:compat/iceandfire/netherite_dragon_armor",
+  "weight": 5,
+  "category": "gathering",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:armorer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.iceandfire_netherite_dragon_armor.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.iceandfire_netherite_dragon_armor.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.iceandfire_netherite_dragon_armor.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.iceandfire_netherite_dragon_armor.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.iceandfire_netherite_dragon_armor.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.iceandfire_netherite_dragon_armor.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.iceandfire_netherite_dragon_armor.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "iceandfire:dragonarmor_netherite_head",
+      "count": 1
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "iceandfire:dragonarmor_netherite_neck",
+      "count": 1
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "iceandfire:dragonarmor_netherite_body",
+      "count": 1
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "iceandfire:dragonarmor_netherite_tail",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 55
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 14
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:compat_capability",
+        "provider": "iceandfire",
+        "capability": "iceandfire.netherite_dragon_armor"
+      }
+    ]
+  }
+}

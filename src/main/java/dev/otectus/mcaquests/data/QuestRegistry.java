@@ -26,15 +26,52 @@ public final class QuestRegistry {
      * would be the very per-open recomputation the offer session exists to avoid.
      */
     private static volatile int generation;
+    /**
+     * Quest ids that failed to parse at the last load, mapped to the resource namespace their error
+     * blamed (empty string when none could be identified).
+     *
+     * <p>Kept because "this quest could not be loaded" and "this quest never existed" are different
+     * facts and the quest log used to conflate them: a player holding a quest from a datapack that
+     * names an uninstalled mod's content saw "Unknown quest" and lost the ability to tell whether
+     * removing that mod had done it. Recorded per reload, cleared by the next one, never persisted —
+     * a reload that fixes the pack empties this by itself.
+     */
+    private static volatile Map<ResourceLocation, String> quarantine = Map.of();
 
     private QuestRegistry() {
     }
 
     static void replaceAll(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors, List<String> warnings) {
+        replaceAll(loaded, errors, warnings, Map.of());
+    }
+
+    static void replaceAll(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors,
+                           List<String> warnings, Map<ResourceLocation, String> quarantined) {
         quests = Map.copyOf(loaded);
         generation++;
         lastErrors = List.copyOf(errors);
         lastWarnings = List.copyOf(warnings);
+        quarantine = Map.copyOf(quarantined);
+    }
+
+    /** True when this id was seen at the last load but could not be parsed. */
+    public static boolean isQuarantined(ResourceLocation id) {
+        return quarantine.containsKey(id);
+    }
+
+    /**
+     * The namespace blamed for a quarantined quest's parse failure, if one could be identified —
+     * normally the mod whose content the quest names. Empty for an id that loaded fine, and for one
+     * whose error message named nothing useful.
+     */
+    public static Optional<String> quarantinedNamespace(ResourceLocation id) {
+        String namespace = quarantine.get(id);
+        return namespace == null || namespace.isEmpty() ? Optional.empty() : Optional.of(namespace);
+    }
+
+    /** Every quarantined quest from the last load, for diagnostics. */
+    public static Map<ResourceLocation, String> quarantined() {
+        return quarantine;
     }
 
     /** How many times the catalogue has been replaced. Never reset; wraps harmlessly. */

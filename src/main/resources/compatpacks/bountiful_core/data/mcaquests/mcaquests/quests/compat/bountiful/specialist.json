@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:compat/bountiful/specialist",
+  "weight": 6,
+  "category": "combat",
+  "difficulty": "hard",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 48000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:weaponsmith"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.bountiful_specialist.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.bountiful_specialist.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.bountiful_specialist.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.bountiful_specialist.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.bountiful_specialist.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.bountiful_specialist.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.bountiful_specialist.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:bountiful_bounties",
+      "count": 1,
+      "min_rarity": "RARE"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 40
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:compat_capability",
+        "provider": "bountiful",
+        "capability": "bountiful.cash_in_hook"
+      },
+      {
+        "type": "mcaquests:compat_capability",
+        "provider": "bountiful",
+        "capability": "bountiful.read_rarity"
+      }
+    ]
+  }
+}

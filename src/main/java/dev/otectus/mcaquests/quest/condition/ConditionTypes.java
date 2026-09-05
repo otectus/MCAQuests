@@ -12,6 +12,7 @@ import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AdvancementCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AgeGroupCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.BiomeCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.CompatCapabilityCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.FtbqChapterCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.FtbqQuestCompletedCondition;
@@ -73,6 +74,18 @@ public final class ConditionTypes {
             HAS_INCIDENT = register(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mcareputation",
                     "has_incident"),
             dev.otectus.mcaquests.quest.condition.leaf.HasIncidentCondition.CODEC);
+
+    /**
+     * {@code mcareputation:villager_opinion} — what this giver personally makes of the player, as
+     * opposed to what their village records.
+     *
+     * <p>Registered unconditionally for the same reason {@link #HAS_INCIDENT} is: the pack must parse
+     * identically with or without MCA: Reputation, and it is evaluation that degrades.
+     */
+    public static final QuestConditionType<dev.otectus.mcaquests.quest.condition.leaf.VillagerOpinionCondition>
+            VILLAGER_OPINION = register(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mcareputation",
+                    "villager_opinion"),
+            dev.otectus.mcaquests.quest.condition.leaf.VillagerOpinionCondition.CODEC);
 
     // Townstead (Townstead spec 5.1). Registered unconditionally, exactly like the FTB Quests and
     // MCA: Reputation conditions above: a datapack must parse identically whether or not the mod is
@@ -145,6 +158,12 @@ public final class ConditionTypes {
             register("ftbq_chapter_completed", FtbqChapterCompletedCondition.CODEC);
     public static final QuestConditionType<FtbqTaskCompletedCondition> FTBQ_TASK_COMPLETED =
             register("ftbq_task_completed", FtbqTaskCompletedCondition.CODEC);
+
+    // 1.5.4 -- the mod-agnostic capability gate. Registered unconditionally for the same reason every
+    // optional-mod condition above is: a pack must parse identically whether or not the mod is
+    // installed, and an unknown provider id answers "not present" rather than failing the load.
+    public static final QuestConditionType<CompatCapabilityCondition> COMPAT_CAPABILITY =
+            register("compat_capability", CompatCapabilityCondition.CODEC);
 
     public static final Codec<QuestConditionType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

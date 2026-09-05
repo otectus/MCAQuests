@@ -372,12 +372,74 @@ tasks.register('mapProbeTest', Test) {
     }
 }
 
+// Replays the Ice & Fire manifest against real Ice & Fire jars. Separate from `check` because neither
+// jar is resolvable from a Maven the build controls: Community Edition is on Modrinth and the original
+// on CurseForge, so the paths come from whoever runs it.
+//
+//     ./gradlew iceAndFireProbeTest -PiceandfireCeJar=<path> -PiceandfireOriginalJar=<path>
+//
+// Either may be given alone; the half with no jar skips itself. Unlike the Townstead and map probes
+// these are raw jar paths with no configuration and no deobfuscation: the test only reads bytes out of
+// a zip and parses a constant pool, and never loads a class from either jar.
+tasks.register('iceAndFireProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the Ice & Fire registry manifest against supplied Ice & Fire jars.'
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.iceandfire.IceAndFireJarProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    // The SKIPPED report lives in onlyIf rather than doFirst: onlyIf is evaluated first, and a
+    // doFirst on a skipped task never runs.
+    onlyIf {
+        if (project.hasProperty('iceandfireCeJar') || project.hasProperty('iceandfireOriginalJar')) {
+            return true
+        }
+        logger.lifecycle('SKIPPED: no Ice & Fire jar supplied (-PiceandfireCeJar/-PiceandfireOriginalJar)')
+        false
+    }
+    doFirst {
+        systemProperty 'mcaquests.iceandfire.probe.ce',
+                project.findProperty('iceandfireCeJar')?.toString() ?: ''
+        systemProperty 'mcaquests.iceandfire.probe.original',
+                project.findProperty('iceandfireOriginalJar')?.toString() ?: ''
+    }
+}
+
+// Replays the Bountiful manifest against a real Bountiful jar. Separate from `check` for the same
+// reason as the Ice & Fire probe: Bountiful is CurseForge-only, so the path comes from whoever runs it.
+//
+//     ./gradlew bountifulProbeTest -PbountifulJar=<path>
+//
+// The test only reads bytes out of a zip and parses a constant pool; it never loads a class from the
+// jar, which it could not do anyway without kotlinforforge and Kambrik on the classpath.
+tasks.register('bountifulProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the Bountiful binding manifest against a supplied Bountiful jar.'
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.bountiful.BountifulJarProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    // The SKIPPED report lives in onlyIf rather than doFirst: onlyIf is evaluated first, and a
+    // doFirst on a skipped task never runs.
+    onlyIf {
+        if (project.hasProperty('bountifulJar')) {
+            return true
+        }
+        logger.lifecycle('SKIPPED: no Bountiful jar supplied (-PbountifulJar)')
+        false
+    }
+    doFirst {
+        systemProperty 'mcaquests.bountiful.probe.jar',
+                project.findProperty('bountifulJar')?.toString() ?: ''
+    }
+}
+
 // ModDevGradle configures `test` late (unitTest wires in the Minecraft classpath, the JUnit runner and
-// its JVM args), so the two probe tasks inherit that configuration here instead of assembling a
+// its JVM args), so the probe tasks inherit that configuration here instead of assembling a
 // second, subtly different runtime out of sourceSets.
 afterEvaluate {
     def base = tasks.named('test', Test).get()
-    ['townsteadProbeTest', 'mapProbeTest'].each { name ->
+    ['townsteadProbeTest', 'mapProbeTest', 'iceAndFireProbeTest', 'bountifulProbeTest'].each { name ->
         tasks.named(name, Test).configure {
             classpath = base.classpath
             testClassesDirs = base.testClassesDirs
@@ -451,7 +513,9 @@ tasks.register('jarSmokeCheck') {
         def names = []
         zipTree(jarFile).visit { details -> if (!details.directory) names << details.relativePath.pathString }
         def contains = { String entry -> names.contains(entry) }
-        ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json', 'pack.mcmeta'].each { required ->
+        ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json', 'mcaquests.compat.mixins.json',
+         'pack.mcmeta', 'compatpacks/iafce_quests/pack.mcmeta', 'compatpacks/bountiful_core/pack.mcmeta',
+         'compatpacks/bountiful_iafce/pack.mcmeta'].each { required ->
             if (!contains(required)) {
                 throw new GradleException("${jarFile.name} is missing ${required}.")
             }
@@ -460,7 +524,8 @@ tasks.register('jarSmokeCheck') {
         // must not be mistaken for a bundled JourneyMap.
         def forbidden = ['net/minecraftforge/', 'net/conczin/', 'net/mca/', 'forge/net/mca/',
                          'dev/ftb/', 'journeymap/', 'xaero/', 'dev/architectury/',
-                         'dev/otectus/mcareputation/']
+                         'dev/otectus/mcareputation/', 'io/ejekta/', 'com/iafenvoy/',
+                         'com/github/alexthe666/']
         def bundled = names.findAll { name -> forbidden.any { name.startsWith(it) } }
         if (!bundled.isEmpty()) {
             throw new GradleException("${jarFile.name} bundles third-party classes: " +

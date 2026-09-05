@@ -1,0 +1,70 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:compat/iceandfire/dragon_seeker_trial",
+  "weight": 8,
+  "category": "exploration",
+  "difficulty": "medium",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "mca:adventurer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.iceandfire_dragon_seeker_trial.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.iceandfire_dragon_seeker_trial.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.iceandfire_dragon_seeker_trial.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.iceandfire_dragon_seeker_trial.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.iceandfire_dragon_seeker_trial.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.iceandfire_dragon_seeker_trial.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.iceandfire_dragon_seeker_trial.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:use_item",
+      "item": "iceandfire:legendary_dragon_seeker",
+      "count": 1,
+      "require_success": false
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:currency"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 30
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 8
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:compat_capability",
+        "provider": "iceandfire",
+        "capability": "iceandfire.dragon_seekers"
+      }
+    ]
+  }
+}

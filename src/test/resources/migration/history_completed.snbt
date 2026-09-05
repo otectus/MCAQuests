@@ -1,0 +1,25 @@
+{
+  active: [],
+  history: {
+    cooldowns: {
+      "mcaquests:archer_cull_from_afar|7b1c4b6e-1e5c-4a2f-9c3d-8a5f6e7d0b11": 148000L
+    },
+    completions: {
+      "mcaquests:archer_cull_from_afar": 2
+    },
+    outcomes: {
+      "mcaquests:relations_protect_my_child|ABANDONED": 1,
+      "mcaquests:road_caravan_through|DECLINED": 3
+    },
+    completions_by_giver: {
+      "mcaquests:archer_cull_from_afar|7b1c4b6e-1e5c-4a2f-9c3d-8a5f6e7d0b11": 2
+    },
+    outcomes_by_giver: {
+      "mcaquests:relations_protect_my_child|7b1c4b6e-1e5c-4a2f-9c3d-8a5f6e7d0b11|ABANDONED": 1,
+      "mcaquests:road_caravan_through|7b1c4b6e-1e5c-4a2f-9c3d-8a5f6e7d0b11|DECLINED": 3
+    }
+  },
+  titles: {},
+  stats: {},
+  offers: {}
+}

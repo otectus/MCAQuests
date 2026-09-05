@@ -49,6 +49,8 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
 | **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2101.1.x; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
 | **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.8)`, verified against **0.7.6**; adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
+| **[Ice & Fire: Community Edition](https://www.curseforge.com/minecraft/mc-mods/ice-and-fire-dragons)** | *Optional* — 2.0 and later; quest targets for dragons, hippogryphes and creatures; auto-detects original or Community Edition build ([ICEANDFIRE.md](ICEANDFIRE.md)) |
+| **[Bountiful](https://www.curseforge.com/minecraft/mc-mods/bountiful)** | *Optional* — 8.0.x; bounty boards and completion as quest objectives ([BOUNTIFUL.md](BOUNTIFUL.md)) |
 | **Create: Numismatics** | *Optional* — set `currencyProvider = NUMISMATICS` to pay quest rewards in coins ([CONFIG.md](CONFIG.md#rewardscurrency)) |
 
 MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.

@@ -72,6 +72,15 @@ public class JournalScreen extends McaQuestsScreen {
 
     /** The data the current layout was built from, so {@link #tick} can notice the server's reply. */
     private List<JournalVillageEntry> renderedVillages = List.of();
+
+    /**
+     * Whether this open of the journal has already asked the server for its snapshot. {@code init()}
+     * runs again on every {@code rebuildWidgets()}, and the reply to a request is exactly what makes
+     * {@code tick()} rebuild, so requesting from every {@code init()} looped: request, reply, rebuild,
+     * request... Each pass recreated the tab buttons and reset their tooltip timers, which is what the
+     * flickering "Journal" tooltip was.
+     */
+    private boolean snapshotRequested;
     private List<Component> renderedTitles = List.of();
     private List<JournalArchiveEntry> renderedArchive = List.of();
 
@@ -91,8 +100,11 @@ public class JournalScreen extends McaQuestsScreen {
     @Override
     protected void init() {
         super.init();
-        // Request a fresh server-authoritative snapshot each time the journal opens.
-        PacketDistributor.sendToServer(new RequestJournalC2SPacket());
+        // Request a fresh server-authoritative snapshot once per open, not once per rebuild.
+        if (!snapshotRequested) {
+            snapshotRequested = true;
+            PacketDistributor.sendToServer(new RequestJournalC2SPacket());
+        }
         buildRows();
 
         addBookTabs(BookTab.JOURNAL);

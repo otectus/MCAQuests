@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.client.map.ClientMapWaypointRegistry;
 import dev.otectus.mcaquests.client.map.WaypointDiagnostics;
+import dev.otectus.mcaquests.client.marker.EdgeIndicatorDebug;
 import dev.otectus.mcaquests.compat.MapWaypointBackend;
 import dev.otectus.mcaquests.compat.ProbeStep;
 import net.minecraft.commands.CommandSourceStack;
@@ -42,7 +43,23 @@ public final class ClientCommands {
                 .then(Commands.literal("waypoints")
                         .executes(ClientCommands::waypointStatus)
                         .then(Commands.literal("status").executes(ClientCommands::waypointStatus))
-                        .then(Commands.literal("probe").executes(ClientCommands::waypointProbe))));
+                        .then(Commands.literal("probe").executes(ClientCommands::waypointProbe)))
+                .then(Commands.literal("debug")
+                        .then(Commands.literal("marker").executes(ClientCommands::toggleMarkerDebug))));
+    }
+
+    /**
+     * Draws what the edge indicator is thinking, on top of the HUD.
+     *
+     * <p>A toggle rather than a report, because what goes wrong with the indicator goes wrong while
+     * the player is turning: a printed line would be one frame out of a hundred and forty, and the
+     * frame that matters is the one where the raw bearing and the filtered one disagree.
+     */
+    private static int toggleMarkerDebug(CommandContext<CommandSourceStack> ctx) {
+        boolean enabled = EdgeIndicatorDebug.toggle();
+        ctx.getSource().sendSuccess(() -> Component.translatable(
+                enabled ? "mcaquests.marker.debug.on" : "mcaquests.marker.debug.off"), false);
+        return Command.SINGLE_SUCCESS;
     }
 
     /** What every installed map backend is doing, without touching any of them. */
