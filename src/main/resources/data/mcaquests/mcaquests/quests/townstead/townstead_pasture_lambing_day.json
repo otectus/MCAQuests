@@ -42,7 +42,7 @@
   "objectives": [
     {
       "type": "mcaquests:breed_animals",
-      "animal": "minecraft:sheep",
+      "animal": { "entity": "minecraft:sheep" },
       "near": {
         "anchor": "townstead_building",
         "building_type": "pen"

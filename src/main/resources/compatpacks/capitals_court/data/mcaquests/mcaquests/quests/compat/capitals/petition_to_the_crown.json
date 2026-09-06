@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:compat/capitals/petition_to_the_crown",
+  "weight": 10,
+  "category": "delivery",
+  "difficulty": "easy",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 24000
+  },
+  "giver": {
+    "professions": [
+      "minecraft:librarian",
+      "minecraft:cartographer"
+    ],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "mcaquests.quest.capitals_petition_to_the_crown.title"
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "mcaquests.quest.capitals_petition_to_the_crown.dialogue.offer"
+    },
+    "accept": {
+      "translate": "mcaquests.quest.capitals_petition_to_the_crown.dialogue.accept"
+    },
+    "decline": {
+      "translate": "mcaquests.quest.capitals_petition_to_the_crown.dialogue.decline"
+    },
+    "in_progress": {
+      "translate": "mcaquests.quest.capitals_petition_to_the_crown.dialogue.in_progress"
+    },
+    "ready": {
+      "translate": "mcaquests.quest.capitals_petition_to_the_crown.dialogue.ready"
+    },
+    "complete": {
+      "translate": "mcaquests.quest.capitals_petition_to_the_crown.dialogue.complete"
+    }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "capital_role",
+        "role": "hand"
+      },
+      "item": "minecraft:paper",
+      "count": 8
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:xp",
+      "amount": 25
+    },
+    {
+      "type": "mcaquests:hearts",
+      "amount": 6
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:compat_capability",
+        "provider": "mcacapitals",
+        "capability": "capitals.registry"
+      },
+      {
+        "type": "mcaquests:capital_present"
+      }
+    ]
+  }
+}

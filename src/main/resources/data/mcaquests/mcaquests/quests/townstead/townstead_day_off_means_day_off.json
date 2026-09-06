@@ -45,6 +45,8 @@
       "source": "villager",
       "target": "giver",
       "path": "needs.energy",
+      "operator": "gte",
+      "value": 0,
       "direction": "increase",
       "amount": 6,
       "minimum_final": 12
@@ -54,7 +56,7 @@
       "source": "villager",
       "target": "giver",
       "path": "schedule.currentActivity",
-      "operator": "neq",
+      "operator": "ne",
       "value": "work",
       "hold_ticks": 600,
       "reset_on_false": true

@@ -58,7 +58,7 @@
         "location": {
           "anchor": "bed"
         },
-        "tag": "mcaquests:common_undead",
+        "threat": { "tag": "mcaquests:common_undead" },
         "radius": 24,
         "count": 6
       },

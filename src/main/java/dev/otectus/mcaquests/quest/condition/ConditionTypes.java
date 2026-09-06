@@ -11,6 +11,11 @@ import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AdvancementCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.AgeGroupCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.BiomeCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.CapitalAllegianceCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.CapitalInterregnumCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.CapitalPresentCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.CapitalRelationCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.CapitalRoleCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.CompatCapabilityCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.FtbqChapterCompletedCondition;
@@ -163,6 +168,21 @@ public final class ConditionTypes {
     // installed, and an unknown provider id answers "not present" rather than failing the load.
     public static final QuestConditionType<CompatCapabilityCondition> COMPAT_CAPABILITY =
             register("compat_capability", CompatCapabilityCondition.CODEC);
+
+    // 1.6.0 -- MCA Capitals. Registered unconditionally like every other optional-mod condition; each
+    // one reads through the Capitals bridge, which answers "no capital here" when the mod is absent,
+    // disabled, or only partially bound. Court content therefore parses on a Quests-only install and
+    // simply never becomes eligible.
+    public static final QuestConditionType<CapitalPresentCondition> CAPITAL_PRESENT =
+            register("capital_present", CapitalPresentCondition.CODEC);
+    public static final QuestConditionType<CapitalRoleCondition> CAPITAL_ROLE =
+            register("capital_role", CapitalRoleCondition.CODEC);
+    public static final QuestConditionType<CapitalAllegianceCondition> CAPITAL_ALLEGIANCE =
+            register("capital_allegiance", CapitalAllegianceCondition.CODEC);
+    public static final QuestConditionType<CapitalRelationCondition> CAPITAL_RELATION =
+            register("capital_relation", CapitalRelationCondition.CODEC);
+    public static final QuestConditionType<CapitalInterregnumCondition> CAPITAL_INTERREGNUM =
+            register("capital_interregnum", CapitalInterregnumCondition.CODEC);
 
     public static final Codec<QuestConditionType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

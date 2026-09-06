@@ -104,11 +104,21 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 | `minEscortJourney` | `24` | How far, in blocks, the subject of an `escort_entity` or `reach_location` objective must **start** from the destination for the quest to be worth doing. A quest whose subject is already inside this distance is **not offered**, and one granted some other way (a quest chain, a command) will not credit arrival until the subject has genuinely travelled. This is what stops *"walk me to my bed"* being offered by a villager standing at their bed and completed instantly for the reward. A datapack can override it per objective with `min_journey`; set `0` here to fall back to the objective's own arrival radius. Range `0`–`512`. |
 | `highlightQuestTargets` | `true` | Outline, through walls, the villager the quest you are **following** currently wants you to reach — the delivery recipient, the escortee, the villager to heal/cure/protect/defend, or (once every objective is done) the villager you hand the quest back to. Sent to the quest owner only; other players never see your outlines. Through 1.4.3 this outlined a villager for *every* objective of *every* active quest, plus the giver of any quest that named nobody, for the quest's whole lifetime — see `highlightAllActiveQuests`. |
 | `highlightAllActiveQuests` | `false` | Restore the pre-1.5.0 behaviour: outline every active quest's target at once instead of only the quest you are following. The giver fallback is **not** restored — outlining somebody because they once gave you a quest carried no information. |
-| `guidanceSearchIntervalTicks` | `200` | How long before the quest marker retries a world search that found nothing. Locating a structure or biome is the same work as `/locate` and runs on the server thread; a search that **succeeds** is remembered on the objective permanently (and survives a restart), so this only governs how often a failed one is retried as you travel. Range `20`–`24000`. |
-| `guidanceSearchesPerPass` | `1` | How many world searches one player's guidance pass may run, per second. Since 1.5.0 every active quest gets its own destination rather than only the one carrying the marker, so a player holding five quests whose structures are all out of range could otherwise fire five `/locate` calls at once. Quests that do not get a turn are asked again on the next pass — nothing is skipped, it is only spread out. Range `1`–`8`. |
+| `guidanceSearchIntervalTicks` | `200` | How long before an objective retries a completed world search that found nothing. Pending structure searches are polled without this delay; successful coordinates remain saved on the objective across restarts. The shared structure cache also retains completed misses for 200 ticks. Range `20`–`24000`. |
+| `guidanceSearchesPerPass` | `1` | How many synchronous biome/block searches one player's guidance pass may run. Other objectives retry next pass. Structure searches use a separate server-wide queue with one outstanding chunk request, at most eight queue steps per tick, and a soft 2 ms processing budget. Range `1`–`8`. |
+| `guidanceStructureSearchRadius` | `8` | Maximum random-spread structure search radius in **placement regions**, not chunks. A region spans the structure's configured spacing (27 chunks for a vanilla Nether fortress). The previous vanilla radius of 100 could examine up to 40,401 candidate regions per placement; 8 limits that to 289. Higher values reach farther but request more chunk data over time. Strongholds use their finite ring-position list instead. Range `0`–`100`. |
 | `autoTrackNewQuests` | `true` | Accepting a quest starts following it when you are not already following one, so the marker and the tracker point at it without being asked. Set `false` to choose with the pin in the quest log instead. A **server** setting, because the server decides what to point you at. |
 | `highlightUsesGlowingEffect` | `false` | Legacy highlighting mode. Applies the vanilla **Glowing status effect** to the villager itself instead of drawing a per-player outline. That effect is world state, so **every player on the server sees it** and it can appear in minimaps and shader outlines — which is why it is no longer the default. Only enable it if you want that behaviour back. |
 | `questChatMessages` | `true` | Send a short chat confirmation when a quest is accepted or completed. |
+
+Structure guidance checks nearby candidates over multiple ticks and requests only the chunk's
+structure-start data through Minecraft's asynchronous chunk API. It verifies a real structure before
+drawing a marker; the result is an approximate nearby destination, not necessarily the exact nearest
+result of `/locate`. Nearby searches for the same target share work within a 128-block region and
+dimension. The queue holds at most 128 searches/results, expires unpolled work after 200 ticks, and
+clears on server shutdown, level unload, and datapack reload. A pending marker does not stop quest
+progress. Chunk generation still consumes resources, and the soft tick budget cannot preempt a slow
+modded operation; biome searches remain synchronous.
 
 ### `[debug]`
 | Option | Default | What it does |
@@ -148,6 +158,13 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 | `mode` | `AUTO` | How far the optional Bountiful integration goes. `AUTO` uses the completion hook when Bountiful's own cash-in method is present with the shape it needs, and falls back to data-only when it is not. `DATA_ONLY` mounts our bounty pools and reads bounty rarity but never observes a cash-in, so bounty-completion quests are not offered. `OFF` makes the integration behave exactly as if Bountiful were not installed. |
 | `enableBuiltinContent` | `true` | Whether MCA: Quests mounts its own Bountiful quest pack. Turn this off to keep the capability probing and the `compat_capability` condition, but author all bounty-board content yourself. |
 | `enableIceAndFirePools` | `true` | Whether MCA: Quests offers its Ice & Fire bounty pools and decree to Bountiful's loader when both mods are installed. Separate from `enableBuiltinContent` because these become part of what a bounty board generates, which is Bountiful's economy to balance rather than ours. |
+
+### `[compat.capitals]`
+| Option | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch for the optional MCA Capitals integration. When false, every Capitals capability reports unavailable, so gated quests are never offered and any a player already holds pause rather than break. The registry probe still runs, so `/mcaquests compat capitals status` keeps telling the truth about what is installed. Role gating is done through `capital_role` conditions in quest JSON, not through config. |
+| `enableBuiltinContent` | `true` | Whether MCA: Quests mounts its own MCA Capitals quest pack. Turn this off to keep the capability probing and the `compat_capability` condition, but author all court content yourself. |
+| `pollIntervalTicks` | `200` | How often (ticks) the capital situation poller samples thrones and diplomacy. This is the ceiling on how long a vacant throne or a fresh war can go unnoticed before a situation fires. Polled rather than event-driven because Capitals resolves a succession on its own death handler, and reading the throne from beside it would race. Clamp `20`–`6000`. |
 
 ### `[compat.ftbquests]`
 | Option | Default | What it does |

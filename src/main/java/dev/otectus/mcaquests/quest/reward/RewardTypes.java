@@ -72,6 +72,17 @@ public final class RewardTypes {
     public static final QuestRewardType<GrantTitleReward> GRANT_TITLE =
             register(new ResourceLocation(McaQuests.MOD_ID, "grant_title"), GrantTitleReward.CODEC);
 
+    // 1.6.0 — MCA Capitals. Registered unconditionally like the Townstead and FTB rewards above; each
+    // one checks its own Capitals capability at grant time and logs a warning instead of granting when
+    // the mod is absent, disabled, or only partially bound.
+    public static final QuestRewardType<CapitalTitleReward> CAPITAL_TITLE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "capital_title"), CapitalTitleReward.CODEC);
+    public static final QuestRewardType<CapitalChronicleReward> CAPITAL_CHRONICLE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "capital_chronicle"), CapitalChronicleReward.CODEC);
+    public static final QuestRewardType<CapitalVillagerTitleReward> CAPITAL_VILLAGER_TITLE =
+            register(new ResourceLocation(McaQuests.MOD_ID, "capital_villager_title"),
+                    CapitalVillagerTitleReward.CODEC);
+
     // v1.1.0 — semantic money. The item paid out is a server config choice (emeralds, Numismatics, custom),
     // so a datapack asks for "some currency" and never hard-codes another mod's item.
     public static final QuestRewardType<CurrencyReward> CURRENCY =

@@ -237,6 +237,15 @@ dependencies {
         runtimeOnly fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
         runtimeOnly fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
     }
+
+    // Optional: put MCA Capitals on the dev runtime for hands-on testing. Never a compile dependency
+    // -- CapitalsBinding resolves it by name -- and never shipped. Capitals only loads with MCA
+    // 7.7.1-alpha.2 or newer, which is not the default dev MCA, so both switches are needed:
+    //
+    //     ./gradlew runClient -PmcaDevVersion=7.7.1-alpha.2+1.20.1 -PenableCapitalsInDev=true
+    if (project.hasProperty('enableCapitalsInDev') && project.enableCapitalsInDev.toBoolean()) {
+        runtimeOnly fg.deobf("maven.modrinth:capitals-a-monarchy-mod-for-mca-reborn:2Bj8IiyC")
+    }
 }
 
 test {
@@ -376,6 +385,39 @@ tasks.register('bountifulProbeTest', Test) {
     doFirst {
         systemProperty 'mcaquests.bountiful.probe.jar',
                 project.findProperty('bountifulJar')?.toString() ?: ''
+    }
+}
+
+// Replays the Capitals binding manifest against a real MCA Capitals jar, in its own JVM and its own
+// class loader. Separate from `check` because the jar comes from Modrinth rather than this build's
+// dependency graph, so its path is supplied by whoever runs it:
+//
+//     ./gradlew capitalsProbeTest -PcapitalsJar=<path>
+//
+// MCA rides along on `mcaquests.probe.jars` for the same load-bearing reason Townstead's probe needs
+// it: Capitals statically imports MCA throughout, so enumerating a Capitals class's methods resolves
+// MCA parameter types, and without MCA present whole classes read as unbound and the probe would pass
+// vacuously. Only the MCA build Capitals declares support for is fed to it -- 7.7.1-alpha.2+1.20.1,
+// the lower bound in its own mods.toml -- because an older one leaves the same members unresolvable.
+tasks.register('capitalsProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the MCA Capitals binding manifest against a supplied Capitals jar.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.capitals.CapitalsBindingProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    onlyIf { project.hasProperty('capitalsJar') }
+    doFirst {
+        systemProperty 'mcaquests.capitals.probe.jar',
+                project.findProperty('capitalsJar')?.toString() ?: ''
+        systemProperty 'mcaquests.probe.jars', mcaProbeVersions.indices
+                .findAll { i -> mcaProbeVersions[i].startsWith('7.7.1-alpha.2') }
+                .collect { i -> configurations.getByName("mcaProbe${i}").files }
+                .flatten()
+                .findAll { it.name.contains('minecraft-comes-alive') }
+                .join(File.pathSeparator)
     }
 }
 

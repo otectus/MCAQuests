@@ -4,9 +4,12 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.project.ProjectManager;
+import dev.otectus.mcaquests.quest.situation.CapitalsSituationDetector;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -73,6 +76,27 @@ public final class QuestEventHandlers {
     public static void creditConversation(ServerPlayer player, Entity villager) {
         QuestProgressEvents.creditTalk(player, villager);
         ProjectManager.onProjectTalk(player, villager);
+    }
+
+    /**
+     * Polls MCA Capitals for court changes worth a situation (1.6.0).
+     *
+     * <p>Throttled by {@code compat.capitals.pollIntervalTicks} rather than run every tick: a court
+     * changes hands a handful of times a world, and the poll walks every capital. {@code Phase.END} so
+     * the reading is of a tick that has finished — Capitals settles a succession during the tick that
+     * killed the sovereign, and asking at the start of one would see the throne mid-handover.
+     */
+    @SubscribeEvent
+    public static void onServerTickPollCapitals(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+        MinecraftServer server = event.getServer();
+        int interval = McaQuestsConfig.COMMON.capitalsPollIntervalTicks.get();
+        if (server == null || interval <= 0 || server.getTickCount() % interval != 0) {
+            return;
+        }
+        CapitalsSituationDetector.poll(server);
     }
 
     static void debugReject(String reason, Entity target) {

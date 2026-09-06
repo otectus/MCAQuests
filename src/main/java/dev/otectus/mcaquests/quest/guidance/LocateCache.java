@@ -7,18 +7,17 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 /**
  * Remembers where a world search found something, so it is never run twice for the same objective.
  *
- * <p>{@code findNearestMapStructure} and {@code findClosestBiome3d} are the two most expensive calls
- * this mod can make — they are what {@code /locate} does, and they run on the server thread. Guidance
- * is recomputed roughly once a second per player, so calling either one straight from an objective
- * would have meant a {@code /locate} per player per second, forever. That is not a marker, that is a
- * denial of service.
+ * <p>Biome searches run synchronously; structure searches use {@link StructureSearches} and are
+ * polled through {@link #resolveAsync}. Guidance is recomputed roughly once a second per player,
+ * so remembering verified answers avoids repeating world searches for an unchanged objective.
  *
- * <p>So a search happens at most once per objective, and its answer is written into that objective's
+ * <p>A successful search's answer is written into that objective's
  * own {@link ObjectiveProgress#extra()} — which is already persisted, already per-quest-instance, and
  * already how {@code EscortEntityObjective} freezes its destination. A restart or a relog therefore
  * costs nothing: the fortress is still where it was.
@@ -34,13 +33,12 @@ import java.util.function.Supplier;
  *
  * <h2>The per-pass budget</h2>
  *
- * <p>Guidance used to ask exactly one quest where to send the player, so at most one objective per
- * pass could reach a search. It now asks <em>every</em> active quest, so a player holding five
- * quests whose structures are all out of range would, without this, run five {@code /locate}s every
- * time the retry interval elapsed — five times the cost for the same one line of tracker text.
+ * <p>Guidance asks every active quest for a destination. Synchronous biome and block searches
+ * therefore share a per-pass budget. Structure polling is exempt: its actual work is limited by
+ * the server-wide queue, and a pending search must not starve the player's other objectives.
  *
  * <p>{@link #beginPass(int)} therefore opens a pass with a budget of {@code guidanceSearchesPerPass}
- * real searches; once it is spent, further misses answer empty and <b>record nothing</b>, so the
+ * synchronous searches; once it is spent, further misses answer empty and <b>record nothing</b>, so the
  * quests that did not get a turn are tried on the next pass rather than being throttled for a reason
  * that has nothing to do with the world. A cached hit is a tag read and never touches the budget.
  *
@@ -130,6 +128,43 @@ public final class LocateCache {
         extra.putLong(key + "Tried", now);
         extra.putString(key + "Dim", dimension);
         Optional<BlockPos> found = search.get();
+        found.ifPresent(pos -> {
+            extra.putInt(key + "X", pos.getX());
+            extra.putInt(key + "Y", pos.getY());
+            extra.putInt(key + "Z", pos.getZ());
+        });
+        return found;
+    }
+
+    /**
+     * Polls queued work without treating "pending" as a failed search. The global structure queue
+     * budgets actual work; polling its shared futures must not consume the synchronous per-pass
+     * budget or one pending quest would prevent every later quest from starting. No callback holds
+     * player/progress state: only the current level's result can be written, on this thread.
+     */
+    public static Optional<BlockPos> resolveAsync(ObjectiveProgress progress, String key, ServerLevel level,
+            Supplier<CompletableFuture<Optional<BlockPos>>> search) {
+        return resolveAsync(progress, key, level.dimension().location().toString(), level.getGameTime(),
+                retryInterval(), search);
+    }
+
+    static Optional<BlockPos> resolveAsync(ObjectiveProgress progress, String key, String dimension,
+            long now, int retryTicks, Supplier<CompletableFuture<Optional<BlockPos>>> search) {
+        CompoundTag extra = progress.extra();
+        boolean sameDimension = dimension.equals(extra.getString(key + "Dim"));
+        if (sameDimension && extra.contains(key + "X")) {
+            return Optional.of(new BlockPos(extra.getInt(key + "X"), extra.getInt(key + "Y"),
+                    extra.getInt(key + "Z")));
+        }
+        if (sameDimension && extra.contains(key + "Tried")
+                && now - extra.getLong(key + "Tried") < retryTicks) return Optional.empty();
+        if (!sameDimension) forget(progress, key);
+        CompletableFuture<Optional<BlockPos>> future = search.get();
+        if (!future.isDone()) return Optional.empty();
+        Optional<BlockPos> found = future.isCompletedExceptionally() ? Optional.empty()
+                : future.getNow(Optional.empty());
+        extra.putString(key + "Dim", dimension);
+        extra.putLong(key + "Tried", now);
         found.ifPresent(pos -> {
             extra.putInt(key + "X", pos.getX());
             extra.putInt(key + "Y", pos.getY());

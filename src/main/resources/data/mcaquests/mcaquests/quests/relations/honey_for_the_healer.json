@@ -43,7 +43,7 @@
   "objectives": [
     {
       "type": "mcaquests:breed_animals",
-      "animal": "minecraft:bee",
+      "animal": { "entity": "minecraft:bee" },
       "near": {
         "anchor": "home_village"
       },

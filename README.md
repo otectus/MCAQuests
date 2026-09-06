@@ -51,6 +51,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.8)`, verified against **0.7.6**; adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
 | **[Ice & Fire](https://www.curseforge.com/minecraft/mc-mods/iceandfire)** | *Optional* — original or Community Edition; hunt dragons and mythical creatures ([ICEANDFIRE.md](ICEANDFIRE.md)) |
 | **[Bountiful](https://www.curseforge.com/minecraft/mc-mods/bountiful)** | *Optional* — discover the contract board and complete bounties ([BOUNTIFUL.md](BOUNTIFUL.md)) |
+| **[MCA Capitals](https://www.curseforge.com/minecraft/mc-mods/mca-capitals)** | *Optional* — serve a sovereign, earn a title, and keep peace between capitals ([CAPITALS.md](CAPITALS.md)) |
 | **Create: Numismatics** | *Optional* — set `currencyProvider = NUMISMATICS` to pay quest rewards in coins ([CONFIG.md](CONFIG.md#rewardscurrency)) |
 
 MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.

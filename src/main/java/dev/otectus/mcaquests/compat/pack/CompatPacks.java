@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.compat.pack;
 
+import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.CompatProvider;
 import dev.otectus.mcaquests.compat.CompatRegistry;
 import dev.otectus.mcaquests.compat.bountiful.BountifulBridge;
@@ -33,6 +34,10 @@ public final class CompatPacks {
     /** The same seam for {@code compat.bountiful.enableBuiltinContent}. */
     private static volatile BooleanSupplier bountifulBuiltinContent =
             BountifulCompat::builtinContentEnabled;
+
+    /** The same seam for {@code compat.capitals.enableBuiltinContent}. */
+    private static volatile BooleanSupplier capitalsBuiltinContent =
+            () -> McaQuestsConfig.COMMON.capitalsEnableBuiltinContent.get();
 
     /** The same seam for {@code compat.bountiful.enableIceAndFirePools}. */
     private static volatile BooleanSupplier bountifulIceAndFirePools =
@@ -81,11 +86,26 @@ public final class CompatPacks {
                     && registry.has(IceAndFireRegistryManifest.MOD_ID, IceAndFireCapabilities.CORE)
                     && bountifulIceAndFirePools.getAsBoolean());
 
+    /**
+     * MCA Capitals court content: mounted when Capitals is installed with its capital registry bound,
+     * and the owner has not turned our content off.
+     *
+     * <p>The registry is the right thing to require rather than merely "Capitals is loaded". Every
+     * quest and situation in this pack is about a court — a sovereign to walk home, a hand to petition,
+     * a throne that has fallen empty — so an installation where the registry did not bind has nobody
+     * for them to be about, and the offers would name offices that resolve to no one.
+     */
+    public static final ConditionalCompatPack CAPITALS_COURT = new ConditionalCompatPack(
+            "capitals_court", "capitals_court",
+            registry -> registry.has("mcacapitals", "capitals.registry")
+                    && capitalsBuiltinContent.getAsBoolean());
+
     /** In declaration order, which is the order they are offered to the repository. */
     private static final List<ConditionalCompatPack> ALL = List.of(
             ICEANDFIRE_QUESTS,
             BOUNTIFUL_CORE,
-            BOUNTIFUL_ICEANDFIRE);
+            BOUNTIFUL_ICEANDFIRE,
+            CAPITALS_COURT);
 
     private CompatPacks() {
     }
@@ -109,6 +129,13 @@ public final class CompatPacks {
     /** Overrides {@code compat.bountiful.enableIceAndFirePools} for one test; {@code null} restores it. */
     public static void setBountifulIceAndFirePoolsForTest(BooleanSupplier override) {
         bountifulIceAndFirePools = override == null ? BountifulCompat::iceAndFirePoolsEnabled : override;
+    }
+
+    /** Overrides {@code compat.capitals.enableBuiltinContent} for one test; {@code null} restores it. */
+    public static void setCapitalsBuiltinContentForTest(BooleanSupplier override) {
+        capitalsBuiltinContent = override == null
+                ? () -> McaQuestsConfig.COMMON.capitalsEnableBuiltinContent.get()
+                : override;
     }
 
     /**

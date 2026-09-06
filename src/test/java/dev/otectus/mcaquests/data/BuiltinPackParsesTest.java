@@ -212,6 +212,72 @@ class BuiltinPackParsesTest {
                 + "discards, so it never runs");
     }
 
+    /**
+     * Every objective a file declares must decode on its own.
+     *
+     * <p>{@code QuestDefinition} reads {@code objectives} through {@code optionalFieldOf} as well, so one
+     * malformed entry empties the whole list without an error: the quest loads, is offered, and is
+     * instantly turn-in ready with nothing to do. That is how seven shipped {@code defend_location}
+     * objectives that wrote the threat flat (a top-level {@code "entity"} instead of a nested
+     * {@code "threat"} object) went unnoticed until 1.6.0. Situation offers are checked too, since their
+     * objectives ride the same codec. Conditional compat packs are included because they are shipped
+     * content just the same.
+     */
+    @Test
+    @DisplayName("no quest or situation offer silently loses declared objectives")
+    void declaredObjectivesSurviveParsing() {
+        List<String> lost = new ArrayList<>();
+        List<Path> roots = new ArrayList<>();
+        roots.add(DATA);
+        try (Stream<Path> packs = Files.list(Path.of("src/main/resources/compatpacks"))) {
+            packs.filter(Files::isDirectory)
+                    .map(p -> p.resolve("data/mcaquests/mcaquests"))
+                    .filter(Files::isDirectory)
+                    .sorted()
+                    .forEach(roots::add);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        for (Path root : roots) {
+            for (String folder : List.of("quests", "situations")) {
+                Path dir = root.resolve(folder);
+                if (!Files.isDirectory(dir)) {
+                    continue;
+                }
+                for (Path file : jsonUnder(dir)) {
+                    JsonElement parsed = json(file);
+                    if (!parsed.isJsonObject()) {
+                        continue;
+                    }
+                    checkObjectives(file, parsed.getAsJsonObject(), lost);
+                    JsonElement offer = parsed.getAsJsonObject().get("offer");
+                    if (offer != null && offer.isJsonObject()) {
+                        checkObjectives(file, offer.getAsJsonObject(), lost);
+                    }
+                }
+            }
+        }
+        assertEquals(List.of(), lost, "these files declare objectives that do not parse; at runtime the "
+                + "list is silently emptied rather than reported");
+    }
+
+    private static void checkObjectives(Path file, com.google.gson.JsonObject owner, List<String> lost) {
+        JsonElement objectives = owner.get("objectives");
+        if (objectives == null || !objectives.isJsonArray()) {
+            return;
+        }
+        int index = 0;
+        for (JsonElement objective : objectives.getAsJsonArray()) {
+            DataResult<dev.otectus.mcaquests.quest.objective.QuestObjective> parsed =
+                    dev.otectus.mcaquests.quest.objective.ObjectiveTypes.CODEC.parse(JsonOps.INSTANCE, objective);
+            if (parsed.result().isEmpty()) {
+                lost.add(file + " objectives[" + index + "]: "
+                        + parsed.error().map(DataResult.PartialResult::message).orElse("?"));
+            }
+            index++;
+        }
+    }
+
     private static <T> void assertAllParse(String folder, com.mojang.serialization.Codec<T> codec) {
         List<String> failures = new ArrayList<>();
         List<Path> files = jsonUnder(folder);
@@ -230,7 +296,11 @@ class BuiltinPackParsesTest {
     }
 
     private static List<Path> jsonUnder(String folder) {
-        try (Stream<Path> files = Files.walk(DATA.resolve(folder))) {
+        return jsonUnder(DATA.resolve(folder));
+    }
+
+    private static List<Path> jsonUnder(Path dir) {
+        try (Stream<Path> files = Files.walk(dir)) {
             return files.filter(p -> p.toString().endsWith(".json")).sorted().toList();
         } catch (IOException e) {
             throw new UncheckedIOException(e);

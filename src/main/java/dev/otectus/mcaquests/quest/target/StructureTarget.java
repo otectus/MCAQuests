@@ -1,11 +1,10 @@
 package dev.otectus.mcaquests.quest.target;
 
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
+import dev.otectus.mcaquests.quest.guidance.StructureSearches;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -18,6 +17,7 @@ import net.minecraft.world.level.levelgen.structure.Structure;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Matches a structure by id ({@code "structure": ...}) or tag ({@code "structure_tag": ...}) for the
@@ -77,21 +77,16 @@ public record StructureTarget(Optional<ResourceLocation> structure, Optional<Tag
     }
 
     /**
-     * The nearest generated instance of this structure to {@code from}, or empty.
-     *
-     * <p>This is vanilla's own {@code /locate} call, and it is <b>expensive</b>: it walks outward
-     * chunk by chunk and can stall the server tick for a noticeable fraction of a second on a slow
-     * disk. Nothing here throttles it — callers must, and the only caller does, through
-     * {@code LocateCache}, which searches once per objective and remembers the answer for good.
-     *
-     * <p>{@code skipKnownStructures} is {@code false} so a structure the player has already been
-     * inside still counts. The objective is "go there", not "find one nobody has seen".
-     *
-     * <p>Fails to empty rather than throwing, exactly like {@link #matches}: the id lives in a
-     * dynamic registry and may name nothing in this world, in which case there is no marker to draw
-     * and the quest simply says where to go in words.
+     * Polls a shared, resumable search. Empty also means pending: callers should ask again later.
+     * Returns a verified nearby structure; navigation is approximate, not an exact /locate result.
+     * The radius counts placement regions (which may span many chunks), capped by server config.
      */
     public Optional<BlockPos> locate(ServerLevel level, BlockPos from, int chunkRadius) {
+        return locateAsync(level, from, chunkRadius).getNow(Optional.empty());
+    }
+
+    /** Never waits for chunk generation. All results are inspected/persisted on the server thread. */
+    public CompletableFuture<Optional<BlockPos>> locateAsync(ServerLevel level, BlockPos from, int chunkRadius) {
         try {
             Registry<Structure> registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
             HolderSet<Structure> set = null;
@@ -103,14 +98,12 @@ public record StructureTarget(Optional<ResourceLocation> structure, Optional<Tag
                 set = registry.getTag(tag.get()).map(named -> (HolderSet<Structure>) named).orElse(null);
             }
             if (set == null || set.size() == 0) {
-                return Optional.empty();
+                return CompletableFuture.completedFuture(Optional.empty());
             }
-            Pair<BlockPos, Holder<Structure>> found =
-                    level.getChunkSource().getGenerator().findNearestMapStructure(level, set, from,
-                            Math.max(1, chunkRadius), false);
-            return found == null ? Optional.empty() : Optional.of(found.getFirst());
-        } catch (Throwable t) {
-            return Optional.empty();
+            return StructureSearches.request(level, this, set, from, chunkRadius)
+                    .exceptionally(error -> Optional.empty());
+        } catch (RuntimeException t) {
+            return CompletableFuture.completedFuture(Optional.empty());
         }
     }
 

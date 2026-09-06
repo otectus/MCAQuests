@@ -1,6 +1,10 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.RelativeCandidate;
+import dev.otectus.mcaquests.compat.capitals.CapitalRef;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
+import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.situation.SituationFocus;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
@@ -8,6 +12,7 @@ import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -112,7 +117,29 @@ public interface VillagerTargeted extends QuestObjective {
                     .isPresent()
                     ? Optional.empty()
                     : Optional.of(Component.translatable("mcaquests.unofferable.no_situation_focus"));
+            // A capital office is offered only when a villager is actually sitting in it. A village
+            // with no capital, a vacant office, and an office held by a player all withhold the quest
+            // here rather than producing one that names a person who cannot be walked up to --
+            // villagerRoleHolders answers in villagers, so a player-held throne is an empty office.
+            case CAPITAL_ROLE -> {
+                Entity giver = context.villager();
+                Optional<CapitalRef> capital = CapitalsQueries.giverCapital(giver);
+                boolean seated = capital.filter(CapitalsCompat.bridge()::isActive).isPresent()
+                        && !selector.capitalRoleHolders(giver, context.level()).isEmpty();
+                yield seated ? Optional.empty()
+                        : Optional.of(Component.translatable("mcaquests.unofferable.no_capital_role",
+                                selector.describe(), Component.literal(capitalName(context, capital))));
+            }
             default -> Optional.empty();
         };
+    }
+
+    /** What to call the court the office belongs to, falling back to the giver's own village. */
+    private static String capitalName(QuestContext context, Optional<CapitalRef> capital) {
+        return capital.flatMap(cap -> CapitalsQueries.capitalName(context.level(), cap))
+                .or(() -> context.villager() == null
+                        ? Optional.empty()
+                        : McaCompat.getHomeVillageName(context.villager()))
+                .orElse("");
     }
 }

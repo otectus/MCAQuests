@@ -60,7 +60,7 @@
         "anchor": "townstead_building",
         "building_type": "graveyard"
       },
-      "entity": "minecraft:zombie",
+      "threat": { "entity": "minecraft:zombie" },
       "radius": 40,
       "count": 4
     },
@@ -70,7 +70,7 @@
         "anchor": "townstead_building",
         "building_type": "graveyard"
       },
-      "entity": "minecraft:skeleton",
+      "threat": { "entity": "minecraft:skeleton" },
       "radius": 40,
       "count": 2
     }

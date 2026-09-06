@@ -1,0 +1,98 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:capitals_drums_of_war",
+  "scope": "village",
+  "duration_ticks": 14000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:capital_war"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 20
+    },
+    "failure": {
+      "reputation": -10
+    }
+  },
+  "offer": {
+    "weight": 10,
+    "difficulty": "hard",
+    "giver": {
+      "professions": [
+        "mca:guard",
+        "mca:archer"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.capitals_drums_of_war.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.capitals_drums_of_war.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.capitals_drums_of_war.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.capitals_drums_of_war.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.capitals_drums_of_war.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.capitals_drums_of_war.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.capitals_drums_of_war.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.capitals_drums_of_war.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:defend_location",
+        "location": {
+          "anchor": "home_village"
+        },
+        "threat": {
+          "entity": "minecraft:pillager"
+        },
+        "radius": 48,
+        "count": 10
+      },
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "minecraft:vindicator",
+        "count": 4
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 45
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 12
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:compat_capability",
+          "provider": "mcacapitals",
+          "capability": "capitals.registry"
+        },
+        {
+          "type": "mcaquests:capital_present"
+        }
+      ]
+    }
+  }
+}

@@ -75,6 +75,12 @@ public final class ObjectiveSupport {
             return target.resolve(player, active, level, locked);
         }
         Optional<LivingEntity> resolved = target.resolve(player, active, level);
+        if (resolved.isEmpty() && target.mode() == VillagerTarget.Mode.CAPITAL_ROLE) {
+            // The office holder is not loaded, or has stopped being loaded since the quest was accepted.
+            // Bind them anyway: an unloaded sovereign is still the sovereign this quest is about.
+            resolved = target.selectRelativeForBinding(level.getEntity(active.villagerUuid()), level)
+                    .flatMap(uuid -> target.resolve(player, active, level, uuid));
+        }
         if (resolved.isEmpty() && target.mode() == VillagerTarget.Mode.FAMILY) {
             // The moment the offer gate described has passed - a "require": "nearby" relative has
             // wandered away from the giver. Bind the same person anyway rather than leave the objective
@@ -83,7 +89,8 @@ public final class ObjectiveSupport {
             resolved = target.selectRelativeForBinding(level.getEntity(active.villagerUuid()), level)
                     .flatMap(uuid -> target.resolve(player, active, level, uuid));
         }
-        if (lockEveryMode || target.mode() == VillagerTarget.Mode.FAMILY) {
+        if (lockEveryMode || target.mode() == VillagerTarget.Mode.FAMILY
+                || target.mode() == VillagerTarget.Mode.CAPITAL_ROLE) {
             resolved.ifPresent(entity -> progress.setTargetUuid(entity.getUUID()));
         }
         return resolved;
@@ -112,6 +119,16 @@ public final class ObjectiveSupport {
     public static Optional<Component> boundTargetLost(VillagerTarget target, ActiveQuest active,
                                                       ObjectiveProgress progress, ServerLevel level) {
         UUID bound = progress.targetUuid();
+        // A capital office is the one selector that can lose its target without anybody dying: the
+        // holder abdicates, is deposed, or the crown passes to a player, and the office simply empties.
+        // Named as the office rather than as a lost villager, because the office is what the player was
+        // told about and the person may be alive and well two hundred blocks away.
+        if (target.mode() == VillagerTarget.Mode.CAPITAL_ROLE
+                && (bound == null || level.getEntity(bound) == null)
+                && target.capitalRoleHolders(level.getEntity(active.villagerUuid()), level).isEmpty()) {
+            return Optional.of(Component.translatable("mcaquests.objective.unavailable.capital_role",
+                    target.describe()));
+        }
         if (bound == null || level.getEntity(bound) != null) {
             return Optional.empty();
         }

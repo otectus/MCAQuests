@@ -52,10 +52,9 @@ public record EnterStructureObjective(StructureTarget structure) implements Ques
      * The nearest generated instance of the structure, found once and then remembered.
      *
      * <p>"Enter an ancient city" is an instruction a player cannot act on without a map and some
-     * luck, and the mod used to give them the sentence and nothing else. The search is vanilla's own
-     * {@code /locate}, which is far too expensive to run on a once-a-second guidance pass, so it
-     * goes through {@code LocateCache}: once per objective, remembered across restarts, and retried
-     * only after {@code guidanceSearchIntervalTicks} if the first attempt found nothing in range.
+     * luck, and the mod used to give them the sentence and nothing else. StructureSearches checks
+     * candidates over multiple ticks. LocateCache polls pending results and remembers a successful
+     * destination across restarts; only completed misses wait for guidanceSearchIntervalTicks.
      *
      * <p>Marked approximate, because the answer is the structure's origin chunk rather than its door.
      */
@@ -66,13 +65,13 @@ public record EnterStructureObjective(StructureTarget structure) implements Ques
             return java.util.Optional.empty();
         }
         return dev.otectus.mcaquests.quest.guidance.LocateCache
-                .resolve(progress, "structure", level,
-                        () -> structure.locate(level, player.blockPosition(), SEARCH_CHUNKS))
+                .resolveAsync(progress, "structure", level,
+                        () -> structure.locateAsync(level, player.blockPosition(), SEARCH_CHUNKS))
                 .map(pos -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(pos, level,
                         dev.otectus.mcaquests.quest.guidance.GuidanceKind.STRUCTURE, structure.describe(), ARRIVE_RADIUS, true));
     }
 
-    /** Chunks the search may walk. Vanilla's own {@code /locate} reach. */
+    /** Placement-region ceiling; the server config normally limits this to a smaller radius. */
     private static final int SEARCH_CHUNKS = 100;
     /** How close counts as arrived, for fading the marker out. The poll decides completion. */
     private static final int ARRIVE_RADIUS = 32;

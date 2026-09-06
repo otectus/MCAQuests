@@ -138,7 +138,7 @@ public record LocationAnchor(Type type, Optional<Integer> radius,
      * about the same dock. It deliberately omits everything that does not change which candidate is
      * chosen, so two spellings of the same requirement still collide.
      */
-    /** Chunks the vanilla-village fallback search may walk. Vanilla's own {@code /locate} reach. */
+    /** Placement-region ceiling for the queued village fallback; capped by server config. */
     private static final int VANILLA_VILLAGE_SEARCH_CHUNKS = 100;
 
     /**

@@ -58,6 +58,8 @@
       "source": "villager",
       "target": "giver",
       "path": "needs.hunger",
+      "operator": "gte",
+      "value": 0,
       "direction": "increase",
       "amount": 20,
       "minimum_final": 60

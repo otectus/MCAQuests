@@ -42,7 +42,7 @@
   "objectives": [
     {
       "type": "mcaquests:tame_animal",
-      "animal": "minecraft:horse",
+      "animal": { "entity": "minecraft:horse" },
       "near": {
         "anchor": "home_village"
       },

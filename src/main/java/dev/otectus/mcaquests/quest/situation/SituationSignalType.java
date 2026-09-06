@@ -39,5 +39,13 @@ public enum SituationSignalType {
     /** A resident is far outside their home village after dark and has not moved on. MCA only. */
     VILLAGER_STRANDED,
     /** Hostile mobs have gathered at a resident's bed or the village centre. MCA only. */
-    HOSTILES_NEAR_HOME
+    HOSTILES_NEAR_HOME,
+
+    // 1.6.0, MCA Capitals. Appended for the same reason as everything above it: the ordinal seeds the
+    // per-village draw in SituationManager.onSignal, so inserting would reshuffle which situation an
+    // existing village opens on an existing day.
+    /** A capital's throne has just fallen vacant. */
+    CAPITAL_INTERREGNUM,
+    /** A capital has just gone to war with another capital. */
+    CAPITAL_WAR
 }

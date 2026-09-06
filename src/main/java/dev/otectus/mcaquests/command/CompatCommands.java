@@ -42,6 +42,7 @@ public final class CompatCommands {
         }
         compat.then(IceAndFireCompatCommands.node());
         compat.then(BountifulCompatCommands.node());
+        compat.then(CapitalsCompatCommands.node());
         return compat;
     }
 
