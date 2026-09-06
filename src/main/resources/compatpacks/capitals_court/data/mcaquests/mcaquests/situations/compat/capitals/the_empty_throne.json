@@ -1,0 +1,92 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:capitals_the_empty_throne",
+  "scope": "village",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 96000,
+  "trigger": {
+    "type": "mcaquests:capital_interregnum",
+    "sovereign": "any"
+  },
+  "outcomes": {
+    "success": {
+      "reputation": 20
+    },
+    "failure": {
+      "reputation": -8
+    }
+  },
+  "offer": {
+    "weight": 9,
+    "difficulty": "medium",
+    "giver": {
+      "professions": [
+        "minecraft:librarian",
+        "minecraft:cleric"
+      ],
+      "adult_only": true
+    },
+    "title": {
+      "translate": "mcaquests.situation.capitals_the_empty_throne.offer.title"
+    },
+    "dialogue": {
+      "offer": {
+        "translate": "mcaquests.situation.capitals_the_empty_throne.offer.dialogue.offer"
+      },
+      "accept": {
+        "translate": "mcaquests.situation.capitals_the_empty_throne.offer.dialogue.accept"
+      },
+      "decline": {
+        "translate": "mcaquests.situation.capitals_the_empty_throne.offer.dialogue.decline"
+      },
+      "in_progress": {
+        "translate": "mcaquests.situation.capitals_the_empty_throne.offer.dialogue.in_progress"
+      },
+      "ready": {
+        "translate": "mcaquests.situation.capitals_the_empty_throne.offer.dialogue.ready"
+      },
+      "complete": {
+        "translate": "mcaquests.situation.capitals_the_empty_throne.offer.dialogue.complete"
+      },
+      "failed": {
+        "translate": "mcaquests.situation.capitals_the_empty_throne.offer.dialogue.failed"
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:deliver_to_villager",
+        "recipient": {
+          "mode": "capital_role",
+          "role": "hand"
+        },
+        "item": "minecraft:paper",
+        "count": 12
+      }
+    ],
+    "rewards": [
+      {
+        "type": "mcaquests:currency"
+      },
+      {
+        "type": "mcaquests:xp",
+        "amount": 36
+      },
+      {
+        "type": "mcaquests:hearts",
+        "amount": 10
+      }
+    ],
+    "conditions": {
+      "all_of": [
+        {
+          "type": "mcaquests:compat_capability",
+          "provider": "mcacapitals",
+          "capability": "capitals.registry"
+        },
+        {
+          "type": "mcaquests:capital_present"
+        }
+      ]
+    }
+  }
+}

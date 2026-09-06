@@ -40,6 +40,7 @@ import dev.otectus.mcaquests.quest.objective.UseItemObjective;
 import dev.otectus.mcaquests.quest.objective.VillagerTargeted;
 import dev.otectus.mcaquests.quest.objective.VisitBiomeObjective;
 import dev.otectus.mcaquests.quest.objective.VisitDimensionObjective;
+import dev.otectus.mcaquests.quest.situation.CapitalsSituationDetector;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.quest.situation.SituationDetectors;
 import dev.otectus.mcaquests.quest.situation.SituationManager;
@@ -571,6 +572,24 @@ public final class QuestProgressEvents {
                 highlightTargets(player, level);
             }
         }
+    }
+
+    /**
+     * Polls MCA Capitals for court changes worth a situation (1.6.0).
+     *
+     * <p>Throttled by {@code compat.capitals.pollIntervalTicks} rather than run every tick: a court
+     * changes hands a handful of times a world, and the poll walks every capital. {@code Post} so the
+     * reading is of a tick that has finished — Capitals settles a succession during the tick that
+     * killed the sovereign, and asking at the start of one would see the throne mid-handover.
+     */
+    @SubscribeEvent
+    public static void onServerTickPollCapitals(ServerTickEvent.Post event) {
+        MinecraftServer server = event.getServer();
+        int interval = McaQuestsConfig.COMMON.capitalsPollIntervalTicks.get();
+        if (server == null || interval <= 0 || server.getTickCount() % interval != 0) {
+            return;
+        }
+        CapitalsSituationDetector.poll(server);
     }
 
     /** Opens a {@code villager_death} situation when an MCA villager with a home village dies (0.8.0). */

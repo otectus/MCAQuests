@@ -51,7 +51,7 @@
         "anchor": "townstead_building",
         "building_type": "armory"
       },
-      "entity": "minecraft:pillager",
+      "threat": { "entity": "minecraft:pillager" },
       "radius": 40,
       "count": 4
     },

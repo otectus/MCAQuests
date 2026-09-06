@@ -54,6 +54,8 @@
       "source": "villager",
       "target": "giver",
       "path": "needs.thirst",
+      "operator": "gte",
+      "value": 0,
       "direction": "increase",
       "amount": 6,
       "minimum_final": 12

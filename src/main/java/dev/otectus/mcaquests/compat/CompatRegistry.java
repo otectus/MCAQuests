@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.compat;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.bountiful.BountifulCompat;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.iceandfire.IceAndFireCompat;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
@@ -56,6 +57,7 @@ public final class CompatRegistry {
         registry.register(new FtbqCompatProvider());
         registry.register(new IceAndFireCompat());
         registry.register(new BountifulCompat());
+        registry.register(new CapitalsCompat());
     }
 
     /** Adds a provider, replacing any earlier one with the same {@link CompatProvider#id()}. */

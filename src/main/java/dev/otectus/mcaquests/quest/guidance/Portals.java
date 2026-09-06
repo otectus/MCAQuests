@@ -28,7 +28,7 @@ public final class Portals {
 
     /** Blocks around the player worth looking for a portal in. Past that, the walk <em>is</em> the quest. */
     private static final int PORTAL_SEARCH_RADIUS = 192;
-    /** Chunks a stronghold search may walk. Vanilla's own {@code /locate} reach. */
+    /** Compatibility radius argument; strongholds use their finite placement list. */
     private static final int STRONGHOLD_SEARCH_CHUNKS = 100;
 
     private static final ResourceLocation STRONGHOLD = ResourceLocation.withDefaultNamespace("stronghold");
@@ -37,8 +37,8 @@ public final class Portals {
     }
 
     /**
-     * Where to go, in {@code level}, to reach {@code destination} — or empty when there is nothing
-     * honest to point at.
+     * Where to go, in {@code level}, to reach {@code destination} — or empty when no verified
+     * route is available yet. Stronghold searches are queued and polled on subsequent updates.
      *
      * <ul>
      *   <li>The Nether from anywhere, or the overworld from the Nether: the nearest lit nether

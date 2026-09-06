@@ -48,6 +48,8 @@
       "source": "villager",
       "target": "giver",
       "path": "needs.energy",
+      "operator": "gte",
+      "value": 0,
       "direction": "increase",
       "amount": 8,
       "minimum_final": 12

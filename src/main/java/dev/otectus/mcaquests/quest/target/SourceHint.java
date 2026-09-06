@@ -60,7 +60,7 @@ public record SourceHint(Optional<ResourceLocation> structure, Optional<TagKey<S
                          Optional<Block> block, Optional<TagKey<Block>> blockTag,
                          Optional<ResourceLocation> dimension, Optional<LocationAnchor> anchor) {
 
-    /** Chunks a structure search may walk. Vanilla's own {@code /locate} reach. */
+    /** Placement-region ceiling; StructureSearches applies the smaller configured radius. */
     private static final int STRUCTURE_SEARCH_CHUNKS = 100;
     /** Blocks a biome search may sample outward. */
     private static final int BIOME_SEARCH_BLOCKS = 3200;
@@ -135,8 +135,8 @@ public record SourceHint(Optional<ResourceLocation> structure, Optional<TagKey<S
         if (structureAt.isPresent()) {
             StructureTarget target = structureAt.get();
             Optional<GuidanceTarget> found = LocateCache
-                    .resolve(progress, "srcStruct", level,
-                            () -> target.locate(level, player.blockPosition(), STRUCTURE_SEARCH_CHUNKS))
+                    .resolveAsync(progress, "srcStruct", level,
+                            () -> target.locateAsync(level, player.blockPosition(), STRUCTURE_SEARCH_CHUNKS))
                     .map(pos -> GuidanceTarget.ofPos(pos, level, GuidanceKind.STRUCTURE,
                             target.describe(), AREA_ARRIVE_RADIUS, true));
             if (found.isPresent()) {

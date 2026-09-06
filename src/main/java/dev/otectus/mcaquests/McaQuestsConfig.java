@@ -71,6 +71,7 @@ public final class McaQuestsConfig {
         public final ModConfigSpec.BooleanValue highlightAllActiveQuests;
         public final ModConfigSpec.IntValue guidanceSearchIntervalTicks;
         public final ModConfigSpec.IntValue guidanceSearchesPerPass;
+        public final ModConfigSpec.IntValue guidanceStructureSearchRadius;
         public final ModConfigSpec.BooleanValue autoTrackNewQuests;
         public final ModConfigSpec.BooleanValue questChatMessages;
         public final ModConfigSpec.BooleanValue strictJsonValidation;
@@ -114,6 +115,11 @@ public final class McaQuestsConfig {
         public final ModConfigSpec.EnumValue<BountifulMode> bountifulMode;
         public final ModConfigSpec.BooleanValue bountifulEnableBuiltinContent;
         public final ModConfigSpec.BooleanValue bountifulEnableIceAndFirePools;
+
+        // MCA Capitals optional integration (1.6.0 spec, WP1).
+        public final ModConfigSpec.BooleanValue capitalsEnabled;
+        public final ModConfigSpec.BooleanValue capitalsEnableBuiltinContent;
+        public final ModConfigSpec.IntValue capitalsPollIntervalTicks;
 
         // Townstead optional integration (Townstead spec section 11, v1.4.0).
         public final ModConfigSpec.BooleanValue townsteadEnabled;
@@ -316,19 +322,23 @@ public final class McaQuestsConfig {
                     .define("highlightAllActiveQuests", false);
             guidanceSearchIntervalTicks = b.comment(
                     "How long, in ticks, before the quest marker retries a world search that found nothing.",
-                    "Locating a structure or a biome is the same work as /locate and runs on the server",
-                    "thread; a search that SUCCEEDS is remembered permanently on the objective, so this only",
+                    "Structure searches are queued; biome searches still run on the server thread.",
+                    "A search that SUCCEEDS is remembered permanently on the objective, so this only",
                     "governs how often a failed one is tried again as the player travels. Lower it if you",
                     "want markers to appear sooner after a long journey; raise it on a busy server.")
                     .defineInRange("guidanceSearchIntervalTicks", 200, 20, 24000);
             guidanceSearchesPerPass = b.comment(
-                    "How many world searches one player's guidance pass may run, per second.",
-                    "Since 1.5.0 every active quest gets its own destination rather than only the one",
-                    "carrying the marker, so a player holding five quests whose structures are all out of",
-                    "range could otherwise fire five /locate calls at once. Quests that do not get a turn",
-                    "are asked again on the next pass -- nothing is skipped, it is only spread out. Raise it",
-                    "if destinations take too long to appear after a long journey.")
+                    "How many synchronous biome/block searches one player's guidance pass may run.",
+                    "Quests that do not get a turn are asked again on the next pass. Structure searches",
+                    "use a separate server-wide queue, with one outstanding chunk request at a time.")
                     .defineInRange("guidanceSearchesPerPass", 1, 1, 8);
+            guidanceStructureSearchRadius = b.comment(
+                    "Maximum structure search radius in placement regions, NOT individual chunks.",
+                    "A region spans the structure's configured spacing (27 chunks for vanilla fortresses).",
+                    "Default 8 limits exploration compared with vanilla /locate's 100. Higher values",
+                    "can find more distant structures but request more chunk data over time.",
+                    "Does not limit strongholds, which use a finite list of concentric-ring positions.")
+                    .defineInRange("guidanceStructureSearchRadius", 8, 0, 100);
             autoTrackNewQuests = b.comment(
                     "If true (default), accepting a quest starts following it when you are not already",
                     "following one, so the marker and the tracker point at it without you having to ask.",
@@ -456,6 +466,30 @@ public final class McaQuestsConfig {
                     "balance rather than ours.")
                     .define("enableIceAndFirePools", true);
             // Two levels pushed, two popped -- "compat.bountiful" must not leave "compat" behind for
+            // the sections that follow.
+            b.pop(2);
+
+            b.push("compat.capitals");
+            capitalsEnabled = b.comment(
+                    "Master switch for the optional MCA Capitals integration. When false the provider",
+                    "reports DISABLED and every capital condition, role target and title reward answers",
+                    "as if Capitals were absent, so gated quests are never offered and any a player",
+                    "already holds pause rather than break. Which court offices a quest requires is not",
+                    "configured here: that is what the capital_role condition in quest JSON is for.")
+                    .define("enabled", true);
+            capitalsEnableBuiltinContent = b.comment(
+                    "Whether MCA: Quests mounts its own MCA Capitals quest pack. Turn this off to keep the",
+                    "capability probing and the compat_capability condition, but author all court content",
+                    "yourself.")
+                    .define("enableBuiltinContent", true);
+            capitalsPollIntervalTicks = b.comment(
+                    "How often (ticks) the capital situation poller samples thrones and diplomacy. Polled",
+                    "rather than event-driven because Capitals resolves a succession on its own death",
+                    "handler, and reading the throne from beside it would race. This is therefore the",
+                    "ceiling on how long a vacant throne or a fresh war can go unnoticed -- and an",
+                    "interregnum Capitals resolves inside one interval can be missed entirely.")
+                    .defineInRange("pollIntervalTicks", 200, 20, 6000);
+            // Two levels pushed, two popped -- "compat.capitals" must not leave "compat" behind for
             // the sections that follow.
             b.pop(2);
 

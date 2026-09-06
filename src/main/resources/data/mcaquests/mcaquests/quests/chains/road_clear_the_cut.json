@@ -45,7 +45,7 @@
         "anchor": "nearest_other_village",
         "radius": 2048
       },
-      "entity": "minecraft:pillager",
+      "threat": { "entity": "minecraft:pillager" },
       "radius": 48,
       "count": 8
     },
@@ -55,7 +55,7 @@
         "anchor": "nearest_other_village",
         "radius": 2048
       },
-      "entity": "minecraft:spider",
+      "threat": { "entity": "minecraft:spider" },
       "radius": 48,
       "count": 6
     }

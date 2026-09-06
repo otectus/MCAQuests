@@ -7,6 +7,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.RelativeCandidate;
+import dev.otectus.mcaquests.compat.capitals.CapitalRole;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
+import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import dev.otectus.mcaquests.quest.situation.SituationFocus;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -41,6 +44,7 @@ import java.util.UUID;
  * { "mode": "family", "relation": "child", "require": "missing" }
  * { "mode": "situation_focus" }                          // the villager the situation is about
  * { "mode": "uuid", "uuid": "&lt;uuid&gt;" }
+ * { "mode": "capital_role", "role": "sovereign" }       // the villager holding that office (MCA Capitals)
  * </pre>
  *
  * <h2>{@code require}: who a family target may name</h2>
@@ -60,7 +64,7 @@ import java.util.UUID;
  */
 public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
                              Optional<String> relation, Optional<UUID> uuid,
-                             Optional<String> require) {
+                             Optional<String> require, Optional<CapitalRole> role) {
 
     public enum Mode {
         SELF,
@@ -72,7 +76,16 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
          * or went missing. Only meaningful on a situation offer; anywhere else it resolves to nothing,
          * which makes the objective unofferable rather than silently pointing somewhere else.
          */
-        SITUATION_FOCUS
+        SITUATION_FOCUS,
+        /**
+         * Whoever holds a named office or rank in the capital of the giver's village (MCA Capitals).
+         * The person, not the post: the holder is bound when the quest is accepted, so a quest about
+         * escorting the sovereign stays about that sovereign even if the crown changes hands.
+         *
+         * <p>A throne held by a <em>player</em> resolves to nobody -- every mode here names an MCA
+         * villager -- which makes the objective unofferable rather than pointing at a player.
+         */
+        CAPITAL_ROLE
     }
 
     /** Relations understood by {@code family} mode (mirrors {@link McaCompat#giverRelativeUuids}). */
@@ -96,7 +109,8 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
             ResourceLocation.CODEC.lenientOptionalFieldOf("profession").forGetter(VillagerTarget::profession),
             Codec.STRING.lenientOptionalFieldOf("relation").forGetter(VillagerTarget::relation),
             UUIDUtil.STRING_CODEC.lenientOptionalFieldOf("uuid").forGetter(VillagerTarget::uuid),
-            Codec.STRING.lenientOptionalFieldOf("require").forGetter(VillagerTarget::require)
+            Codec.STRING.lenientOptionalFieldOf("require").forGetter(VillagerTarget::require),
+            CapitalRole.CODEC.lenientOptionalFieldOf("role").forGetter(VillagerTarget::role)
     ).apply(instance, VillagerTarget::new));
 
     public static final Codec<VillagerTarget> CODEC = MAP_CODEC.codec();
@@ -107,7 +121,16 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
      */
     public VillagerTarget(Mode mode, Optional<ResourceLocation> profession, Optional<String> relation,
                           Optional<UUID> uuid) {
-        this(mode, profession, relation, uuid, Optional.empty());
+        this(mode, profession, relation, uuid, Optional.empty(), Optional.empty());
+    }
+
+    /**
+     * The pre-{@code role} shape, for the same reason: a target built in code by an add-on names no
+     * capital office, and {@code role} is only meaningful on {@link Mode#CAPITAL_ROLE}.
+     */
+    public VillagerTarget(Mode mode, Optional<ResourceLocation> profession, Optional<String> relation,
+                          Optional<UUID> uuid, Optional<String> require) {
+        this(mode, profession, relation, uuid, require, Optional.empty());
     }
 
     /** The default target: the quest giver. */
@@ -187,7 +210,30 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
                     : SituationFocus.focalVillager(level.getServer(), giver, questId)
                             .flatMap(u -> living(level.getEntity(u)));
             case PROFESSION -> resolveProfession(player, giver, level);
+            case CAPITAL_ROLE -> capitalRoleHolders(giver, level).stream()
+                    .flatMap(holder -> living(level.getEntity(holder)).stream())
+                    .findFirst();
         };
+    }
+
+    /**
+     * Everyone who holds this target's office in the capital of the giver's village, in a stable order.
+     *
+     * <p>Sorted by UUID string rather than left in whatever order Capitals iterates its sets, so a
+     * {@code knight} target picks the same knight on two consecutive calls and the objective line does
+     * not change who it names between ticks. Empty when the giver's village has no capital, when MCA
+     * Capitals is absent, and when the office is vacant -- all of which read the same way to a quest.
+     */
+    public List<UUID> capitalRoleHolders(@Nullable Entity giver, ServerLevel level) {
+        if (mode != Mode.CAPITAL_ROLE || role.isEmpty() || giver == null) {
+            return List.of();
+        }
+        return CapitalsQueries.giverCapital(giver)
+                .map(capital -> CapitalsCompat.bridge().villagerRoleHolders(level, capital, role.get())
+                        .stream()
+                        .sorted(Comparator.comparing(UUID::toString))
+                        .toList())
+                .orElseGet(List::of);
     }
 
     /**
@@ -219,6 +265,11 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
      * UUID comparison against whoever is bound here.
      */
     public Optional<UUID> selectRelativeForBinding(@Nullable Entity giver, ServerLevel level) {
+        // A capital office binds whoever holds it at accept, loaded or not: the quest is about that
+        // person from then on, and an unloaded sovereign is not a reason to leave it unbound.
+        if (mode == Mode.CAPITAL_ROLE) {
+            return capitalRoleHolders(giver, level).stream().findFirst();
+        }
         Optional<UUID> exact = selectRelative(giver, level);
         if (exact.isPresent() || mode != Mode.FAMILY || giver == null) {
             return exact;
@@ -280,6 +331,9 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
                     .focalVillager(level.getServer(), active.situationInstance().orElse(null))
                     .map(candidate.getUUID()::equals)
                     .orElse(false);
+            case CAPITAL_ROLE -> giver(level, active)
+                    .map(g -> capitalRoleHolders(g, level).contains(candidate.getUUID()))
+                    .orElse(false);
         };
     }
 
@@ -299,6 +353,9 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
             case FAMILY -> Component.translatable("mcaquests.target.relation." + effectiveRelation());
             case SITUATION_FOCUS -> Component.translatable("mcaquests.target.villager.situation_focus");
             case UUID -> Component.translatable("mcaquests.target.villager.someone");
+            case CAPITAL_ROLE -> role
+                    .<Component>map(r -> Component.translatable("mcaquests.target.capital_role." + r.key()))
+                    .orElseGet(() -> Component.translatable("mcaquests.target.villager.someone"));
         };
     }
 
@@ -326,6 +383,12 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
         if (loaded.isPresent()) {
             name = Optional.of(McaCompat.getVillagerDisplayName(loaded.get()).getString());
             village = McaCompat.getHomeVillageName(loaded.get());
+        } else if (bound != null && mode == Mode.CAPITAL_ROLE) {
+            // Capitals names its own -- "Sovereign Anya" rather than a bare name -- and it is the only
+            // place a court villager's name can be read while they are unloaded.
+            name = CapitalsQueries.giverCapital(giver)
+                    .flatMap(capital -> CapitalsCompat.bridge().displayName(level, capital, bound));
+            village = giver == null ? Optional.empty() : McaCompat.getHomeVillageName(giver);
         } else if (bound != null && giver != null) {
             name = McaCompat.getRelativeDisplayName(giver, bound);
             village = McaCompat.getHomeVillageName(giver);
@@ -380,6 +443,14 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
                 String rel = effectiveRelation();
                 if (!RELATIONS.contains(rel)) {
                     errors.add(prefix + " uses unknown family relation '" + rel + "' (expected one of " + RELATIONS + ").");
+                }
+            }
+            case CAPITAL_ROLE -> {
+                if (role.isEmpty()) {
+                    errors.add(prefix + " uses villager mode 'capital_role' but has no 'role'.");
+                } else if (!role.get().appliesToVillager()) {
+                    errors.add(prefix + " uses villager mode 'capital_role' with role '" + role.get().key()
+                            + "', which no villager can hold.");
                 }
             }
             default -> {

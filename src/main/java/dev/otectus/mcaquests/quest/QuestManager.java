@@ -745,6 +745,10 @@ public final class QuestManager {
                 case SITUATION_FOCUS -> SituationFocus
                         .focalVillager(level.getServer(), active.situationInstance().orElse(null))
                         .ifPresent(active.progress(i)::setTargetUuid);
+                // The person holding the office at accept, not the office. A crown that changes hands
+                // mid-quest must not silently re-point an escort at whoever is on the throne now.
+                case CAPITAL_ROLE -> selector.selectRelativeForBinding(villager, level)
+                        .ifPresent(active.progress(i)::setTargetUuid);
                 default -> {
                 }
             }

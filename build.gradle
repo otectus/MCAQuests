@@ -227,6 +227,15 @@ dependencies {
         runtimeOnly "dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}"
         runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}"
     }
+
+    // Optional: put MCA Capitals on the dev runtime for hands-on testing. Never a compile dependency
+    // -- CapitalsBinding resolves it by name -- and never shipped. Capitals needs MCA 7.7.35-beta.3 or
+    // newer, which the default dev MCA (mca_dev_version) already satisfies:
+    //
+    //     ./gradlew runClient -PenableCapitalsInDev=true
+    if (project.hasProperty('enableCapitalsInDev') && project.enableCapitalsInDev.toBoolean()) {
+        runtimeOnly "maven.modrinth:capitals-a-monarchy-mod-for-mca-reborn:ZSqQbuHC"
+    }
 }
 
 // A jar carrying nothing but a mods.toml, declaring modId `mca`.
@@ -434,12 +443,54 @@ tasks.register('bountifulProbeTest', Test) {
     }
 }
 
+// Replays the Capitals binding manifest against a real MCA Capitals jar, in its own JVM and its own
+// class loader. Separate from `check` because the jar comes from Modrinth rather than this build's
+// dependency graph, so its path is supplied by whoever runs it:
+//
+//     ./gradlew capitalsProbeTest -PcapitalsJar=<path>
+//
+// MCA rides along on `mcaquests.probe.jars` for the same load-bearing reason Townstead's probe needs
+// it: Capitals statically imports MCA throughout, so enumerating a Capitals class's methods resolves
+// MCA parameter types, and without MCA present whole classes read as unbound and the probe would pass
+// vacuously. Only the fleet member Capitals declares support for is fed to it -- S2Ln2tIn
+// (7.7.36-beta.3), the one inside the [7.7.35-beta.3,7.8.0) range in its own neoforge.mods.toml --
+// because the older fleet member leaves the same members unresolvable.
+tasks.register('capitalsProbeTest', Test) {
+    group = 'verification'
+    description = 'Verifies the MCA Capitals binding manifest against a supplied Capitals jar.'
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.capitals.CapitalsBindingProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    // The SKIPPED report lives in onlyIf rather than doFirst: onlyIf is evaluated first, and a
+    // doFirst on a skipped task never runs.
+    onlyIf {
+        if (project.hasProperty('capitalsJar')) {
+            return true
+        }
+        logger.lifecycle('SKIPPED: no MCA Capitals jar supplied (-PcapitalsJar)')
+        false
+    }
+    doFirst {
+        systemProperty 'mcaquests.capitals.probe.jar',
+                project.findProperty('capitalsJar')?.toString() ?: ''
+        systemProperty 'mcaquests.probe.jars', mcaProbeVersions.indices
+                .findAll { i -> mcaProbeVersions[i] == 'S2Ln2tIn' }
+                .collect { i -> configurations.getByName("mcaProbe${i}").files }
+                .flatten()
+                .findAll { it.name.contains('minecraft-comes-alive') }
+                .collect { it.toString() }
+                .join(File.pathSeparator)
+    }
+}
+
 // ModDevGradle configures `test` late (unitTest wires in the Minecraft classpath, the JUnit runner and
 // its JVM args), so the probe tasks inherit that configuration here instead of assembling a
 // second, subtly different runtime out of sourceSets.
 afterEvaluate {
     def base = tasks.named('test', Test).get()
-    ['townsteadProbeTest', 'mapProbeTest', 'iceAndFireProbeTest', 'bountifulProbeTest'].each { name ->
+    ['townsteadProbeTest', 'mapProbeTest', 'iceAndFireProbeTest', 'bountifulProbeTest',
+     'capitalsProbeTest'].each { name ->
         tasks.named(name, Test).configure {
             classpath = base.classpath
             testClassesDirs = base.testClassesDirs
@@ -463,6 +514,7 @@ tasks.named('processResources', ProcessResources).configure {
             ftbquests_version_range    : ftbquests_version_range,
             mcareputation_version_range: mcareputation_version_range,
             townstead_version_range    : townstead_version_range,
+            mcacapitals_version_range  : mcacapitals_version_range,
             journeymap_version_range   : journeymap_version_range,
             xaero_version_range        : xaero_version_range,
             mod_id                     : mod_id,

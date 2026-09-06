@@ -182,4 +182,42 @@ public record TriggerSignal(
         return new TriggerSignal(SituationSignalType.HOSTILES_NEAR_HOME, level, villageId, villagerUuid,
                 null, 0f, count, false, null);
     }
+
+    // --- MCA Capitals (1.6.0) --------------------------------------------------------------------
+
+    /**
+     * A capital's throne has just fallen vacant.
+     *
+     * <p>The transition is carried rather than a bare flag because the two vacancies are different
+     * stories: a villager sovereign dying leaves a court to settle the succession, while a player
+     * sovereign's death leaves a capital whose ruler may simply never come back. The context's
+     * {@code to} end is {@code "vacant_player"} in the second case and {@code "vacant"} in the first,
+     * which is what {@code CapitalInterregnumTrigger}'s {@code sovereign} filter reads.
+     *
+     * <p>{@code deceasedSovereign} travels as the signal's villager so an offer can be about the person
+     * who died; it is absent when Capitals recorded no sovereign for the interregnum.
+     */
+    public static TriggerSignal capitalInterregnum(@Nullable ServerLevel level, int villageId,
+                                                   @Nullable UUID deceasedSovereign,
+                                                   boolean playerSovereign) {
+        return new TriggerSignal(SituationSignalType.CAPITAL_INTERREGNUM, level, villageId,
+                deceasedSovereign, null, 0f, 0, false,
+                SignalContext.transition("throne", "occupied",
+                        playerSovereign ? "vacant_player" : "vacant"));
+    }
+
+    /**
+     * This village's capital has just gone to war with {@code otherCapitalId}.
+     *
+     * <p>Raised once per village on each side of the pair, so the situation can open in either capital.
+     * {@code fromState} is the relation the pair was in beforehand — a war declared out of an alliance
+     * is a different story from one declared out of an existing truce, and a definition can tell them
+     * apart without a second signal type.
+     */
+    public static TriggerSignal capitalWar(@Nullable ServerLevel level, int villageId,
+                                           UUID otherCapitalId, String fromState) {
+        return new TriggerSignal(SituationSignalType.CAPITAL_WAR, level, villageId, null, null,
+                0f, 0, false,
+                SignalContext.transition("relation:" + otherCapitalId, fromState, "WAR"));
+    }
 }

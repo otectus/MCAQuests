@@ -96,3 +96,16 @@ description='''${mod_description}'''
     versionRange="${xaero_version_range}"
     ordering="AFTER"
     side="CLIENT"
+
+# MCA Capitals is an OPTIONAL integration (compat.capitals). Quests loads and plays exactly as it does
+# without it. When present we load AFTER it so its saved data and capital registry exist before
+# CapitalsCompat binds; from that point a village's throne, court, allegiance and diplomacy become
+# quest state, and three rewards write back to it. Capitals is itself compiled against MCA and needs
+# 7.7.35-beta.3 or newer here, so an installation that has Capitals has MCA too. Removing Capitals later
+# does not corrupt a save: capital quests pause with their progress intact and can still be abandoned.
+[[dependencies.${mod_id}]]
+    modId="mcacapitals"
+    type="optional"
+    versionRange="${mcacapitals_version_range}"
+    ordering="AFTER"
+    side="BOTH"

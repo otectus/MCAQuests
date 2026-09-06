@@ -298,6 +298,7 @@ object always carries a `mode`:
 { "mode": "family", "relation": "sibling" }              // any | spouse | parent | child | sibling | grandparent
 { "mode": "family", "relation": "child", "require": "missing" }
 { "mode": "situation_focus" }                            // the villager an open situation is about
+{ "mode": "capital_role", "role": "sovereign" }          // holds a specific office in the giver's capital
 { "mode": "uuid", "uuid": "<uuid>" }
 ```
 
@@ -367,6 +368,16 @@ siblings, deliberately excluding grandparents.
 caught the infection, or went missing — rather than a relative of whoever happens to be telling you about
 it. Only meaningful inside a situation's `offer`; anywhere else it resolves to nobody, which makes the
 objective unofferable rather than silently pointing somewhere else.
+
+#### `capital_role`
+
+`{ "mode": "capital_role", "role": "sovereign" }` names a villager who holds a specific court office in the giver's capital. The `role` field is required and must be a valid office name (see Role names below). The holder is bound to one concrete villager when the quest is accepted and never re-resolves, exactly like `family` targets — a quest accepted before this existed binds on its next tick.
+
+If the giver has no active capital, or if the office has no holder, or if the only holder is a player, the objective is **unofferable** with reason `mcaquests.unofferable.no_capital_role` (using the role label and capital name as arguments).
+
+A quest that does not bind successfully suspends rather than failing; if Capitals is later installed, or if a new officeholder is appointed, the same quest picks up where it was.
+
+**Role names:** `sovereign`, `consort`, `dowager`, `heir`, `royal_child`, `hand`, `commander`, `herald`, `grand_maester`, `master_of_laws`, `ambassador`, `duke`, `lord`, `knight`, `royal_guard`, `member` (any member of the court). `archduke` is player-only and does not apply to villagers. Invalid role names fail validation at load.
 
 ### Location anchors
 
@@ -527,6 +538,9 @@ Granted atomically on turn-in (items insert-or-drop, then XP, effects, loot, and
 | `mcaquests:command` | `command` (string) | Runs a command. **Disabled** unless `allowCommandRewards = true`. |
 | `mcaquests:village_reputation` | `amount` | Adds independent mod-side reputation to the giver's village (see Progression). |
 | `mcaquests:grant_title` | `title` (resource location), `scope` (`village`/`global`, default `village`) | Awards a player title (see Progression). |
+| `mcaquests:capital_title` | `title` (required; one of `knight`, `lord`, `duke`, `archduke`), `female_title` (optional) | Grants the player a noble title in the giver's capital. The gendered constants (KNIGHT/DAME, LORD/LADY, DUKE/DUCHESS, ARCHDUKE/ARCHDUCHESS) are chosen by `bridge().isPlayerFemale(level, player)` (empty → masculine), and `female_title` overrides the feminine constant. Requires the `capitals.title_grants` capability. |
+| `mcaquests:capital_chronicle` | `key` (required; a translation key), `herald` (bool, default `true`) | Writes a line to the capital's chronicle, reading the `key` as a translation (`Component.translatable(key, playerName, capitalName).getString()`) on the server side. When `herald=true`, the herald announces it; when false, it is recorded silently. Requires the `capitals.chronicle` capability. |
+| `mcaquests:capital_villager_title` | `villager` (villager target, defaults to `self`), `title` (required; one of `knight`, `lord`, `duke`) | Raises a villager in the giver's capital to a noble rank. The villager is resolved with `resolveFrom(player, giver, level, questId)`; `title` is mapped to gendered constants by `bridge().isVillagerFemale(level, uuid)`. Requires the `capitals.villager_titles` capability. |
 
 ### Currency rewards
 
@@ -575,7 +589,12 @@ An extra gate on whether the quest is **offered**. A single condition object, wh
 | `mcaquests:quest_declined` | `quest` (resource location), `scope` — true once the player turned that offer down. Declining costs nothing, so branch on it as a preference ("offer the softer version instead"), not as a punishment |
 | `mcaquests:village_reputation` | `min`, `max` — raw reputation with the giver's village |
 | `mcaquests:reputation_tier` | `min_tier` (required), `max_tier`, `ladder` (default `mcaquests:default`) — tier with the giver's village (see Progression) |
-| `mcaquests:compat_capability` | `provider` (required), `capability` (required), `present` (bool, default `true`) | True when a registered optional-mod provider reports a capability as present (or absent, when `present: false`). Used to gate content on third-party mods: Ice & Fire, Bountiful, and built-in facilities like Townstead. An unknown provider or capability id is simply not present — it is not a parse error, because a pack may legitimately name a provider that an add-on registers. See Optional-mod compatibility below. |
+| `mcaquests:compat_capability` | `provider` (required), `capability` (required), `present` (bool, default `true`) | True when a registered optional-mod provider reports a capability as present (or absent, when `present: false`). Used to gate content on third-party mods: Ice & Fire, Bountiful, MCA Capitals, and built-in facilities like Townstead. An unknown provider or capability id is simply not present — it is not a parse error, because a pack may legitimately name a provider that an add-on registers. See Optional-mod compatibility below. |
+| `mcaquests:capital_present` | `subject` (`"giver"`/`"player_village"`, default `"giver"`), `present` (bool, default `true`) | True when the subject's village has an ACTIVE capital. `subject=giver` checks whether the giver belongs to a capital; `subject=player_village` checks the player's village as the nearest MCA village within 128 blocks (`CapitalsQueries.VILLAGE_RESOLUTION_RADIUS`). |
+| `mcaquests:capital_role` | `subject` (`"player"`/`"giver"`, default `"player"`), `role` (required; see Role names below), `capital` (`"giver"`/`"any"`, default `"giver"`), `present` (bool, default `true`) | True when the subject holds the office in the capital. `subject=player` checks whether the player holds the role in the capital (or any capital if `capital=any`); `subject=giver` checks whether the giver holds it in their own capital. A role only applies to villagers or players; `subject=player` rejects roles a player cannot hold, and `subject=giver` rejects roles a villager cannot hold. Invalid combinations are validated at load (e.g., `subject=giver role=archduke` is an error because villagers cannot hold archduke). |
+| `mcaquests:capital_allegiance` | `match` (`"giver"`/`"any"`, default `"giver"`), `present` (bool, default `true`) | True when the player's declared allegiance matches the subject. `match=giver` is true when the player is sworn to the giver's capital (or that capital is absent, in which case the condition is false); `match=any` is true when the player is sworn to any capital at all. |
+| `mcaquests:capital_relation` | `other` (`"any"`/`"allegiance"`, default `"any"`), `state` (list of `"peace"`, `"non_aggression_pact"`, `"alliance"`, `"truce"`, `"war"`), `present` (bool, default `true`) | True when a diplomatic relation matches the selector. `other=any` checks the giver's capital against any other capital; `other=allegiance` checks the player's declared capital (if any) against the giver's capital. The values in `state` name the relations as capitals see them (case-insensitive). |
+| `mcaquests:capital_interregnum` | `present` (bool, default `true`) | True when the giver's capital's throne is currently vacant (an interregnum is open). |
 
 > **`scope`** on the four quest-state conditions chooses whose history they read. `global` (the default)
 > counts the quest across all villagers — the historical behaviour. `giver` counts only what the player did
@@ -722,7 +741,7 @@ worse than none.
 
 ## Optional-mod compatibility
 
-Three optional mods have built-in integration with MCA: Quests: **Townstead**, **Ice & Fire**, and **Bountiful**. Content that uses them gates on the mod's availability via the `compat_capability` condition, and when the mod is absent the content is *paused* rather than *lost* — a player holding a quest that names absent content keeps it in their log, and it resumes when the mod returns.
+Four optional mods have built-in integration with MCA: Quests: **Townstead**, **Ice & Fire**, **Bountiful**, and **MCA Capitals**. Content that uses them gates on the mod's availability via the `compat_capability` condition, and when the mod is absent the content is *paused* rather than *lost* — a player holding a quest that names absent content keeps it in their log, and it resumes when the mod returns.
 
 ### Conditional compatibility packs
 
@@ -730,9 +749,10 @@ MCA: Quests ships built-in quest and bounty content for these mods, mounted as d
 
 | Pack ID | Mounted when | Contents |
 |---|---|---|
-| `mcaquests/iafce_quests` | Ice & Fire installed with dragons, and `compat.iceandfire.enableBuiltinContent` on | Quest ids: `mcaquests:compat/iceandfire/*` — three dragon hunts (fire, ice, lightning), a hydra hunt, a Dread purge, a Dragon Seeker trial, and two netherite armor quests |
+| `mcaquests/iafce_quests` | Ice & Fire installed with dragons, and `compat.iceandfire.enableBuiltinContent` on | Quest ids: `mcaquests:compat/iceandfire/*` — dragon, hydra and dread hunts, the Dragon Seeker trial, and netherite armor quests |
 | `mcaquests/bountiful_core` | Bountiful installed with board registered, and `compat.bountiful.enableBuiltinContent` on | Quest ids: `mcaquests:compat/bountiful/*` — bounty board discovery, quest chains for contract specialties |
 | `mcaquests/bountiful_iafce` | Both mods above, and `compat.bountiful.enableIceAndFirePools` on | Bounty pools and decrees for Ice & Fire hunts (not quests), fed to Bountiful's own generator |
+| `mcaquests/capitals_court` | MCA Capitals installed with registry capability, and `compat.capitals.enableBuiltinContent` on | Quest ids: `mcaquests:compat/capitals/*` — court duties and succession (eight quests, two situations) |
 
 A pack author can override or disable a quest by creating a datapack with an identical resource path. For example, to shadow `mcaquests:compat/iceandfire/dragon_seeker_trial` (which conventionally matches its quest id), create a datapack at `data/mcaquests/mcaquests/quests/compat/iceandfire/dragon_seeker_trial.json` — the merge resolves the override by resource path (which conventionally matches the quest id), so you can shadow a built-in quest completely or copy it and vary one field. An owner's datapack wins over the mounted compat pack at the same path.
 
@@ -1604,6 +1624,8 @@ player-proximity-driven (villages near players are scanned periodically) plus ev
 | `mcaquests:townstead_profession_tier` | `profession` (optional), `minimum_tier` | *(optional Townstead)* A resident **rises** to that tier. Edge-triggered from a persisted baseline, so an already-master blacksmith never fires it. |
 | `mcaquests:townstead_spirit` | `spirit` (optional), `minimum_tier` | *(optional Townstead)* The village gains a spirit tier, or its dominant character changes. |
 | `mcaquests:townstead_building` | `building_type` (optional), `minimum_level` | *(optional Townstead)* A matching building is newly registered or upgraded. |
+| `mcaquests:capital_interregnum` | `sovereign` (`"any"`/`"villager"`/`"player"`, default `"any"`) | *(optional [MCA Capitals](CAPITALS.md))* A capital's throne becomes vacant. `sovereign=any` (default) fires when anyone held it; `sovereign=villager` fires only when a villager held it; `sovereign=player` only when a player was the sovereign. |
+| `mcaquests:capital_war` | *(none)* | *(optional MCA Capitals)* A capital declares war on another capital (diplomatic state changes to WAR). Fires once per pair of capitals per cycle. |
 
 ### The `offer` block
 
@@ -1940,6 +1962,39 @@ Without MCA: Reputation, or without a build of MCA: Reputation that includes the
   }
 }
 ```
+
+---
+
+## MCA Capitals integration (optional)
+
+*(requires the optional [MCA Capitals](https://www.curseforge.com/minecraft/mc-mods/mca-capitals) mod,
+version range `[1.3.5,)` and itself requires MCA Reborn 7.7.35-beta.3+ — see [CAPITALS.md](CAPITALS.md) for the
+full guide, including the bundled quests and situations, the capability model, and what
+happens to a save when Capitals is removed.)*
+
+MCA Capitals makes one MCA villager the sovereign of a capital, assigns offices in the hierarchy below them, and manages diplomatic relations between capitals. This integration turns that into things a quest can read and react to: five conditions for gating on capital state, three rewards for granting titles and writing chronicle entries, a new villager target mode for finding officeholders, and two situation triggers for succession and war.
+
+**They are registered whether or not Capitals is installed**, so a datapack using them parses and
+validates identically either way. What changes is the answer: with Capitals absent every
+`capital_*` condition is **not met** (so the content is never offered), every `capital_*` reward
+no-ops, and an already-accepted quest **suspends** — it keeps its progress,
+stays abandonable, and resumes exactly where it was if Capitals comes back. Nothing fails and nothing is lost.
+
+**Open every Capitals quest with `capital_present`.** It is the most basic gate and ensures the giver has an active capital. Without it your content will be offered even when no capital can be found.
+
+```json
+{
+  "type": "mcaquests:capital_present"
+}
+```
+
+### Villager targeting — `capital_role` mode
+
+`{ "mode": "capital_role", "role": "sovereign" }` names a villager who holds a specific court office in the giver's capital. The `role` field is required and must be one of: `sovereign`, `consort`, `dowager`, `heir`, `royal_child`, `hand`, `commander`, `herald`, `grand_maester`, `master_of_laws`, `ambassador`, `duke`, `lord`, `knight`, `royal_guard`, or `member` (any member of the court).
+
+The holder is **bound to one concrete villager when the quest is accepted** and never re-resolves, just like `family` targets — a quest accepted before this existed binds on its next tick. Because of that binding, the objective must deliver to **the villager the quest named**, not just anyone who holds that office.
+
+If the giver has no active capital, or if the office has no villager holder (it may be held by a player, or be empty), the objective is **unofferable** with reason `mcaquests.unofferable.no_capital_role` (using the role label and capital name as arguments). A quest that does not bind successfully suspends rather than failing; if Capitals is later installed or a new officeholder is appointed, the same quest picks up where it was.
 
 ---
 

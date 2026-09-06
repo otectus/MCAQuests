@@ -4,7 +4,101 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.4] - Unreleased
+## [1.6.1] - 2026-09-06
+
+### Fixed — Structure guidance stalls
+
+- Structure markers, including fortress guidance after entering the Nether and stronghold portal
+  routes, now use a bounded search queue and asynchronous chunk requests instead of running vanilla
+  `/locate` inside a quest update. World-state reads and saved quest progress remain on the server
+  thread. Pending searches do not count as failed attempts or delay quest progress updates.
+- Nearby quests and players share structure searches. Only one chunk request is outstanding across
+  the server, with a temporary ticket for structure-start data released when the request completes.
+  Queue entries expire when no longer polled and are cleared on reload, unload, and shutdown.
+- Added `behavior.guidanceStructureSearchRadius` (default 8 placement regions, range 0–100) to bound
+  exploration. Markers identify verified nearby structures; they need not match `/locate`'s exact
+  nearest result. Biome searches still use the existing synchronous per-pass budget.
+
+## [1.6.0] - 2026-09-05
+
+A second major optional-mod integration, with **MCA Capitals** — making quests that depend on court politics. Sovereigns, courts, noble titles, diplomatic relations and succession conflicts now play a role in what a player is offered and what they can achieve. The integration follows the binding pattern introduced in 1.5.4 and runs a poller to watch for throne changes and wars, raising situations when they occur. Twenty malformed built-in objectives across sixteen files (fifteen quests, one situation) that silently decoded to nothing are fixed and a new test guards against their return — ten flat `defend_location` threats among them. No network protocol change; `QuestNetwork.PROTOCOL_VERSION` unchanged at `"15"`.
+
+### Added — MCA Capitals integration
+
+MCA: Quests detects **MCA Capitals** 1.3.5+ at runtime and exposes nine capabilities (registry, roles, player titles, title grants, allegiance, diplomacy, interregnum, chronicle, and villager titles), exactly like Ice & Fire and Bountiful in 1.5.4. A `compat/capitals/` bridge reaches capitals through reflection, never by static import. Config keys (true by default):
+- `compat.capitals.enabled` — turn off the integration entirely
+- `compat.capitals.enableBuiltinContent` — load the built-in quest pack (`capitals_court`, eight quests and two situations)
+- `compat.capitals.pollIntervalTicks` (default 200, range 20–6000) — how often the situation poller samples throne and diplomatic state (the ceiling on how long an interregnum or war can go unnoticed before a situation fires)
+
+Status and probe diagnostics via `/mcaquests compat capitals status` and `probe`.
+
+### Added — Conditions
+
+Five new condition types gate quests on capital state:
+- `mcaquests:capital_present` — the giver's village has an active capital (or the player's nearest village, with `subject=player_village`)
+- `mcaquests:capital_role` — the giver or player holds a specific office (sovereign, hand, knight, etc.) in a capital
+- `mcaquests:capital_allegiance` — the player has declared allegiance to the giver's capital (or any capital, with `match=any`)
+- `mcaquests:capital_relation` — a diplomatic relation between capitals matches a state (`peace`, `war`, `alliance`, etc.)
+- `mcaquests:capital_interregnum` — the giver's capital's throne is currently vacant
+
+### Added — Villager targeting
+
+`VillagerTarget` gained a `capital_role` mode: `{ "mode": "capital_role", "role": "sovereign" }` names the villager holding a specific court office in the giver's capital, bound at accept like `family` targets. Invalid role names fail validation at load. A player-held throne never resolves (the player is not a quest target), so a quest for that office is unofferable.
+
+**For add-ons:** `VillagerTarget.Mode` gained a `CAPITAL_ROLE` constant. Old code building targets with the original four-argument (mode, profession, relation, uuid) and five-argument (adding require) constructors still compiles; they delegate to the new six-argument canonical form that adds role. Code with an exhaustive `switch` over `Mode` needs a new case.
+
+### Added — Rewards
+
+Three new reward types work with Capitals:
+- `mcaquests:capital_title` — grant the player a noble title (knight, lord, duke, archduke) in the giver's capital; gendered by player gender
+- `mcaquests:capital_chronicle` — write a line to the capital's chronicle (with or without the herald announcing it)
+- `mcaquests:capital_villager_title` — raise a villager to knight, lord, or duke in the giver's capital
+
+### Added — Situations
+
+Two new signal types (appended to `SituationSignalType`; never insert):
+- `CAPITAL_INTERREGNUM` — fires when a capital's throne becomes vacant
+- `CAPITAL_WAR` — fires when a capital declares war on another
+
+Two new triggers gate situation offers on these:
+- `mcaquests:capital_interregnum` with optional `sovereign` filter (`any`/`villager`/`player`) — which kind held the throne that is now empty
+- `mcaquests:capital_war` — fires once per pair of capitals per cycle
+
+A new poller samples throne and diplomatic state at `pollIntervalTicks` intervals and raises signals into a persisted `mcaquests_capitals_signals` saved data store.
+
+### Added — Content
+
+The `capitals_court` pack ships eight quests (royal escort, petitions, accolade, heir guard, coronation gift, herald's request, alliance envoy, lord's due) and two situations (empty throne, drums of war). Offered only when Capitals is installed and `enableBuiltinContent` is true.
+
+### Added — Translations
+
+New keys for all five conditions, three rewards, the `capital_role` villager target mode (with all villager role names), the nine capabilities, status command output, the eight quests (titles and dialogue), and two situations (titles and dialogue). English and Brazilian Portuguese, locale parity enforced by `LocaleParityTest`.
+
+### Fixed
+
+Twenty built-in objectives across sixteen files (fifteen quests and one situation) were written with malformed JSON shapes that `QuestDefinition`'s `optionalFieldOf` codec could not parse. Decoding errors inside the objective list were silently converted to the empty default with no logged warning; a quest malformed this way still loaded and was offered, but had nothing for a player to do and turned in instantly. Four distinct shapes were corrected:
+
+- **`defend_location` threat field written flat** (ten objectives across seven files): `entity`/`tag` at the objective level instead of nested under `"threat"`. Quests: `mcaquests:bell_watch_before_dawn` (2), `mcaquests:bell_when_the_horns_answer` (1), `mcaquests:road_clear_the_cut` (2), `mcaquests:townstead_commission_bells_for_old_names` (2), `mcaquests:townstead_commission_watch_at_the_gate` (1), `mcaquests:townstead_lanterns_for_the_departed` (1), and situation `mcaquests:monster_in_the_cellar` (1).
+- **`breed_animals` / `tame_animal` entity as bare string** (four objectives): `animal` field written as a bare entity id instead of `{ "entity": "..." }`. Quests: `mcaquests:honey_for_the_healer` (breed_animals, bee), `mcaquests:horse_for_the_courier` (tame_animal, horse), `mcaquests:townstead_commission_breadth_of_the_fields` (breed_animals, sheep), `mcaquests:townstead_pasture_lambing_day` (breed_animals, sheep).
+- **`townstead_change` missing operator and value** (four objectives): omitted required `operator` and `value` fields. Fixed by adding inert defaults `"operator": "gte", "value": 0`; the quest intent (`direction`, `amount`, `minimum_final`) is unchanged. Quests: `mcaquests:townstead_breakfast_before_bells`, `mcaquests:townstead_heat_over_the_fields`, `mcaquests:townstead_rest_after_the_alarm`, `mcaquests:townstead_day_off_means_day_off`.
+- **`townstead_state` invalid operator name** (two objectives): used operator `neq` instead of `ne`. Quests: `mcaquests:townstead_day_off_means_day_off`, `mcaquests:townstead_character_choose_our_name`.
+
+A datapack author who copied any of these shapes from the built-in files must nest or rename them the same way. A new loader test, `declaredObjectivesSurviveParsing`, decodes every objective of every built-in quest, situation offer, and conditional compat pack individually and fails if any silently disappears.
+
+### Compatibility
+
+- **Network protocol:** No change; `QuestNetwork.PROTOCOL_VERSION` stays `"15"`. Clients and servers on 1.6.0 must match, but need not match an existing 1.5.4 installation (server/client version skew from 1.5.4 to 1.6.0 does not require any client to update). Capital state and title grants are rendered in components sent by the server.
+- **MCA Capitals requirement:** MCA: Quests declares `mcacapitals` as an optional dependency with version range `[1.3.5,)`. MCA Capitals' own neoforge.mods.toml requires MCA Reborn [7.7.35-beta.3,7.8.0), so a world that installs Capitals must be on that MCA Reborn version.
+- **`VillagerTarget` public API:** The original four-argument and five-argument constructors are preserved for add-on source compatibility. Calling code is unaffected. Datapack JSON gains an optional `role` field on villager targets.
+
+### Build
+
+- New `capitalsProbeTest` task: verify the binding manifest against a supplied Capitals jar (`./gradlew capitalsProbeTest -PcapitalsJar=<path>`).
+- New `-PenableCapitalsInDev=true` flag: run the dev environment with Capitals installed (`./gradlew runClient -PenableCapitalsInDev=true`).
+
+---
+
+## [1.5.4] - 2026-09-05
 
 A compatibility framework for third-party mod integrations — **Ice & Fire** (original and Community Edition) and **Bountiful** — each with conditional built-in content, new objective and condition types to bind them, and a registry-probed capability system so quests suspend rather than fail when optional content is missing. The marker gains frame-rate-independent direction smoothing, behind-camera bearing in a screen-edge indicator, an occluded mode with rate-limited sampling, and `/mcaquestsclient debug marker`. Quest suspensions show why ("quest paused: missing Bountiful"), and an unregistered entity type in a target no longer fails to load. No network protocol change; `QuestNetwork.PROTOCOL_VERSION` unchanged.
 

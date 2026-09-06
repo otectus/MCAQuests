@@ -51,7 +51,7 @@
       "location": {
         "anchor": "home_village"
       },
-      "entity": "minecraft:pillager",
+      "threat": { "entity": "minecraft:pillager" },
       "radius": 64,
       "count": 12
     },

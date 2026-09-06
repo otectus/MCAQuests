@@ -143,8 +143,8 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
             return java.util.Optional.empty();
         }
         java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> area = structure.flatMap(target -> dev.otectus.mcaquests.quest.guidance.LocateCache
-                .resolve(progress, "searchStruct", level,
-                        () -> target.locate(level, player.blockPosition(), SEARCH_CHUNKS))
+                .resolveAsync(progress, "searchStruct", level,
+                        () -> target.locateAsync(level, player.blockPosition(), SEARCH_CHUNKS))
                 .map(pos -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(pos, level, dev.otectus.mcaquests.quest.guidance.GuidanceKind.STRUCTURE,
                         target.describe(), discoverRadius, true)));
         if (area.isPresent()) {
@@ -157,7 +157,7 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
                         target.describe(), discoverRadius, true)));
     }
 
-    /** Chunks a structure search may walk, and blocks a biome search may sample. */
+    /** Structure placement-region ceiling (capped by config), and biome search radius in blocks. */
     private static final int SEARCH_CHUNKS = 100;
     private static final int SEARCH_BLOCKS = 3200;
 

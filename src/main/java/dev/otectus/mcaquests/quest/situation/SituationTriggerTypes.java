@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.quest.situation.trigger.CapitalInterregnumTrigger;
+import dev.otectus.mcaquests.quest.situation.trigger.CapitalWarTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.HostilesNearHomeTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.InfectionTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.LowFoodTrigger;
@@ -67,6 +69,14 @@ public final class SituationTriggerTypes {
             register("villager_stranded", VillagerStrandedTrigger.CODEC);
     public static final SituationTriggerType<HostilesNearHomeTrigger> HOSTILES_NEAR_HOME =
             register("hostiles_near_home", HostilesNearHomeTrigger.CODEC);
+
+    // MCA Capitals (1.6.0). Registered unconditionally for the same reason the Townstead block is: a
+    // datapack must parse identically whether or not Capitals is installed, and the poller that
+    // produces these signals simply never runs when it is not.
+    public static final SituationTriggerType<CapitalInterregnumTrigger> CAPITAL_INTERREGNUM =
+            register("capital_interregnum", CapitalInterregnumTrigger.CODEC);
+    public static final SituationTriggerType<CapitalWarTrigger> CAPITAL_WAR =
+            register("capital_war", CapitalWarTrigger.CODEC);
 
     public static final Codec<SituationTriggerType<?>> TYPE_CODEC = ResourceLocation.CODEC.flatXmap(
             id -> {

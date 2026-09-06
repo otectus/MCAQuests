@@ -67,7 +67,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Recomputed on the same once-a-second poll the highlight uses, and diffed against what the player
  * was last sent — a marker on a bed is the same marker a second later, so the common case is zero
  * packets. Asking every quest instead of one raises the ceiling on world searches, so the pass runs
- * inside {@link LocateCache#beginPass()}, which caps real searches at {@code guidanceSearchesPerPass}
+ * inside {@link LocateCache#beginPass()}, which caps synchronous searches at {@code guidanceSearchesPerPass}
  * and leaves the quests that did not get a turn to try again next pass rather than recording a miss
  * they never made.
  */

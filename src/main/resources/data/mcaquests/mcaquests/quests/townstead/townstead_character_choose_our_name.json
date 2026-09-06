@@ -47,7 +47,7 @@
       "type": "mcaquests:townstead_state",
       "source": "spirit",
       "path": "classification",
-      "operator": "neq",
+      "operator": "ne",
       "value": "settlement",
       "hold_ticks": 1200,
       "reset_on_false": true
