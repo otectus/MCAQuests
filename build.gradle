@@ -202,6 +202,26 @@ dependencies {
                 "-PmcaReputationClasses=<compatible class directory>. The integration is optional at runtime.")
     }
 
+    // Townstead public API — OPTIONAL typed adapter, compile-only, never bundled. Townstead builds
+    // the jar with `../Townstead: ./gradlew :1.20.1-forge:apiJar`; it contains only the frozen
+    // com.aetherianartificer.townstead.api.v1 package, which names no MCA type. Pass
+    // -PtownsteadApiJar=<jar> to point elsewhere. When no jar is found the typed adapter package is
+    // left out of the build entirely and the reflective bridge alone ships, so this dependency can
+    // never make the mod unbuildable.
+    def townsteadApiJar = project.findProperty('townsteadApiJar')
+            ? file(project.findProperty('townsteadApiJar'))
+            : fileTree(dir: "${projectDir}/../Townstead/.cache/townstead-build-1.20.1-forge/libs",
+                       include: 'townstead-api-*-v1.jar').files.sort { it.name }.reverse().find()
+    if (townsteadApiJar != null && townsteadApiJar.exists()) {
+        logger.lifecycle("Townstead API: compiling the typed adapter against ${townsteadApiJar.name}")
+        compileOnly files(townsteadApiJar)
+    } else {
+        logger.warn("Townstead API jar not found; the typed Townstead adapter is left out of this build " +
+                "and only the reflective bridge ships. Build it with ../Townstead: ./gradlew :1.20.1-forge:apiJar " +
+                "or pass -PtownsteadApiJar=<jar>.")
+        sourceSets.main.java.exclude 'dev/otectus/mcaquests/compat/townstead/v1/**'
+    }
+
     // Mixin annotation processor — generates the refmap for our client menu-injection mixin.
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
