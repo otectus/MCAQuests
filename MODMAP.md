@@ -26,16 +26,18 @@ dev.otectus.mcaquests.api                            5 files
 dev.otectus.mcaquests.api.event                      11 files
 dev.otectus.mcaquests.client                         29 files
 dev.otectus.mcaquests.client.gui                     6 files
-dev.otectus.mcaquests.client.map                     8 files
+dev.otectus.mcaquests.client.map                     11 files
 dev.otectus.mcaquests.client.marker                  18 files
 dev.otectus.mcaquests.command                        6 files
-dev.otectus.mcaquests.compat                         60 files
+dev.otectus.mcaquests.compat                         62 files
 dev.otectus.mcaquests.compat.bountiful               15 files
 dev.otectus.mcaquests.compat.capitals                10 files
 dev.otectus.mcaquests.compat.ftbq                    23 files
 dev.otectus.mcaquests.compat.iceandfire              5 files
 dev.otectus.mcaquests.compat.journeymap              2 files
 dev.otectus.mcaquests.compat.map                     2 files
+dev.otectus.mcaquests.compat.mapatlases              6 files
+dev.otectus.mcaquests.compat.mapatlases.client       7 files
 dev.otectus.mcaquests.compat.mca                     2 files
 dev.otectus.mcaquests.compat.pack                    3 files
 dev.otectus.mcaquests.compat.reputation              5 files
@@ -44,6 +46,7 @@ dev.otectus.mcaquests.data                           26 files
 dev.otectus.mcaquests.event                          6 files
 dev.otectus.mcaquests.mixin                          2 files
 dev.otectus.mcaquests.mixin.compat                   1 file
+dev.otectus.mcaquests.mixin.mapatlases               2 files
 dev.otectus.mcaquests.network                        34 files
 dev.otectus.mcaquests.profession                     1 file
 dev.otectus.mcaquests.project                        14 files
@@ -100,6 +103,7 @@ _No datagen providers detected — assets and data JSON are hand-written._
 Run `check_mod.py --only content` for the platform-independent content check (missing models, lang keys, textures).
 
 <!-- MODMAP:AUTO:END — everything below is hand-maintained and preserved -->
+
 
 
 

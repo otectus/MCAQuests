@@ -313,6 +313,16 @@ Automatic waypoints follow quest progress in the same way as the built-in tracke
 
 On Xaero-only installations, manually pinned quest destinations are session waypoints and do not persist after closing the game.
 
+### Map Atlases
+
+With **Map Atlases** installed, active quest destinations automatically appear on its atlas fullscreen screen, its native minimap, and the map shown by a held atlas, plus a small rim arrow when the followed quest is off-screen.
+
+A **Quest destinations** list covers every eligible target and can focus the followed quest, and explicit **Show in atlas** and **Save pin** actions are offered alongside the JourneyMap and Xaero options.
+
+This integration is client-side only and checks the installed Map Atlases build against one exact, verified release; on any other build it disables itself and quest guidance continues to work as before.
+
+Nothing is required from pack authors — quest destinations appear automatically wherever Map Atlases is installed.
+
 ### Create: Numismatics
 
 Install **Create: Numismatics** and configure MCA: Quests to use its coins as the global quest currency.
@@ -445,6 +455,7 @@ All built-in interface text, quest dialogue, objectives, rewards, projects, situ
 | <strong>Create: Numismatics</strong> |Alternative quest currency                                                                                                 |
 | <strong>JourneyMap 6.0.0+</strong> |Quest map waypoints                                                                                                        |
 | <strong>Xaero's Minimap 26.0.0+</strong> |Quest map waypoints                                                                                                        |
+| <strong>Map Atlases</strong> |Quest destinations on the atlas screen, minimap and held-atlas view (client-side only)                                     |
 
 ## Getting Started
 

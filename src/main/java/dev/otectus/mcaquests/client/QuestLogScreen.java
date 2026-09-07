@@ -129,11 +129,18 @@ public class QuestLogScreen extends McaQuestsScreen {
     }
 
     /** How many optional coordinate buttons this row carries: none, copy, or copy and waypoint. */
+    private static boolean hasMapActions() {
+        return ClientMapWaypointRegistry.backends().stream().anyMatch(b -> b.isUsable() || b.supportsNavigation());
+    }
+
+    private String mapSelectedQuest;
+    public void selectMapQuest(String key) { mapSelectedQuest = key; }
+
     private static int sideButtonCount(QuestLogEntry entry) {
         if (destination(entry).isEmpty()) {
             return 0;
         }
-        return ClientMapWaypointRegistry.bestPinSupport() != PinSupport.NONE ? 2 : 1;
+        return hasMapActions() ? 2 : 1;
     }
 
     @Override
@@ -191,17 +198,14 @@ public class QuestLogScreen extends McaQuestsScreen {
 
                 // Only where there is a map to add one to. A button that silently does nothing is
                 // worse than no button.
-                if (ClientMapWaypointRegistry.bestPinSupport() == PinSupport.NONE) {
+                if (!hasMapActions()) {
                     continue;
                 }
                 sideX -= TRACK_GAP + SIDE_W;
                 // Xaero's third-party store is rebuilt on every world load, so a pin dropped there is
                 // honestly a pin for this session. The button says which one it is offering rather
                 // than promising something that quietly disappears at the next login.
-                Component pinTooltip = Component.translatable(
-                        ClientMapWaypointRegistry.bestPinSupport() == PinSupport.PERSISTENT
-                                ? "mcaquests.tooltip.add_waypoint"
-                                : "mcaquests.tooltip.add_session_waypoint");
+                Component pinTooltip = Component.translatable("mcaquests.atlas.actions");
                 IconButton waypoint = new IconButton(sideX, view.screenY(buttonY), SIDE_W, ABANDON_H,
                         pinTooltip, GuiTextures.ICON_STAR, IconButton.Look.BUTTON,
                         b -> destination(entry).ifPresent(this::addWaypoint));
@@ -211,6 +215,16 @@ public class QuestLogScreen extends McaQuestsScreen {
             y += entryHeight(entry) + CARD_GAP;
         }
         view.setContentHeight(y + projectsHeight(renderedProjects));
+        if (mapSelectedQuest != null) {
+            controls.entrySet().stream().filter(e -> (e.getKey().questId() + "/" + e.getKey().villagerUuid()).equals(mapSelectedQuest)
+                    && e.getKey().control() == Control.TRACK).findFirst().ifPresent(e -> {
+                        setFocused(e.getValue());
+                        scrolledWidgets.stream().filter(w -> w.widget() == e.getValue()).findFirst()
+                                .ifPresent(w -> view.scrollIntoView(w.contentY(), w.height()));
+                        applyScrolledVisibility();
+                    });
+            mapSelectedQuest = null;
+        }
 
         addBookTabs(BookTab.LOG);
         addRenderableWidget(McaButton.create(Component.translatable("mcaquests.button.back"), b -> onClose())
@@ -363,36 +377,8 @@ public class QuestLogScreen extends McaQuestsScreen {
      * same spot that disappears when the player logs out.
      */
     private void addWaypoint(ActiveGuidance guidance) {
-        PinSupport wanted = ClientMapWaypointRegistry.bestPinSupport();
-        if (wanted == PinSupport.NONE) {
-            return;
-        }
-        WaypointSpec spec = new WaypointSpec(
-                guidance.questId() + "/" + guidance.villagerUuid() + "/pin",
-                guidance.target().pos(), guidance.target().dimension(),
-                guidance.target().label().getString(), guidance.target().kind(),
-                WaypointSpec.Ownership.PIN);
-        boolean added = false;
-        for (MapWaypointBackend backend : ClientMapWaypointRegistry.backends()) {
-            if (!backend.isUsable() || backend.capabilities().pins() != wanted) {
-                continue;
-            }
-            added |= backend.pin(spec) == MapMutationResult.APPLIED;
-        }
-        if (this.minecraft.player == null) {
-            return;
-        }
-        // A map that declined the pin used to say nothing at all, which reads exactly like a button
-        // that does nothing. Every outcome is now reported, and the success says how long it lasts.
-        Component message = added
-                ? Component.translatable(wanted == PinSupport.PERSISTENT
-                        ? "mcaquests.message.waypoint_added"
-                        : "mcaquests.message.session_waypoint_added",
-                        GuidanceText.coordinates(guidance.target().pos()))
-                : Component.translatable("mcaquests.message.waypoint_failed");
-        this.minecraft.player.displayClientMessage(message, true);
+        dev.otectus.mcaquests.client.map.MapActionScreen.open(this, guidance);
     }
-
     /** A bar is worth drawing only for an objective that is counted and can actually advance. */
     private static boolean showsBar(CardObjective objective) {
         return !objective.unavailable() && objective.required() > 1;

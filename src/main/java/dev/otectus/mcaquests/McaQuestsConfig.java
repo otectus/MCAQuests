@@ -640,6 +640,16 @@ public final class McaQuestsConfig {
         public final ModConfigSpec.IntValue markerEdgeTransitionFrames;
         public final ModConfigSpec.BooleanValue markerEdgeShowDistance;
         public final ModConfigSpec.IntValue markerEdgeOcclusionSampleMs;
+        public final ModConfigSpec.BooleanValue mapAtlasesWaypoints, mapAtlasesWorldMap, mapAtlasesMinimap, mapAtlasesInHand,
+                mapAtlasesPrimaryEdgeArrow, mapAtlasesNavigation, mapAtlasesPins;
+        public final ModConfigSpec.IntValue mapAtlasesSliceTolerance, mapAtlasesWorldMapBudget, mapAtlasesMinimapBudget;
+        public final ModConfigSpec.DoubleValue mapAtlasesMarkerScale;
+        public final ModConfigSpec.EnumValue<AtlasCoverage> mapAtlasesCoverage;
+        public final ModConfigSpec.EnumValue<AtlasSlicePolicy> mapAtlasesSlicePolicy;
+        public final ModConfigSpec.EnumValue<AtlasLabels> mapAtlasesLabels;
+        public enum AtlasCoverage { COVERED_MAPS, EXPLORED_PIXELS }
+        public enum AtlasSlicePolicy { SHOW_WITH_HEIGHT_HINT, STRICT_SLICE }
+        public enum AtlasLabels { HOVER_AND_PRIMARY, HOVER_ONLY, NONE }
         public final ModConfigSpec.BooleanValue mapWaypoints;
         public final ModConfigSpec.BooleanValue mapWaypointsFollowedOnly;
         public final ModConfigSpec.BooleanValue journeyMapWaypoints;
@@ -737,6 +747,20 @@ public final class McaQuestsConfig {
                     "Only ever affects opacity over time -- the marker never moves, scales or spins either",
                     "way.")
                     .define("questMarkerReducedMotion", false);
+            mapAtlasesWaypoints = b.comment("Automatic Map Atlases quest overlays. The master mapWaypoints switch also applies.").define("mapAtlasesWaypoints", true);
+            mapAtlasesWorldMap = b.comment("Draw automatic quest destinations on the atlas screen.").define("mapAtlasesWorldMap", true);
+            mapAtlasesMinimap = b.comment("Draw automatic quest destinations on the native atlas minimap.").define("mapAtlasesMinimap", true);
+            mapAtlasesInHand = b.comment("Draw automatic quest destinations on the map displayed by a held atlas.").define("mapAtlasesInHand", true);
+            mapAtlasesPrimaryEdgeArrow = b.comment("Show the primary destination on the minimap rim when covered by this atlas.").define("mapAtlasesPrimaryEdgeArrow", true);
+            mapAtlasesNavigation = b.comment("Allow explicit Show in atlas actions, independently of automatic overlays.").define("mapAtlasesNavigation", true);
+            mapAtlasesPins = b.comment("Allow explicit personal pins in the native atlas store, independently of automatic overlays.").define("mapAtlasesPins", true);
+            mapAtlasesCoverage = b.comment("COVERED_MAPS requires an existing map. EXPLORED_PIXELS additionally requires explored vanilla pixels; other types are withheld.").defineEnum("mapAtlasesCoverage", AtlasCoverage.COVERED_MAPS);
+            mapAtlasesSlicePolicy = b.comment("Show vertical hints or require reliable target height within the selected slice tolerance.").defineEnum("mapAtlasesSlicePolicy", AtlasSlicePolicy.SHOW_WITH_HEIGHT_HINT);
+            mapAtlasesSliceTolerance = b.comment("Vertical tolerance in blocks for STRICT_SLICE.").defineInRange("mapAtlasesSliceTolerance", 8, 0, 64);
+            mapAtlasesMarkerScale = b.comment("Additional marker scale, applied once with native icon scaling.").defineInRange("mapAtlasesMarkerScale", 1.0, 0.5, 2.0);
+            mapAtlasesLabels = b.comment("Label density; destination details remain keyboard accessible.").defineEnum("mapAtlasesLabels", AtlasLabels.HOVER_AND_PRIMARY);
+            mapAtlasesWorldMapBudget = b.comment("Maximum fullscreen glyphs; overflow remains in Quest destinations.").defineInRange("mapAtlasesWorldMapBudget", 128, 8, 256);
+            mapAtlasesMinimapBudget = b.comment("Maximum minimap glyphs; overflow remains in Quest destinations.").defineInRange("mapAtlasesMinimapBudget", 32, 4, 64);
             mapWaypoints = b.comment(
                     "Put your quest destinations on JourneyMap and Xaero's Minimap, where either is",
                     "installed. One waypoint per quest that has somewhere to send you, created when it",

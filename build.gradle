@@ -510,7 +510,7 @@ tasks.register('capitalsProbeTest', Test) {
 afterEvaluate {
     def base = tasks.named('test', Test).get()
     ['townsteadProbeTest', 'mapProbeTest', 'iceAndFireProbeTest', 'bountifulProbeTest',
-     'capitalsProbeTest'].each { name ->
+     'capitalsProbeTest', 'mapAtlasesProbeTest'].each { name ->
         tasks.named(name, Test).configure {
             classpath = base.classpath
             testClassesDirs = base.testClassesDirs
@@ -713,5 +713,36 @@ tasks.register('installMod') {
         java.nio.file.Files.copy(source.toPath(), new File(modsDir, source.name).toPath(),
                 java.nio.file.StandardCopyOption.REPLACE_EXISTING)
         logger.lifecycle("Installed ${source.name} to ${modsDir}.")
+    }
+}
+
+// Explicit release gate: missing atlas/Moonlight inputs fail instead of silently skipping a probe.
+tasks.register('mapAtlasesProbeTest', Test) {
+    group = 'verification'
+    description = 'Checks the exact Map Atlases render and native-action contracts without loading optional classes.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.mapatlases.MapAtlasesJarProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    doFirst {
+        ['mapAtlasesJar', 'moonlightJar'].each { key ->
+            def value = project.findProperty(key)?.toString()
+            if (!value || !file(value).isFile()) throw new GradleException("Supply -P${key}=<exact release jar>")
+        }
+        systemProperty 'mcaquests.atlas.jar', file(project.property('mapAtlasesJar')).absolutePath
+        systemProperty 'mcaquests.moonlight.jar', file(project.property('moonlightJar')).absolutePath
+    }
+}
+if (project.findProperty('requireMapAtlasesJars')?.toString()?.toBoolean()) {
+    tasks.named('check').configure { dependsOn 'mapAtlasesProbeTest' }
+}
+// Reflective adapter: optional artifacts never enter the compile or published dependency graph.
+if (project.findProperty('enableMapAtlasesInDev')?.toString()?.toBoolean()) {
+    ['mapAtlasesJar', 'moonlightJar'].each { key ->
+        def value = project.findProperty(key)?.toString()
+        if (!value || !file(value).isFile()) throw new GradleException("Supply -P${key}=<exact release jar>")
+        dependencies.add('runtimeOnly', files(value))
     }
 }
