@@ -10,6 +10,7 @@ import dev.otectus.mcaquests.client.map.WaypointReconciler;
 import dev.otectus.mcaquests.compat.ClearCause;
 import dev.otectus.mcaquests.compat.MapWaypointBackend;
 import dev.otectus.mcaquests.compat.WaypointSpec;
+import dev.otectus.mcaquests.compat.WaypointPresentation;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
 import dev.otectus.mcaquests.quest.guidance.GuidanceTarget;
 import net.minecraft.client.Minecraft;
@@ -68,6 +69,7 @@ public final class QuestWaypointSync {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
+        ClientMapWaypointRegistry.backends().forEach(MapWaypointBackend::clientTick);
         ClientLevel level = minecraft.level;
         if (level == null || minecraft.player == null) {
             return;
@@ -117,6 +119,7 @@ public final class QuestWaypointSync {
         return switch (backend.id()) {
             case "journeymap" -> McaQuestsConfig.CLIENT.journeyMapWaypoints.get();
             case "xaero" -> McaQuestsConfig.CLIENT.xaeroWaypoints.get();
+            case "map_atlases" -> McaQuestsConfig.CLIENT.mapAtlasesWaypoints.get();
             default -> true;
         };
     }
@@ -129,10 +132,23 @@ public final class QuestWaypointSync {
         List<WaypointSpec> desired = new ArrayList<>(source.size());
         for (ActiveGuidance guidance : source) {
             GuidanceTarget target = guidance.target();
-            desired.add(new WaypointSpec(key(guidance), target.pos(), target.dimension(),
-                    target.label().getString(), target.kind(), WaypointSpec.Ownership.AUTOMATIC));
+            desired.add(specification(guidance, WaypointSpec.Ownership.AUTOMATIC));
         }
         return desired;
+    }
+
+    public static WaypointSpec specification(ActiveGuidance guidance, WaypointSpec.Ownership ownership) {
+        GuidanceTarget target = guidance.target();
+        var entry = ClientQuestData.active().stream().filter(q -> q.questId().equals(guidance.questId())
+                && q.villagerUuid().equals(guidance.villagerUuid())).findFirst();
+        boolean primary = ClientGuidanceData.primary().map(p -> p.isAbout(guidance.questId(), guidance.villagerUuid())).orElse(false);
+        boolean reliableY = !target.approximate() && !target.lastKnown() && (target.entityId().isPresent()
+                || target.kind() == dev.otectus.mcaquests.quest.guidance.GuidanceKind.HOME
+                || target.kind() == dev.otectus.mcaquests.quest.guidance.GuidanceKind.WORKSTATION);
+        return new WaypointSpec(key(guidance), target.pos(), target.dimension(), target.label().getString(),
+                target.kind(), ownership, new WaypointPresentation(target.approximate(), target.lastKnown(),
+                target.arriveRadius(), primary, reliableY, entry.map(q -> q.title().getString()).orElse(""),
+                entry.map(q -> q.ready()).orElse(false)));
     }
 
     /**

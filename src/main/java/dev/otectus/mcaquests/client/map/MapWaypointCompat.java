@@ -39,23 +39,25 @@ public final class MapWaypointCompat {
             return;
         }
         initialised = true;
-        if (!ModList.get().isLoaded(XAERO_MOD_ID)) {
-            McaQuests.LOGGER.debug("[MCA: Quests] Xaero's Minimap not installed; its quest waypoints off.");
-            return;
-        }
+        initialise(XAERO_MOD_ID, XAERO_BACKEND_ID, XAERO_BACKEND);
+        initialise("map_atlases", "map_atlases",
+                "dev.otectus.mcaquests.compat.mapatlases.MapAtlasesWaypointBackend");
+    }
+
+    private static void initialise(String modId, String backendId, String backendClass) {
+        if (!ModList.get().isLoaded(modId)) return;
         try {
-            Method resolve = Class.forName(XAERO_BACKEND).getMethod("resolve");
+            Method resolve = Class.forName(backendClass).getMethod("resolve");
             MapWaypointBackend backend = (MapWaypointBackend) resolve.invoke(null);
             if (backend == null) {
                 return;
             }
-            ClientMapWaypointRegistry.register(XAERO_BACKEND_ID, backend);
-            McaQuests.LOGGER.info("[MCA: Quests] Minimap — Xaero's Minimap {} ({})",
+            ClientMapWaypointRegistry.register(backendId, backend);
+            McaQuests.LOGGER.info("[MCA: Quests] Map backend {}: {} ({})", backendId,
                     backend.status().binding(), backend.modVersion().orElse("version unknown"));
         } catch (Throwable t) {
             // A Xaero build this one does not recognise disables its waypoints and nothing else.
-            McaQuests.LOGGER.error("[MCA: Quests] Xaero waypoint integration failed to start; quest "
-                    + "destinations will still show on the tracker and the world marker.", t);
+            McaQuests.LOGGER.error("[MCA: Quests] Map backend {} failed to start", backendId, t);
         }
     }
 

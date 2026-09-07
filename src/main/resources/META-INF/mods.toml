@@ -114,3 +114,11 @@ description='''${mod_description}'''
     versionRange="[1.3.5,)"
     ordering="AFTER"
     side="BOTH"
+
+# Optional adapter; unsupported atlas versions disable only this integration.
+[[dependencies.${mod_id}]]
+    modId="map_atlases"
+    mandatory=false
+    versionRange="*"
+    ordering="AFTER"
+    side="CLIENT"

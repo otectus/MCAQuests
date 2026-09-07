@@ -432,6 +432,7 @@ mixin {
     // to apply it at all -- but it still has to be registered here, or its class would be missing
     // from the reobfuscated jar's mixin refmap handling entirely.
     config 'mcaquests.compat.mixins.json'
+    config 'mcaquests.mapatlases.mixins.json'
 }
 
 // Expand metadata placeholders into mods.toml / pack.mcmeta at build time.
@@ -530,3 +531,38 @@ tasks.register('installMod') {
 }
 
 apply from: 'gradle/verify-artifact.gradle'
+
+// Explicit release gate: missing atlas/Moonlight inputs fail instead of silently skipping a probe.
+tasks.register('mapAtlasesProbeTest', Test) {
+    group = 'verification'
+    description = 'Checks the exact Map Atlases render and native-action contracts without loading optional classes.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'dev.otectus.mcaquests.compat.mapatlases.MapAtlasesJarProbeTest' }
+    outputs.upToDateWhen { false }
+    testLogging { showStandardStreams = true }
+    doFirst {
+        ['mapAtlasesJar', 'moonlightJar'].each { key ->
+            def value = project.findProperty(key)?.toString()
+            if (!value || !file(value).isFile()) throw new GradleException("Supply -P${key}=<exact release jar>")
+        }
+        systemProperty 'mcaquests.atlas.jar', file(project.property('mapAtlasesJar')).absolutePath
+        systemProperty 'mcaquests.moonlight.jar', file(project.property('moonlightJar')).absolutePath
+    }
+}
+if (project.findProperty('requireMapAtlasesJars')?.toString()?.toBoolean()) {
+    tasks.named('check').configure { dependsOn 'mapAtlasesProbeTest' }
+}
+// Reflective adapter: optional artifacts never enter the compile or published dependency graph.
+if (project.findProperty('enableMapAtlasesInDev')?.toString()?.toBoolean()) {
+    ['mapAtlasesJar', 'moonlightJar'].each { key ->
+        def value = project.findProperty(key)?.toString()
+        if (!value || !file(value).isFile()) throw new GradleException("Supply -P${key}=<exact release jar>")
+        dependencies.add('runtimeOnly', fg.deobf(files(value)))
+    }
+}
+
+if (project.findProperty('atlasRuntimeFixture')?.toString()?.toBoolean()) {
+    apply from: 'tools/atlas-runtime-test/forge.gradle'
+}

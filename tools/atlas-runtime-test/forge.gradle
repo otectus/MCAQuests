@@ -1,0 +1,17 @@
+// Explicit disposable test mod, separate from every published MCA: Quests artifact.
+sourceSets {
+    atlasRuntimeTest {
+        java.srcDir 'tools/atlas-runtime-test'
+        resources.srcDir 'tools/atlas-runtime-test/resources'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += compileClasspath
+    }
+}
+tasks.named('compileAtlasRuntimeTestJava', JavaCompile).configure { options.compilerArgs += ['-proc:none'] }
+tasks.register('atlasRuntimeTestJar', Jar) {
+    from sourceSets.atlasRuntimeTest.output
+    archiveBaseName = 'mcaquests-atlas-runtime-test'
+    archiveVersion = '1'
+}
+reobf { atlasRuntimeTestJar { } }
+tasks.named('atlasRuntimeTestJar').configure { finalizedBy 'reobfAtlasRuntimeTestJar' }

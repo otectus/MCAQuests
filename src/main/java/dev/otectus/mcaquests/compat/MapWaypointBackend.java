@@ -70,6 +70,25 @@ public interface MapWaypointBackend {
      */
     MapMutationResult pin(WaypointSpec spec);
 
+    default MapActionAvailability pinAvailability(WaypointSpec spec,
+            net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> currentDimension) {
+        if (!isUsable() || capabilities().pins() == PinSupport.NONE)
+            return MapActionAvailability.unavailable("unsupported_pins");
+        if (currentDimension == null) return MapActionAvailability.unavailable("no_session");
+        if (capabilities().currentDimensionOnly() && !spec.dimension().equals(currentDimension))
+            return MapActionAvailability.unavailable("other_dimension");
+        return MapActionAvailability.ready();
+    }
+
+    default boolean supportsNavigation() { return false; }
+    default MapActionAvailability navigationAvailability(WaypointSpec spec) {
+        return MapActionAvailability.unavailable("unsupported_navigation");
+    }
+    default MapMutationResult navigate(WaypointSpec spec) { return MapMutationResult.UNSUPPORTED; }
+    /** Client tick for bounded explicit navigation; automatic reconciliation remains separate. */
+    default void clientTick() { }
+    default List<net.minecraft.network.chat.Component> details() { return List.of(); }
+
     /** A snapshot for diagnostics. Reads only; safe to call at any time. */
     MapBackendStatus status();
 

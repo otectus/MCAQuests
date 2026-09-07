@@ -1,0 +1,10 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.otectus.mcaquests.mixin.mapatlases",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "mcaquests.refmap.json",
+  "plugin": "dev.otectus.mcaquests.compat.mapatlases.MapAtlasesMixinPlugin",
+  "client": ["AtlasDisplayMixin", "AtlasInHandMixin"],
+  "injectors": {"defaultRequire": 0}
+}
