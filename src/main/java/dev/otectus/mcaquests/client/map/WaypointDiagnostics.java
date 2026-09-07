@@ -59,6 +59,7 @@ public final class WaypointDiagnostics {
                     .findFirst();
             lines.add(stateLine(status, pass));
             lines.add(capabilitiesLine(status.capabilities()));
+            lines.addAll(backend.details());
             lines.add(lastSyncLine(lastSyncMillis, nowMillis));
             pass.flatMap(SyncReport.BackendReport::nextRetryAtMillis).ifPresent(retryAt ->
                     lines.add(Component.translatable(PREFIX + "pending_retry",

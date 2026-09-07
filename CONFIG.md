@@ -268,12 +268,42 @@ The arrow at the edge of the screen that points at a target you are not looking 
 
 | Option | Default | What it does |
 |---|---|---|
-| `mapWaypoints` | `true` | Put your quest destinations on **JourneyMap** and **Xaero's Minimap**, where either is installed. One waypoint per quest that has somewhere to send you, created when it resolves, moved as the quest advances, and taken away when it is done. They are not saved into your own waypoint list — they belong to the quest, not to you — so uninstalling this mod leaves nothing behind. A destination in another dimension gets no waypoint. Master switch; overrides `journeyMapWaypoints` and `xaeroWaypoints` below. |
+| `mapWaypoints` | `true` | Put your quest destinations on **JourneyMap**, **Xaero's Minimap** and **Map Atlases**, where any is installed. One waypoint per quest that has somewhere to send you, created when it resolves, moved as the quest advances, and taken away when it is done. They are not saved into your own waypoint list — they belong to the quest, not to you — so uninstalling this mod leaves nothing behind. A destination in another dimension gets no waypoint. Master switch; overrides `journeyMapWaypoints`, `xaeroWaypoints` and `mapAtlasesWaypoints` below. |
 | `journeyMapWaypoints` | `true` | Put quest destinations on **JourneyMap** (if installed). Only matters when `mapWaypoints=true`. |
 | `xaeroWaypoints` | `true` | Put quest destinations on **Xaero's Minimap** (if installed). Only matters when `mapWaypoints=true`. |
+| `mapAtlasesWaypoints` | `true` | Put quest destinations on **Map Atlases** (if installed), as automatic overlays on its atlas screen, minimap and, where allowed below, a held atlas's own map. Only matters when `mapWaypoints=true`. |
 | `mapWaypointsFollowedOnly` | `false` | Restrict those waypoints to the quest you are following, so the map carries one at a time rather than one per quest. The in-world marker shows only one quest at a time; this makes the map match it. |
 
 > The anchor + X/Y offset together make any on-screen tracker position reachable. Example: `TOP_RIGHT` with `questTrackerX = 4`, `questTrackerY = 28` tucks it under the top-right corner.
+
+### Map Atlases
+
+`mapAtlasesWorldMap`, `mapAtlasesMinimap`, `mapAtlasesInHand`, `mapAtlasesPrimaryEdgeArrow`,
+`mapAtlasesMarkerScale`, `mapAtlasesLabels`, `mapAtlasesWorldMapBudget` and `mapAtlasesMinimapBudget`
+only matter when `mapAtlasesWaypoints=true`, since they all shape the automatic overlays that switch
+gates. `mapAtlasesCoverage`, `mapAtlasesSlicePolicy` and `mapAtlasesSliceTolerance` are different:
+they feed the same placement check the automatic overlays use to decide whether a destination is
+drawable, and that same check also decides whether the explicit **Show in atlas** and **Save pin**
+actions are offered — so they matter whenever `mapAtlasesWaypoints`, `mapAtlasesNavigation` or
+`mapAtlasesPins` is on, not only under `mapAtlasesWaypoints`. `mapAtlasesNavigation` and
+`mapAtlasesPins` are themselves independent of `mapAtlasesWaypoints`: they gate the explicit actions,
+which work whether or not the automatic overlays are on.
+
+| Option | Default | What it does |
+|---|---|---|
+| `mapAtlasesWorldMap` | `true` | Draw automatic quest destinations on the atlas fullscreen. |
+| `mapAtlasesMinimap` | `true` | Draw them on Map Atlases' native minimap HUD. |
+| `mapAtlasesInHand` | `true` | Draw them on the map shown by a held atlas item. |
+| `mapAtlasesPrimaryEdgeArrow` | `true` | Show the quest you are following at the minimap's rim when it is covered by the active atlas but off the visible map. |
+| `mapAtlasesNavigation` | `true` | Offer the explicit **Show in atlas** action from the quest log and the atlas's own destination list, independently of the automatic overlays above. |
+| `mapAtlasesPins` | `true` | Offer the explicit **Save pin** action into Map Atlases' own personal-pin store, independently of the automatic overlays above. |
+| `mapAtlasesCoverage` | `COVERED_MAPS` | What counts as "on the map": `COVERED_MAPS` needs only an existing map sheet covering that spot; `EXPLORED_PIXELS` additionally needs that spot to be explored on the map (vanilla maps only — other map types are withheld rather than guessed at). |
+| `mapAtlasesSlicePolicy` | `SHOW_WITH_HEIGHT_HINT` | How strict a destination's height must be before it is drawn on a sliced (vertical-layer) map: `SHOW_WITH_HEIGHT_HINT` still draws it with an above/below hint, `STRICT_SLICE` withholds a target outside `mapAtlasesSliceTolerance`. |
+| `mapAtlasesSliceTolerance` | `8` | Vertical tolerance in blocks used only by `STRICT_SLICE`. Range `0`–`64`. |
+| `mapAtlasesMarkerScale` | `1.0` | Extra scale applied to Map Atlases markers, on top of the atlas's own icon scaling. Range `0.5`–`2.0`. |
+| `mapAtlasesLabels` | `HOVER_AND_PRIMARY` | Marker label density: `HOVER_AND_PRIMARY` (hover tooltip plus a short label on the followed quest), `HOVER_ONLY` (tooltip only), or `NONE` (no hover tooltip either). |
+| `mapAtlasesWorldMapBudget` | `128` | Maximum quest glyphs drawn on the atlas fullscreen at once; anything past the limit still shows in **Quest destinations**. Range `8`–`256`. |
+| `mapAtlasesMinimapBudget` | `32` | Same limit for the minimap and the held atlas. Range `4`–`64`. |
 
 ---
 

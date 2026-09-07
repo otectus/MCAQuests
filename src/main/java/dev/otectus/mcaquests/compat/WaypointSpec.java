@@ -28,7 +28,18 @@ public record WaypointSpec(
         ResourceKey<Level> dimension,
         String label,
         GuidanceKind kind,
-        WaypointSpec.Ownership ownership) {
+        WaypointSpec.Ownership ownership,
+        WaypointPresentation presentation) {
+
+    public WaypointSpec(String key, BlockPos pos, ResourceKey<Level> dimension, String label,
+                        GuidanceKind kind, Ownership ownership) {
+        this(key, pos, dimension, label, kind, ownership, WaypointPresentation.DEFAULT);
+    }
+
+    public WaypointSpec {
+        pos = pos.immutable();
+        presentation = presentation == null ? WaypointPresentation.DEFAULT : presentation;
+    }
 
     /**
      * Whether this mod may take the waypoint away again.

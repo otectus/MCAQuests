@@ -4,7 +4,7 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.2] - 2026-09-06
+## [1.6.2] - 2026-09-07
 
 Stabilization and compatibility refinement for the NeoForge 1.21.1 release.
 
@@ -73,6 +73,88 @@ Stabilization and compatibility refinement for the NeoForge 1.21.1 release.
   authors to declare `pack_format: 34` for a standalone datapack; `34` is the 1.21.1 resource-pack
   format, and `48` is the 1.21.1 data-pack format that this mod's own bundled compat packs use.
   Packs authored against the old advice will have been flagged as an incompatible pack format.
+
+### Added — Map Atlases integration
+
+- Added **Map Atlases** as a third automatic map-waypoint backend (`compat/mapatlases/`), alongside
+  JourneyMap and Xaero's Minimap — see **[MAPATLASES.md](MAPATLASES.md)**. Quest destinations are
+  drawn as temporary overlays on the atlas fullscreen, its native minimap, and a held atlas's own
+  map, through the existing guidance lifecycle and backend reconciler; nothing is written into a map
+  item, vanilla map data or a persistent waypoint file. A "Quest destinations" button injected into
+  the atlas screen lists every currently eligible target and can focus the followed quest; clicking a
+  drawn marker opens the same contextual action menu as the quest log's own map button.
+- Added explicit **Show in atlas** and **Save pin** actions per destination and per installed backend
+  (JourneyMap, Xaero, Map Atlases), replacing the single click that used to fan out to every backend
+  sharing the same durability — see "Changed" below.
+- Added 14 new client config keys under `[client]`: `mapAtlasesWaypoints`, `mapAtlasesWorldMap`,
+  `mapAtlasesMinimap`, `mapAtlasesInHand`, `mapAtlasesPrimaryEdgeArrow`, `mapAtlasesNavigation`,
+  `mapAtlasesPins`, `mapAtlasesCoverage`, `mapAtlasesSlicePolicy`, `mapAtlasesSliceTolerance`,
+  `mapAtlasesMarkerScale`, `mapAtlasesLabels`, `mapAtlasesWorldMapBudget`, `mapAtlasesMinimapBudget`.
+  See **[CONFIG.md](CONFIG.md#map-atlases)**.
+- Added a dedicated, optional, client-only mixin configuration, `mcaquests.mapatlases.mixins.json`
+  (`required: false`, `injectors.defaultRequire: 0`, gated by the new `MapAtlasesMixinPlugin`), with
+  two mixins: `AtlasDisplayMixin` on Map Atlases' shared fullscreen/minimap renderer
+  (`pepjebs.mapatlases.client.AbstractAtlasDisplay`) and `AtlasInHandMixin` on its held-item renderer
+  (`pepjebs.mapatlases.client.AtlasInHandRenderer`). The plugin verifies an exact, version-pinned
+  Map Atlases `1.21-6.7.3` bytecode shape before applying either one, and both only inject additional
+  drawing — neither cancels nor overwrites a return value — so they can coexist with any other mod
+  hooking the same two Map Atlases methods.
+- Registered the new mixin config in `neoforge.mods.toml` via a `[[mixins]]` block, and added an
+  optional, client-side `map_atlases` dependency entry (`type="optional"`, `versionRange="*"`,
+  `side="CLIENT"`). Map Atlases is never required and never bundled; like the existing Xaero
+  binding, MCA: Quests resolves its classes reflectively at runtime and adds no compile-time
+  dependency on it or on its optional Moonlight dependency.
+- Added Gradle support in `build.gradle`: `mapAtlasesProbeTest` replays the exact render and
+  native-action contract against real `-PmapAtlasesJar=`/`-PmoonlightJar=` release jars (wired into
+  `check` only behind `-PrequireMapAtlasesJars=true`); `-PenableMapAtlasesInDev=true` (with the same
+  two jar properties) adds them as `runtimeOnly` for dev runs, mirroring `enableFtbqInDev` and
+  `enableCapitalsInDev`.
+- Added `NoMapAtlasesStaticLinkTest` (Map Atlases and Moonlight types stay confined to
+  `compat/mapatlases/` and `mixin/mapatlases/`), `AtlasBackendTest`, `AtlasProjectionTest`,
+  `MapAtlasesJarProbeTest`, and `MapPinRoutingTest` covering the new multi-destination pin routing.
+- Added 56 translation keys under `mcaquests.atlas.*` to both `en_us.json` and `pt_br.json`, covering
+  the new actions, unavailability reasons, status lines and marker kinds.
+- Added `assets/mcaquests/textures/gui/atlas_ink.png`, the texture the held-atlas overlay renders its
+  markers with.
+- No network protocol change; `QuestNetwork.PROTOCOL_VERSION` unchanged.
+
+### Changed — Quest log and map-pin routing
+
+- Replaced the quest log's single pin button — which used to fan one click out to every backend
+  sharing the same pin durability (persistent or session) — with a contextual action screen
+  (`MapActionScreen`) that lists each eligible *backend* separately and reports each outcome on its
+  own; when there is exactly one eligible backend and none of the installed backends support
+  navigation, saving still commits in one click, as before. The old `mcaquests.tooltip.add_waypoint` /
+  `add_session_waypoint` and `mcaquests.message.waypoint_added` / `session_waypoint_added` /
+  `waypoint_failed` translation keys are no longer used by this flow, which now uses
+  `mcaquests.atlas.save` / `save_session` / `saved` / `saved_session` / `save_failed` instead; see
+  "Removed" below.
+- The quest log's side "add to map" button now appears whenever any installed backend is usable at
+  all, or supports explicit navigation — including a backend that is usable but offers neither pin
+  support nor navigation — not only when one supports a persistent or session pin.
+- `QuestWaypointSync` now attaches a `WaypointPresentation` (approximate/last-known flags, arrival
+  radius, primary/followed flag, a reliable-height flag, the quest's title and its ready-to-turn-in
+  state) to every waypoint it builds, sourced from `GuidanceTarget` and the client's own quest data.
+- `ClientQuestData.update` now also sets `MapSyncDirtyFlag`, so a quest-log sync (title, ready-to-
+  turn-in state) reconciles map waypoints on the next tick instead of waiting for the next guidance
+  packet or setting change.
+
+### Removed
+
+- The `mcaquests.tooltip.add_waypoint`, `mcaquests.tooltip.add_session_waypoint`,
+  `mcaquests.message.waypoint_added`, `mcaquests.message.session_waypoint_added` and
+  `mcaquests.message.waypoint_failed` translation keys, from both `en_us.json` and `pt_br.json`. They
+  belonged to the old quest-log pin flow that `MapActionScreen` replaced (see "Changed" above) and are
+  no longer referenced anywhere.
+
+### Changed — Map waypoint model (source-compatible)
+
+- `WaypointSpec` gained a `presentation` component (`WaypointPresentation`). The previous six-argument
+  constructor is preserved and defaults the new component to `WaypointPresentation.DEFAULT`, so
+  existing callers compile and behave unchanged.
+- `MapWaypointBackend` gained six new `default` methods (`pinAvailability`, `supportsNavigation`,
+  `navigationAvailability`, `navigate`, `clientTick`, `details`) supporting the new contextual-action
+  and diagnostics flow. Existing backend implementations do not need to override any of them.
 
 ## [1.6.1] - 2026-09-06
 

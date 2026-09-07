@@ -16,6 +16,7 @@ public final class ClientQuestData {
 
     public static void update(List<QuestLogEntry> entries) {
         active = List.copyOf(entries);
+        dev.otectus.mcaquests.client.map.MapSyncDirtyFlag.set();
     }
 
     public static List<QuestLogEntry> active() {
