@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -27,8 +29,8 @@ public record ReachLocationObjective(LocationAnchor location, int radius,
 
     public static final Codec<ReachLocationObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(ReachLocationObjective::location),
-            Codec.intRange(1, 64).optionalFieldOf("radius", 6).forGetter(ReachLocationObjective::radius),
-            Codec.intRange(0, 512).optionalFieldOf("min_journey").forGetter(ReachLocationObjective::minJourney)
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "radius", 6).forGetter(ReachLocationObjective::radius),
+            StrictCodecs.strictOptional(Codec.intRange(0, 512), "min_journey").forGetter(ReachLocationObjective::minJourney)
     ).apply(instance, ReachLocationObjective::new));
 
     /** How far the player must start from the anchor, defaulting to {@code minEscortJourney}. */

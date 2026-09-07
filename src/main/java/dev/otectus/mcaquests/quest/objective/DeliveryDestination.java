@@ -109,17 +109,24 @@ public record DeliveryDestination(Kind kind, TownsteadTarget target) {
      * caller can refuse an under-capacity transfer without having moved anything.
      */
     public static int roomFor(Container container, Item item, int wanted) {
-        int maxStack = new ItemStack(item).getMaxStackSize();
-        int room = 0;
+        if (wanted <= 0) {
+            return 0;
+        }
+        ItemStack payload = new ItemStack(item);
+        int maxStack = Math.min(payload.getMaxStackSize(), container.getMaxStackSize());
+        long room = 0;
         for (int slot = 0; slot < container.getContainerSize() && room < wanted; slot++) {
+            if (!container.canPlaceItem(slot, payload)) {
+                continue;
+            }
             ItemStack stack = container.getItem(slot);
             if (stack.isEmpty()) {
                 room += maxStack;
-            } else if (stack.is(item)) {
+            } else if (ItemStack.isSameItemSameTags(stack, payload)) {
                 room += Math.max(0, Math.min(maxStack, stack.getMaxStackSize()) - stack.getCount());
             }
         }
-        return Math.min(room, wanted);
+        return (int) Math.min(room, wanted);
     }
 
     /**
@@ -128,15 +135,22 @@ public record DeliveryDestination(Kind kind, TownsteadTarget target) {
      * between the check and the commit.
      */
     public static int insert(Container container, Item item, int count) {
-        int maxStack = new ItemStack(item).getMaxStackSize();
+        if (count <= 0) {
+            return 0;
+        }
+        ItemStack payload = new ItemStack(item);
+        int maxStack = Math.min(payload.getMaxStackSize(), container.getMaxStackSize());
         int remaining = count;
         for (int slot = 0; slot < container.getContainerSize() && remaining > 0; slot++) {
+            if (!container.canPlaceItem(slot, payload)) {
+                continue;
+            }
             ItemStack stack = container.getItem(slot);
             if (stack.isEmpty()) {
                 int give = Math.min(remaining, maxStack);
                 container.setItem(slot, new ItemStack(item, give));
                 remaining -= give;
-            } else if (stack.is(item)) {
+            } else if (ItemStack.isSameItemSameTags(stack, payload)) {
                 int give = Math.min(remaining, Math.min(maxStack, stack.getMaxStackSize()) - stack.getCount());
                 if (give > 0) {
                     stack.grow(give);

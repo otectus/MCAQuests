@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -20,7 +22,7 @@ public record InfectedCondition(double minProgress) implements QuestCondition {
     // See DispatchedCodecInlinesTest.
     public static final Codec<InfectedCondition> CODEC = RecordCodecBuilder.<InfectedCondition>mapCodec(
             instance -> instance.group(
-                    Codec.DOUBLE.optionalFieldOf("min_progress", 0.0D).forGetter(InfectedCondition::minProgress)
+                    StrictCodecs.strictOptional(Codec.DOUBLE, "min_progress", 0.0D).forGetter(InfectedCondition::minProgress)
             ).apply(instance, InfectedCondition::new)).flatXmap(InfectedCondition::validate, InfectedCondition::validate).codec();
 
     private static DataResult<InfectedCondition> validate(InfectedCondition condition) {

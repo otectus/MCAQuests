@@ -1,0 +1,57 @@
+{
+  "format_version": 1,
+  "id": "kinbound:mind_the_little_one",
+  "weight": 14,
+  "category": "relations",
+  "difficulty": "medium",
+  "offer_group": "kin_crisis",
+  "title": { "text": "Mind the Little One" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "adult_only": true,
+    "min_hearts": 20
+  },
+  "dialogue": {
+    "offer": { "text": "I have the night shift and they will not sleep. Stay with them until the noise passes — two minutes of it and you will understand why I am asking." },
+    "accept": { "text": "Do not let them out of the lantern light." },
+    "decline": { "text": "Then I will take them with me and we will both be tired." },
+    "in_progress": { "text": "Still out there. Stay close to them." },
+    "ready": { "text": "Quiet again. And they are asleep." },
+    "complete": { "text": "You stayed. People remember who stayed." },
+    "failed": { "text": "I should never have gone. I should never have gone." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:protect_entity",
+      "villager": { "mode": "family", "relation": "child", "require": "nearby" },
+      "duration_ticks": 2400,
+      "require_near_player": true,
+      "near_radius": 12,
+      "fail_on_death": true
+    },
+    {
+      "type": "mcaquests:defend_villager",
+      "villager": { "mode": "family", "relation": "child", "require": "nearby" },
+      "threat": { "tag": "mcaquests:common_undead" },
+      "radius": 16,
+      "count": 4
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 4 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:related_villager_status", "relation": "child", "status": "nearby" },
+      { "type": "mcaquests:time", "period": "NIGHT" },
+      { "type": "mcaquests:personality", "personalities": ["sensitive", "shy", "friendly", "gloomy"] }
+    ]
+  },
+  "failure": {
+    "fail_on_target_lost": true,
+    "failure_hearts": -6,
+    "retry_after": 24000
+  }
+}

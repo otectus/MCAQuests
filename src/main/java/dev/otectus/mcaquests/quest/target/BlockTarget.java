@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.quest.target;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.data.RegistryEntryCodec;
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
@@ -18,8 +21,8 @@ import java.util.Optional;
 public record BlockTarget(Optional<Block> block, Optional<TagKey<Block>> tag) {
 
     public static final MapCodec<BlockTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BuiltInRegistries.BLOCK.byNameCodec().optionalFieldOf("block").forGetter(BlockTarget::block),
-            TagKey.codec(Registries.BLOCK).optionalFieldOf("tag").forGetter(BlockTarget::tag)
+            StrictCodecs.strictOptional(RegistryEntryCodec.of(BuiltInRegistries.BLOCK), "block").forGetter(BlockTarget::block),
+            StrictCodecs.strictOptional(TagKey.codec(Registries.BLOCK), "tag").forGetter(BlockTarget::tag)
     ).apply(instance, BlockTarget::new));
 
     public boolean matches(BlockState state) {

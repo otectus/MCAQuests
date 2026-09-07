@@ -29,7 +29,7 @@ public record OpenStandingC2SPacket(ResourceLocation dimension, int villageId) {
 
     public static void handle(OpenStandingC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player == null || !ReputationBridge.isCanonical()) {
                 return;

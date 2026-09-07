@@ -1,3 +1,5 @@
+> Historical audit snapshot. The implemented stabilization pass and current verification are documented in [STABILIZATION.md](STABILIZATION.md).
+
 # MCA: Quests content inventory
 
 Generated ground truth for [QUEST_AUDIT.md](QUEST_AUDIT.md). Produced by a census script over the

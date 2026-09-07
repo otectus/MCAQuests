@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.compat.reputation;
 
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.state.VillageStanding;
+import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcareputation.api.ReputationMirror;
 import dev.otectus.mcareputation.community.CommunityKey;
 import net.minecraft.resources.ResourceLocation;
@@ -29,6 +30,7 @@ import java.util.UUID;
 public final class QuestsReputationMirror implements ReputationMirror {
 
     private final MinecraftServer server;
+    private boolean closed;
 
     public QuestsReputationMirror(MinecraftServer server) {
         this.server = server;
@@ -39,9 +41,15 @@ public final class QuestsReputationMirror implements ReputationMirror {
         return "mcaquests:fallback-store";
     }
 
+    /** Stop accepting commits before unregistering, even if an incompatible API rejects cleanup. */
+    void close() {
+        closed = true;
+    }
+
     @Override
     public void mirrorScore(UUID player, CommunityKey community, int score, ResourceLocation ladder,
                             String highWaterTier) {
+        if (closed) return;
         ProjectSavedData data = ProjectSavedData.get(server);
         VillageStanding standing = data.standing();
         standing.setScore(player, community.dimension(), community.villageId(), score);
@@ -54,6 +62,7 @@ public final class QuestsReputationMirror implements ReputationMirror {
 
     @Override
     public void mirrorVillageTitle(UUID player, CommunityKey community, ResourceLocation title) {
+        if (closed) return;
         ProjectSavedData data = ProjectSavedData.get(server);
         if (data.standing().grantVillageTitle(player, community.dimension(), community.villageId(), title)) {
             data.standingChanged();
@@ -62,12 +71,13 @@ public final class QuestsReputationMirror implements ReputationMirror {
 
     @Override
     public void mirrorGlobalTitle(UUID player, ResourceLocation title) {
+        if (closed) return;
         // Global titles live in the player's own capability data, which is only reachable while they
-        // are online. An offline grant is not lost: the canonical store holds it, and the Journal sync
-        // on the player's next login re-asserts it through the bridge.
+        // are online. The canonical store remains authoritative for offline grants. This copy is
+        // silent: the canonical event is translated by QuestsReputationEvents exactly once.
         var online = server.getPlayerList().getPlayer(player);
         if (online != null) {
-            dev.otectus.mcaquests.quest.title.TitleService.grantGlobal(online, title);
+            QuestCapabilities.get(online).ifPresent(data -> data.titles().grantGlobal(title));
         }
     }
 }

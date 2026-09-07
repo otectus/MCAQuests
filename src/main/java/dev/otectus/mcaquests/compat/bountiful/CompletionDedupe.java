@@ -53,6 +53,9 @@ public final class CompletionDedupe {
     public synchronized boolean accept(String key) {
         long now = clock.getAsLong();
         sweep(now);
+        if (seen.size() >= CAP && !seen.containsKey(key)) {
+            return false;
+        }
         return seen.putIfAbsent(key, now) == null;
     }
 
@@ -61,12 +64,12 @@ public final class CompletionDedupe {
      * {@link #accept}, so a burst that is never followed by another cash-in still frees its keys.
      */
     public synchronized void sweep(long now) {
-        seen.values().removeIf(when -> now - when >= TTL_TICKS);
-        if (seen.size() > CAP) {
-            // Everything here expires within two ticks anyway, so dropping the lot costs at most one
-            // duplicated credit and cannot leak.
-            seen.clear();
-        }
+        seen.values().removeIf(when -> now < when || now - when >= TTL_TICKS);
+    }
+
+    /** Server sessions have independent clocks and must not inherit another world's cash-ins. */
+    public synchronized void clear() {
+        seen.clear();
     }
 
     /** How many keys are currently remembered. Diagnostics and tests only. */

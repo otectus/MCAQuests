@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.project.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.BlockTarget;
@@ -15,7 +17,7 @@ public record ProjectPlaceBlockObjective(BlockTarget target, int count) implemen
 
     public static final Codec<ProjectPlaceBlockObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(ProjectPlaceBlockObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ProjectPlaceBlockObjective::count)
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ProjectPlaceBlockObjective::count)
     ).apply(instance, ProjectPlaceBlockObjective::new));
 
     @Override

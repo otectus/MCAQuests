@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "id": "kinbound:a_name_on_the_stone",
+  "weight": 10,
+  "category": "relations",
+  "difficulty": "easy",
+  "offer_group": "kin_grief",
+  "title": { "text": "A Name on the Stone" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "adult_only": true,
+    "min_hearts": 15
+  },
+  "dialogue": {
+    "offer": { "text": "My grandmother's chair is still by that wall and nobody has set a light beside it since. Three candles by my door and a few poppies, and I will say her name out loud again." },
+    "accept": { "text": "Poppies. She liked the red ones." },
+    "decline": { "text": "No. It is a strange thing to ask of a stranger." },
+    "in_progress": { "text": "Candles first. I want to be able to see it." },
+    "ready": { "text": "Oh. You did it properly." },
+    "complete": { "text": "There. Somebody else knows her name now. That is the whole of it." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "tag": "minecraft:candles",
+      "location": { "anchor": "bed", "villager": { "mode": "self" } },
+      "radius": 8,
+      "count": 3
+    },
+    { "type": "mcaquests:item_delivery", "item": "minecraft:poppy", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 6 },
+    { "type": "mcaquests:grant_title", "title": "kinbound:kin_remembered", "scope": "village" }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:related_villager_status", "relation": "grandparent", "status": "dead" },
+      { "type": "mcaquests:age_group", "groups": ["adult"] }
+    ]
+  }
+}

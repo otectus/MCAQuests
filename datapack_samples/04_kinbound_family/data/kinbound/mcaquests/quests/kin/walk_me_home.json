@@ -1,0 +1,54 @@
+{
+  "format_version": 1,
+  "id": "kinbound:walk_me_home",
+  "weight": 16,
+  "category": "relations",
+  "difficulty": "medium",
+  "offer_group": "kin_errand",
+  "title": { "text": "Walk Me Home" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "adult_only": true,
+    "min_hearts": 5
+  },
+  "dialogue": {
+    "offer": { "text": "I came out further than I meant to and it is darker than I planned for. Walk with me — I will keep the pace, you keep the torch." },
+    "accept": { "text": "Stay close. I am not as quick as I was." },
+    "decline": { "text": "Then I shall be brave about it." },
+    "in_progress": { "text": "Not so fast. I lose the path when I cannot see you." },
+    "ready": { "text": "My own door. I could weep." },
+    "complete": { "text": "Come in. There is soup, and I do not take no for an answer." },
+    "failed": { "text": "They never made it back to the door. I keep looking at the path." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "bed", "villager": { "mode": "self" } },
+      "radius": 6,
+      "lead": true,
+      "wait_distance": 8,
+      "min_journey": 48
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "conditions": {
+    "any_of": [
+      { "type": "mcaquests:giver_distance_from_village", "min_distance": 80 },
+      {
+        "all_of": [
+          { "type": "mcaquests:time", "period": "NIGHT" },
+          { "type": "mcaquests:giver_distance_from_village", "min_distance": 24 }
+        ]
+      }
+    ]
+  },
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  }
+}

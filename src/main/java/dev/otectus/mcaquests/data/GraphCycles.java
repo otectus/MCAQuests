@@ -2,7 +2,10 @@ package dev.otectus.mcaquests.data;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,33 +24,37 @@ public final class GraphCycles {
     public static <K> Optional<List<K>> findCycle(Map<K, List<K>> graph) {
         Set<K> done = new HashSet<>();
         for (K node : graph.keySet()) {
-            Optional<List<K>> cycle = dfs(node, graph, done, new LinkedHashSet<>());
-            if (cycle.isPresent()) {
-                return cycle;
+            if (done.contains(node)) continue;
+            // Datapack chains can be arbitrarily long. Keep DFS frames on the heap instead of
+            // exhausting the server's call stack during reload of a large, otherwise valid pack.
+            Map<K, Integer> path = new LinkedHashMap<>();
+            Deque<Frame<K>> frames = new ArrayDeque<>();
+            path.put(node, 0);
+            frames.push(new Frame<>(node, graph.getOrDefault(node, List.of()).iterator()));
+            while (!frames.isEmpty()) {
+                Frame<K> frame = frames.peek();
+                if (!frame.edges().hasNext()) {
+                    frames.pop();
+                    path.remove(frame.node());
+                    done.add(frame.node());
+                    continue;
+                }
+                K next = frame.edges().next();
+                Integer start = path.get(next);
+                if (start != null) {
+                    List<K> ordered = new ArrayList<>(path.keySet());
+                    List<K> cycle = new ArrayList<>(ordered.subList(start, ordered.size()));
+                    cycle.add(next);
+                    return Optional.of(cycle);
+                }
+                if (!done.contains(next)) {
+                    path.put(next, path.size());
+                    frames.push(new Frame<>(next, graph.getOrDefault(next, List.of()).iterator()));
+                }
             }
         }
         return Optional.empty();
     }
 
-    private static <K> Optional<List<K>> dfs(K node, Map<K, List<K>> graph, Set<K> done, LinkedHashSet<K> path) {
-        if (path.contains(node)) {
-            List<K> ordered = new ArrayList<>(path);
-            List<K> cycle = new ArrayList<>(ordered.subList(ordered.indexOf(node), ordered.size()));
-            cycle.add(node); // close the loop for a readable a -> b -> a message
-            return Optional.of(cycle);
-        }
-        if (done.contains(node)) {
-            return Optional.empty();
-        }
-        path.add(node);
-        for (K next : graph.getOrDefault(node, List.of())) {
-            Optional<List<K>> cycle = dfs(next, graph, done, path);
-            if (cycle.isPresent()) {
-                return cycle;
-            }
-        }
-        path.remove(node);
-        done.add(node);
-        return Optional.empty();
-    }
+    private record Frame<K>(K node, Iterator<K> edges) { }
 }

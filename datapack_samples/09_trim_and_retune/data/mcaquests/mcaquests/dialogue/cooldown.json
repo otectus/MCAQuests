@@ -1,0 +1,21 @@
+{
+  "format_version": 1,
+  "state": "cooldown",
+  "priority": 10,
+  "lines": [
+    {
+      "when": { "type": "mcaquests:personality", "personalities": ["grumpy", "greedy"] },
+      "text": "You have had your work out of me this week. Go and bother the smith."
+    },
+    {
+      "when": { "type": "mcaquests:time", "period": "NIGHT" },
+      "text": "At this hour? Nothing until morning, and not much then."
+    },
+    {
+      "when": { "type": "mcaquests:hearts", "min": 60 },
+      "text": "You have done more than enough for me lately. Rest. I insist.",
+      "weight": 2
+    },
+    { "text": "Nothing new from me today. Come back tomorrow." }
+  ]
+}

@@ -50,6 +50,12 @@ public record TownsteadBuildingProjectObjective(String buildingType, int minimum
     }
 
     @Override
+    public boolean isAvailable(ServerLevel level, ProjectState state) {
+        return state.villageId().isPresent()
+                && TownsteadBridge.Holder.get().has(TownsteadCapability.READ_BUILDING);
+    }
+
+    @Override
     public boolean poll(MinecraftServer server, ServerLevel level, ProjectDefinition definition,
                         ProjectState state, SharedObjectiveProgress progress) {
         OptionalInt village = state.villageId();

@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "id": "illomens:the_turning",
+  "scope": "villager",
+  "duration_ticks": 9600,
+  "cooldown_ticks": 48000,
+  "trigger": { "type": "mcaquests:infection", "min_progress": 0.35 },
+  "outcomes": {
+    "success": { "reputation": 12, "hearts": 20 },
+    "failure": { "reputation": -10, "hearts": -6 },
+    "cleared": { "reputation": 0 }
+  },
+  "offer": {
+    "weight": 16,
+    "difficulty": "hard",
+    "offer_group": "omen_crisis",
+    "priority": 5,
+    "giver": { "adult_only": true },
+    "title": { "text": "The Turning" },
+    "dialogue": {
+      "offer": { "text": "It is already in them. A golden apple and a steady hand — and do it where the others cannot see, they are frightened enough." },
+      "accept": { "text": "Quickly. It moves faster at night." },
+      "decline": { "text": "Then somebody will have to do the other thing, and I will not ask who." },
+      "in_progress": { "text": "Still turning. There is still time." },
+      "ready": { "text": "Look at them. They know their own name again." },
+      "complete": { "text": "We nearly lost somebody tonight and we did not. That is the whole of it." },
+      "failed": { "text": "It finished. We locked the door and we will not talk about it." }
+    },
+    "conditions": { "type": "mcaquests:has_home", "value": true },
+    "objectives": [
+      {
+        "type": "mcaquests:cure_villager",
+        "villager": { "mode": "situation_focus" },
+        "cure_item": { "item": "minecraft:golden_apple" }
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:currency", "difficulty": "hard" },
+      { "type": "mcaquests:hearts", "amount": 14 },
+      { "type": "mcaquests:village_reputation", "amount": 6 }
+    ]
+  }
+}

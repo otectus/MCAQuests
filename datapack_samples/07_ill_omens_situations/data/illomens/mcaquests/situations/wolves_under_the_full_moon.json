@@ -1,0 +1,39 @@
+{
+  "format_version": 1,
+  "id": "illomens:wolves_under_the_full_moon",
+  "enabled": true,
+  "scope": "village",
+  "duration_ticks": 11000,
+  "cooldown_ticks": 168000,
+  "trigger": { "type": "mcaquests:night", "require_full_moon": true },
+  "outcomes": {
+    "success": { "reputation": 14, "hearts": 6 },
+    "failure": { "reputation": -8 },
+    "cleared": { "reputation": 0 }
+  },
+  "offer": {
+    "weight": 14,
+    "difficulty": "medium",
+    "offer_group": "omen_night",
+    "priority": 4,
+    "giver": { "professions": ["minecraft:shepherd", "mca:guard"], "adult_only": true },
+    "title": { "text": "Wolves Under the Full Moon" },
+    "dialogue": {
+      "offer": { "text": "Full moon, and they are bold with it. Four of them off the flock before sunrise, {player}, and do not go past the treeline." },
+      "accept": { "text": "Stay in the lantern light. They will come to you." },
+      "decline": { "text": "Then we sit up with the dogs and hope." },
+      "in_progress": { "text": "Still hunting. I can hear them." },
+      "ready": { "text": "Quiet. Properly quiet. Well done." },
+      "complete": { "text": "Not one lamb lost. On a full moon. That is unheard of." },
+      "failed": { "text": "Dawn, and we are three ewes short. It is nobody's fault but the moon's." }
+    },
+    "objectives": [
+      { "type": "mcaquests:kill_entity", "entity": "minecraft:wolf", "count": 4 }
+    ],
+    "rewards": [
+      { "type": "mcaquests:currency" },
+      { "type": "mcaquests:xp", "amount": 35 },
+      { "type": "mcaquests:hearts", "amount": 8 }
+    ]
+  }
+}

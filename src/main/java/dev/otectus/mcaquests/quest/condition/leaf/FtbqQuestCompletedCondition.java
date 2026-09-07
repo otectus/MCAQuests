@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
@@ -35,7 +37,7 @@ public record FtbqQuestCompletedCondition(String quest, FtbqWhenMissing whenMiss
 
     public static final Codec<FtbqQuestCompletedCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             FtbqIds.hexIdCodec(TYPE_ID, "quest").fieldOf("quest").forGetter(FtbqQuestCompletedCondition::quest),
-            FtbqWhenMissing.CODEC.optionalFieldOf("when_missing", FtbqWhenMissing.NOT_MET)
+            StrictCodecs.strictOptional(FtbqWhenMissing.CODEC, "when_missing", FtbqWhenMissing.NOT_MET)
                     .forGetter(FtbqQuestCompletedCondition::whenMissing)
     ).apply(instance, FtbqQuestCompletedCondition::new));
 

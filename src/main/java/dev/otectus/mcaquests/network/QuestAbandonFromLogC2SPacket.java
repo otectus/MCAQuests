@@ -32,7 +32,7 @@ public record QuestAbandonFromLogC2SPacket(UUID villagerUuid, ResourceLocation q
 
     public static void handle(QuestAbandonFromLogC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 QuestManager.abandonFromLog(player, msg.villagerUuid, msg.questId);

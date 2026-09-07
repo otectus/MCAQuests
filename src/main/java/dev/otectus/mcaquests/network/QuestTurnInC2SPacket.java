@@ -23,7 +23,7 @@ public record QuestTurnInC2SPacket(UUID villagerUuid, ResourceLocation questId) 
 
     public static void handle(QuestTurnInC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 QuestManager.turnInFromPacket(player, msg.villagerUuid, msg.questId);

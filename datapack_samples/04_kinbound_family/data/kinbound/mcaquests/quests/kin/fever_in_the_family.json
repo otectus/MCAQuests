@@ -1,0 +1,49 @@
+{
+  "format_version": 1,
+  "id": "kinbound:fever_in_the_family",
+  "weight": 20,
+  "category": "relations",
+  "difficulty": "hard",
+  "offer_group": "kin_crisis",
+  "priority": 2,
+  "title": { "text": "Fever in the Family" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "It is in the house. I can hear it in their breathing. A golden apple, {player} — I do not care what it costs." },
+    "accept": { "text": "Hurry. Please hurry." },
+    "decline": { "text": "Then I will sit with them myself." },
+    "in_progress": { "text": "Are they still — no. Just go." },
+    "ready": { "text": "They know me again. They know me." },
+    "complete": { "text": "You gave me back somebody I had already started grieving." },
+    "failed": { "text": "It went too far. There was nothing left to bring back." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:cure_villager",
+      "villager": { "mode": "family", "relation": "child", "require": "infected" },
+      "cure_item": { "item": "minecraft:golden_apple" }
+    },
+    {
+      "type": "mcaquests:heal_entity",
+      "villager": { "mode": "family", "relation": "child", "require": "infected" },
+      "item": "minecraft:golden_carrot",
+      "below_health_fraction": 0.6,
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 8 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:related_villager_status", "relation": "child", "status": "infected" },
+      { "type": "mcaquests:has_home", "value": true }
+    ]
+  }
+}

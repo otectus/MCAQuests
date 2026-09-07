@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "marketday:template_wanderer_route",
+  "weight": 6,
+  "category": "exploration",
+  "difficulty": "hard",
+  "offer_group": "market_route",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": {
+    "professions": ["minecraft:cartographer"],
+    "adult_only": true,
+    "min_hearts": 20
+  },
+  "title": {
+    "translate": "marketday.quest.wanderer_route.title",
+    "with": ["{region_name}"]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "marketday.quest.wanderer_route.offer",
+      "with": ["{region_name}", "{realm_name}", "{rumour}"]
+    },
+    "accept": { "translate": "marketday.quest.wanderer_route.accept" },
+    "decline": { "translate": "marketday.quest.wanderer_route.decline" },
+    "in_progress": {
+      "translate": "marketday.quest.wanderer_route.in_progress",
+      "with": ["{region_name}"]
+    },
+    "ready": { "translate": "marketday.quest.wanderer_route.ready" },
+    "complete": { "translate": "marketday.quest.wanderer_route.complete" }
+  },
+  "template": {
+    "variables": {
+      "region": {
+        "kind": "biome",
+        "ids": ["minecraft:jagged_peaks", "minecraft:badlands"],
+        "tags": ["minecraft:is_forest"]
+      },
+      "realm": {
+        "kind": "dimension",
+        "ids": ["minecraft:overworld", "minecraft:the_nether"]
+      },
+      "rumour": {
+        "kind": "text",
+        "options": [
+          { "translate": "marketday.flavor.rumour.tall_tale" },
+          { "translate": "marketday.flavor.rumour.old_map" },
+          { "text": "and my cousin swears there is a ruin out that way" }
+        ]
+      }
+    },
+    "objectives": [
+      { "type": "mcaquests:visit_biome", "biome": "{region}" },
+      { "type": "mcaquests:visit_dimension", "dimension": "{realm}" }
+    ],
+    "rewards": [
+      { "type": "mcaquests:currency", "difficulty": "hard" },
+      { "type": "mcaquests:item", "item": "minecraft:map", "count": 1 },
+      { "type": "mcaquests:hearts", "amount": 14 }
+    ]
+  }
+}

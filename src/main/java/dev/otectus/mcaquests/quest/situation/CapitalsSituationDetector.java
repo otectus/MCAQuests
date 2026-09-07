@@ -9,6 +9,7 @@ import dev.otectus.mcaquests.compat.capitals.CapitalsBridge;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.InterregnumView;
+import dev.otectus.mcaquests.quest.CapitalsQuestRequirements;
 import dev.otectus.mcaquests.quest.situation.state.CapitalsSignalStateSavedData;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Turns MCA Capitals court state into situation signals (1.6.0).
@@ -37,8 +39,8 @@ import java.util.UUID;
  * existing world from opening a situation for every vacancy and every war already in it.
  *
  * <p>Nothing runs at all unless some loaded definition actually consumes the signal, so a pack with no
- * court situations pays one registry scan per poll and nothing else — and none of it runs when Capitals
- * is absent, switched off, or bound to a build the manifest does not understand.
+ * court situations only scans the loaded definitions — and none of it runs when Capitals is absent,
+ * switched off, or bound to a build the manifest does not understand.
  */
 public final class CapitalsSituationDetector {
 
@@ -79,10 +81,10 @@ public final class CapitalsSituationDetector {
             }
             CapitalsSignalStateSavedData state = CapitalsSignalStateSavedData.get(server);
             if (wantsInterregnum) {
-                scanThrones(server, bridge, state, seats);
+                scanThrones(bridge, state, seats, signal -> SituationManager.onSignal(server, signal));
             }
             if (wantsWar) {
-                scanRelations(server, bridge, state, seats);
+                scanRelations(bridge, state, seats, signal -> SituationManager.onSignal(server, signal));
             }
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("[MCA: Quests] Capitals situation poll failed", t);
@@ -93,7 +95,8 @@ public final class CapitalsSituationDetector {
     private static boolean wants(SituationSignalType type) {
         return SituationRegistry.all().stream()
                 .filter(SituationDefinition::enabled)
-                .anyMatch(def -> def.trigger().signalType() == type);
+                .anyMatch(def -> def.trigger().signalType() == type
+                        && CapitalsQuestRequirements.allowsSituation(def));
     }
 
     /**
@@ -126,17 +129,30 @@ public final class CapitalsSituationDetector {
      * interregnum in one store, and asking per capital would re-read the same map for every court in the
      * dimension.
      */
-    private static void scanThrones(MinecraftServer server, CapitalsBridge bridge,
-                                    CapitalsSignalStateSavedData state, List<Seat> seats) {
-        Map<ServerLevel, Map<UUID, InterregnumView>> snapshots = new HashMap<>();
+    static void scanThrones(CapitalsBridge bridge, CapitalsSignalStateSavedData state,
+                           List<Seat> seats, Consumer<TriggerSignal> emit) {
+        Map<ServerLevel, Optional<Map<UUID, InterregnumView>>> snapshots = new HashMap<>();
         for (Seat seat : seats) {
-            Map<UUID, InterregnumView> vacancies =
-                    snapshots.computeIfAbsent(seat.level(), bridge::interregnums);
-            InterregnumView view = vacancies.get(seat.capital().capitalId());
-            if (!state.observeRisingEdge(seat.capital().capitalId() + "|interregnum", view != null)) {
+            Optional<Map<UUID, InterregnumView>> vacancies =
+                    snapshots.computeIfAbsent(seat.level(), bridge::interregnumSnapshot);
+            if (vacancies.isEmpty()) {
+                // A failed read says nothing about the throne. Recording it as occupied would
+                // announce the same vacancy again once the bridge recovers.
                 continue;
             }
-            SituationManager.onSignal(server, TriggerSignal.capitalInterregnum(
+            InterregnumView view = vacancies.get().get(seat.capital().capitalId());
+            String key = seat.capital().capitalId() + "|interregnum";
+            boolean becameVacant = state.observeRisingEdge(key, view != null);
+            // Keep the original boolean baseline for existing saves, and remember whose succession
+            // this is too. A coronation followed by another death can occur between two polls, with
+            // no occupied reading in between; that is a new vacancy rather than the old one lasting.
+            String identity = view == null ? "occupied"
+                    : (view.wasPlayerSovereign() ? "player|" : "villager|") + view.deceasedSovereign();
+            boolean changed = state.observeLabel(key, identity).isPresent();
+            if (view == null || (!becameVacant && !changed)) {
+                continue;
+            }
+            emit.accept(TriggerSignal.capitalInterregnum(
                     seat.level(), seat.capital().villageId(),
                     view.deceasedSovereign(), view.wasPlayerSovereign()));
         }
@@ -152,8 +168,8 @@ public final class CapitalsSituationDetector {
      * capitals still get their own signal — a war is news in both villages — but the two come from one
      * observed transition, and each carries the relation that transition came out of.
      */
-    private static void scanRelations(MinecraftServer server, CapitalsBridge bridge,
-                                      CapitalsSignalStateSavedData state, List<Seat> seats) {
+    static void scanRelations(CapitalsBridge bridge, CapitalsSignalStateSavedData state,
+                             List<Seat> seats, Consumer<TriggerSignal> emit) {
         for (int i = 0; i < seats.size(); i++) {
             for (int j = i + 1; j < seats.size(); j++) {
                 Seat first = seats.get(i);
@@ -168,9 +184,9 @@ public final class CapitalsSituationDetector {
                     continue;
                 }
                 String from = previous.get();
-                SituationManager.onSignal(server, TriggerSignal.capitalWar(
+                emit.accept(TriggerSignal.capitalWar(
                         first.level(), first.capital().villageId(), b, from));
-                SituationManager.onSignal(server, TriggerSignal.capitalWar(
+                emit.accept(TriggerSignal.capitalWar(
                         second.level(), second.capital().villageId(), a, from));
             }
         }
@@ -191,6 +207,6 @@ public final class CapitalsSituationDetector {
     }
 
     /** A live capital and the level it sits in, resolved once per poll. */
-    private record Seat(CapitalRef capital, ServerLevel level) {
+    record Seat(CapitalRef capital, ServerLevel level) {
     }
 }

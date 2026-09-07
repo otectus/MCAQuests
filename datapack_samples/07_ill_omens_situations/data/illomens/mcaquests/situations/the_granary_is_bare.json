@@ -1,0 +1,46 @@
+{
+  "format_version": 1,
+  "id": "illomens:the_granary_is_bare",
+  "scope": "village",
+  "duration_ticks": 24000,
+  "cooldown_ticks": 96000,
+  "trigger": { "type": "mcaquests:low_food", "threshold": 24 },
+  "outcomes": {
+    "success": { "reputation": 16 },
+    "failure": { "reputation": -10 },
+    "cleared": { "reputation": 2 }
+  },
+  "offer": {
+    "weight": 12,
+    "difficulty": "medium",
+    "offer_group": "omen_need",
+    "giver": { "professions": ["minecraft:farmer", "minecraft:butcher"], "adult_only": true },
+    "title": { "text": "The Granary Is Bare" },
+    "dialogue": {
+      "offer": { "text": "Anything at all. Bring me {count} of whatever you have and I will make it stretch." },
+      "accept": { "text": "Anything. I am past being particular." },
+      "decline": { "text": "Then we go short. We have gone short before." },
+      "in_progress": { "text": "Whatever you can spare." },
+      "ready": { "text": "That is a week. That is a whole week." },
+      "complete": { "text": "Nobody goes to bed hungry tonight because of you." },
+      "failed": { "text": "It ran out. I am sorry — I should have asked sooner." }
+    },
+    "template": {
+      "variables": {
+        "staple": {
+          "kind": "item",
+          "ids": ["minecraft:bread", "minecraft:baked_potato", "minecraft:cooked_cod", "minecraft:pumpkin_pie"]
+        },
+        "count": { "kind": "int", "min": 12, "max": 24, "per_player_level": 0.5, "limit": 48 }
+      },
+      "objectives": [
+        { "type": "mcaquests:item_delivery", "item": "{staple}", "count": "{count}", "consume": true }
+      ],
+      "rewards": [
+        { "type": "mcaquests:currency", "difficulty": "hard" },
+        { "type": "mcaquests:xp", "amount": "{count}" },
+        { "type": "mcaquests:hearts", "amount": 14 }
+      ]
+    }
+  }
+}

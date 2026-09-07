@@ -40,7 +40,14 @@ import java.util.Optional;
  * reward (expected: going backward across a save-format extension is inherently lossy for the new data).
  */
 public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int phase, int rewardIndex,
-                             @Nullable BankedReward banked) {
+                             @Nullable BankedReward banked, @Nullable String instanceKey,
+                             @Nullable CompoundTag instanceSnapshot) {
+
+    /** Retains the original public constructor and the legacy unscoped save shape. */
+    public PendingReward(Kind kind, @Nullable ResourceLocation projectId, int phase, int rewardIndex,
+                         @Nullable BankedReward banked) {
+        this(kind, projectId, phase, rewardIndex, banked, null, null);
+    }
 
     public enum Kind {
         PROJECT_PHASE, BANKED
@@ -48,6 +55,18 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
 
     public static PendingReward ofPhase(ResourceLocation projectId, int phase, int rewardIndex) {
         return new PendingReward(Kind.PROJECT_PHASE, projectId, phase, rewardIndex, null);
+    }
+
+    public static PendingReward ofPhase(ProjectState state, int phase, int rewardIndex) {
+        return new PendingReward(Kind.PROJECT_PHASE, state.projectId(), phase, rewardIndex,
+                null, state.key().asString(), state.save());
+    }
+
+    /** Legacy entries can only be attributed to instances this player actually helped. */
+    public boolean matchesInstance(ProjectState state, java.util.UUID player) {
+        return kind == Kind.PROJECT_PHASE && state.projectId().equals(projectId)
+                && (instanceKey != null ? instanceKey.equals(state.key().asString())
+                : state.participants().contains(player) && state.isPhaseDistributed(phase));
     }
 
     public static PendingReward ofBanked(BankedReward banked) {
@@ -65,6 +84,12 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
         tag.putString("project", projectId.toString());
         tag.putInt("phase", phase);
         tag.putInt("reward", rewardIndex);
+        if (instanceKey != null) {
+            tag.putString("instance", instanceKey);
+        }
+        if (instanceSnapshot != null) {
+            tag.put("instance_state", instanceSnapshot.copy());
+        }
         return tag;
     }
 
@@ -78,8 +103,15 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
             if (!tag.contains("project")) {
                 return Optional.empty();
             }
-            return Optional.of(ofPhase(new ResourceLocation(tag.getString("project")),
-                    tag.getInt("phase"), tag.getInt("reward")));
+            if (tag.getInt("phase") < 0 || tag.getInt("reward") < 0) {
+                return Optional.empty();
+            }
+            return Optional.of(new PendingReward(Kind.PROJECT_PHASE,
+                    new ResourceLocation(tag.getString("project")), tag.getInt("phase"),
+                    tag.getInt("reward"), null,
+                    tag.contains("instance") ? tag.getString("instance") : null,
+                    tag.contains("instance_state", net.minecraft.nbt.Tag.TAG_COMPOUND)
+                            ? tag.getCompound("instance_state").copy() : null));
         }
         if ("banked".equals(tag.getString("kind"))) {
             return BankedReward.load(tag.getCompound("banked")).map(PendingReward::ofBanked);

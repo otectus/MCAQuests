@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -26,12 +28,12 @@ public record HealEntityObjective(VillagerTarget villager, ItemTarget item,
                                   double belowHealthFraction, int count, boolean consume) implements QuestObjective, VillagerTargeted {
 
     public static final Codec<HealEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            VillagerTarget.CODEC.optionalFieldOf("villager", VillagerTarget.SELF).forGetter(HealEntityObjective::villager),
+            StrictCodecs.strictOptional(VillagerTarget.CODEC, "villager", VillagerTarget.SELF).forGetter(HealEntityObjective::villager),
             ItemTarget.MAP_CODEC.forGetter(HealEntityObjective::item),
-            Codec.doubleRange(0.0D, 1.0D).optionalFieldOf("below_health_fraction", 1.0D)
+            StrictCodecs.strictOptional(Codec.doubleRange(0.0D, 1.0D), "below_health_fraction", 1.0D)
                     .forGetter(HealEntityObjective::belowHealthFraction),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(HealEntityObjective::count),
-            Codec.BOOL.optionalFieldOf("consume", false).forGetter(HealEntityObjective::consume)
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(HealEntityObjective::count),
+            StrictCodecs.strictOptional(Codec.BOOL, "consume", false).forGetter(HealEntityObjective::consume)
     ).apply(instance, HealEntityObjective::new));
 
     @Override

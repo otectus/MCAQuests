@@ -35,7 +35,7 @@ import java.util.UUID;
  * Distributes a completed phase's rewards to the right recipients (spec 0.4.0). Reuses the existing
  * {@link QuestReward} types via {@code grant(player, sponsor)} for normal rewards, and special-cases the
  * project rewards that need scope/participant context. Online players are paid immediately; offline
- * players have non-hearts player rewards queued for login delivery; unloaded villagers have hearts
+ * players have rewards queued with their original instance context for login; unloaded villagers have hearts
  * queued via MCA. Called exactly once per phase (guarded by {@code ProjectState.tryMarkPhaseDistributed}).
  */
 public final class ProjectRewardDistributor {
@@ -69,7 +69,10 @@ public final class ProjectRewardDistributor {
                         .withDefaultRecipients(recipientsKindFor(shared.target()))
                         .withDefaultIncident(dev.otectus.mcaquests.quest.reputation
                                 .QuestReputationBlock.Incidents.PROJECT_PHASE_COMPLETED);
-                ProjectReputation.apply(server, level, state, def, outcome, "phase", phaseIndex);
+                Collection<UUID> recipients = shared.target() == SharedRewardTarget.SPONSOR_VILLAGE
+                        ? state.participants() : recipientsFor(shared.target(), state, phaseContributors, top);
+                ProjectReputation.applyTo(server, level, state, def, outcome, "reward:" + ri,
+                        phaseIndex, recipients);
                 continue;
             }
 
@@ -85,7 +88,7 @@ public final class ProjectRewardDistributor {
                 if (player != null) {
                     grantPlayerReward(level, state, player, reward, sponsor, state.frozenReward(phaseIndex, ri));
                 } else if (canQueueOffline(reward)) {
-                    data.addPending(pid, PendingReward.ofPhase(def.id(), phaseIndex, ri));
+                    data.addPending(pid, PendingReward.ofPhase(state, phaseIndex, ri));
                 }
             }
         }
@@ -156,7 +159,11 @@ public final class ProjectRewardDistributor {
         if (villageId.isEmpty()) {
             return false;
         }
-        ReputationService.award(server, "v:" + villageId.getAsInt(), reward.amount(), player);
+        dev.otectus.mcaquests.quest.reputation.QuestReputation.award(
+                dev.otectus.mcaquests.compat.ReputationAward.builder(server, player.getUUID(),
+                                level.dimension().location(), villageId.getAsInt(),
+                                dev.otectus.mcaquests.quest.reputation.QuestReputation.SOURCE)
+                        .delta(reward.amount()).build());
         return true;
     }
 
@@ -175,13 +182,10 @@ public final class ProjectRewardDistributor {
         };
     }
 
-    /**
-     * Reuses the same "best hearts nearby, then confirm it's the spouse" idiom the FTBQ {@code hearts}
-     * task's {@code spouse_only} mode already relies on (see {@link McaCompat#bestHeartsVillagerWithin}).
-     */
+    /** Filter spouses before choosing the nearest candidate, so another friend cannot block delivery. */
     private static boolean deliverSpouseHearts(ServerPlayer player, int amount) {
-        Optional<Entity> candidate = McaCompat.bestHeartsVillagerWithin(player, VILLAGER_RESOLUTION_RADIUS);
-        if (candidate.isEmpty() || !McaCompat.isPlayerSpouse(player, candidate.get())) {
+        Optional<Entity> candidate = McaCompat.nearestSpouseWithin(player, VILLAGER_RESOLUTION_RADIUS);
+        if (candidate.isEmpty()) {
             return false;
         }
         McaCompat.addHearts(player, candidate.get(), amount);
@@ -239,10 +243,15 @@ public final class ProjectRewardDistributor {
         if (rewardIndex < 0 || rewardIndex >= rewards.size()) {
             return;
         }
+        ServerLevel anchorLevel = player.getServer().getLevel(net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.DIMENSION, state.anchorDimension()));
+        if (anchorLevel == null) {
+            throw new IllegalStateException("Pending project reward dimension is unavailable: " + state.anchorDimension());
+        }
         Entity sponsor = ProjectManager.resolveSponsor(player.getServer(), state);
         // Reads the amount frozen when the phase was distributed, so a player who was offline then is paid
         // exactly what everyone else was — never a fresh roll on login.
-        grantPlayerReward(level, state, player, rewards.get(rewardIndex).reward(), sponsor,
+        grantPlayerReward(anchorLevel, state, player, rewards.get(rewardIndex).reward(), sponsor,
                 state.frozenReward(phase, rewardIndex));
     }
 
@@ -258,14 +267,35 @@ public final class ProjectRewardDistributor {
 
     private static void grantPlayerReward(ServerLevel level, ProjectState state, ServerPlayer player,
                                           QuestReward reward, @Nullable Entity sponsor, OptionalInt frozenAmount) {
+        try {
+            grantPlayerRewardUnchecked(level, state, player, reward, sponsor, frozenAmount);
+        } catch (Exception | LinkageError failure) {
+            McaQuests.LOGGER.error("[MCA: Quests] project '{}' reward {} failed for {}; continuing distribution",
+                    state.projectId(), reward.getClass().getSimpleName(), player.getUUID(), failure);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("mcaquests.reward.failed",
+                    net.minecraft.network.chat.Component.literal(reward.getClass().getSimpleName())));
+        }
+    }
+
+    private static void grantPlayerRewardUnchecked(ServerLevel level, ProjectState state, ServerPlayer player,
+                                                   QuestReward reward, @Nullable Entity sponsor,
+                                                   OptionalInt frozenAmount) {
+        if (!rewardEnabled(reward)) {
+            return;
+        }
         if (reward instanceof HeartsWithParticipantsReward hearts) {
             grantParticipantHearts(level, state, player, hearts);
         } else if (reward instanceof HeartsWithSponsorReward hearts) {
             grantSponsorHearts(level, state, player, hearts, sponsor);
+        } else if (reward instanceof HeartsReward hearts) {
+            grantSponsorHearts(level, state, player, new HeartsWithSponsorReward(hearts.amount()), sponsor);
         } else if (reward instanceof CurrencyReward currency && frozenAmount.isPresent()) {
             currency.grantAmount(player, frozenAmount.getAsInt());
         } else {
-            reward.grant(player, sponsor);
+            reward.grant(player, sponsor, new QuestReward.RewardContext(
+                    state.sponsors().stream().findFirst().orElse(new UUID(0, 0)),
+                    net.minecraft.network.chat.Component.empty(), state.anchorDimension(), state.villageId(),
+                    state.projectId()));
         }
     }
 
@@ -311,21 +341,25 @@ public final class ProjectRewardDistributor {
     }
 
     private static boolean canQueueOffline(QuestReward reward) {
-        return !(reward instanceof HeartsReward
-                || reward instanceof HeartsWithSponsorReward
-                || reward instanceof HeartsWithParticipantsReward);
+        return true; // the persisted instance snapshot retains every target needed on the next login
+    }
+
+    static boolean rewardEnabled(QuestReward reward) {
+        return !(reward instanceof dev.otectus.mcaquests.quest.reward.CommandReward)
+                || dev.otectus.mcaquests.McaQuestsConfig.COMMON.allowProjectCommandRewards.get();
     }
 
     @Nullable
-    private static UUID topContributor(ProjectState state) {
-        Map<UUID, Integer> totals = new java.util.HashMap<>();
+    static UUID topContributor(ProjectState state) {
+        Map<UUID, Long> totals = new java.util.HashMap<>();
         for (SharedObjectiveProgress progress : state.progress()) {
-            progress.contributions().forEach((uuid, amount) -> totals.merge(uuid, amount, Integer::sum));
+            progress.contributions().forEach((uuid, amount) -> totals.merge(uuid, (long) amount, Long::sum));
         }
         UUID best = null;
-        int bestAmount = 0;
-        for (Map.Entry<UUID, Integer> entry : totals.entrySet()) {
-            if (entry.getValue() > bestAmount) {
+        long bestAmount = 0;
+        for (Map.Entry<UUID, Long> entry : totals.entrySet()) {
+            if (entry.getValue() > bestAmount || (entry.getValue() == bestAmount && best != null
+                    && entry.getKey().compareTo(best) < 0)) {
                 bestAmount = entry.getValue();
                 best = entry.getKey();
             }

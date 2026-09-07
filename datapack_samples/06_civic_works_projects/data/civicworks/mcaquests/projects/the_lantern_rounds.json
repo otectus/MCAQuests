@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "id": "civicworks:the_lantern_rounds",
+  "weight": 6,
+  "title": { "text": "The Lantern Rounds" },
+  "category": "defense",
+  "scope": { "scope": "village", "fallback_radius": 64 },
+  "sponsor": {
+    "professions": ["mca:guard"],
+    "on_death": "turn_in_to_village"
+  },
+  "reputation": { "on_project_complete": 10 },
+  "phases": [
+    {
+      "key": "light_the_lanes",
+      "dialogue": {
+        "offer": { "text": "Water first, light second. Twenty-four lanterns and nobody walks home in the dark again." },
+        "in_progress": { "text": "The lanes between the houses, not just the square." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_place_block", "block": "minecraft:lantern", "count": 24 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 40 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "the_first_watch",
+      "dialogue": {
+        "offer": { "text": "Now stand a watch under your own lights." },
+        "in_progress": { "text": "They come from the treeline, mostly." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_kill_entity", "tag": "mcaquests:common_undead", "count": 20 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 8 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:iron_ingot", "count": 8 }, "target": "top_contributor" },
+        { "reward": { "type": "mcaquests:village_reputation", "amount": 6 }, "target": "sponsor_village" }
+      ]
+    }
+  ]
+}

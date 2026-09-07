@@ -1,0 +1,63 @@
+{
+  "format_version": 1,
+  "id": "ledger:making_it_right",
+  "weight": 14,
+  "category": "guild",
+  "difficulty": "medium",
+  "offer_group": "guild_amends",
+  "priority": 2,
+  "title": { "text": "Making It Right" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": {
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "It is written down, you know. What you did. Nobody here is going to forget it — but the ledger has a column for restitution, and I would rather fill that one in." },
+    "accept": { "text": "Work, not apology. The apology can come after." },
+    "decline": { "text": "Then it stands in the book as it is." },
+    "in_progress": { "text": "The column stays open until it is done." },
+    "ready": { "text": "That is more than was asked." },
+    "complete": { "text": "Marked as atoned. The line stays; the weight comes off it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:golden_carrot", "count": 6, "consume": true },
+    { "type": "mcaquests:item_delivery", "item": "minecraft:emerald", "count": 4, "consume": true }
+  ],
+  "rewards": [
+    {
+      "type": "mcareputation:resolve_incident",
+      "incident": "mcareputation:villager_assaulted",
+      "status": ["active", "apologized"],
+      "resolution": "atoned"
+    },
+    {
+      "type": "mcareputation:record_incident",
+      "incident": "mcareputation:restitution_completed",
+      "visibility": "village",
+      "tags": ["restitution"]
+    },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "conditions": {
+    "type": "mcareputation:has_incident",
+    "incident": "mcareputation:villager_assaulted",
+    "status": ["active", "apologized"],
+    "known_to_giver": true
+  },
+  "reputation": {
+    "complete": {
+      "delta": 10,
+      "incident": "mcareputation:quest_completed",
+      "visibility": "village",
+      "tags": ["guild"],
+      "recipients": "resolving_player"
+    },
+    "fail": { "delta": -4, "visibility": "witnessed", "recipients": "resolving_player" },
+    "abandon": { "delta": -2, "visibility": "witnessed", "recipients": "resolving_player" }
+  },
+  "failure": {
+    "deadline_ticks": 72000,
+    "failure_hearts": 0,
+    "retry_after": 24000
+  }
+}

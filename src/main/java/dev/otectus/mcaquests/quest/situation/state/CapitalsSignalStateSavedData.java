@@ -58,7 +58,7 @@ public final class CapitalsSignalStateSavedData extends SavedData {
 
     /**
      * The same idea for readings that are <em>names</em> rather than numbers: which diplomatic state a
-     * pair of capitals was in the last time the pair was looked at.
+     * pair of capitals was in the last time the pair was looked at, or whose succession was pending.
      *
      * <p>These could have been stored as hash codes in {@link #readings}, and detecting a change would
      * have worked. But a war signal has to report the relation the pair came out of — an
@@ -127,8 +127,8 @@ public final class CapitalsSignalStateSavedData extends SavedData {
      *
      * <p>Empty on a first sighting, which callers must treat as "seed, do not fire" — installing this
      * mod on a world would otherwise announce a war that was already being fought. Empty is also
-     * returned when nothing changed, so a caller that fires on any present value is correct by
-     * construction.
+     * returned when nothing changed (case-insensitively), so a caller that fires on any present value
+     * is correct by construction.
      *
      * <p>An empty {@code value} is not recorded at all: it means the reading could not be taken, and
      * storing it would make the next real reading look like a transition out of nowhere.
@@ -137,14 +137,16 @@ public final class CapitalsSignalStateSavedData extends SavedData {
         if (value == null || value.isEmpty()) {
             return java.util.Optional.empty();
         }
-        String previous = labels.put(key, value);
+        String previous = labels.get(key);
         if (previous == null) {
+            labels.put(key, value);
             setDirty();
             return java.util.Optional.empty(); // first sighting: remember it, announce nothing
         }
-        if (previous.equals(value)) {
+        if (previous.equalsIgnoreCase(value)) {
             return java.util.Optional.empty();
         }
+        labels.put(key, value);
         setDirty();
         return java.util.Optional.of(previous);
     }
@@ -178,11 +180,9 @@ public final class CapitalsSignalStateSavedData extends SavedData {
         CompoundTag stored = new CompoundTag();
         readings.forEach(stored::putInt);
         tag.put(K_READINGS, stored);
-        if (!labels.isEmpty()) {
-            CompoundTag names = new CompoundTag();
-            labels.forEach(names::putString);
-            tag.put(K_LABELS, names);
-        }
+        CompoundTag names = new CompoundTag();
+        labels.forEach(names::putString);
+        tag.put(K_LABELS, names);
         return tag;
     }
 
@@ -195,19 +195,28 @@ public final class CapitalsSignalStateSavedData extends SavedData {
             // first-sighting behaviour, and strictly better than comparing against a number that no
             // longer means what it did.
             McaQuests.LOGGER.info("[MCA: Quests] Capitals signal baselines were written by schema {} "
-                    + "and this build uses {}; they will be taken again on the next scan. No situations "
-                    + "are lost.", schema, SCHEMA);
+                    + "and this build uses {}; they will be taken again on the next scan. Existing "
+                    + "situation instances are unaffected.", schema, SCHEMA);
+            data.setDirty();
             return data;
         }
         CompoundTag stored = tag.getCompound(K_READINGS);
         for (String key : stored.getAllKeys()) {
-            data.readings.put(key, stored.getInt(key));
+            if (stored.contains(key, Tag.TAG_INT)) {
+                data.readings.put(key, stored.getInt(key));
+            } else {
+                data.setDirty();
+            }
         }
-        // Absent only on a store written before any pair was seen. An empty label map reads as
+        // Older stores may have no labels until a capital pair was seen. An empty label map reads as
         // "never seen", so the first poll seeds the named baselines and stays quiet.
         CompoundTag names = tag.getCompound(K_LABELS);
         for (String key : names.getAllKeys()) {
-            data.labels.put(key, names.getString(key));
+            if (names.contains(key, Tag.TAG_STRING) && !names.getString(key).isEmpty()) {
+                data.labels.put(key, names.getString(key));
+            } else {
+                data.setDirty();
+            }
         }
         return data;
     }

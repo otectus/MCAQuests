@@ -19,9 +19,13 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Raises a villager to a noble rank in the capital the quest was accepted in (MCA Capitals).
@@ -63,6 +67,11 @@ public record CapitalVillagerTitleReward(VillagerTarget villager, String title) 
             return DataResult.error(() -> "capital_villager_title: unknown title '" + reward.title
                     + "' (expected knight/lord/duke)");
         }
+        List<String> errors = new ArrayList<>();
+        reward.villager.validate("capital_villager_title", errors);
+        if (!errors.isEmpty()) {
+            return DataResult.error(() -> String.join("; ", errors));
+        }
         return DataResult.success(value.equals(reward.title)
                 ? reward
                 : new CapitalVillagerTitleReward(reward.villager, value));
@@ -100,17 +109,41 @@ public record CapitalVillagerTitleReward(VillagerTarget villager, String title) 
                     + "the village it was accepted in is no longer the seat of a capital.", context.questId());
             return;
         }
-        Entity subject = giver != null ? giver : level.getEntity(context.giverUuid());
-        Optional<LivingEntity> target =
-                villager.resolveFrom(player, subject, level, context.questId());
+        Optional<UUID> target = recipientUuid(player, giver, level, context, capital.get());
         if (target.isEmpty()) {
             McaQuests.LOGGER.warn("[MCA: Quests] Skipping a capital_villager_title reward on quest '{}': "
                     + "its villager could not be resolved.", context.questId());
             return;
         }
-        java.util.UUID subjectId = target.get().getUUID();
+        UUID subjectId = target.get();
         bridge.setVillagerTitle(level, capital.get(), subjectId,
                 nobleTitleConstant(bridge.isVillagerFemale(level, subjectId).orElse(false)));
+    }
+
+    /**
+     * A title is written to a villager's persistent UUID, so the giver need not be loaded at turn-in.
+     * Other selectors stay relative to the original giver even if a substitute accepts the quest.
+     */
+    Optional<UUID> recipientUuid(ServerPlayer player, @Nullable Entity giver, ServerLevel level,
+                                 RewardContext context, CapitalRef capital) {
+        if (villager.mode() == VillagerTarget.Mode.SELF) {
+            return Optional.of(context.giverUuid());
+        }
+        if (villager.mode() == VillagerTarget.Mode.UUID) {
+            return villager.uuid();
+        }
+        if (villager.mode() == VillagerTarget.Mode.CAPITAL_ROLE) {
+            return villager.role().flatMap(role -> CapitalsCompat.bridge()
+                    .villagerRoleHolders(level, capital, role).stream()
+                    .min(Comparator.comparing(UUID::toString)));
+        }
+        Entity subject = giver != null && context.giverUuid().equals(giver.getUUID())
+                ? giver : level.getEntity(context.giverUuid());
+        if (villager.mode() == VillagerTarget.Mode.FAMILY) {
+            return villager.selectRelativeForBinding(subject, level);
+        }
+        return villager.resolveFrom(player, subject, level, context.questId())
+                .map(LivingEntity::getUUID);
     }
 
     /** The Capitals {@code NobleTitle} constant this reward seats a villager of that gender in. */

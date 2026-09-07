@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
@@ -25,7 +27,7 @@ public record QuestDeclinedCondition(ResourceLocation quest, HistoryScope scope)
 
     public static final Codec<QuestDeclinedCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("quest").forGetter(QuestDeclinedCondition::quest),
-            HistoryScope.CODEC.optionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestDeclinedCondition::scope)
+            StrictCodecs.strictOptional(HistoryScope.CODEC, "scope", HistoryScope.GLOBAL).forGetter(QuestDeclinedCondition::scope)
     ).apply(instance, QuestDeclinedCondition::new));
 
     @Override

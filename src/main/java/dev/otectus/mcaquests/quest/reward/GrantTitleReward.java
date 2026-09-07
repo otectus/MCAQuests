@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.title.TitleScope;
@@ -21,7 +23,7 @@ public record GrantTitleReward(ResourceLocation title, TitleScope scope) impleme
 
     public static final Codec<GrantTitleReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("title").forGetter(GrantTitleReward::title),
-            TitleScope.CODEC.optionalFieldOf("scope", TitleScope.VILLAGE).forGetter(GrantTitleReward::scope)
+            StrictCodecs.strictOptional(TitleScope.CODEC, "scope", TitleScope.VILLAGE).forGetter(GrantTitleReward::scope)
     ).apply(instance, GrantTitleReward::new));
 
     @Override

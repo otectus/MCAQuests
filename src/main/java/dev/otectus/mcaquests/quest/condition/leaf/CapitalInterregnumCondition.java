@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.condition.leaf;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
 import dev.otectus.mcaquests.data.StrictCodecs;
@@ -37,12 +38,17 @@ public record CapitalInterregnumCondition(boolean present) implements QuestCondi
 
     @Override
     public boolean test(QuestContext context) {
+        if (!CapitalsCompat.bridge().has(CapitalsCapability.REGISTRY)
+                || !CapitalsCompat.bridge().has(CapitalsCapability.INTERREGNUM)) {
+            return false;
+        }
         Entity giver = context.villager();
         boolean vacant = giver != null && giver.level() instanceof ServerLevel level
                 && CapitalsQueries.giverCapital(giver)
                         .map(cap -> CapitalsCompat.bridge().interregnum(level, cap).isPresent())
                         .orElse(false);
-        return vacant == present;
+        return CapitalsCompat.bridge().has(CapitalsCapability.REGISTRY)
+                && CapitalsCompat.bridge().has(CapitalsCapability.INTERREGNUM) && vacant == present;
     }
 
     @Override

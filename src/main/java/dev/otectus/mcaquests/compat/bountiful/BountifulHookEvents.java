@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -109,7 +110,7 @@ public final class BountifulHookEvents {
             BountyCompletion completion = new BountyCompletion(serverPlayer.getUUID(), gameTime,
                     pending.rarity() == BountyRarity.UNKNOWN ? "" : pending.rarity().name(),
                     pending.objectiveCount(), pending.dedupeKey());
-            if (DEDUPE.accept(serverPlayer.getUUID() + "@" + pending.dedupeKey() + "@" + gameTime)) {
+            if (DEDUPE.accept(serverPlayer.getUUID() + "@" + pending.dedupeKey())) {
                 BountifulCompat.dispatchCompletion(serverPlayer, completion);
             }
         } catch (Throwable t) {
@@ -129,6 +130,13 @@ public final class BountifulHookEvents {
         }
         gameTime = event.getServer().overworld().getGameTime();
         DEDUPE.sweep(gameTime);
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        DEDUPE.clear();
+        PENDING.remove();
+        gameTime = 0;
     }
 
     /**

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.template;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -31,8 +33,8 @@ public record RegistryVariable(RegistryKind kind, List<ResourceLocation> ids,
      * {@link TemplateVariable#CODEC} on encode, so it is not a field here. */
     public static Codec<RegistryVariable> codec(RegistryKind kind) {
         return RecordCodecBuilder.<RegistryVariable>create(instance -> instance.group(
-                ResourceLocation.CODEC.listOf().optionalFieldOf("ids", List.of()).forGetter(RegistryVariable::ids),
-                ResourceLocation.CODEC.listOf().optionalFieldOf("tags", List.of()).forGetter(RegistryVariable::tags)
+                StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "ids", List.of()).forGetter(RegistryVariable::ids),
+                StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "tags", List.of()).forGetter(RegistryVariable::tags)
         ).apply(instance, (ids, tags) -> new RegistryVariable(kind, ids, tags))).flatXmap(
                 var -> validate(kind, var), var -> validate(kind, var));
     }

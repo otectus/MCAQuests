@@ -2,7 +2,7 @@
 
 **[MCA Capitals](https://www.curseforge.com/minecraft/mc-mods/mca-capitals)** makes one MCA villager the sovereign of a capital, assigns offices in the hierarchy below them, manages diplomatic relations between capitals, and handles succession when a throne becomes vacant. This integration makes courts a subject for quests: escort the sovereign, petition the Hand, raise a villager to nobility, or keep the realm in order when the crown changes hands.
 
-MCA: Quests does not compile against Capitals and reaches it through reflection only. Everything it learns about a capital is reported as **capabilities** rather than as a single yes-or-no, so one method rename in a Capitals point release disables exactly the feature that read it — the title rewards stop being granted, and the villager offices simply go unmatched rather than breaking any quest.
+MCA: Quests does not compile against Capitals and reaches it through reflection only. Everything it learns about a capital is reported as **capabilities** rather than as a single yes-or-no. Missing or failing methods disable the features that depend on them. Quests requiring an unavailable Capitals capability are withheld from offers, and accepted quests pause until it returns, including quests that need Capitals only for a reward.
 
 Everything here is **optional in both directions**. Without Capitals the types still register, so your datapacks parse identically, the bundled content simply never becomes eligible, and nothing else about MCA: Quests changes.
 
@@ -19,7 +19,7 @@ Confirm it took with `/mcaquests compat capitals status`. You want to see status
 
 ## How it works
 
-Capitals has a public API for reading capital state, roles and diplomacy. MCA: Quests binds those methods by name and arity at runtime (never by parameter type), so nothing in this codebase is ever linked to Capitals and the integration can degrade gracefully if an update shifts a method. Role holders are looked up on demand; the poller samples diplomacy and succession state at intervals, so a war or interregnum are subject to the `pollIntervalTicks` ceiling before a situation can fire.
+MCA: Quests binds Capitals methods by name and arity at runtime, without linking its classes. Role holders are looked up on demand; the poller samples diplomacy and succession state at intervals. A change that remains observable is normally detected within `pollIntervalTicks`; a vacancy that begins and ends between polls can be missed. The first successful sample establishes a baseline rather than announcing every existing vacancy or war. Failed samples preserve that baseline, and distinct deceased sovereigns can identify successive vacancies even without an observed occupied interval.
 
 | Capability | What it unlocks |
 |---|---|
@@ -47,7 +47,7 @@ Open every Capitals definition with this. It is true only when the capability is
 }
 ```
 
-Capability names are case-insensitive, and a name that is not a real capability **fails the datapack reload** rather than silently gating on nothing.
+Capitals capability names are case-insensitive. An unknown provider or capability is treated as unavailable, not as a parse error; this allows add-ons to register their own providers. Use the exact provider id `mcacapitals` and check spelling against the table above.
 
 ---
 
@@ -60,11 +60,11 @@ A quest you accepted while Capitals was installed **does not fail**. It:
 - keeps its progress, exactly as it was;
 - stops polling, so nothing advances and nothing regresses;
 - never reads as complete, so it cannot be turned in;
-- shows an amber **"On hold — waiting on a mod that is not installed"** line in the quest log;
+- shows a **"Quest paused"** line naming MCA Capitals in the quest log;
 - stays abandonable, from both the log and the villager menu;
 - and picks up exactly where it left off if Capitals returns.
 
-Suspension is decided fresh every pass rather than written into the save, so recovery needs no migration and nothing can go stale. Offers simply stop appearing, because every bundled definition gates on a Capitals capability that is absent when the mod is gone.
+Availability is checked again each pass, so capabilities recover after a successful probe without discarding progress. Disabling the integration has the same effect. Turning off only `enableBuiltinContent` hides new bundled offers; accepted quests can continue while their definitions and required capabilities remain available. Reloading without the pack pauses its existing quests.
 
 ---
 
@@ -93,14 +93,14 @@ Eight quests and two situations, all gated on `capitals.registry` and the `enabl
 2. **petition_to_the_crown** — deliver petitions to the Hand; rewards XP and hearts
 3. **the_accolade** — clear hostiles from the roads and present an iron sword to the sovereign to earn a knighthood; rewards the player the knight title and a chronicle entry
 4. **guard_the_heir** — stand near the heir for three minutes; rewards hearts and XP
-5. **coronation_gift** — present a golden helmet to the sovereign on their coronation; rewards a chronicle entry
+5. **coronation_gift** — present a golden helmet to the sovereign while the throne is occupied; rewards a chronicle entry (this quest is not tied to a coronation event)
 6. **the_chroniclers_request** — bring a writable book to the herald; rewards hearts and a chronicle entry
-7. **envoy_of_the_alliance** — deliver letters to an allied capital's ambassador; rewards hearts and village reputation
+7. **envoy_of_the_alliance** — deliver letters to the giver's capital's ambassador while that capital has an alliance; rewards hearts and village reputation
 8. **a_lords_due** — give emeralds to a villager seeking a lordship; rewards that villager the lord title and the player hearts
 
 **Situations:**
 
-- **the_empty_throne** — triggered when a capital's throne becomes vacant; offer duties to the Hand (role-gated); rewards currency, XP, hearts and village reputation
+- **the_empty_throne** — triggered when a capital's throne becomes vacant; deliver papers to the Hand; rewards currency, XP, hearts and village reputation
 - **drums_of_war** — triggered when a capital declares war on another; defend the village center; rewards currency, XP, hearts and village reputation
 
 To control whether the built-in content appears, see `[compat.capitals]` in the config.
@@ -111,9 +111,11 @@ To control whether the built-in content appears, see `[compat.capitals]` in the 
 
 Every quest that names an office asks for a **condition**, not a config switch. A capital can have many quests, and which ones are offered to a player depends on which offices are held and which the quest author wrote. The `capital_role` condition names the office and checks both villagers and the player.
 
-A giver villager is automatically part of their own capital, so `capital_role subject=giver role=sovereign` will never be offered by a villager from a non-sovereign capital. A player-held throne is separate from the villager hierarchy, so the same condition on the player will offer the quest only when you hold that office.
+`capital_role subject=giver role=sovereign` requires the giver themselves to hold the sovereign office. Living in the capital does not make every villager an officeholder. With `subject=player`, the condition checks the player and the giver remains an ordinary MCA villager. A player-held throne is separate from the villager hierarchy.
 
-If no villager holds an office (the hand has been dismissed, for example), or if the office is held only by a player and the giver is not that player, the quest is not offered. The condition does not block the offer with an "unavailable" message — it makes the condition false, so the quest simply does not appear.
+An objective with a `capital_role` villager target requires a villager officeholder. A player-only or vacant office cannot supply one, so that offer is withheld. Once accepted, the target UUID stays bound to that villager through later appointments and chunk unloading; it does not switch to a successor. If several villagers hold a role, selection is deterministic.
+
+Capital rewards use the original giver's village and identity saved at acceptance, including when turning in elsewhere or while the giver is unloaded. Chronicle rewards render the bundled English text on dedicated servers. Custom datapacks can supply `fallback` text with `%s` placeholders for the player and capital when their translation key is unavailable on the server.
 
 **Appointing sovereigns and changing allegiances is deliberately out of scope.** Those are Capitals' own ceremonies and are meant for Capitals' own commands and game mechanics to run. MCA: Quests observes and reacts to them (via situations and conditions) but never initiates them.
 
@@ -149,13 +151,13 @@ To verify the binding against a real Capitals jar:
 
 **Can I write Capitals quests without Capitals installed?** Yes — the types register regardless, so your pack parses and validates. It just will not be offered until Capitals is there.
 
-**What offices can I gate on?** The roles that apply to villagers: sovereign, consort, dowager, heir, royal_child, hand, commander, herald, grand maester, master of laws, ambassador, duke, lord, knight, royal guard, and member (anyone in the court). Archduke is player-only and never a quest requirement.
+**What offices can I gate on?** Sovereign, consort, dowager, heir, royal_child, hand, commander, herald, grand_maester, master_of_laws, ambassador, duke, lord, knight, royal_guard, and member (court membership). Archduke is available as a player title reward, but is not a `capital_role` selector.
 
 **Why don't my throne quests appear?** Run `/mcaquests compat capitals status` to see which capabilities bound. If it is ABSENT or DISABLED, check that Capitals is installed and the `compat.capitals.enabled` config is `true`. If a capability is marked unavailable, the quest is gated on something that is not present (e.g., a missing optional MCA feature).
 
-**Can a player become a quest giver if they hold the sovereign office?** No. A player throne exists separately from the villager hierarchy, and quest givers are always villagers. A quest gated on the player holding an office will not be offered by anyone.
+**Can a player become a quest giver if they hold the sovereign office?** No. Quest givers are always villagers. Villagers can offer quests gated on the player holding an office with `capital_role subject=player`.
 
-**Why do the court quests never appear?** Either Capitals is not installed, or one of the conditions it gates on is false. Most quests require an active capital and an active interregnum/peace for one of the conditions. Run `/mcaquests debug` to see the current capital's state, and `/mcaquests compat capitals status` to see what capabilities bound.
+**Why do the court quests never appear?** Check that the pack is enabled, the giver's profession is eligible, the giver belongs to an active capital, and any target office has a villager holder. Individual quests add further conditions. Use `/mcaquests debug quest <quest-id>` for offer filtering and `/mcaquests compat capitals status` for capability diagnostics.
 
 ---
 

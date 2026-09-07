@@ -514,8 +514,8 @@ public final class McaCompat {
                                                       String relation, Set<UUID> homeVillage, Set<UUID> anywhere) {
         Object entry = McaHandles.node(tree, uuid);
         Entity entity = level.getEntity(uuid);
-        boolean embodied = entity != null;
-        boolean loaded = embodied && entity.isAlive();
+        boolean embodied = loadedEntityAnywhere(level, uuid) != null;
+        boolean loaded = entity != null && entity.isAlive();
         return new RelativeCandidate(
                 uuid,
                 relation,
@@ -529,7 +529,7 @@ public final class McaCompat {
                 loaded && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR,
                 homeVillage.contains(uuid),
                 anywhere.contains(uuid),
-                canMaterialise(level, entry, uuid),
+                canMaterialise(level, entry, uuid, anywhere.contains(uuid)),
                 loaded && isInfected(entity));
     }
 
@@ -551,15 +551,17 @@ public final class McaCompat {
     private static Set<UUID> residentsAnywhere(ServerLevel level, List<UUID> ids) {
         Set<UUID> found = new HashSet<>();
         try {
-            for (Object village : McaHandles.allVillages(level)) {
-                List<UUID> residents = McaHandles.villageResidentUuids(village);
-                for (UUID uuid : ids) {
-                    if (residents.contains(uuid)) {
-                        found.add(uuid);
+            for (ServerLevel dimension : serverLevels(level)) {
+                for (Object village : McaHandles.allVillages(dimension)) {
+                    Set<UUID> residents = new HashSet<>(McaHandles.villageResidentUuids(village));
+                    for (UUID uuid : ids) {
+                        if (residents.contains(uuid)) {
+                            found.add(uuid);
+                        }
                     }
-                }
-                if (found.size() == ids.size()) {
-                    break;
+                    if (found.size() == ids.size()) {
+                        return found;
+                    }
                 }
             }
         } catch (Throwable t) {
@@ -577,12 +579,27 @@ public final class McaCompat {
      * be found" and "the mod can actually produce them" cannot drift apart. They were previously two
      * hand-maintained copies of the same list.
      */
-    private static boolean canMaterialise(ServerLevel level, Object node, UUID uuid) {
-        return node != null
+    private static boolean canMaterialise(ServerLevel level, Object node, UUID uuid, boolean resident) {
+        return node != null && !resident && McaHandles.canMaterializeRelatives()
                 && !McaHandles.nodeDeceased(node)
                 && !McaHandles.nodeIsPlayer(node)
                 && !McaHandles.nodeProbablyGenerated(node)
-                && level.getEntity(uuid) == null;
+                && loadedEntityAnywhere(level, uuid) == null;
+    }
+
+    private static Iterable<ServerLevel> serverLevels(ServerLevel level) {
+        return level.getServer() == null ? List.of(level) : level.getServer().getAllLevels();
+    }
+
+    @Nullable
+    private static Entity loadedEntityAnywhere(ServerLevel level, UUID uuid) {
+        for (ServerLevel dimension : serverLevels(level)) {
+            Entity entity = dimension.getEntity(uuid);
+            if (entity != null) {
+                return entity;
+            }
+        }
+        return null;
     }
 
     /**
@@ -652,8 +669,8 @@ public final class McaCompat {
                 return Optional.empty();
             }
             Entity entity = level.getEntity(uuid);
-            boolean embodied = entity != null;
-            boolean loaded = embodied && entity.isAlive();
+            boolean embodied = loadedEntityAnywhere(level, uuid) != null;
+            boolean loaded = entity != null && entity.isAlive();
             Set<UUID> homeVillage = giver == null ? Set.of() : homeVillageResidents(giver);
             boolean anywhere = isVillageResidentAnywhere(level, uuid);
             return Optional.of(new RelativeCandidate(
@@ -669,7 +686,7 @@ public final class McaCompat {
                     loaded && giver != null && entity.distanceToSqr(giver) <= INTERACT_RANGE_SQR,
                     homeVillage.contains(uuid),
                     anywhere,
-                    canMaterialise(level, node, uuid),
+                    canMaterialise(level, node, uuid, anywhere),
                     loaded && isInfected(entity)));
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA describeVillager failed; defaulting empty", t);
@@ -1161,14 +1178,14 @@ public final class McaCompat {
      */
     public static Optional<Entity> materializeRelative(ServerLevel level, UUID relativeUuid, BlockPos pos) {
         try {
-            if (level.getEntity(relativeUuid) != null) {
+            if (loadedEntityAnywhere(level, relativeUuid) != null) {
                 return Optional.empty(); // already in the world — never spawn a second copy
             }
             Object tree = McaHandles.familyTree(level);
             Object node = McaHandles.node(tree, relativeUuid);
             // The same predicate RelativeCandidate.materialisable() reports, so what the mod tells a
             // datapack it can find and what it will actually produce can never drift apart.
-            if (!canMaterialise(level, node, relativeUuid)) {
+            if (!canMaterialise(level, node, relativeUuid, isVillageResidentAnywhere(level, relativeUuid))) {
                 return Optional.empty();
             }
             Object gender = McaHandles.nodeBinaryGender(node);
@@ -1232,12 +1249,7 @@ public final class McaCompat {
      */
     public static boolean isVillageResidentAnywhere(ServerLevel level, UUID uuid) {
         try {
-            for (Object village : McaHandles.allVillages(level)) {
-                if (McaHandles.villageResidentUuids(village).contains(uuid)) {
-                    return true;
-                }
-            }
-            return false;
+            return residentsAnywhere(level, List.of(uuid)).contains(uuid);
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA isVillageResidentAnywhere failed; defaulting false", t);
             return false;
@@ -1307,19 +1319,28 @@ public final class McaCompat {
      * default: {@code empty} (none loaded / MCA absent / any failure).
      */
     public static OptionalInt maxHeartsWithin(ServerPlayer player, double radius) {
+        return maxHeartsWithin(player, radius, false);
+    }
+
+    /** Highest hearts with a loaded nearby spouse, regardless of other villagers' relationship scores. */
+    public static OptionalInt maxSpouseHeartsWithin(ServerPlayer player, double radius) {
+        return maxHeartsWithin(player, radius, true);
+    }
+
+    private static OptionalInt maxHeartsWithin(ServerPlayer player, double radius, boolean spouseOnly) {
         try {
-            OptionalInt max = OptionalInt.empty();
-            for (Entity villager : villagersNear(player, radius)) {
-                int hearts = getHearts(player, villager);
-                if (max.isEmpty() || hearts > max.getAsInt()) {
-                    max = OptionalInt.of(hearts);
-                }
-            }
-            return max;
+            return maxMatchingHearts(villagersNear(player, radius),
+                    villager -> !spouseOnly || isPlayerSpouse(player, villager),
+                    villager -> getHearts(player, villager));
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA maxHeartsWithin failed; defaulting empty", t);
             return OptionalInt.empty();
         }
+    }
+
+    static <T> OptionalInt maxMatchingHearts(List<T> candidates, java.util.function.Predicate<T> eligible,
+                                            java.util.function.ToIntFunction<T> hearts) {
+        return candidates.stream().filter(eligible).mapToInt(hearts).max();
     }
 
     /**
@@ -1372,6 +1393,18 @@ public final class McaCompat {
         }
     }
 
+    /** A loaded nearby spouse, filtering before distance ranking so friends cannot hide the target. */
+    public static Optional<Entity> nearestSpouseWithin(ServerPlayer player, double radius) {
+        try {
+            return villagersNear(player, radius).stream()
+                    .filter(villager -> isPlayerSpouse(player, villager))
+                    .min(Comparator.comparingDouble(villager -> villager.distanceToSqr(player)));
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA nearestSpouseWithin failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
     /**
      * The nearest loaded <em>adult</em> MCA villager to the player within {@code radius} blocks — the
      * adult-filtered sibling of {@link #nearestVillagerWithin}, added for the FTBQ
@@ -1405,8 +1438,20 @@ public final class McaCompat {
 
     /** Shared bounded scan behind the four proximity accessors above. */
     private static List<Entity> villagersNear(ServerPlayer player, double radius) {
+        if (player == null || !Double.isFinite(radius) || radius < 0.0D) {
+            return List.of();
+        }
         AABB box = player.getBoundingBox().inflate(radius);
-        return McaHandles.villagersWithin(player.level(), box);
+        return McaHandles.villagersWithin(player.level(), box).stream()
+                .filter(Entity::isAlive)
+                .filter(villager -> withinRadius(villager.distanceToSqr(player), radius))
+                .toList();
+    }
+
+    /** The entity query supplies a cube; the configured proximity is a spherical distance. */
+    static boolean withinRadius(double distanceSquared, double radius) {
+        return Double.isFinite(radius) && radius >= 0.0D && Double.isFinite(distanceSquared)
+                && distanceSquared >= 0.0D && distanceSquared <= radius * radius;
     }
 
     /** Wraps an MCA village's id, mapping the "no village" sentinel to {@code empty}. */

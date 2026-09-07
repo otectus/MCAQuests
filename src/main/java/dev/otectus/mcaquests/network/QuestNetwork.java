@@ -3,6 +3,9 @@ package dev.otectus.mcaquests.network;
 import dev.otectus.mcaquests.McaQuests;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.NetworkDirection;
+
+import java.util.Optional;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 /**
@@ -50,73 +53,94 @@ public final class QuestNetwork {
 
     public static void register() {
         CHANNEL.registerMessage(nextId++, OpenQuestMenuC2SPacket.class,
-                OpenQuestMenuC2SPacket::encode, OpenQuestMenuC2SPacket::decode, OpenQuestMenuC2SPacket::handle);
+                OpenQuestMenuC2SPacket::encode, OpenQuestMenuC2SPacket::decode, OpenQuestMenuC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, QuestDecisionC2SPacket.class,
-                QuestDecisionC2SPacket::encode, QuestDecisionC2SPacket::decode, QuestDecisionC2SPacket::handle);
+                QuestDecisionC2SPacket::encode, QuestDecisionC2SPacket::decode, QuestDecisionC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, QuestTurnInC2SPacket.class,
-                QuestTurnInC2SPacket::encode, QuestTurnInC2SPacket::decode, QuestTurnInC2SPacket::handle);
+                QuestTurnInC2SPacket::encode, QuestTurnInC2SPacket::decode, QuestTurnInC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, QuestAbandonC2SPacket.class,
-                QuestAbandonC2SPacket::encode, QuestAbandonC2SPacket::decode, QuestAbandonC2SPacket::handle);
+                QuestAbandonC2SPacket::encode, QuestAbandonC2SPacket::decode, QuestAbandonC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, QuestMenuDataS2CPacket.class,
-                QuestMenuDataS2CPacket::encode, QuestMenuDataS2CPacket::decode, QuestMenuDataS2CPacket::handle);
+                QuestMenuDataS2CPacket::encode, QuestMenuDataS2CPacket::decode, QuestMenuDataS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextId++, QuestLogSyncS2CPacket.class,
-                QuestLogSyncS2CPacket::encode, QuestLogSyncS2CPacket::decode, QuestLogSyncS2CPacket::handle);
+                QuestLogSyncS2CPacket::encode, QuestLogSyncS2CPacket::decode, QuestLogSyncS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextId++, QuestReadyToastS2CPacket.class,
-                QuestReadyToastS2CPacket::encode, QuestReadyToastS2CPacket::decode, QuestReadyToastS2CPacket::handle);
+                QuestReadyToastS2CPacket::encode, QuestReadyToastS2CPacket::decode, QuestReadyToastS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         // v0.4.0 — community projects.
         CHANNEL.registerMessage(nextId++, ProjectContributeC2SPacket.class,
-                ProjectContributeC2SPacket::encode, ProjectContributeC2SPacket::decode, ProjectContributeC2SPacket::handle);
+                ProjectContributeC2SPacket::encode, ProjectContributeC2SPacket::decode, ProjectContributeC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, ProjectMenuDataS2CPacket.class,
-                ProjectMenuDataS2CPacket::encode, ProjectMenuDataS2CPacket::decode, ProjectMenuDataS2CPacket::handle);
+                ProjectMenuDataS2CPacket::encode, ProjectMenuDataS2CPacket::decode, ProjectMenuDataS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextId++, ProjectLogSyncS2CPacket.class,
-                ProjectLogSyncS2CPacket::encode, ProjectLogSyncS2CPacket::decode, ProjectLogSyncS2CPacket::handle);
+                ProjectLogSyncS2CPacket::encode, ProjectLogSyncS2CPacket::decode, ProjectLogSyncS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextId++, ProjectPhaseToastS2CPacket.class,
-                ProjectPhaseToastS2CPacket::encode, ProjectPhaseToastS2CPacket::decode, ProjectPhaseToastS2CPacket::handle);
+                ProjectPhaseToastS2CPacket::encode, ProjectPhaseToastS2CPacket::decode, ProjectPhaseToastS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         // v0.7.0 — progression: tier-up toast + journal request/sync.
         CHANNEL.registerMessage(nextId++, ReputationTierToastS2CPacket.class,
-                ReputationTierToastS2CPacket::encode, ReputationTierToastS2CPacket::decode, ReputationTierToastS2CPacket::handle);
+                ReputationTierToastS2CPacket::encode, ReputationTierToastS2CPacket::decode, ReputationTierToastS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextId++, RequestJournalC2SPacket.class,
-                RequestJournalC2SPacket::encode, RequestJournalC2SPacket::decode, RequestJournalC2SPacket::handle);
+                RequestJournalC2SPacket::encode, RequestJournalC2SPacket::decode, RequestJournalC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(nextId++, JournalSyncS2CPacket.class,
-                JournalSyncS2CPacket::encode, JournalSyncS2CPacket::decode, JournalSyncS2CPacket::handle);
+                JournalSyncS2CPacket::encode, JournalSyncS2CPacket::decode, JournalSyncS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         // v0.8.0 — Living Village: situation "needs help" toast.
         CHANNEL.registerMessage(nextId++, SituationToastS2CPacket.class,
-                SituationToastS2CPacket::encode, SituationToastS2CPacket::decode, SituationToastS2CPacket::handle);
+                SituationToastS2CPacket::encode, SituationToastS2CPacket::decode, SituationToastS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         // Task M5.1 — FTB Quests editor known-ids sync (registered unconditionally; only the send is
         // gated on FTB Quests being loaded + syncFtbqEditorIds, see FtbqEditorIdsSync).
         CHANNEL.registerMessage(nextId++, FtbqEditorIdsS2CPacket.class,
-                FtbqEditorIdsS2CPacket::encode, FtbqEditorIdsS2CPacket::decode, FtbqEditorIdsS2CPacket::handle);
+                FtbqEditorIdsS2CPacket::encode, FtbqEditorIdsS2CPacket::decode, FtbqEditorIdsS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         // Abandon from the quest log — no villager interaction required, so a quest whose giver is gone
         // is still droppable.
         CHANNEL.registerMessage(nextId++, QuestAbandonFromLogC2SPacket.class,
                 QuestAbandonFromLogC2SPacket::encode, QuestAbandonFromLogC2SPacket::decode,
-                QuestAbandonFromLogC2SPacket::handle);
+                QuestAbandonFromLogC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         // §29.7 — the journal's View Deeds link into MCA: Reputation's standing screen. Registered
         // unconditionally like every packet; the handler no-ops unless Reputation is canonical.
         CHANNEL.registerMessage(nextId++, OpenStandingC2SPacket.class,
                 OpenStandingC2SPacket::encode, OpenStandingC2SPacket::decode,
-                OpenStandingC2SPacket::handle);
+                OpenStandingC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         // Per-player quest-target highlighting — the glow is drawn client-side for the quest owner only,
         // so one player's markers are never visible to everyone else on the server.
         CHANNEL.registerMessage(nextId++, HighlightTargetsS2CPacket.class,
                 HighlightTargetsS2CPacket::encode, HighlightTargetsS2CPacket::decode,
-                HighlightTargetsS2CPacket::handle);
+                HighlightTargetsS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         // v1.5.0 — objective guidance. The marker the player follows, and which quest they follow.
         // Appended, because ids here are positional: inserting anywhere above renumbers every packet
         // after it, and a client one build behind would decode a project contribution as a toast.
         CHANNEL.registerMessage(nextId++, QuestGuidanceS2CPacket.class,
                 QuestGuidanceS2CPacket::encode, QuestGuidanceS2CPacket::decode,
-                QuestGuidanceS2CPacket::handle);
+                QuestGuidanceS2CPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextId++, QuestTrackC2SPacket.class,
                 QuestTrackC2SPacket::encode, QuestTrackC2SPacket::decode,
-                QuestTrackC2SPacket::handle);
+                QuestTrackC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 }

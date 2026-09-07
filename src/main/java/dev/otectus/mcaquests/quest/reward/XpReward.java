@@ -29,11 +29,11 @@ public record XpReward(int amount) implements QuestReward {
 
     @Override
     public void grant(ServerPlayer player, @Nullable Entity villager) {
-        player.giveExperiencePoints(effectiveAmount());
+        player.giveExperiencePoints(RewardAmounts.remainingCapacity(player.totalExperience, effectiveAmount()));
     }
 
     /** Amount after {@code xpRewardMultiplier}. Shown and granted through the same value, so the card never lies. */
     public int effectiveAmount() {
-        return Math.max(0, (int) Math.round(amount * McaQuestsConfig.COMMON.xpRewardMultiplier.get()));
+        return RewardAmounts.positiveScaled(amount, McaQuestsConfig.COMMON.xpRewardMultiplier.get());
     }
 }

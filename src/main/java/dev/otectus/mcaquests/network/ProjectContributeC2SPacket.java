@@ -27,7 +27,7 @@ public record ProjectContributeC2SPacket(UUID villagerUuid, ResourceLocation pro
 
     public static void handle(ProjectContributeC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 ProjectManager.contributeFromPacket(player, msg.villagerUuid, msg.projectId);

@@ -133,7 +133,8 @@ public final class CapitalsCompat implements CompatProvider {
         }
         // Installed and switched on, but nothing bound: this is a Capitals build the manifest no
         // longer understands, and a Noop bridge would report it as "not installed" and hide that.
-        return ReflectiveCapitalsBridge.of(resolution);
+        return ReflectiveCapitalsBridge.of(resolution.status() == CompatStatus.ABSENT
+                ? CapitalsBinding.unavailable() : resolution);
     }
 
     /**

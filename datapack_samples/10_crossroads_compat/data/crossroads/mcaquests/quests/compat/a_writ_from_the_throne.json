@@ -1,0 +1,55 @@
+{
+  "format_version": 1,
+  "id": "crossroads:a_writ_from_the_throne",
+  "weight": 8,
+  "category": "court",
+  "difficulty": "hard",
+  "offer_group": "crossroads_court",
+  "title": { "text": "A Writ from the Throne" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "adult_only": true,
+    "min_hearts": 30
+  },
+  "dialogue": {
+    "offer": { "text": "The writ has to reach the herald before it means anything, and the herald will not take it from my hands. Yours, they will take." },
+    "accept": { "text": "Sealed. Do not open it, and do not lose it." },
+    "decline": { "text": "Then it stays on my table and nothing changes." },
+    "in_progress": { "text": "The herald. Nobody else." },
+    "ready": { "text": "It is read into the record. It is done." },
+    "complete": { "text": "You will find your own name in the chronicle now. Get used to it." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": { "mode": "capital_role", "role": "herald" },
+      "item": "minecraft:paper",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:capital_title", "title": "knight", "female_title": "dame" },
+    {
+      "type": "mcaquests:capital_chronicle",
+      "key": "crossroads.chronicle.writ_delivered",
+      "herald": true,
+      "fallback": "%1$s carried the writ to the court of %2$s."
+    },
+    {
+      "type": "mcaquests:capital_villager_title",
+      "villager": { "mode": "self" },
+      "title": "lord"
+    }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:capital_present", "subject": "giver" },
+      { "type": "mcaquests:capital_role", "subject": "player", "role": "knight", "capital": "giver", "present": false },
+      { "type": "mcaquests:capital_allegiance", "match": "giver" },
+      { "type": "mcaquests:capital_relation", "other": "any", "state": ["peace", "alliance", "non_aggression_pact"] }
+    ]
+  }
+}

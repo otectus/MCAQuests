@@ -5,7 +5,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,6 +34,6 @@ public record ProjectLogEntry(ResourceLocation projectId,
                 buf.readComponent(),
                 buf.readComponent(),
                 buf.readComponent(),
-                buf.readCollection(ArrayList::new, ProjectObjectiveLine::decode));
+                dev.otectus.mcaquests.network.PacketCollections.readList(buf, ProjectObjectiveLine::decode));
     }
 }

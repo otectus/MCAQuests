@@ -258,8 +258,12 @@ public final class XaeroWaypoints implements MapWaypointBackend {
     @Override
     public void clearAutomatic(ClearCause cause) {
         Object store = calls.store(QUESTS);
-        if (store != null) {
-            calls.clear(store);
+        if (store == null) {
+            store = automaticStore.get();
+        }
+        if (store == null || !calls.clear(store)) {
+            // Retain the keys while the map is unavailable so the next reconciliation retries.
+            return;
         }
         applied.clear();
         automaticStore = new WeakReference<>(null);

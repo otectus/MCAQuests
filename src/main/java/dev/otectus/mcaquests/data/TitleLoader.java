@@ -57,8 +57,7 @@ public final class TitleLoader extends SimpleJsonResourceReloadListener {
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            TitleDefinition.CODEC.parse(JsonOps.INSTANCE, entry.getValue())
-                    .resultOrPartial(message -> recordError(errors, strict, "Title '" + fileId + "': " + message))
+            dev.otectus.mcaquests.data.StrictCodecs.parse(TitleDefinition.CODEC, JsonOps.INSTANCE, entry.getValue(), message -> recordError(errors, strict, "Title '" + fileId + "': " + message))
                     .ifPresent(def -> {
                         if (TitleValidator.validate(fileId, def, errors)) {
                             loaded.put(fileId, def);

@@ -41,6 +41,12 @@ public interface ProjectObjective {
         return progress.count() >= required();
     }
 
+    /** Missing optional content pauses deadlines as well as objective polling. */
+    default boolean isAvailable(net.minecraft.server.level.ServerLevel level,
+                                dev.otectus.mcaquests.project.state.ProjectState state) {
+        return true;
+    }
+
     /** True if progress accumulates via game events rather than a sponsor contribution. */
     boolean isEventDriven();
 

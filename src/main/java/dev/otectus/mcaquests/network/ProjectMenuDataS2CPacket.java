@@ -6,7 +6,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -25,7 +24,7 @@ public record ProjectMenuDataS2CPacket(UUID villagerUuid, List<ProjectCard> card
 
     public static ProjectMenuDataS2CPacket decode(FriendlyByteBuf buf) {
         return new ProjectMenuDataS2CPacket(buf.readUUID(),
-                buf.readCollection(ArrayList::new, ProjectCard::decode));
+                PacketCollections.readList(buf, ProjectCard::decode));
     }
 
     public static void handle(ProjectMenuDataS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {

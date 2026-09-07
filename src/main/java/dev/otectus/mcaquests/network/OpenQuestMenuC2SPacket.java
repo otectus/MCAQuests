@@ -24,7 +24,7 @@ public record OpenQuestMenuC2SPacket(UUID villagerUuid) {
 
     public static void handle(OpenQuestMenuC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 QuestManager.openFromPacket(player, msg.villagerUuid);

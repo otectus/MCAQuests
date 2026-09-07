@@ -10,10 +10,9 @@ import dev.otectus.mcaquests.compat.FtbqBridge;
  * compatibility disables the integration instead of crashing the game (spec §10.4).
  *
  * <p>Current scope (task M3.2): the bridge seam, all ten §15 task types, all three §16 reward types,
- * and the full event bridge (§12/§15.0) — {@link FtbqBridge.Holder} is set <em>before</em>
- * {@link FtbqEventBridge#register()} so that if event-bridge registration itself throws partway through
- * (a future FTB Quests binary incompatibility), any listener that already attached to the bus still sees
- * a real bridge instance rather than momentarily reading the {@code Noop} default.
+ * and the full event bridge (§12/§15.0). The holder is published after registration succeeds, so any
+ * partially attached listeners stay inactive if a future FTB Quests binary incompatibility interrupts
+ * initialization.
  */
 public final class FtbqBootstrap {
 
@@ -23,8 +22,8 @@ public final class FtbqBootstrap {
     public static void init() {                       // called iff ModList.get().isLoaded("ftbquests")
         FtbqTaskTypes.register();
         FtbqRewardTypes.register();
-        FtbqBridge.Holder.set(new FtbqBridgeImpl());
         FtbqEventBridge.register();
+        FtbqBridge.Holder.set(new FtbqBridgeImpl());
         McaQuests.LOGGER.info(
                 "[MCA: Quests] FTB Quests integration bridge active ({} task type(s), {} reward type(s) "
                         + "registered, event bridge listening).",

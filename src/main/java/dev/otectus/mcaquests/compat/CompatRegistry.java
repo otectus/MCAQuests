@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +65,7 @@ public final class CompatRegistry {
     public synchronized void register(CompatProvider provider) {
         Map<String, CompatProvider> next = new LinkedHashMap<>(providers);
         next.put(provider.id(), provider);
-        providers = Map.copyOf(next);
+        providers = Collections.unmodifiableMap(next);
     }
 
     /** Every registered provider, in registration order. */

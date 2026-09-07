@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
@@ -41,9 +43,9 @@ public record FtbqCompleteQuestObjective(String quest, AlreadyCompleteMode alrea
 
     public static final Codec<FtbqCompleteQuestObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             FtbqIds.hexIdCodec(TYPE_ID, "quest").fieldOf("quest").forGetter(FtbqCompleteQuestObjective::quest),
-            AlreadyCompleteMode.CODEC.optionalFieldOf("already_complete", AlreadyCompleteMode.SATISFY)
+            StrictCodecs.strictOptional(AlreadyCompleteMode.CODEC, "already_complete", AlreadyCompleteMode.SATISFY)
                     .forGetter(FtbqCompleteQuestObjective::alreadyComplete),
-            QuestText.CODEC.optionalFieldOf("display_name").forGetter(FtbqCompleteQuestObjective::displayName)
+            StrictCodecs.strictOptional(QuestText.CODEC, "display_name").forGetter(FtbqCompleteQuestObjective::displayName)
     ).apply(instance, FtbqCompleteQuestObjective::new));
 
     @Override

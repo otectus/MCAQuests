@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "id": "beekeeper:honey_for_the_hearth",
+  "enabled": true,
+  "weight": 12,
+  "category": "delivery",
+  "difficulty": "easy",
+  "offer_group": "hive_work",
+  "title": { "text": "Honey for the Hearth" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["minecraft:farmer"],
+    "adult_only": true,
+    "min_hearts": 0
+  },
+  "dialogue": {
+    "offer": { "text": "The hives are heavy and my ladder is not what it was. Six bottles of honey, {player}, and I will not forget it." },
+    "accept": { "text": "Mind the smoke, and mind your fingers." },
+    "decline": { "text": "No shame in it. Bees frighten better folk than you." },
+    "in_progress": { "text": "Still buzzing about it, are you?" },
+    "ready": { "text": "Six bottles! Set them down before you drop them." },
+    "complete": { "text": "That is the winter's sweetening seen to. Thank you." },
+    "failed": { "text": "Too late — the comb went to the ants." },
+    "cooldown": { "text": "You have already emptied my hives this week. Let them work." },
+    "locked": { "text": "Perhaps when I know you a little better." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:honey_bottle",
+      "count": 6,
+      "consume": true,
+      "source": { "block_tag": "minecraft:beehives" }
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ],
+  "turn_in": { "mode": "original_giver" },
+  "conditions": { "type": "mcaquests:time", "period": "DAY" }
+}

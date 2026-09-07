@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "marketday:template_ranger_cull",
+  "weight": 12,
+  "category": "combat",
+  "difficulty": "medium",
+  "offer_group": "market_watch",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["mca:archer", "mca:guard"],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "marketday.quest.ranger_cull.title",
+    "with": ["{beast_name}"]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "marketday.quest.ranger_cull.offer",
+      "with": ["{count}", "{beast_name}"]
+    },
+    "accept": { "translate": "marketday.quest.ranger_cull.accept" },
+    "decline": { "translate": "marketday.quest.ranger_cull.decline" },
+    "in_progress": {
+      "translate": "marketday.quest.ranger_cull.in_progress",
+      "with": ["{beast_name}"]
+    },
+    "ready": { "translate": "marketday.quest.ranger_cull.ready" },
+    "complete": { "translate": "marketday.quest.ranger_cull.complete" }
+  },
+  "template": {
+    "variables": {
+      "beast": {
+        "kind": "entity",
+        "ids": ["minecraft:spider", "minecraft:creeper"],
+        "tags": ["mcaquests:common_undead"]
+      },
+      "count": {
+        "kind": "int",
+        "min": 5,
+        "max": 12,
+        "per_player_level": 0.3,
+        "limit": 24
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:kill_entity",
+        "entity": "{beast}",
+        "count": "{count}",
+        "source": { "anchor": { "anchor": "nearest_village" } }
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:currency" },
+      { "type": "mcaquests:xp_levels", "levels": 1 },
+      { "type": "mcaquests:hearts", "amount": 8 }
+    ]
+  }
+}

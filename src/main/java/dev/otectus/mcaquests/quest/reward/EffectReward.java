@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -17,8 +19,8 @@ public record EffectReward(MobEffect effect, int duration, int amplifier) implem
 
     public static final Codec<EffectReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BuiltInRegistries.MOB_EFFECT.byNameCodec().fieldOf("effect").forGetter(EffectReward::effect),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("duration", 600).forGetter(EffectReward::duration),
-            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("amplifier", 0).forGetter(EffectReward::amplifier)
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "duration", 600).forGetter(EffectReward::duration),
+            StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "amplifier", 0).forGetter(EffectReward::amplifier)
     ).apply(instance, EffectReward::new));
 
     @Override

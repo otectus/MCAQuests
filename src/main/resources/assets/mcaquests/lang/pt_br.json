@@ -3198,5 +3198,7 @@
   "mcaquests.chronicle.capitals.the_accolade": "%s foi sagrado cavaleiro de %s.",
   "mcaquests.chronicle.capitals.coronation_gift": "%s depositou uma coroa dourada diante do trono de %s.",
   "mcaquests.chronicle.capitals.the_chroniclers_request": "%s trouxe páginas novas para a crônica de %s.",
-  "mcaquests.compatpack.capitals_court": "MCA: Quests — conteúdo do MCA Capitals"
+  "mcaquests.compatpack.capitals_court": "MCA: Quests — conteúdo do MCA Capitals",
+  "mcaquests.message.project_failed": "Projeto comunitário fracassou: %s",
+  "mcaquests.reward.items_pending": "Recompensa adicional salva: %s × %s. Libere espaço no inventário para recebê-la."
 }

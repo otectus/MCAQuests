@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "id": "ledger:a_good_word",
+  "weight": 8,
+  "category": "guild",
+  "difficulty": "medium",
+  "offer_group": "guild_ledger",
+  "title": { "text": "A Good Word" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
+  "giver": {
+    "professions": ["minecraft:librarian", "minecraft:toolsmith", "minecraft:weaponsmith"],
+    "adult_only": true,
+    "min_hearts": 30
+  },
+  "dialogue": {
+    "offer": { "text": "I will not vouch for somebody on hearsay. I saw what you did with my own eyes, which is why I am the one asking. Trade honestly with three of us and I will put my name under yours." },
+    "accept": { "text": "Honestly. I will hear about it if not." },
+    "decline": { "text": "Then somebody else can vouch for you." },
+    "in_progress": { "text": "Three trades. Fair ones." },
+    "ready": { "text": "Three, and nobody complained. That is rarer than you think." },
+    "complete": { "text": "My name is under yours now. Do not make me regret the ink." }
+  },
+  "objectives": [
+    { "type": "mcaquests:trade_with_villager", "profession": "minecraft:librarian", "count": 3 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 30 },
+    { "type": "mcaquests:grant_title", "title": "ledger:master_of_the_guild", "scope": "global" }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcareputation:villager_opinion",
+        "min_tier": "friend",
+        "basis": ["involved", "witnessed"]
+      },
+      { "type": "mcaquests:reputation_tier", "min_tier": "trusted", "ladder": "ledger:guild" }
+    ]
+  }
+}

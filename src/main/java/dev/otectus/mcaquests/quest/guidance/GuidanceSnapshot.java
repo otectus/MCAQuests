@@ -91,7 +91,7 @@ public record GuidanceSnapshot(List<ActiveGuidance> all, int primary) {
     }
 
     public static GuidanceSnapshot decode(FriendlyByteBuf buf) {
-        List<ActiveGuidance> all = buf.readCollection(ArrayList::new, ActiveGuidance::decode);
+        List<ActiveGuidance> all = dev.otectus.mcaquests.network.PacketCollections.readList(buf, ActiveGuidance::decode);
         return new GuidanceSnapshot(all, buf.readVarInt() - 1);
     }
 }

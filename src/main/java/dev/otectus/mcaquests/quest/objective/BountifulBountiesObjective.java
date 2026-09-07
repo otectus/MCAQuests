@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -61,7 +63,7 @@ public record BountifulBountiesObjective(int count, Optional<BountyRarity> minRa
      * is the only moment anybody is in a position to fix it.
      */
     private static final MapCodec<Optional<BountyRarity>> MIN_RARITY =
-            Codec.STRING.optionalFieldOf("min_rarity").flatXmap(
+            StrictCodecs.strictOptional(Codec.STRING, "min_rarity").flatXmap(
                     written -> written.isEmpty()
                             ? DataResult.success(Optional.empty())
                             : rarityOf(written.get()).map(Optional::of),
@@ -82,7 +84,7 @@ public record BountifulBountiesObjective(int count, Optional<BountyRarity> minRa
 
     public static final Codec<BountifulBountiesObjective> CODEC =
             RecordCodecBuilder.create(instance -> instance.group(
-                    ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1)
+                    StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1)
                             .forGetter(BountifulBountiesObjective::count),
                     MIN_RARITY.forGetter(BountifulBountiesObjective::minRarity),
                     SourceHint.FIELD.forGetter(BountifulBountiesObjective::source)

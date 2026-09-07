@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.target;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
@@ -29,8 +31,8 @@ import java.util.concurrent.CompletableFuture;
 public record StructureTarget(Optional<ResourceLocation> structure, Optional<TagKey<Structure>> tag) {
 
     public static final MapCodec<StructureTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceLocation.CODEC.optionalFieldOf("structure").forGetter(StructureTarget::structure),
-            TagKey.codec(Registries.STRUCTURE).optionalFieldOf("structure_tag").forGetter(StructureTarget::tag)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "structure").forGetter(StructureTarget::structure),
+            StrictCodecs.strictOptional(TagKey.codec(Registries.STRUCTURE), "structure_tag").forGetter(StructureTarget::tag)
     ).apply(instance, StructureTarget::new));
 
     /** True when {@code pos} is inside a generated piece of the targeted structure. */

@@ -7,7 +7,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -19,7 +18,7 @@ public record QuestLogSyncS2CPacket(List<QuestLogEntry> entries) {
     }
 
     public static QuestLogSyncS2CPacket decode(FriendlyByteBuf buf) {
-        return new QuestLogSyncS2CPacket(buf.readCollection(ArrayList::new, QuestLogEntry::decode));
+        return new QuestLogSyncS2CPacket(PacketCollections.readList(buf, QuestLogEntry::decode));
     }
 
     public static void handle(QuestLogSyncS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {

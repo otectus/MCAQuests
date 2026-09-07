@@ -4,7 +4,98 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-09-06
+
+Stabilization and compatibility refinement for the Forge 1.20.1 and NeoForge 1.21.1 releases.
+
+### Fixed — Stabilization and refinement
+
+- Aligned guidance readiness with aggregate payment and hand-in eligibility; protected search
+  queue completion callbacks that clear or repopulate work during reload.
+- Bounded large item/currency payouts and saved the exact remainder for later inventory delivery,
+  including logout, death/respawn and missing-item recovery. Clamped reward arithmetic and respected
+  the project command-reward opt-in and configured hearts ceiling.
+- Made nested text, dialogue, trigger and reward fields reject malformed present values; unknown
+  concrete item/block registry IDs no longer turn into air.
+- Restricted Forge packets to their intended direction and bounded collection decoding and client
+  request processing. Valid large quest collections retain their existing wire format and protocol.
+- Made built-in item handovers reserve all source items and destination capacity before committing,
+  retain stack metadata, support tag-selected payloads, and avoid partial consumption on failure.
+- Restored target-loss failure rules and preserved them on situation offers. Canceled gameplay
+  events no longer count as successful actions or premature quest failures.
+- Enforced project offer limits, sponsor selection, unlock conditions and contribution limits on
+  the server. Implemented documented project deadlines, weather and sponsor-loss failures, retry
+  rules, paused timing, failure outcomes and localized notifications.
+- Bound offline project rewards to the original instance and frozen payout. Missing definitions,
+  malformed records and unknown future entries are retained for recovery; one broken entry cannot
+  discard the rest of a player's rewards. Clone/save copies no longer alias mutable quest state.
+- Prevented overflow in progress, offer weights, template ranges and scaling, and pending hearts.
+- Rejected partial datapack definitions and malformed optional rules instead of silently removing
+  objectives or gates. Omitted fields keep their defaults. Quarantine diagnostics retain declared
+  ids even when they differ from filenames; failed strict reloads retain the previous catalogue.
+- Corrected negated composite validation and made long dependency-chain validation stack-safe.
+- Tightened MCA radius checks, spouse selection and cross-dimension relative recovery to prevent
+  duplicate villagers. Hardened optional integration initialization, bounty deduplication, cached
+  Townstead data and failed minimap cleanup/retries.
+- Gave newly inserted compatibility packs low default priority so owner datapacks can override them.
+  Explicit pack ordering already saved in a world remains authoritative.
+- Fixed wrapped journal rows, small scrollbar geometry, stale quest-log coordinate actions, delayed
+  menu replies, repeated menu scroll resets and quest keybinds outside gameplay.
+- Strengthened the Forge artifact verifier to inspect actual Minecraft member references and prove
+  it rejects dev-mapped output. Corrected Minecraft/Forge dependency ranges, build prerequisites,
+  compatibility documentation and current feature descriptions. Added regression and resource
+  integrity coverage; see `docs/audit/STABILIZATION.md` for results and runtime checks.
+
+### Added — Sample datapacks
+
+- Added a top-level `datapack_samples/` folder: ten complete, installable sample datapacks plus an
+  index `README.md`. Together they exercise quests, quest chains, templates, failure and deadlines,
+  village projects, situations, voice pools, reputation ladders, titles, MCA: Reputation incidents,
+  and optional-mod gating for Townstead, Ice & Fire, Bountiful, FTB Quests and MCA Capitals.
+  `09_trim_and_retune` demonstrates disabling and overriding the mod's own bundled content by
+  shadowing its resource paths.
+- Added `SampleDatapacksParseTest`, which parses each sample quest, project, situation, reputation
+  ladder, title and voice pool through the real codecs. Objectives, conditions and rewards are also
+  parsed individually, since an optional codec can otherwise empty a list silently without failing
+  the enclosing definition. It then runs the same reload-time validators a live reload runs —
+  chain, template, failure, objective, target-gate, age-eligibility and project — giving the
+  samples the same treatment `BuiltinPackParsesTest` and `BuiltinPackValidatesTest` already give
+  the bundled pack.
+- The samples are documentation and example content only: they ship in the repository, not in the
+  built jar, and change no runtime behaviour.
+
 ## [1.6.1] - 2026-09-06
+
+### Fixed — MCA Capitals integration
+
+- Capitals capabilities required by quest conditions, role targets and rewards now gate offers and
+  pause accepted quests, including ordinary objectives in quests with title-only dependencies. Missing
+  court packs and their situation offers are correctly identified as waiting on MCA Capitals.
+- Accepted court situations preserve their shared deadline through missing capabilities or removed
+  content, including save/reload and players returning after a pause. Disabling built-in content hides
+  new court offers and situations without disabling custom datapacks.
+- Failed reflection calls disable their dependent capabilities until a successful re-probe. Missing
+  save hooks disable record mutations while leaving registry reads available; unsuccessful persistence
+  is no longer reported as a successful bridge mutation. Installed but unloadable Capitals classes
+  report partial compatibility with diagnostics.
+- Negative capital conditions fail closed when their data cannot be read. `capital_relation` now
+  honors its documented `present` field. Invalid feminine titles, villager reward targets and succession
+  filters are rejected instead of silently ignored.
+- Quest and situation offer codecs reject malformed objective, reward and condition fields instead of
+  replacing them with empty defaults. Missing optional fields retain their existing defaults.
+- Villager title rewards retain the original giver and capital through unloaded entities and substitute
+  turn-ins. Role targets, including trades, bind deterministically and retain the same UUID through
+  unloading, save/reload and succession. Court membership targets include household and former members
+  recognized by membership conditions.
+- Chronicle rewards use bundled English text on dedicated servers instead of writing translation keys.
+  Custom packs can provide optional `fallback` text with player and capital name placeholders.
+- Succession polling preserves the last successful snapshot through read failures and recognizes
+  distinct deceased sovereigns between polls. Saved baselines tolerate legacy and malformed entries;
+  diplomatic state casing cannot replay war signals.
+- Corrected the Capitals guide and datapack reference, and marked the original integration spec as a
+  historical proposal. The envoy targets the giver's ambassador; coronation gifts check an occupied
+  throne rather than a coronation event. Existing constructor signatures remain available; no network
+  packet changes or required save migration.
 
 ### Fixed — Structure guidance stalls
 

@@ -42,6 +42,49 @@ class WaypointReconcilerTest {
     private final WaypointReconciler reconciler = new WaypointReconciler();
 
     @Test
+    void disablingRetriesFailedCleanupUntilOwnedMarkersAreGone() {
+        FakeMapWaypointBackend backend = new FakeMapWaypointBackend("journeymap");
+        reconcile(backend, List.of(spec("q1", 10, GuidanceKind.VILLAGER, "Anna")), 0L);
+        backend.failNextClear();
+        SyncReport failed = reconciler.reconcile(List.of(backend), List.of(), b -> false,
+                Level.OVERWORLD, 1L, 1L, 100L);
+        assertEquals(Set.of("q1"), backend.appliedKeys());
+        long next = failed.backends().get(0).nextRetryAtMillis().orElseThrow();
+        reconciler.reconcile(List.of(backend), List.of(), b -> false,
+                Level.OVERWORLD, 1L, 1L, next - 1);
+        assertEquals(1, backend.clears().size());
+        reconciler.reconcile(List.of(backend), List.of(), b -> false,
+                Level.OVERWORLD, 1L, 1L, next);
+        assertTrue(backend.appliedKeys().isEmpty());
+    }
+
+    @Test
+    void retryLaterSchedulesAnotherPassWithoutAnyNewGuidance() {
+        FakeMapWaypointBackend backend = new FakeMapWaypointBackend("journeymap")
+                .scriptApply(MapMutationResult.RETRY_LATER);
+        List<WaypointSpec> desired = List.of(spec("q1", 10, GuidanceKind.VILLAGER, "Anna"));
+        SyncReport report = reconcile(backend, desired, 100L);
+        long retryAt = report.backends().get(0).nextRetryAtMillis().orElseThrow();
+        assertEquals(1100L, retryAt);
+        reconcile(backend, desired, retryAt - 1);
+        assertEquals(1, backend.calls().size());
+        reconcile(backend, desired, retryAt);
+        assertEquals(Set.of("q1"), backend.appliedKeys());
+    }
+
+    @Test
+    void retryLaterAfterFailureMovesTheDeadlineForwardInsteadOfBusyLooping() {
+        FakeMapWaypointBackend backend = new FakeMapWaypointBackend("journeymap")
+                .scriptApply(MapMutationResult.FAILED, MapMutationResult.RETRY_LATER);
+        List<WaypointSpec> desired = List.of(spec("q1", 10, GuidanceKind.VILLAGER, "Anna"));
+        reconcile(backend, desired, 0L);
+        SyncReport report = reconcile(backend, desired, 1000L);
+        assertEquals(2000L, report.backends().get(0).nextRetryAtMillis().orElseThrow());
+        reconcile(backend, desired, 1001L);
+        assertEquals(2, backend.calls().size());
+    }
+
+    @Test
     @DisplayName("a new destination is applied once and then left alone")
     void appliesOnceAndDedupes() {
         FakeMapWaypointBackend backend = new FakeMapWaypointBackend("journeymap");

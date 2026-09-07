@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -31,8 +33,8 @@ public record GiverDistanceFromVillageCondition(double minDistance, boolean requ
     // See DispatchedCodecInlinesTest.
     public static final Codec<GiverDistanceFromVillageCondition> CODEC =
             RecordCodecBuilder.<GiverDistanceFromVillageCondition>mapCodec(instance -> instance.group(
-                    Codec.DOUBLE.optionalFieldOf("min_distance", 0.0D).forGetter(GiverDistanceFromVillageCondition::minDistance),
-                    Codec.BOOL.optionalFieldOf("require_outside_border", false).forGetter(GiverDistanceFromVillageCondition::requireOutsideBorder)
+                    StrictCodecs.strictOptional(Codec.DOUBLE, "min_distance", 0.0D).forGetter(GiverDistanceFromVillageCondition::minDistance),
+                    StrictCodecs.strictOptional(Codec.BOOL, "require_outside_border", false).forGetter(GiverDistanceFromVillageCondition::requireOutsideBorder)
             ).apply(instance, GiverDistanceFromVillageCondition::new))
             .flatXmap(GiverDistanceFromVillageCondition::validate, GiverDistanceFromVillageCondition::validate).codec();
 

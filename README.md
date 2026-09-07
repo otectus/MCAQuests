@@ -1,13 +1,13 @@
 # MCA: Quests
 
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-brightgreen)](https://www.minecraft.net/)
-[![Loader](https://img.shields.io/badge/Loader-Forge%2047.4.10%2B-1f425f)](https://files.minecraftforge.net/)
-[![Requires](https://img.shields.io/badge/Requires-MCA%20Reborn%207.6.x-orange)](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)
+[![Loader](https://img.shields.io/badge/Loader-Forge%2047.x-1f425f)](https://files.minecraftforge.net/)
+[![Requires](https://img.shields.io/badge/Requires-MCA%20Reborn%207.6.x%20%2F%207.7.x-orange)](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE.md)
 
 An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** villagers. Right-click a villager, open the new **Quests** menu, accept a job, complete it out in the world, and turn it in for items, XP, status effects — and a meaningful boost to your **MCA hearts** with that specific villager.
 
-> Server-authoritative, dup-proof, and fully data-driven: every quest is a JSON file, so modpacks and players can add their own without writing code.
+> Server-authoritative and fully data-driven: every quest is a JSON file, so modpacks and players can add their own without writing code.
 
 ---
 
@@ -18,14 +18,14 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 - 🎭 **Multi-offer conversation UI** — villagers present several quests at once, each with flavor dialogue, objectives, and a reward summary; Accept / Decline / Complete / Abandon inline. The villager themselves stands in the header, turning to follow your cursor.
 - 🖼️ **A real interface, in vanilla's own language** — nine-sliced panels, framed cards, textured buttons and scrollbars you can actually drag, reward **item icons** with vanilla tooltips, per-objective progress bars, difficulty badges, and heart icons. The quest log and journal share one tabbed window. Every screen adapts from a 320×240-equivalent display up to 4K, at any GUI scale, and is reachable by keyboard and narrator.
 - 🔗 **Relationship quest chains** — link quests into multi-stage arcs that remember what you did: a farmer asks for wheat, then to expand the farm, then to help an apprentice, then invites you to a feast. Chains branch on whether you completed, failed, or abandoned earlier steps, and the UI shows the arc name and "Part 2 of 4". All datapack-driven — no code required (4 sample arcs included).
-- 🌾 **Living Village situations** — villages **react to what happens in the world**. Raids, deaths, zombie infections, missing kin, famine, nightfall, a resident stranded outside the walls after dark, mobs gathering at somebody's door — and, with Townstead, a season turning, a villager coming of age or retiring, and a village losing its routine — open transient **situations** that surface dynamic, **time-limited** quest offers on nearby villagers — "drive back the raid", "cure the infected", "find the missing child", "fill the empty granary" — and resolve into village reputation when you help (or fail to). Server-authoritative, throttled so they never spam, and persisted in the world save. Fully datapack-driven (`situations/`) and backward compatible; 6 example situations included.
-- 🏘️ **Village projects** — shared, multi-stage **community goals** that the whole server works on together. A sponsor villager rallies the town — repair the well, restock the guardhouse, restore the library — and **any player can contribute**: progress is shared and lives in the world save, so donations, kills, and builds all bank into one common pool. Pick a **scope** (player, villager, family, profession, or village), and phases hand out **shared rewards** (to contributors, the top contributor, everyone who helped, or the village) plus mod-side village reputation. Fully datapack-driven and backward compatible; 6 example projects included.
+- 🌾 **Living Village situations** — villages **react to what happens in the world**. Raids, deaths, zombie infections, missing kin, famine, nightfall, a resident stranded outside the walls after dark, mobs gathering at somebody's door — and, with Townstead, a season turning, a villager coming of age or retiring, and a village losing its routine — open transient **situations** that surface dynamic, **time-limited** quest offers on nearby villagers — "drive back the raid", "cure the infected", "find the missing child", "fill the empty granary" — and resolve into village reputation when you help (or fail to). Server-authoritative, throttled so they never spam, and persisted in the world save. Fully datapack-driven (`situations/`) and backward compatible; 25 built-in situations, plus optional compatibility content.
+- 🏘️ **Village projects** — shared, multi-stage **community goals** that the whole server works on together. A sponsor villager rallies the town — repair the well, restock the guardhouse, restore the library — and **any player can contribute**: progress is shared and lives in the world save, so donations, kills, and builds all bank into one common pool. Pick a **scope** (player, villager, family, profession, or village), and phases hand out **shared rewards** (to contributors, the top contributor, everyone who helped, or the village) plus mod-side village reputation. Fully datapack-driven and backward compatible; 21 built-in projects.
 - 🏅 **Progression: reputation tiers & titles** — village reputation now climbs a named ladder (Stranger → Acquaintance → Friend → Honored → Revered), with a tier-up toast and auto-earned **titles**. Gate quests on a player's standing with the `reputation_tier` condition, award titles with the `grant_title` reward, and track it all in a new **Journal** screen (village reputation, tiers, titles, and a completed-quest archive). Fully datapack-driven (`reputation_tiers/`, `titles/`) and backward compatible.
 - 🎯 **Objective types for what a quest is actually about** — deliver, gather, craft, fish, kill, break and place blocks, visit biomes, dimensions and structures, reach and defend places, escort and protect villagers, breed and tame animals, cure the infected, find missing kin, talk to professions — and, with Townstead, hold a state, move a value, work whole shifts, raise a building, grow a village's character and keep its people well.
-- 🎁 **8 reward types** — items, **currency**, XP, XP levels, status effects, loot tables, commands (off by default), and **MCA hearts**.
+- 🎁 **Rewards and optional integration rewards** — items, **currency**, XP, XP levels, status effects, loot tables, commands (off by default), and **MCA hearts**.
 - 💰 **Semantic currency & difficulty bands** — a quest asks for *money*, not for emeralds. Tag a quest `easy` / `medium` / `hard` and the server decides the payout range and the coin: vanilla emeralds by default, **Create: Numismatics** coins, or any item you like — one config line, no datapack rewritten. Numismatics is resolved by registry id and never linked against, so it stays a genuine optional. Amounts are rolled **once at accept time** and frozen, so the number on the card is the number you're paid and reopening the menu can't reroll it.
-- 🌍 **Fully localizable, fully translated** — every one of the 2,891 built-in strings is a translation key, and **Brazilian Portuguese** ships complete alongside English: interface, objectives, rewards, quest dialogue, relationship arcs, projects, and situations. Automated parity checks keep every locale honest.
-- 🔒 **25 condition types** + `all_of` / `any_of` / `not` composites — gate offers by hearts, profession, biome, dimension, time, weather, held item, advancement, level, random chance, and quest history (completed / not-completed / failed / abandoned).
+- 🌍 **Fully localizable, fully translated** — all built-in player-facing strings is a translation key, and **Brazilian Portuguese** ships complete alongside English: interface, objectives, rewards, quest dialogue, relationship arcs, projects, and situations. Automated parity checks keep every locale honest.
+- 🔒 **Conditions** + `all_of` / `any_of` / `not` composites — gate offers by hearts, profession, biome, dimension, time, weather, held item, advancement, level, random chance, and quest history (completed / not-completed / failed / abandoned).
 - 💞 **MCA-aware conditions** — gate quests on the villager's life-sim state: whether they're your **spouse** or **family**, their **relationship status**, **age**, **personality**, **mood**, **village/home**, **health**, or **infection**, and even whether a **relative is missing or has died**. All optional, datapack-driven, and fail-safe; 6 sample quests included (spouse errand, child's request, sick-villager remedy, guard patrol, missing-child search, memorial).
 - 🗣️ **Villagers who explain themselves** — a villager with nothing to offer tells you *why*: you did that yesterday, or you have not earned it yet. Greetings and refusals vary with their **personality**, and with anything else the condition language can see — mood, time of day, weather, how well they know you. Shipped as datapack `dialogue/` pools, so a pack can add a voice, shadow the built-in one, or gate a line on whatever it likes.
 - 🧭 **Quest tracking** — a keybind-toggled **Quest Log** (with an **Abandon** button per quest, so you can always drop one even if its giver is gone), a fully repositionable **HUD tracker** that names the giver, and a **toast + sound** when a quest is ready to turn in.
@@ -43,12 +43,12 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | | |
 |---|---|
 | **Minecraft** | 1.20.1 |
-| **Mod loader** | Forge 47.4.10 or newer |
-| **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.6.x |
+| **Mod loader** | Forge 47.x (built and tested against 47.4.10) |
+| **[MCA Reborn](https://www.curseforge.com/minecraft/mc-mods/minecraft-comes-alive-reborn)** | **Required** — 7.6.x / 7.7.x |
 | **[Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api)** | **Required** (Forge) — MCA Reborn depends on it |
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
-| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — 2001.4.x tested; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
-| **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.8)`, verified against **0.7.6**; adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
+| **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — compiled against 2001.4.22; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
+| **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.8)`, legacy binding probed against **0.7.6**; modern API gameplay still needs runtime verification; adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
 | **[Ice & Fire](https://www.curseforge.com/minecraft/mc-mods/iceandfire)** | *Optional* — original or Community Edition; hunt dragons and mythical creatures ([ICEANDFIRE.md](ICEANDFIRE.md)) |
 | **[Bountiful](https://www.curseforge.com/minecraft/mc-mods/bountiful)** | *Optional* — discover the contract board and complete bounties ([BOUNTIFUL.md](BOUNTIFUL.md)) |
 | **[MCA Capitals](https://www.curseforge.com/minecraft/mc-mods/mca-capitals)** | *Optional* — serve a sovereign, earn a title, and keep peace between capitals ([CAPITALS.md](CAPITALS.md)) |
@@ -87,13 +87,15 @@ Emergent **situations** load from `data/<namespace>/mcaquests/situations/**.json
 
 ## Building from source
 
+Implemented fixes, exact regression/probe results and remaining runtime checks are recorded in the [stabilization audit](docs/audit/STABILIZATION.md).
+
 Requires **JDK 17**.
 
 ```bash
 ./gradlew build
 ```
 
-The jar lands in `build/libs/`. MCA Reborn and Architectury are pulled automatically (MCA via the Modrinth Maven). `gradle.properties` leaves `org.gradle.java.home` unset, so point `JAVA_HOME` at a JDK 17 install (or let the toolchain resolver fetch one) — Gradle itself must run on 17, since ForgeGradle 6 does not tolerate 21.
+The jar lands in `build/libs/`. First build the sibling MCA: Reputation project with `./gradlew classes`, or pass `-PmcaReputationClasses=<compatible class directory>`. That compile-only API is required to build the optional Reputation adapter; players do not need Reputation installed. MCA Reborn, Architectury, and the published compile dependencies are resolved automatically (MCA via the Modrinth Maven). `gradle.properties` leaves `org.gradle.java.home` unset, so point `JAVA_HOME` at a JDK 17 install (or let the toolchain resolver fetch one) — Gradle itself must run on 17, since ForgeGradle 6 does not tolerate 21.
 
 To put the result in a mods folder, use:
 
@@ -105,13 +107,15 @@ Do not copy `build/libs/` by hand while a build is running. ForgeGradle reobfusc
 
 ## Compatibility note
 
-MCA Reborn exposes no public API, so MCA: Quests reaches into its internal classes. It supports the **7.6.x and 7.7.x** lines from one jar: rather than linking MCA at compile time, every MCA class and member is resolved **by name at runtime**, against whichever package layout is installed. MCA repackaged mid-7.7 — from a Forgix-merged jar (`forge.net.mca.*`) to a single-root one (`net.conczin.mca.*`) — and the layout cannot be inferred from the version number, so the mod probes for it on startup.
+MCA Reborn exposes no public API, so MCA: Quests reaches into its internal classes. It supports the **7.6.x and 7.7.x** lines from one jar: rather than linking MCA at compile time, every MCA class and member is resolved **by name at runtime**, against whichever package layout is installed. MCA repackaged mid-7.7; the tested Forge artifacts use `forge.net.mca.*` and `forge.net.conczin.mca.*`, while the binding also recognizes unmerged roots — and the layout cannot be inferred from the version number, so the mod probes for it on startup.
+
+The Forge artifact targets **Minecraft 1.20.1 / Forge 47.x / Java 17**. Its mandatory MCA binding probes cover **7.6.20**, **7.7.0-beta.2**, and **7.7.1-alpha.2** for 1.20.1, each in isolation. This verifies the binding manifest across the supported package layouts; it is not a substitute for a production client/server playthrough of every MCA point release. The **NeoForge 1.21.1** port is a separate artifact with Java 21 and its own MCA probe fleet; the two jars are not interchangeable.
 
 If an MCA build ever ships a layout this version does not recognise, MCA-backed features disable themselves with a single log line and **the server keeps running**; run `/mcaquests debug mca` to see which package root matched and whether anything is missing. All MCA access stays isolated behind the `McaCompat` adapter and its binding layer (`compat.mca`), and a build-time check fails the build if any class ever references an MCA type directly again.
 
 The **MCA: Conversations** integration is a soft dependency: MCA: Quests exposes the dialogue and objective hooks (`QuestDialogueHooks`, `ExternalSignalObjective`) and the add-on registers itself against them. When it isn't installed the hooks simply no-op — quest dialogue falls back to the static datapack text and objectives progress through their normal detectors.
 
-The **FTB Quests** integration is likewise a soft, optional dependency (`mandatory=false`, tested against **2001.4.x**): every FTB-facing task/reward routes through an internal bridge that becomes an inert no-op if FTB Quests is absent, disabled, or throws, so nothing about MCA: Quests' own datapack format or world save depends on it being installed. The integration compiles against FTB's publicly published maven artifacts and ships none of them — the jar contains zero FTB code. See **[FTBQUESTS.md](FTBQUESTS.md)** for the full task/reward/condition reference.
+The **FTB Quests** integration is likewise a soft, optional dependency (`mandatory=false`, compiled against **2001.4.22**): every FTB-facing task/reward routes through an internal bridge that becomes an inert no-op if FTB Quests is absent, disabled, or throws, so nothing about MCA: Quests' own datapack format or world save depends on it being installed. The integration compiles against FTB's publicly published maven artifacts and ships none of them — the jar contains zero FTB code. See **[FTBQUESTS.md](FTBQUESTS.md)** for the full task/reward/condition reference.
 
 The **Townstead** integration is optional in the same way, and is reached even more carefully. Townstead is itself built against MCA, so its own method signatures name MCA classes — binding any of them directly would tie this mod to one MCA package layout and undo the runtime resolution described above. So nothing is bound by parameter type: Townstead members are matched by name and arity and invoked through handles whose arguments are all `Object`, and a build-time check fails the build if any compiled class so much as mentions a Townstead type. The jar contains zero Townstead code and is not compiled against it.
 

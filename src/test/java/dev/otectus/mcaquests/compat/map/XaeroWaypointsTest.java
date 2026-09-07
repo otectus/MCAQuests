@@ -147,6 +147,19 @@ class XaeroWaypointsTest {
     }
 
     @Test
+    void failedAutomaticClearIsRetriedWithoutForgettingOwnedKeys() {
+        FakeCalls calls = new FakeCalls();
+        XaeroWaypoints backend = backend(calls);
+        backend.apply(spec("q1", GuidanceKind.VILLAGER));
+        calls.clearSucceeds = false;
+        backend.clearAutomatic(ClearCause.DISABLED);
+        assertEquals(Set.of("q1"), backend.appliedKeys());
+        calls.clearSucceeds = true;
+        backend.clearAutomatic(ClearCause.DISABLED);
+        assertTrue(backend.appliedKeys().isEmpty());
+    }
+
+    @Test
     @DisplayName("a pin lands in the pin origin under a key that names its dimension")
     void pinsAreKeyedByDimension() {
         FakeCalls calls = new FakeCalls();
@@ -194,6 +207,7 @@ class XaeroWaypointsTest {
         private Object store = new Object();
         private boolean addSucceeds = true;
         private boolean removeSucceeds = true;
+        private boolean clearSucceeds = true;
 
         @Nullable
         private MapBackendStatus.Failure lastFailure;
@@ -224,7 +238,7 @@ class XaeroWaypointsTest {
         @Override
         public boolean clear(Object store) {
             log.add("clear:" + QUESTS);
-            return true;
+            return clearSucceeds || fail("clear");
         }
 
         @Override

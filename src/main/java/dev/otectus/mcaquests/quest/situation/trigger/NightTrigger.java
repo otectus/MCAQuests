@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -15,7 +17,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record NightTrigger(boolean requireFullMoon) implements SituationTrigger {
 
     public static final Codec<NightTrigger> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.BOOL.optionalFieldOf("require_full_moon", false).forGetter(NightTrigger::requireFullMoon)
+            StrictCodecs.strictOptional(Codec.BOOL, "require_full_moon", false).forGetter(NightTrigger::requireFullMoon)
     ).apply(instance, NightTrigger::new));
 
     @Override

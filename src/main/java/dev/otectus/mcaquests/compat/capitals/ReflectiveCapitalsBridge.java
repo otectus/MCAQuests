@@ -41,8 +41,8 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
 
     private final CapitalsBinding.Resolution resolution;
 
-    /** Members already reported as failing, so a broken handle logs once rather than once a tick. */
-    private final Set<String> reported = ConcurrentHashMap.newKeySet();
+    /** Failed members stay unavailable until a fresh bridge is created by the probe command. */
+    private final Set<CapitalsBinding.Member> failed = ConcurrentHashMap.newKeySet();
 
     public ReflectiveCapitalsBridge(CapitalsBinding.Resolution resolution) {
         this.resolution = resolution;
@@ -55,6 +55,13 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
 
     @Override
     public CompatStatus status() {
+        if (resolution.status() == CompatStatus.FULL) {
+            for (CapitalsBinding.Member member : failed) {
+                if (!member.requiredBy().isEmpty()) {
+                    return CompatStatus.PARTIAL;
+                }
+            }
+        }
         return resolution.status();
     }
 
@@ -70,12 +77,26 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
 
     @Override
     public boolean has(CapitalsCapability capability) {
-        return resolution.has(capability);
+        if (!resolution.has(capability)) {
+            return false;
+        }
+        for (CapitalsBinding.Member member : failed) {
+            if (member.requiredBy().contains(capability)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
     public List<String> unresolvedMembers() {
-        return resolution.unresolved();
+        Set<String> unresolved = new LinkedHashSet<>(resolution.unresolved());
+        for (CapitalsBinding.Member member : CapitalsBinding.MANIFEST) {
+            if (failed.contains(member) && !member.optional()) {
+                unresolved.add(member.toString());
+            }
+        }
+        return List.copyOf(unresolved);
     }
 
     // --- the registry ----------------------------------------------------------------------------
@@ -147,7 +168,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
             return List.of();
         }
         Object record = capital.record();
-        return switch (role) {
+        List<UUID> holders = switch (role) {
             case SOVEREIGN -> single(CapitalsBinding.REC_SOVEREIGN, record);
             case CONSORT -> single(CapitalsBinding.REC_CONSORT, record);
             case DOWAGER -> single(CapitalsBinding.REC_DOWAGER, record);
@@ -167,6 +188,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
             // A player-only title. Never a villager, so never a holder here.
             case ARCHDUKE -> List.of();
         };
+        return has(CapitalsCapability.ROLES) ? holders : List.of();
     }
 
     /**
@@ -187,7 +209,9 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
         union.addAll(uuidOrEmpty(call(CapitalsBinding.AMBASSADOR, level, record)));
         for (CapitalsBinding.Member rank : List.of(CapitalsBinding.REC_ROYAL_CHILDREN,
                 CapitalsBinding.REC_DUKES, CapitalsBinding.REC_LORDS, CapitalsBinding.REC_KNIGHTS,
-                CapitalsBinding.REC_ROYAL_GUARDS)) {
+                CapitalsBinding.REC_ROYAL_GUARDS, CapitalsBinding.REC_HOUSEHOLD,
+                CapitalsBinding.REC_DISINHERITED, CapitalsBinding.REC_LEGITIMIZED,
+                CapitalsBinding.REC_DISGRACED_GUARDS)) {
             union.addAll(set(rank, record));
         }
         return List.copyOf(union);
@@ -200,7 +224,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
             return false;
         }
         Object record = capital.record();
-        return switch (role) {
+        boolean holds = switch (role) {
             case ROYAL_CHILD -> callBoolean(CapitalsBinding.REC_IS_ROYAL_CHILD, record, villager);
             case DUKE -> callBoolean(CapitalsBinding.REC_IS_DUKE, record, villager);
             case LORD -> callBoolean(CapitalsBinding.REC_IS_LORD, record, villager);
@@ -210,11 +234,11 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
             case ARCHDUKE -> false;
             default -> villagerRoleHolders(level, capital, role).contains(villager);
         };
+        return has(CapitalsCapability.ROLES) && holds;
     }
 
     /**
-     * The predicate form of {@link #members}, and the closer mirror of Capitals' own: it can also ask
-     * about the household and the disgraced, which have a membership test but no readable set.
+     * The predicate form of {@link #members}, including household and former court members.
      */
     private boolean belongsToCapital(ServerLevel level, Object record, UUID villager) {
         for (CapitalsBinding.Member office : List.of(CapitalsBinding.REC_SOVEREIGN,
@@ -247,7 +271,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
             return false;
         }
         Object record = capital.record();
-        return switch (role) {
+        boolean holds = switch (role) {
             case SOVEREIGN -> callBoolean(CapitalsBinding.REC_IS_PLAYER_SOVEREIGN, record)
                     && player.equals(uuidOrNull(call(CapitalsBinding.REC_PLAYER_SOVEREIGN_ID, record)));
             case CONSORT -> callBoolean(CapitalsBinding.REC_IS_PLAYER_CONSORT, record)
@@ -265,6 +289,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
                     || grantedTitle(level, record, player).isPresent();
             default -> false;
         };
+        return has(CapitalsCapability.PLAYER_TITLES) && holds;
     }
 
     /** True when the player's granted title is either half of a gendered pair. */
@@ -302,12 +327,17 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
 
     @Override
     public Map<UUID, InterregnumView> interregnums(ServerLevel level) {
+        return interregnumSnapshot(level).orElseGet(Map::of);
+    }
+
+    @Override
+    public Optional<Map<UUID, InterregnumView>> interregnumSnapshot(ServerLevel level) {
         if (level == null || !has(CapitalsCapability.INTERREGNUM)) {
-            return Map.of();
+            return Optional.empty();
         }
         Object snapshot = call(CapitalsBinding.INTERREGNUM_SNAPSHOT, level);
         if (!(snapshot instanceof Map<?, ?> records)) {
-            return Map.of();
+            return Optional.empty();
         }
         Map<UUID, InterregnumView> views = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : records.entrySet()) {
@@ -315,7 +345,8 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
                 views.put(capitalId, view(capitalId, entry.getValue()));
             }
         }
-        return Map.copyOf(views);
+        return has(CapitalsCapability.INTERREGNUM)
+                ? Optional.of(Map.copyOf(views)) : Optional.empty();
     }
 
     @Override
@@ -324,12 +355,20 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
             return Optional.empty();
         }
         Object record = call(CapitalsBinding.INTERREGNUM_RECORD, level, capital.capitalId());
-        return record == null ? Optional.empty() : Optional.of(view(capital.capitalId(), record));
+        if (record == null) {
+            return Optional.empty();
+        }
+        InterregnumView view = view(capital.capitalId(), record);
+        return has(CapitalsCapability.INTERREGNUM) ? Optional.of(view) : Optional.empty();
     }
 
     private InterregnumView view(UUID capitalId, Object record) {
-        return new InterregnumView(capitalId, uuidOrNull(call(CapitalsBinding.IR_DECEASED, record)),
-                callBoolean(CapitalsBinding.IR_WAS_PLAYER, record));
+        boolean wasPlayer = callBoolean(CapitalsBinding.IR_WAS_PLAYER, record);
+        UUID sovereign = uuidOrNull(call(CapitalsBinding.IR_DECEASED, record));
+        if (sovereign == null && wasPlayer) {
+            sovereign = uuidOrNull(call(CapitalsBinding.IR_FORMER_PLAYER, record));
+        }
+        return new InterregnumView(capitalId, sovereign, wasPlayer);
     }
 
     // --- the three mutations ------------------------------------------------------------------------
@@ -369,8 +408,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
         if (member == null || !callVoid(member, capital.record(), villager, female)) {
             return false;
         }
-        markDirty(level);
-        return true;
+        return markDirty(level);
     }
 
     @Override
@@ -385,8 +423,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
         if (!written) {
             return false;
         }
-        markDirty(level);
-        return true;
+        return markDirty(level);
     }
 
     /**
@@ -394,26 +431,28 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
      * capital record: {@code CapitalManager} is a plain map, so a title or chronicle line that is not
      * followed by this is lost at the next restart.
      */
-    private void markDirty(ServerLevel level) {
-        callVoid(CapitalsBinding.MARK_DIRTY, level);
+    private boolean markDirty(ServerLevel level) {
+        return callVoid(CapitalsBinding.MARK_DIRTY, level);
     }
 
     // --- gender ------------------------------------------------------------------------------------
 
     @Override
     public Optional<Boolean> isPlayerFemale(ServerLevel level, ServerPlayer player) {
-        if (level == null || player == null || !resolution.has(CapitalsBinding.PLAYER_IS_FEMALE)) {
+        if (level == null || player == null || !available(CapitalsBinding.PLAYER_IS_FEMALE)) {
             return Optional.empty();
         }
-        return Optional.of(callBoolean(CapitalsBinding.PLAYER_IS_FEMALE, level, player));
+        Object female = call(CapitalsBinding.PLAYER_IS_FEMALE, level, player);
+        return female instanceof Boolean value ? Optional.of(value) : Optional.empty();
     }
 
     @Override
     public Optional<Boolean> isVillagerFemale(ServerLevel level, UUID villager) {
-        if (level == null || villager == null || !resolution.has(CapitalsBinding.VILLAGER_IS_FEMALE)) {
+        if (level == null || villager == null || !available(CapitalsBinding.VILLAGER_IS_FEMALE)) {
             return Optional.empty();
         }
-        return Optional.of(callBoolean(CapitalsBinding.VILLAGER_IS_FEMALE, level, villager));
+        Object female = call(CapitalsBinding.VILLAGER_IS_FEMALE, level, villager);
+        return female instanceof Boolean value ? Optional.of(value) : Optional.empty();
     }
 
     // --- plumbing ------------------------------------------------------------------------------------
@@ -429,6 +468,9 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
             return Optional.empty();
         }
         Object dimension = call(CapitalsBinding.REC_DIMENSION, record);
+        if (!has(CapitalsCapability.REGISTRY)) {
+            return Optional.empty();
+        }
         return Optional.of(new CapitalRef(record, capitalId, village,
                 dimension instanceof String text ? text : ""));
     }
@@ -477,6 +519,9 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
         }
         try {
             return Enum.valueOf((Class<? extends Enum>) type, name.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            // An unsupported requested title does not mean the enum class itself is broken.
+            return null;
         } catch (Throwable t) {
             report(classMember, t);
             return null;
@@ -485,6 +530,9 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
 
     @Nullable
     private Object call(CapitalsBinding.Member member, Object... args) {
+        if (!available(member)) {
+            return null;
+        }
         try {
             return resolution.handle(member).invokeWithArguments(args);
         } catch (Throwable t) {
@@ -499,7 +547,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
 
     /** Invokes a {@code void} member; the boolean is "it ran", not a return value. */
     private boolean callVoid(CapitalsBinding.Member member, Object... args) {
-        if (!resolution.has(member)) {
+        if (!available(member)) {
             return false;
         }
         try {
@@ -511,6 +559,10 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
         }
     }
 
+    private boolean available(CapitalsBinding.Member member) {
+        return resolution.has(member) && !failed.contains(member);
+    }
+
     /**
      * One debug line per member that misbehaves, ever.
      *
@@ -519,7 +571,7 @@ public final class ReflectiveCapitalsBridge implements CapitalsBridge {
      * faster than it explained anything.
      */
     private void report(CapitalsBinding.Member member, Throwable t) {
-        if (reported.add(member.toString())) {
+        if (failed.add(member)) {
             McaQuests.LOGGER.debug("[MCA: Quests] MCA Capitals member {} failed; that part of the "
                     + "integration answers as unavailable from here on.", member, t);
         }

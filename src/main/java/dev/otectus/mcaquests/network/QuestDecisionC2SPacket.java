@@ -24,7 +24,7 @@ public record QuestDecisionC2SPacket(UUID villagerUuid, ResourceLocation questId
 
     public static void handle(QuestDecisionC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 QuestManager.acceptFromPacket(player, msg.villagerUuid, msg.questId, msg.accept);

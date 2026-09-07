@@ -181,12 +181,11 @@ public class QuestLogScreen extends McaQuestsScreen {
             // is not a mistake worth making twice.
             int sideX = contentRight() - CARD_PAD - ABANDON_W - TRACK_GAP - TRACK_W;
             for (ActiveGuidance guidance : destination(entry).stream().toList()) {
-                BlockPos pos = guidance.target().pos();
                 sideX -= TRACK_GAP + SIDE_W;
                 IconButton copy = new IconButton(sideX, view.screenY(buttonY), SIDE_W, ABANDON_H,
                         Component.translatable("mcaquests.tooltip.copy_coords"),
                         GuiTextures.ICON_DISTANCE, IconButton.Look.BUTTON,
-                        b -> copyCoordinates(pos));
+                        b -> destination(entry).ifPresent(current -> copyCoordinates(current.target().pos())));
                 copy.setTooltip(Tooltip.create(Component.translatable("mcaquests.tooltip.copy_coords")));
                 addControl(entry, Control.COPY, copy, buttonY);
 
@@ -205,7 +204,7 @@ public class QuestLogScreen extends McaQuestsScreen {
                                 : "mcaquests.tooltip.add_session_waypoint");
                 IconButton waypoint = new IconButton(sideX, view.screenY(buttonY), SIDE_W, ABANDON_H,
                         pinTooltip, GuiTextures.ICON_STAR, IconButton.Look.BUTTON,
-                        b -> addWaypoint(guidance));
+                        b -> destination(entry).ifPresent(this::addWaypoint));
                 waypoint.setTooltip(Tooltip.create(pinTooltip));
                 addControl(entry, Control.WAYPOINT, waypoint, buttonY);
             }
@@ -241,8 +240,8 @@ public class QuestLogScreen extends McaQuestsScreen {
     }
 
     /**
-     * What the layout depends on outside the quest list: whether each quest has a destination — which
-     * adds a line and two buttons — and whether there is a map to pin one to.
+     * What the layout depends on outside the quest list: destination controls, rendered row heights
+     * and whether there is a map to pin one to. A moving target can change the wrapped line count.
      *
      * <p>The guidance snapshot itself changes about once a second, because the distance in it is
      * different every time the player takes a step. Rebuilding on that took keyboard focus away from
@@ -253,7 +252,7 @@ public class QuestLogScreen extends McaQuestsScreen {
         signature.add("map=" + ClientMapWaypointRegistry.bestPinSupport());
         for (QuestLogEntry entry : rendered) {
             signature.add(entry.villagerUuid() + "/" + entry.questId() + "="
-                    + destination(entry).isPresent());
+                    + destination(entry).isPresent() + "/height=" + entryHeight(entry));
         }
         return signature;
     }

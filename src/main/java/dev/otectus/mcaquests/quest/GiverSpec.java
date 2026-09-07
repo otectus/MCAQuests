@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 
@@ -15,10 +16,10 @@ public record GiverSpec(List<ResourceLocation> professions, boolean adultOnly, i
     public static final GiverSpec ANY = new GiverSpec(List.of(), true, Integer.MIN_VALUE, Integer.MAX_VALUE);
 
     public static final Codec<GiverSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.listOf().optionalFieldOf("professions", List.of()).forGetter(GiverSpec::professions),
-            Codec.BOOL.optionalFieldOf("adult_only", true).forGetter(GiverSpec::adultOnly),
-            Codec.INT.optionalFieldOf("min_hearts", Integer.MIN_VALUE).forGetter(GiverSpec::minHearts),
-            Codec.INT.optionalFieldOf("max_hearts", Integer.MAX_VALUE).forGetter(GiverSpec::maxHearts)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "professions", List.of()).forGetter(GiverSpec::professions),
+            StrictCodecs.strictOptional(Codec.BOOL, "adult_only", true).forGetter(GiverSpec::adultOnly),
+            StrictCodecs.strictOptional(Codec.INT, "min_hearts", Integer.MIN_VALUE).forGetter(GiverSpec::minHearts),
+            StrictCodecs.strictOptional(Codec.INT, "max_hearts", Integer.MAX_VALUE).forGetter(GiverSpec::maxHearts)
     ).apply(instance, GiverSpec::new));
 
     public boolean isGeneric() {

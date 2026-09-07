@@ -80,9 +80,8 @@ description='''${mod_description}'''
 
 # JourneyMap is an OPTIONAL, CLIENT-SIDE integration. When present, the quest destinations the tracker
 # already names also appear as waypoints on the map -- one per active quest that has somewhere to send
-# you, taken away when the quest ends. Nothing here is compiled against it: compat.map.MapBinding
-# resolves JourneyMap's API by name at runtime, so this mod loads unchanged when it is absent, and a
-# JourneyMap point release that moves a method disables the waypoints and nothing else. CLIENT only --
+# you, taken away when the quest ends. compat.journeymap uses JourneyMap's compile-only plugin API;
+# JourneyMap discovers the plugin only when installed. Xaero is bound reflectively. CLIENT only --
 # a waypoint is a thing on one player's map. Range starts at 6.0.0, where the API moved to v2 and the
 # Waypoint constructor this mod used to be able to call was replaced by a factory.
 [[dependencies.${mod_id}]]

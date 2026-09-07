@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -94,6 +95,37 @@ class CapitalsBindingProbeTest {
             assertTrue(resolution.unresolved().isEmpty(),
                     "An absent Capitals is not a partial binding; nothing should be reported as a miss.");
             assertNotNull(resolution.handle(CapitalsBinding.ALL_CAPITALS));
+        }
+    }
+
+    @Test
+    void missingSaveHookDisablesRecordMutationsButKeepsReadOnlyRegistry() throws Exception {
+        List<Path> capitals = jars(CAPITALS_JAR_PROPERTY);
+        Assumptions.assumeFalse(capitals.isEmpty(), "No Capitals jar supplied for sabotage probe");
+        List<Path> all = new ArrayList<>(capitals);
+        all.addAll(jars(MCA_JARS_PROPERTY));
+        URL[] urls = all.stream().map(path -> {
+            try {
+                return path.toUri().toURL();
+            } catch (java.net.MalformedURLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }).toArray(URL[]::new);
+        try (URLClassLoader loader = new URLClassLoader(urls, getClass().getClassLoader()) {
+            @Override
+            protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                if (name.equals(CapitalsBinding.PACKAGE + "data.CapitalDataAccess")) {
+                    throw new ClassNotFoundException("simulated missing save hook");
+                }
+                return super.loadClass(name, resolve);
+            }
+        }) {
+            CapitalsBinding.Resolution resolution = CapitalsBinding.resolveAgainst(loader);
+            assertTrue(resolution.has(CapitalsCapability.REGISTRY));
+            assertFalse(resolution.has(CapitalsCapability.CHRONICLE));
+            assertFalse(resolution.has(CapitalsCapability.VILLAGER_TITLES));
+            assertTrue(resolution.has(CapitalsCapability.TITLE_GRANTS));
+            assertEquals(List.of(CapitalsBinding.MARK_DIRTY.toString()), resolution.unresolved());
         }
     }
 

@@ -8,8 +8,11 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.RelativeCandidate;
 import dev.otectus.mcaquests.compat.capitals.CapitalRole;
+import dev.otectus.mcaquests.compat.capitals.CapitalsBridge;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.DisplayNames;
 import dev.otectus.mcaquests.quest.situation.SituationFocus;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -106,11 +109,11 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
 
     public static final MapCodec<VillagerTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             MODE_CODEC.fieldOf("mode").forGetter(VillagerTarget::mode),
-            ResourceLocation.CODEC.optionalFieldOf("profession").forGetter(VillagerTarget::profession),
-            Codec.STRING.optionalFieldOf("relation").forGetter(VillagerTarget::relation),
-            UUIDUtil.STRING_CODEC.optionalFieldOf("uuid").forGetter(VillagerTarget::uuid),
-            Codec.STRING.optionalFieldOf("require").forGetter(VillagerTarget::require),
-            CapitalRole.CODEC.optionalFieldOf("role").forGetter(VillagerTarget::role)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "profession").forGetter(VillagerTarget::profession),
+            StrictCodecs.strictOptional(Codec.STRING, "relation").forGetter(VillagerTarget::relation),
+            StrictCodecs.strictOptional(UUIDUtil.STRING_CODEC, "uuid").forGetter(VillagerTarget::uuid),
+            StrictCodecs.strictOptional(Codec.STRING, "require").forGetter(VillagerTarget::require),
+            StrictCodecs.strictOptional(CapitalRole.CODEC, "role").forGetter(VillagerTarget::role)
     ).apply(instance, VillagerTarget::new));
 
     public static final Codec<VillagerTarget> CODEC = MAP_CODEC.codec();
@@ -210,9 +213,8 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
                     : SituationFocus.focalVillager(level.getServer(), giver, questId)
                             .flatMap(u -> living(level.getEntity(u)));
             case PROFESSION -> resolveProfession(player, giver, level);
-            case CAPITAL_ROLE -> capitalRoleHolders(giver, level).stream()
-                    .flatMap(holder -> living(level.getEntity(holder)).stream())
-                    .findFirst();
+            case CAPITAL_ROLE -> selectRelativeForBinding(giver, level)
+                    .flatMap(holder -> living(level.getEntity(holder)));
         };
     }
 
@@ -228,8 +230,13 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
         if (mode != Mode.CAPITAL_ROLE || role.isEmpty() || giver == null) {
             return List.of();
         }
+        CapitalsBridge bridge = CapitalsCompat.bridge();
+        if (!bridge.has(CapitalsCapability.REGISTRY) || !bridge.has(CapitalsCapability.ROLES)) {
+            return List.of();
+        }
         return CapitalsQueries.giverCapital(giver)
-                .map(capital -> CapitalsCompat.bridge().villagerRoleHolders(level, capital, role.get())
+                .filter(bridge::isActive)
+                .map(capital -> bridge.villagerRoleHolders(level, capital, role.get())
                         .stream()
                         .sorted(Comparator.comparing(UUID::toString))
                         .toList())
@@ -332,7 +339,8 @@ public record VillagerTarget(Mode mode, Optional<ResourceLocation> profession,
                     .map(candidate.getUUID()::equals)
                     .orElse(false);
             case CAPITAL_ROLE -> giver(level, active)
-                    .map(g -> capitalRoleHolders(g, level).contains(candidate.getUUID()))
+                    .flatMap(g -> selectRelativeForBinding(g, level))
+                    .map(candidate.getUUID()::equals)
                     .orElse(false);
         };
     }

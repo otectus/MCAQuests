@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
@@ -13,8 +15,8 @@ import java.util.Optional;
 public record HeartsCondition(Optional<Integer> min, Optional<Integer> max) implements QuestCondition {
 
     public static final Codec<HeartsCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(HeartsCondition::min),
-            Codec.INT.optionalFieldOf("max").forGetter(HeartsCondition::max)
+            StrictCodecs.strictOptional(Codec.INT, "min").forGetter(HeartsCondition::min),
+            StrictCodecs.strictOptional(Codec.INT, "max").forGetter(HeartsCondition::max)
     ).apply(instance, HeartsCondition::new));
 
     @Override

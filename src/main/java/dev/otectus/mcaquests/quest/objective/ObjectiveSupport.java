@@ -22,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Small shared helpers for the NPC/village objective types: resolving the quest giver from the
@@ -74,13 +75,14 @@ public final class ObjectiveSupport {
         if (locked != null) {
             return target.resolve(player, active, level, locked);
         }
-        Optional<LivingEntity> resolved = target.resolve(player, active, level);
-        if (resolved.isEmpty() && target.mode() == VillagerTarget.Mode.CAPITAL_ROLE) {
-            // The office holder is not loaded, or has stopped being loaded since the quest was accepted.
-            // Bind them anyway: an unloaded sovereign is still the sovereign this quest is about.
-            resolved = target.selectRelativeForBinding(level.getEntity(active.villagerUuid()), level)
+        if (target.mode() == VillagerTarget.Mode.CAPITAL_ROLE) {
+            // Freeze the person before looking for their loaded entity. Legacy quests and quests
+            // recovering from a vacant office must not change targets as chunks load or thrones pass.
+            return bindSelectedTarget(progress,
+                    () -> target.selectRelativeForBinding(level.getEntity(active.villagerUuid()), level))
                     .flatMap(uuid -> target.resolve(player, active, level, uuid));
         }
+        Optional<LivingEntity> resolved = target.resolve(player, active, level);
         if (resolved.isEmpty() && target.mode() == VillagerTarget.Mode.FAMILY) {
             // The moment the offer gate described has passed - a "require": "nearby" relative has
             // wandered away from the giver. Bind the same person anyway rather than leave the objective
@@ -89,11 +91,20 @@ public final class ObjectiveSupport {
             resolved = target.selectRelativeForBinding(level.getEntity(active.villagerUuid()), level)
                     .flatMap(uuid -> target.resolve(player, active, level, uuid));
         }
-        if (lockEveryMode || target.mode() == VillagerTarget.Mode.FAMILY
-                || target.mode() == VillagerTarget.Mode.CAPITAL_ROLE) {
+        if (lockEveryMode || target.mode() == VillagerTarget.Mode.FAMILY) {
             resolved.ifPresent(entity -> progress.setTargetUuid(entity.getUUID()));
         }
         return resolved;
+    }
+
+    /** Bind an identity independently of whether Minecraft has loaded that person's entity yet. */
+    static Optional<UUID> bindSelectedTarget(ObjectiveProgress progress, Supplier<Optional<UUID>> selector) {
+        if (progress.targetUuid() != null) {
+            return Optional.of(progress.targetUuid());
+        }
+        Optional<UUID> selected = selector.get();
+        selected.ifPresent(progress::setTargetUuid);
+        return selected;
     }
 
     /**
@@ -119,12 +130,10 @@ public final class ObjectiveSupport {
     public static Optional<Component> boundTargetLost(VillagerTarget target, ActiveQuest active,
                                                       ObjectiveProgress progress, ServerLevel level) {
         UUID bound = progress.targetUuid();
-        // A capital office is the one selector that can lose its target without anybody dying: the
-        // holder abdicates, is deposed, or the crown passes to a player, and the office simply empties.
-        // Named as the office rather than as a lost villager, because the office is what the player was
-        // told about and the person may be alive and well two hundred blocks away.
+        // An unbound office waits for an appointment. Once a person is bound, their former office's
+        // vacancy is irrelevant: an escort still means that same villager after abdication.
         if (target.mode() == VillagerTarget.Mode.CAPITAL_ROLE
-                && (bound == null || level.getEntity(bound) == null)
+                && bound == null
                 && target.capitalRoleHolders(level.getEntity(active.villagerUuid()), level).isEmpty()) {
             return Optional.of(Component.translatable("mcaquests.objective.unavailable.capital_role",
                     target.describe()));

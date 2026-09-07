@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -63,9 +65,9 @@ public record InteractBlockObjective(Optional<ResourceLocation> block, Optional<
      */
     public static final Codec<InteractBlockObjective> CODEC =
             RecordCodecBuilder.<InteractBlockObjective>mapCodec(instance -> instance.group(
-                    ResourceLocation.CODEC.optionalFieldOf("block").forGetter(InteractBlockObjective::block),
-                    TagKey.codec(Registries.BLOCK).optionalFieldOf("tag").forGetter(InteractBlockObjective::tag),
-                    ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(InteractBlockObjective::count),
+                    StrictCodecs.strictOptional(ResourceLocation.CODEC, "block").forGetter(InteractBlockObjective::block),
+                    StrictCodecs.strictOptional(TagKey.codec(Registries.BLOCK), "tag").forGetter(InteractBlockObjective::tag),
+                    StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(InteractBlockObjective::count),
                     SourceHint.FIELD.forGetter(InteractBlockObjective::source)
             ).apply(instance, InteractBlockObjective::new))
                     // A MapCodec all the way through, then .codec() last: the objective dispatch codec

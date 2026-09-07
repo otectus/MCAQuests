@@ -8,6 +8,7 @@ import dev.otectus.mcaquests.project.ProjectScope;
 import dev.otectus.mcaquests.project.SharedReward;
 import dev.otectus.mcaquests.project.SharedRewardTarget;
 import dev.otectus.mcaquests.quest.reward.CommandReward;
+import dev.otectus.mcaquests.quest.reward.UnlockReward;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModList;
 
@@ -57,17 +58,16 @@ public final class ProjectValidator {
             }
 
             // follow-up must resolve.
-            def.followUp().ifPresent(target -> {
-                ProjectDefinition t = loaded.get(target);
-                if (t == null) {
-                    errors.add(error(id, "follow_up references unknown project '" + target + "'"));
-                } else if (!t.enabled()) {
-                    errors.add(error(id, "follow_up references disabled project '" + target + "'"));
-                }
-            });
+            def.followUp().ifPresent(target -> validateLink(def, target, "follow_up", loaded, errors));
 
             for (int i = 0; i < def.phases().size(); i++) {
                 validatePhase(def, i, errors, allowCommands);
+                for (SharedReward reward : def.phase(i).rewards()) {
+                    if (reward.reward() instanceof UnlockReward unlock) {
+                        validateLink(def, unlock.target(), "phase '" + def.phase(i).keyOr(i) + "' unlock",
+                                loaded, errors);
+                    }
+                }
             }
         }
 
@@ -109,6 +109,20 @@ public final class ProjectValidator {
                 errors.add(warn(id, "phase '" + key + "' reward target '" + reward.target().name().toLowerCase()
                         + "' but the phase has no objectives, so there are no contributors"));
             }
+        }
+    }
+
+    static void validateLink(ProjectDefinition source, ResourceLocation targetId, String kind,
+                             Map<ResourceLocation, ProjectDefinition> loaded, List<String> errors) {
+        ProjectDefinition target = loaded.get(targetId);
+        if (target == null) {
+            errors.add(error(source.id(), kind + " references unknown project '" + targetId + "'"));
+        } else if (!target.enabled()) {
+            errors.add(error(source.id(), kind + " references disabled project '" + targetId + "'"));
+        } else if (target.scopeType() != source.scopeType()) {
+            errors.add(error(source.id(), kind + " references project '" + targetId
+                    + "' with incompatible scope " + target.scopeType().lower()
+                    + "; linked projects must share the " + source.scopeType().lower() + " scope"));
         }
     }
 

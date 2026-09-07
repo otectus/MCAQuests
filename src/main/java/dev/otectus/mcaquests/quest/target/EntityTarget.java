@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.target;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.DisplayNames;
@@ -40,8 +42,8 @@ public record EntityTarget(Optional<EntityType<?>> entity, Optional<TagKey<Entit
     }
 
     public static final MapCodec<EntityTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceLocation.CODEC.optionalFieldOf("entity").forGetter(EntityTarget::entityId),
-            TagKey.codec(Registries.ENTITY_TYPE).optionalFieldOf("tag").forGetter(EntityTarget::tag)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "entity").forGetter(EntityTarget::entityId),
+            StrictCodecs.strictOptional(TagKey.codec(Registries.ENTITY_TYPE), "tag").forGetter(EntityTarget::tag)
     ).apply(instance, EntityTarget::resolving));
 
     /** Builds a target from a raw id, keeping the id when this world has no such entity type. */

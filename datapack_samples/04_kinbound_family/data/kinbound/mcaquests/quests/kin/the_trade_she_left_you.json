@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "kinbound:the_trade_she_left_you",
+  "weight": 10,
+  "category": "relations",
+  "difficulty": "medium",
+  "offer_group": "kin_life",
+  "title": { "text": "The Trade She Left You" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "adult_only": false,
+    "min_hearts": 20
+  },
+  "dialogue": {
+    "offer": { "text": "Everyone keeps saying I should take up her trade. I do not even know what a smith does all day. Come round the workshops with me and I will decide for myself." },
+    "accept": { "text": "The smith first. Then the mason, if I have not lost my nerve." },
+    "decline": { "text": "Fine. I will ask somebody who has time." },
+    "in_progress": { "text": "Two more. You said you would come." },
+    "ready": { "text": "The smith, then. It is the smith." },
+    "complete": { "text": "I told them I was apprenticing. They did not laugh. Thank you for coming with me." }
+  },
+  "objectives": [
+    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:toolsmith", "count": 2 },
+    {
+      "type": "mcaquests:trade_with_villager",
+      "profession": "minecraft:toolsmith",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 14 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:is_family_member", "relation": "child" },
+      { "type": "mcaquests:age_group", "groups": ["teen"] }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "id": "crossroads:the_book_and_the_village",
+  "weight": 6,
+  "category": "guild",
+  "difficulty": "medium",
+  "offer_group": "crossroads_book",
+  "title": { "text": "The Book and the Village" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:librarian"],
+    "adult_only": true,
+    "min_hearts": 20
+  },
+  "dialogue": {
+    "offer": { "text": "You finished the chapter on the old roads, so you are the only person here who can answer the question I have been sitting on for a year." },
+    "accept": { "text": "Take your time. It has waited a year." },
+    "decline": { "text": "Then it waits another." },
+    "in_progress": { "text": "The one about the roads. You will know it when you see it." },
+    "ready": { "text": "You have it. I can tell." },
+    "complete": { "text": "Written down, at last, by somebody who actually went." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:ftbq_complete_quest",
+      "quest": "1A2B3C4D5E6F7081",
+      "display_name": { "text": "the Road Wardens' entry" },
+      "already_complete": "block_offer"
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 6 },
+    { "type": "mcaquests:ftbq_progress", "action": "complete_task", "id": "F00DF00DF00DF00D" }
+  ],
+  "conditions": {
+    "type": "mcaquests:ftbq_chapter_completed",
+    "chapter": "0123456789ABCDEF",
+    "when_missing": "not_met"
+  }
+}

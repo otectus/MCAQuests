@@ -59,8 +59,7 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            ProjectDefinition.CODEC.parse(JsonOps.INSTANCE, entry.getValue())
-                    .resultOrPartial(message -> recordError(errors, strict, "Project '" + fileId + "': " + message))
+            dev.otectus.mcaquests.data.StrictCodecs.parse(ProjectDefinition.CODEC, JsonOps.INSTANCE, entry.getValue(), message -> recordError(errors, strict, "Project '" + fileId + "': " + message))
                     .ifPresent(def -> {
                         if (loaded.containsKey(def.id())) {
                             recordError(errors, strict, "Duplicate project id '" + def.id() + "' (from " + fileId + ")");

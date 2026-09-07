@@ -19,7 +19,7 @@ public final class ProjectProgressEvents {
     private ProjectProgressEvents() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public static void onEntityKilled(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide()) {
             return;
@@ -30,7 +30,7 @@ public final class ProjectProgressEvents {
                 .ifPresent(player -> ProjectManager.onProjectKill(player, event.getEntity()));
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ProjectManager.onProjectPlace(player, event.getPlacedBlock(), event.getPos());

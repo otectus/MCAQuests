@@ -5,6 +5,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.capitals.CapitalRef;
 import dev.otectus.mcaquests.compat.capitals.CapitalsBridge;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
 import dev.otectus.mcaquests.data.StrictCodecs;
@@ -37,7 +38,12 @@ import java.util.UUID;
  * <p>The states are Capitals' own, spelled lower case. A capital with no relation recorded reads as
  * nothing rather than as {@code peace}: an untouched pair has never had a relationship row written.
  */
-public record CapitalRelationCondition(Other other, List<String> states) implements QuestCondition {
+public record CapitalRelationCondition(Other other, List<String> states, boolean present) implements QuestCondition {
+
+    /** Compatibility for add-ons constructing the original positive-only condition. */
+    public CapitalRelationCondition(Other other, List<String> states) {
+        this(other, states, true);
+    }
 
     /** The five states Capitals records between two capitals. */
     public static final Set<String> STATES =
@@ -65,7 +71,9 @@ public record CapitalRelationCondition(Other other, List<String> states) impleme
                     StrictCodecs.strictOptional(Other.CODEC, "other", Other.ANY)
                             .forGetter(CapitalRelationCondition::other),
                     McaConditionCodecs.validatedNonEmptyList("capital diplomatic state", STATES)
-                            .fieldOf("state").forGetter(CapitalRelationCondition::states)
+                            .fieldOf("state").forGetter(CapitalRelationCondition::states),
+                    StrictCodecs.strictOptional(Codec.BOOL, "present", true)
+                            .forGetter(CapitalRelationCondition::present)
             ).apply(instance, CapitalRelationCondition::new));
 
     @Override
@@ -75,6 +83,18 @@ public record CapitalRelationCondition(Other other, List<String> states) impleme
 
     @Override
     public boolean test(QuestContext context) {
+        CapitalsBridge bridge = CapitalsCompat.bridge();
+        if (!bridge.has(CapitalsCapability.REGISTRY) || !bridge.has(CapitalsCapability.DIPLOMACY)
+                || other == Other.ALLEGIANCE && !bridge.has(CapitalsCapability.ALLEGIANCE)) {
+            return false;
+        }
+        boolean matching = hasMatchingRelation(context, bridge);
+        return bridge.has(CapitalsCapability.REGISTRY) && bridge.has(CapitalsCapability.DIPLOMACY)
+                && (other != Other.ALLEGIANCE || bridge.has(CapitalsCapability.ALLEGIANCE))
+                && matching == present;
+    }
+
+    private boolean hasMatchingRelation(QuestContext context, CapitalsBridge bridge) {
         Entity giver = context.villager();
         if (giver == null || !(giver.level() instanceof ServerLevel level)) {
             return false;
@@ -84,8 +104,10 @@ public record CapitalRelationCondition(Other other, List<String> states) impleme
             return false;
         }
         UUID mine = own.get().capitalId();
-        CapitalsBridge bridge = CapitalsCompat.bridge();
         if (other == Other.ALLEGIANCE) {
+            if (context.player() == null) {
+                return false;
+            }
             return bridge.declaredAllegiance(level, context.player().getUUID())
                     .filter(declared -> !declared.equals(mine))
                     .map(declared -> matches(bridge.diplomaticState(level, mine, declared)))

@@ -5,7 +5,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.UUID;
@@ -63,11 +62,11 @@ public record QuestLogEntry(ResourceLocation questId, UUID villagerUuid, Compone
                 buf.readComponent(),
                 buf.readComponent(),
                 buf.readComponent(),
-                buf.readCollection(ArrayList::new, CardObjective::decode),
+                dev.otectus.mcaquests.network.PacketCollections.readList(buf, CardObjective::decode),
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean() ? OptionalLong.of(buf.readVarLong()) : OptionalLong.empty(),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent));
+                dev.otectus.mcaquests.network.PacketCollections.readList(buf, FriendlyByteBuf::readComponent));
     }
 }

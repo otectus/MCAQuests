@@ -1,0 +1,51 @@
+{
+  "format_version": 1,
+  "id": "drover:pasture_and_pen",
+  "weight": 12,
+  "category": "husbandry",
+  "difficulty": "medium",
+  "offer_group": "drove_stock",
+  "title": { "text": "Pasture and Pen" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": {
+    "professions": ["minecraft:shepherd"],
+    "adult_only": true,
+    "min_hearts": 10
+  },
+  "dialogue": {
+    "offer": { "text": "Four more lambs before the drove, a fence that holds them, and a dog that knows what a sheep is. In that order, ideally." },
+    "accept": { "text": "The dog is the hard part. Bones and patience." },
+    "decline": { "text": "Then I shall drive four fewer and eat the loss." },
+    "in_progress": { "text": "Lambs, fence, dog. Any order you like, in truth." },
+    "ready": { "text": "A flock, a pen and a dog. That is a shepherd's whole world." },
+    "complete": { "text": "You have a knack for this. Come with us in the spring." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:breed_animals",
+      "animal": { "entity": "minecraft:sheep" },
+      "near": { "anchor": "home_village" },
+      "radius": 48,
+      "count": 4
+    },
+    {
+      "type": "mcaquests:build_near_location",
+      "tag": "minecraft:fences",
+      "location": { "anchor": "workstation", "villager": { "mode": "self" } },
+      "radius": 16,
+      "count": 10
+    },
+    {
+      "type": "mcaquests:tame_animal",
+      "animal": { "entity": "minecraft:wolf" },
+      "near": { "anchor": "giver_pos" },
+      "radius": 64,
+      "count": 1
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:item", "item": "minecraft:shears", "count": 1 },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ]
+}

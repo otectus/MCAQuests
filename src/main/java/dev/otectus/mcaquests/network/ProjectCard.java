@@ -4,7 +4,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -42,8 +41,8 @@ public record ProjectCard(ResourceLocation projectId,
                 buf.readComponent(),
                 buf.readComponent(),
                 buf.readComponent(),
-                buf.readCollection(ArrayList::new, ProjectObjectiveLine::decode),
-                buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent),
+                PacketCollections.readList(buf, ProjectObjectiveLine::decode),
+                PacketCollections.readList(buf, FriendlyByteBuf::readComponent),
                 buf.readEnum(ProjectMenuStatus.class));
     }
 }

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
@@ -37,9 +39,9 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     public static final Codec<DeliverToVillagerObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             VillagerTarget.MAP_CODEC.fieldOf("recipient").forGetter(DeliverToVillagerObjective::recipient),
             ItemTarget.MAP_CODEC.forGetter(DeliverToVillagerObjective::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(DeliverToVillagerObjective::itemCount),
-            Codec.BOOL.optionalFieldOf("consume", true).forGetter(DeliverToVillagerObjective::consume),
-            DeliveryDestination.CODEC.optionalFieldOf("destination").forGetter(DeliverToVillagerObjective::destination)
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(DeliverToVillagerObjective::itemCount),
+            StrictCodecs.strictOptional(Codec.BOOL, "consume", true).forGetter(DeliverToVillagerObjective::consume),
+            StrictCodecs.strictOptional(DeliveryDestination.CODEC, "destination").forGetter(DeliverToVillagerObjective::destination)
     ).apply(instance, DeliverToVillagerObjective::new));
 
     /** The pre-1.4.1 shape, for callers and tests that predate {@code destination}. */
@@ -153,27 +155,9 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
         if (!(target instanceof Villager villager)) {
             return false;
         }
-        Item single = item.item().orElse(null);
-        if (single == null) {
-            return false; // a tag-matched payload has no single item to insert; refuse rather than guess
-        }
         Container inventory = villager.getInventory();
-        if (DeliveryDestination.roomFor(inventory, single, itemCount) < itemCount) {
-            return false;
-        }
-        int taken = ObjectiveSupport.consumeMatching(player, item, itemCount);
-        if (taken < itemCount) {
-            return false; // lost a race with another inventory change; nothing has been inserted yet
-        }
-        int leftover = DeliveryDestination.insert(inventory, single, itemCount);
-        if (leftover > 0) {
-            // The container changed under us after roomFor said yes. Give it back rather than delete it.
-            player.getInventory().placeItemBackInInventory(new ItemStack(single, leftover));
-            McaQuests.LOGGER.warn("[MCA: Quests] deliver_to_villager could not fit {} x{} into {} after "
-                    + "capacity was confirmed; {} returned to the player.",
-                    single, itemCount, villager.getName().getString(), leftover);
-        }
-        return true;
+        InventoryTransfer.Plan plan = new InventoryTransfer.Plan(player.getInventory());
+        return plan.reserve(item::matches, itemCount, inventory) && plan.commit();
     }
 
     @Override

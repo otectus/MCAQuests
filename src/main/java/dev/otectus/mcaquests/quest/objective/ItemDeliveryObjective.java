@@ -2,8 +2,8 @@ package dev.otectus.mcaquests.quest.objective;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.data.RegistryEntryCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import dev.otectus.mcaquests.quest.target.SourceHint;
@@ -17,7 +17,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
 
@@ -27,8 +26,8 @@ import javax.annotation.Nullable;
  *
  * <p>An optional {@code destination} sends the goods somewhere instead of destroying them — see
  * {@link DeliveryDestination}. That transfer is <b>exact-once and atomic</b>: capacity is measured
- * before anything moves, the player is only charged once the goods are actually in, and a marker is
- * written so a second turn-in cannot repeat it.
+ * before anything moves, the source is charged before destination insertion, and a marker records a
+ * successful transfer so a second turn-in cannot repeat it.
  */
 public record ItemDeliveryObjective(Item item, int count, boolean consume,
                                     DeliveryDestination destination,
@@ -58,9 +57,9 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
     private static final String K_DELIVERED = "delivered";
 
     public static final Codec<ItemDeliveryObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemDeliveryObjective::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
-            Codec.BOOL.optionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume),
+            RegistryEntryCodec.of(BuiltInRegistries.ITEM).fieldOf("item").forGetter(ItemDeliveryObjective::item),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ItemDeliveryObjective::count),
+            StrictCodecs.strictOptional(Codec.BOOL, "consume", true).forGetter(ItemDeliveryObjective::consume),
             StrictCodecs.strictOptional(DeliveryDestination.CODEC, "destination",
                     DeliveryDestination.CONSUMED).forGetter(ItemDeliveryObjective::destination),
             SourceHint.FIELD.forGetter(ItemDeliveryObjective::source)
@@ -150,7 +149,7 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
             return true;
         }
         Container container = destination.resolveContainer(player, giver).orElse(null);
-        return container != null && DeliveryDestination.roomFor(container, item, count) >= count;
+        return container != null && new InventoryTransfer.Plan(player.getInventory()).reserve(item, count, container);
     }
 
     /** Why the hand-over was refused, for the player. */
@@ -175,14 +174,11 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
     /**
      * Moves the goods from the player into the destination, exactly once.
      *
-     * <p>Ordering is the whole of the safety here, and it is deliberately <em>take, then insert, then
-     * refund the remainder</em>. Items only ever exist in one place at a time: they leave the player
-     * before they arrive, so a container that filled up underneath us cannot duplicate them, and
-     * anything that will not fit is handed straight back rather than evaporating. The marker is written
-     * before the transfer, so even an exception midway cannot let a second turn-in run it again.
+     * <p>Preflights capacity and the source snapshot, removes the selected goods, then inserts their
+     * original stack data. A failed container callback restores both inventories before allowing a
+     * retry. The marker is written after a successful commit.
      *
-     * <p>Called from {@code QuestManager.completeQuest}, which has already established through
-     * {@link #canDeliver} that the whole amount will fit.
+     * <p>Retained for add-ons. The quest manager plans every delivery together in one transaction.
      */
     public void deliver(ServerPlayer player, @Nullable Entity giver, ObjectiveProgress progress) {
         if (!destination.isTransfer() || progress.extra().getBoolean(K_DELIVERED)) {
@@ -192,19 +188,9 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
         if (container == null) {
             return;
         }
-        progress.extra().putBoolean(K_DELIVERED, true);
-
-        int taken = take(player, count);
-        if (taken <= 0) {
-            return;
-        }
-        int bounced = DeliveryDestination.insert(container, item, taken);
-        if (bounced > 0) {
-            // The container filled between canDeliver and here. The goods are already off the player,
-            // so they must go back to them -- never dropped, and never left in limbo.
-            ItemHandlerHelper.giveItemToPlayer(player, new ItemStack(item, bounced));
-            McaQuests.LOGGER.debug("[MCA: Quests] Delivery of {} {} bounced {}; returned to the player.",
-                    taken, item, bounced);
+        InventoryTransfer.Plan plan = new InventoryTransfer.Plan(player.getInventory());
+        if (plan.reserve(item, count, container) && plan.commit()) {
+            progress.extra().putBoolean(K_DELIVERED, true);
         }
     }
 

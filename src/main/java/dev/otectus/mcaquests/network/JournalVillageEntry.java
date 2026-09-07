@@ -4,7 +4,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,7 +39,7 @@ public record JournalVillageEntry(ResourceLocation dimension, int villageId, Com
         Component current = buf.readComponent();
         Component next = buf.readComponent();
         int nextThreshold = buf.readVarInt();
-        List<Component> titles = buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent);
+        List<Component> titles = PacketCollections.readList(buf, FriendlyByteBuf::readComponent);
         return new JournalVillageEntry(dimension, villageId, name, reputation, current, next,
                 nextThreshold, titles);
     }

@@ -1,3 +1,5 @@
+> Historical audit snapshot. The implemented stabilization pass and current verification are documented in [STABILIZATION.md](STABILIZATION.md).
+
 # MCA: Quests — quest completability and consistency audit
 
 Static audit of the bundled quest pack and the Java that drives it. Nothing was executed in-game;

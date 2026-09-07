@@ -1,0 +1,9 @@
+{
+  "tiers": [
+    { "id": "outsider", "threshold": 0, "name": "Outsider" },
+    { "id": "known", "threshold": 20, "name": "Known to the Guild" },
+    { "id": "sworn", "threshold": 60, "name": "Sworn", "grants_title": "ledger:apprentice_of_the_guild" },
+    { "id": "trusted", "threshold": 140, "name": "Trusted Hand", "grants_title": "ledger:hand_of_the_guild" },
+    { "id": "master", "threshold": 280, "name": "Master of the Ledger", "grants_title": "ledger:master_of_the_guild" }
+  ]
+}

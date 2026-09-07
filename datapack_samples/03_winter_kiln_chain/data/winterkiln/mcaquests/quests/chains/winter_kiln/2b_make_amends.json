@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "id": "winterkiln:kiln_2b_make_amends",
+  "weight": 12,
+  "category": "delivery",
+  "difficulty": "medium",
+  "offer_group": "kiln_arc",
+  "priority": 3,
+  "title": { "text": "Make Amends" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:mason"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "I am not angry. I have been the one asleep at the kiln before. Buy the bricks off the next village if you must — sixteen, and we say no more about it." },
+    "accept": { "text": "No more about it." },
+    "decline": { "text": "As you like." },
+    "in_progress": { "text": "Sixteen. However you come by them." },
+    "ready": { "text": "There. The wall does not know who fired them." },
+    "complete": { "text": "Now — the hearth. I would still rather build it with you than without." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:brick", "count": 16, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:xp", "amount": 25 },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "conditions": {
+    "type": "mcaquests:quest_failed",
+    "quest": "winterkiln:kiln_2_fire_the_kiln",
+    "scope": "giver"
+  },
+  "chain": {
+    "chain": "winterkiln:the_winter_kiln",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Winter Kiln" },
+    "chapter": { "text": "Make Amends" },
+    "unlocks": ["winterkiln:kiln_3_the_glazed_hearth"]
+  }
+}

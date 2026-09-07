@@ -42,7 +42,7 @@ public final class ObjectiveProgress {
     }
 
     public ObjectiveProgress(int count) {
-        this.count = count;
+        setCount(count);
     }
 
     public int count() {
@@ -54,7 +54,7 @@ public final class ObjectiveProgress {
     }
 
     public void add(int delta) {
-        setCount(this.count + delta);
+        this.count = (int) Math.max(0L, Math.min(Integer.MAX_VALUE, (long) this.count + delta));
     }
 
     // --- Duration accrual (protect_entity) -------------------------------------------------------
@@ -64,7 +64,11 @@ public final class ObjectiveProgress {
     }
 
     public void addElapsed(long delta) {
-        this.elapsedTicks = Math.max(0L, this.elapsedTicks + delta);
+        if (delta > 0 && this.elapsedTicks > Long.MAX_VALUE - delta) {
+            this.elapsedTicks = Long.MAX_VALUE;
+        } else {
+            this.elapsedTicks = Math.max(0L, this.elapsedTicks + delta);
+        }
     }
 
     public void resetElapsed() {
@@ -151,7 +155,7 @@ public final class ObjectiveProgress {
 
     public static ObjectiveProgress load(CompoundTag tag) {
         ObjectiveProgress progress = new ObjectiveProgress(tag.getInt("count"));
-        progress.elapsedTicks = tag.getLong("elapsed"); // 0 when absent
+        progress.elapsedTicks = Math.max(0L, tag.getLong("elapsed")); // 0 when absent
         if (tag.hasUUID("target")) {
             progress.targetUuid = tag.getUUID("target");
         }
@@ -175,7 +179,7 @@ public final class ObjectiveProgress {
             progress.talkedTo = talked;
         }
         if (tag.contains("extra", Tag.TAG_COMPOUND)) {
-            progress.extra = tag.getCompound("extra");
+            progress.extra = tag.getCompound("extra").copy();
         }
         return progress;
     }

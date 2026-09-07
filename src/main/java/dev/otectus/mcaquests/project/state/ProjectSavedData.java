@@ -28,9 +28,11 @@ public final class ProjectSavedData extends SavedData {
     public static final String DATA_NAME = "mcaquests_projects";
 
     private final Map<String, ProjectState> instances = new LinkedHashMap<>();
+    private final List<CompoundTag> unreadableInstances = new ArrayList<>();
     private final Map<String, Integer> reputation = new LinkedHashMap<>();
     private final Map<String, String> tierHighWater = new LinkedHashMap<>();
     private final Map<UUID, List<PendingReward>> pending = new LinkedHashMap<>();
+    private final Map<UUID, List<CompoundTag>> unreadablePending = new LinkedHashMap<>();
     private dev.otectus.mcaquests.state.VillageStanding standing =
             new dev.otectus.mcaquests.state.VillageStanding();
 
@@ -168,6 +170,7 @@ public final class ProjectSavedData extends SavedData {
         for (ProjectState state : instances.values()) {
             instanceList.add(state.save());
         }
+        unreadableInstances.forEach(entry -> instanceList.add(entry.copy()));
         tag.put("instances", instanceList);
 
         CompoundTag rep = new CompoundTag();
@@ -191,6 +194,11 @@ public final class ProjectSavedData extends SavedData {
             list.forEach(r -> rewards.add(r.save()));
             pend.put(uuid.toString(), rewards);
         });
+        unreadablePending.forEach((uuid, list) -> {
+            ListTag rewards = pend.getList(uuid.toString(), Tag.TAG_COMPOUND);
+            list.forEach(entry -> rewards.add(entry.copy()));
+            pend.put(uuid.toString(), rewards);
+        });
         tag.put("pending", pend);
         return tag;
     }
@@ -199,8 +207,15 @@ public final class ProjectSavedData extends SavedData {
         ProjectSavedData data = new ProjectSavedData();
         ListTag instanceList = tag.getList("instances", Tag.TAG_COMPOUND);
         for (int i = 0; i < instanceList.size(); i++) {
-            ProjectState state = ProjectState.load(instanceList.getCompound(i));
-            data.instances.put(state.key().asString(), state);
+            CompoundTag entry = instanceList.getCompound(i);
+            try {
+                ProjectState state = ProjectState.load(entry);
+                data.instances.put(state.key().asString(), state);
+            } catch (RuntimeException failure) {
+                data.unreadableInstances.add(entry.copy());
+                McaQuests.LOGGER.warn("[MCA: Quests] preserving unreadable project '{}' for recovery",
+                        entry.getString("project"), failure);
+            }
         }
         CompoundTag rep = tag.getCompound("reputation");
         for (String key : rep.getAllKeys()) {
@@ -223,9 +238,17 @@ public final class ProjectSavedData extends SavedData {
                     // skipped without dropping this player's other, well-formed pending rewards.
                     // Fail-safe per §10.2: catch Throwable, log at DEBUG, skip the entry.
                     try {
-                        PendingReward.load(rewards.getCompound(i)).ifPresent(list::add);
+                        CompoundTag entry = rewards.getCompound(i);
+                        Optional<PendingReward> decoded = PendingReward.load(entry);
+                        if (decoded.isPresent()) {
+                            list.add(decoded.get());
+                        } else {
+                            data.unreadablePending.computeIfAbsent(uuid, ignored -> new ArrayList<>()).add(entry.copy());
+                        }
                     } catch (Throwable t) {
-                        McaQuests.LOGGER.debug("[MCA: Quests] skipping malformed pending-reward entry for {}",
+                        data.unreadablePending.computeIfAbsent(uuid, ignored -> new ArrayList<>())
+                                .add(rewards.getCompound(i).copy());
+                        McaQuests.LOGGER.debug("[MCA: Quests] preserving malformed pending-reward entry for {}",
                                 key, t);
                     }
                 }

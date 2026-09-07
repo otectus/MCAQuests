@@ -67,6 +67,13 @@ public final class McaHandles {
         return VILLAGER != null;
     }
 
+    /** Spawning requires trustworthy identity/liveness and resident rolls, never zero-valued stubs. */
+    public static boolean canMaterializeRelatives() {
+        return List.of(McaBinding.NODE_IS_DECEASED, McaBinding.NODE_IS_PLAYER,
+                McaBinding.NODE_PROBABLY_GENERATED, McaBinding.VILLAGE_MANAGER_GET,
+                McaBinding.VILLAGE_RESIDENT_UUIDS, McaBinding.INITIALIZE).stream().allMatch(R::has);
+    }
+
     // --- classes ---------------------------------------------------------------------------------
     private static final Class<?> VILLAGER = R.cls(McaBinding.VILLAGER_CLASS);
     private static final Class<?> VILLAGER_LIKE = R.cls(McaBinding.VILLAGER_LIKE_CLASS);
@@ -396,7 +403,7 @@ public final class McaHandles {
     /** MCA mood value, or {@link Integer#MIN_VALUE} when unavailable (callers map that to empty). */
     public static int moodValue(Object villager) {
         Object brain = brain(villager);
-        if (brain == null) {
+        if (brain == null || !R.has(McaBinding.GET_MOOD_VALUE)) {
             return Integer.MIN_VALUE;
         }
         try {
@@ -659,7 +666,14 @@ public final class McaHandles {
     }
 
     public static int buildingId(Object building) {
-        return building == null ? -1 : intOf(H_BUILDING_ID, building);
+        if (building == null || !R.has(McaBinding.BUILDING_GET_ID)) {
+            return -1;
+        }
+        try {
+            return (int) H_BUILDING_ID.invoke(building);
+        } catch (Throwable t) {
+            return -1;
+        }
     }
 
     public static Optional<BlockPos> buildingCenter(Object building) {
@@ -707,7 +721,7 @@ public final class McaHandles {
 
     /** The village's stable MCA id, or {@link Integer#MIN_VALUE} when unavailable. */
     public static int villageId(Object village) {
-        if (village == null) {
+        if (village == null || !R.has(McaBinding.VILLAGE_GET_ID)) {
             return Integer.MIN_VALUE;
         }
         try {

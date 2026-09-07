@@ -46,7 +46,7 @@ public record QuestTrackC2SPacket(Optional<UUID> villagerUuid, Optional<Resource
 
     public static void handle(QuestTrackC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player == null) {
                 return;

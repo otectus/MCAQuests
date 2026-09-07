@@ -152,6 +152,34 @@ class JourneyMapWaypointBackendTest {
     }
 
     @Test
+    void failedReadBackDoesNotOrphanAWaypointOrDuplicateItOnRetry() {
+        StubClientApi api = new StubClientApi();
+        JourneyMapWaypointBackend backend = backend(api);
+        api.failReads = true;
+        api.failRemovals = true;
+        assertEquals(MapMutationResult.FAILED, backend.apply(spec("q1", GuidanceKind.VILLAGER)));
+        String firstId = api.only().getId();
+        api.failReads = false;
+        api.failRemovals = false;
+        assertEquals(MapMutationResult.APPLIED, backend.apply(spec("q1", GuidanceKind.VILLAGER)));
+        assertEquals(firstId, api.only().getId(), "retry must reuse the object that may already exist");
+    }
+
+    @Test
+    void failedAutomaticClearRetainsOwnershipUntilCleanupCanRetry() {
+        StubClientApi api = new StubClientApi();
+        JourneyMapWaypointBackend backend = backend(api);
+        backend.apply(spec("q1", GuidanceKind.VILLAGER));
+        api.failRemovals = true;
+        backend.clearAutomatic(ClearCause.DISABLED);
+        assertEquals(Set.of("q1"), backend.appliedKeys());
+        api.failRemovals = false;
+        backend.clearAutomatic(ClearCause.DISABLED);
+        assertTrue(backend.appliedKeys().isEmpty());
+        assertTrue(api.stored.isEmpty());
+    }
+
+    @Test
     @DisplayName("withdrawing a key we never applied is not a failure")
     void withdrawingAnUnknownKeyIsUnchanged() {
         assertEquals(MapMutationResult.UNCHANGED, backend(new StubClientApi()).withdraw("nothing"));
@@ -230,6 +258,7 @@ class JourneyMapWaypointBackendTest {
 
         boolean swallowAdds;
         boolean failRemovals;
+        boolean failReads;
         int adds;
         int removeAllCalls;
 
@@ -258,6 +287,9 @@ class JourneyMapWaypointBackendTest {
         @Override
         @Nullable
         public Waypoint getWaypoint(String modId, String waypointId) {
+            if (failReads) {
+                throw new IllegalStateException("stub refuses to read");
+            }
             return stored.get(waypointId);
         }
 

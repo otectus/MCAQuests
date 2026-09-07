@@ -1,0 +1,102 @@
+// Inspect real constant-pool member references. Reflection strings containing SRG names do not
+// establish that ForgeGradle reobfuscated the classes that call Minecraft.
+ext.verifyQuestArchive = { File archive ->
+    int srgReferences = 0
+    new java.util.zip.ZipFile(archive).withCloseable { zip ->
+        ['META-INF/mods.toml', 'pack.mcmeta', 'mcaquests.mixins.json',
+         'mcaquests.compat.mixins.json', 'mcaquests.refmap.json',
+         'assets/mcaquests/lang/en_us.json', 'assets/mcaquests/lang/pt_br.json'].each { name ->
+            def entry = zip.getEntry(name)
+            if (entry == null) throw new GradleException("${archive.name}: missing ${name}")
+            if (zip.getInputStream(entry).getText('UTF-8').contains('${')) {
+                throw new GradleException("${archive.name}: unexpanded metadata in ${name}")
+            }
+        }
+        zip.entries().each { entry ->
+            if (!entry.name.endsWith('.class')) return
+            if (!entry.name.startsWith('dev/otectus/mcaquests/')) {
+                throw new GradleException("${archive.name}: unexpected bundled class ${entry.name}")
+            }
+            new DataInputStream(zip.getInputStream(entry)).withCloseable { input ->
+                if (input.readInt() != (int) 0xCAFEBABE) throw new GradleException('Invalid class header')
+                input.readUnsignedShort()
+                int major = input.readUnsignedShort()
+                if (major > 61) throw new GradleException("${entry.name}: requires newer than Java 17")
+                int count = input.readUnsignedShort()
+                def pool = new Object[count]
+                int[] tags = new int[count]
+                for (int i = 1; i < count; i++) {
+                    int tag = input.readUnsignedByte()
+                    tags[i] = tag
+                    switch (tag) {
+                        case 1: pool[i] = input.readUTF(); break
+                        case [7, 8, 16, 19, 20]: pool[i] = input.readUnsignedShort(); break
+                        case [9, 10, 11, 12, 17, 18]:
+                            pool[i] = [input.readUnsignedShort(), input.readUnsignedShort()]; break
+                        case [3, 4]: input.readInt(); break
+                        case [5, 6]: input.readLong(); i++; break
+                        case 15: input.readUnsignedByte(); input.readUnsignedShort(); break
+                        default: throw new GradleException("Unknown constant-pool tag ${tag}")
+                    }
+                }
+                for (int i = 1; i < count; i++) {
+                    if (!(tags[i] in [9, 10, 11])) continue
+                    def ref = pool[i]
+                    String owner = pool[(int) pool[(int) ref[0]]]
+                    String member = pool[(int) pool[(int) ref[1]][0]]
+                    if (owner.startsWith('net/minecraft/') && member ==~ /[mf]_\d+_/) srgReferences++
+                    if ((owner == 'net/minecraft/world/item/Items' && member == 'EMERALD') ||
+                        (owner == 'net/minecraft/client/Minecraft' && member == 'getInstance')) {
+                        throw new GradleException("${archive.name}: dev-mapped reference ${owner}.${member} in ${entry.name}")
+                    }
+                }
+            }
+        }
+    }
+    if (srgReferences == 0) {
+        throw new GradleException("${archive.name}: no reobfuscated Minecraft member references; do not install this jar")
+    }
+    logger.lifecycle("${archive.name}: verified metadata, isolated classes, Java 17 and ${srgReferences} SRG member references.")
+}
+
+tasks.register('artifactVerifierTest') {
+    group = 'verification'
+    description = 'Proves the release verifier rejects the dev-mapped class output.'
+    dependsOn 'reobfJar'
+    doLast {
+        File scratch = layout.buildDirectory.file('artifact-verifier/dev-mapped.jar').get().asFile
+        scratch.parentFile.mkdirs()
+        new java.util.zip.ZipOutputStream(new FileOutputStream(scratch)).withCloseable { output ->
+            // MixinGradle adds its generated refmap directly to jar, outside sourceSets resources.
+            // Use the finished artifact's non-class entries so only the mapping state differs.
+            new java.util.zip.ZipFile(tasks.named('jar', Jar).get().archiveFile.get().asFile).withCloseable { built ->
+                built.entries().each { entry ->
+                    if (entry.isDirectory() || entry.name.endsWith('.class')) return
+                    output.putNextEntry(new java.util.zip.ZipEntry(entry.name))
+                    output.write(built.getInputStream(entry).bytes)
+                    output.closeEntry()
+                }
+            }
+            sourceSets.main.output.classesDirs.files.each { root ->
+                if (root == null || !root.exists()) return
+                root.eachFileRecurse { file ->
+                    if (!file.isFile() || !file.name.endsWith('.class')) return
+                    String relative = root.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+                    output.putNextEntry(new java.util.zip.ZipEntry(relative))
+                    output.write(file.bytes)
+                    output.closeEntry()
+                }
+            }
+        }
+        try {
+            verifyQuestArchive(scratch)
+        } catch (GradleException expected) {
+            if (!expected.message.contains('dev-mapped reference') &&
+                !expected.message.contains('no reobfuscated Minecraft')) throw expected
+            logger.lifecycle('Artifact verifier correctly rejected dev-mapped class output.')
+            return
+        }
+        throw new GradleException('Artifact verifier accepted dev-mapped class output')
+    }
+}
+tasks.named('check') { dependsOn 'artifactVerifierTest' }

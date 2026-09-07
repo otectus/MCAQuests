@@ -8,6 +8,7 @@ import com.mojang.serialization.MapLike;
 import com.mojang.serialization.RecordBuilder;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -29,6 +30,24 @@ import java.util.stream.Stream;
 public final class StrictCodecs {
 
     private StrictCodecs() {
+    }
+
+    /**
+     * Loads a complete definition or reports its error. DFU partial values can omit invalid list
+     * entries, so accepting them can remove objectives or eligibility gates from authored content.
+     * A broken add-on codec is isolated to its resource just like an ordinary decoding error.
+     */
+    public static <A, T> Optional<A> parse(Codec<A> codec, DynamicOps<T> ops, T input,
+                                         Consumer<String> onError) {
+        DataResult<A> result;
+        try {
+            result = codec.parse(ops, input);
+        } catch (RuntimeException | LinkageError failure) {
+            onError.accept(failure.toString());
+            return Optional.empty();
+        }
+        result.error().ifPresent(error -> onError.accept(error.message()));
+        return result.result();
     }
 
     /** Absent → empty; present and valid → value; present and invalid → error naming the field. */

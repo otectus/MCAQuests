@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -23,9 +25,9 @@ import java.util.Optional;
 public record QuestText(Optional<String> text, Optional<String> translate, List<String> with) {
 
     public static final MapCodec<QuestText> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.optionalFieldOf("text").forGetter(QuestText::text),
-            Codec.STRING.optionalFieldOf("translate").forGetter(QuestText::translate),
-            Codec.STRING.listOf().optionalFieldOf("with", List.of()).forGetter(QuestText::with)
+            StrictCodecs.strictOptional(Codec.STRING, "text").forGetter(QuestText::text),
+            StrictCodecs.strictOptional(Codec.STRING, "translate").forGetter(QuestText::translate),
+            StrictCodecs.strictOptional(Codec.STRING.listOf(), "with", List.of()).forGetter(QuestText::with)
     ).apply(instance, QuestText::new));
 
     public static final Codec<QuestText> CODEC = MAP_CODEC.codec();

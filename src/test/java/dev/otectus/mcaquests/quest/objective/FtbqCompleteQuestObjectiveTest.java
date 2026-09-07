@@ -80,11 +80,8 @@ class FtbqCompleteQuestObjectiveTest {
     void codecRejectsUnknownAlreadyCompleteValue() {
         DataResult<FtbqCompleteQuestObjective> result =
                 parse("{\"quest\":\"" + HEX + "\",\"already_complete\":\"sometimes\"}");
-        // Matches the pre-existing OptionalFieldCodec quirk documented in FtbqConditionPolicyTest: a
-        // present-but-invalid optional enum value silently falls back to the default rather than
-        // failing to parse. Asserting the (surprising but pre-existing) fallback, not a parse error.
-        assertTrue(result.result().isPresent());
-        assertEquals(AlreadyCompleteMode.SATISFY, result.result().get().alreadyComplete());
+        assertTrue(result.error().isPresent());
+        assertTrue(result.result().isEmpty());
     }
 
     @Test

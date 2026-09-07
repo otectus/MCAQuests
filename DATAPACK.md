@@ -1,5 +1,11 @@
 # MCA: Quests — Datapack Format
 
+> Stabilization note: omitted optional fields retain their documented defaults, but malformed
+> quest/project rules and partially decoded definitions are rejected as a whole. In lenient mode
+> the affected resource is skipped and logged; strict validation rejects the reload. Correct the
+> reported field and reload to restore paused quests. Existing valid datapacks need no migration.
+
+
 Quests are data-driven. Drop JSON files into a datapack (or this mod's bundled data) at:
 
 ```
@@ -522,7 +528,9 @@ minimap installed at all.
 
 ## Rewards
 
-Granted atomically on turn-in (items insert-or-drop, then XP, effects, loot, and MCA hearts).
+Granted after turn-in inventory validation and the completion claim guard (items insert-or-drop,
+then XP, effects, loot, and MCA hearts). A broken reward is reported without preventing later
+rewards; arbitrary command or add-on side effects cannot be rolled back as an inventory transaction.
 
 | `type` | Fields | Notes |
 |---|---|---|
@@ -536,9 +544,9 @@ Granted atomically on turn-in (items insert-or-drop, then XP, effects, loot, and
 | `mcaquests:command` | `command` (string) | Runs a command. **Disabled** unless `allowCommandRewards = true`. |
 | `mcaquests:village_reputation` | `amount` | Adds independent mod-side reputation to the giver's village (see Progression). |
 | `mcaquests:grant_title` | `title` (resource location), `scope` (`village`/`global`, default `village`) | Awards a player title (see Progression). |
-| `mcaquests:capital_title` | `title` (required; one of `knight`, `lord`, `duke`, `archduke`), `female_title` (optional) | Grants the player a noble title in the giver's capital. The gendered constants (KNIGHT/DAME, LORD/LADY, DUKE/DUCHESS, ARCHDUKE/ARCHDUCHESS) are chosen by `bridge().isPlayerFemale(level, player)` (empty → masculine), and `female_title` overrides the feminine constant. Requires the `capitals.title_grants` capability. |
-| `mcaquests:capital_chronicle` | `key` (required; a translation key), `herald` (bool, default `true`) | Writes a line to the capital's chronicle, reading the `key` as a translation (`Component.translatable(key, playerName, capitalName).getString()`) on the server side. When `herald=true`, the herald announces it; when false, it is recorded silently. Requires the `capitals.chronicle` capability. |
-| `mcaquests:capital_villager_title` | `villager` (villager target, defaults to `self`), `title` (required; one of `knight`, `lord`, `duke`) | Raises a villager in the giver's capital to a noble rank. The villager is resolved with `resolveFrom(player, giver, level, questId)`; `title` is mapped to gendered constants by `bridge().isVillagerFemale(level, uuid)`. Requires the `capitals.villager_titles` capability. |
+| `mcaquests:capital_title` | `title` (required; one of `knight`, `lord`, `duke`, `archduke`), `female_title` (optional; a title from either half of the gendered pairs) | Grants the player a noble title in the original giver's capital. The gendered constants (KNIGHT/DAME, LORD/LADY, DUKE/DUCHESS, ARCHDUKE/ARCHDUCHESS) follow player gender (unknown → masculine), and `female_title` overrides the feminine constant. Requires `capitals.title_grants`. |
+| `mcaquests:capital_chronicle` | `key` (required; a translation key), `herald` (bool, default `true`), `fallback` (optional string) | Writes a line to the original giver's capital's chronicle, rendered once on the server. The two `%s` arguments are the player and capital names. Bundled chronicle keys have an English fallback for dedicated servers; custom keys should supply `fallback` text when their client translations are unavailable there. When `herald=true`, the herald announces it; otherwise it is recorded silently. Requires `capitals.chronicle`. |
+| `mcaquests:capital_villager_title` | `villager` (villager target, defaults to `self`), `title` (required; one of `knight`, `lord`, `duke`) | Raises a villager in the original giver's capital to a noble rank, using the villager's gender. `self` uses the saved giver UUID and works while unloaded; `uuid` also needs no loaded entity. Other selectors resolve at reward time relative to the original giver or saved capital. A substitute turn-in villager never becomes the recipient. Requires `capitals.villager_titles`. |
 
 ### Currency rewards
 
@@ -1186,6 +1194,20 @@ conditions naming unknown tiers.
 
 ---
 
+### Large item payouts
+
+Item and currency rewards preserve their full calculated amount while sharing a limit of 16 immediate
+stacks per player per game tick. Any remainder is saved on the player and announced in chat. While the player is alive,
+up to 16 stacks of queued rewards are inserted into available inventory space each second; make
+room to collect the rest. The queue survives logout and respawn, and keeps rewards for an absent
+item registry ID until the owning mod returns. Ordinary small payouts retain their existing
+inventory/drop behavior.
+
+Pending project rewards also keep the original instance identity, anchor dimension, and frozen
+payout. Missing definitions or unreadable saved entries are retained for recovery. Restoring
+content can make those entries deliverable again; a later reset or retry cannot claim ownership
+of a newer snapshot that was saved for an earlier instance.
+
 ## Village projects
 
 A **project** is a shared, multi-stage community goal that several players contribute to at once.
@@ -1225,7 +1247,7 @@ available project show the extra button.
 | `conditions` | object | no | none | Gate on whether the project is available at all. Reuses the **existing** quest [condition tree](#conditions). |
 | `reputation` | object | no | all `0` | Mod-side village reputation deltas. See [Reputation](#reputation-deltas). |
 | `follow_up` | resource location | no | none | Another project id seeded in the **same scope** when this one completes. |
-| `failure` | object | no | none | Same [`failure`](#failure--deadlines) block as quests. |
+| `failure` | object | no | none | Shared project deadlines, weather and sponsor-loss rules; see below. |
 | `phases` | array | **yes** | — | One or more phases, run **in order**. Non-empty. See [Phases](#phases). |
 
 ### Scope
@@ -1275,10 +1297,34 @@ villager dies. Omit it for "any adult villager".
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `professions` | list of resource locations | empty = **any** adult villager | Villager professions that may sponsor. |
-| `required_count` | int | `1` | How many eligible sponsors are needed. |
+| `required_count` | int | `1` | Desired sponsor count displayed on the project card; contributions are allowed before it is reached. |
 | `adult_only` | bool | `true` | Children never sponsor when `true`. |
 | `pinned_sponsors` | list of UUIDs | — | Specific villagers that always sponsor (by UUID). |
 | `on_death` | enum | config `defaultSponsorDeathBehavior` (`pause`) | What happens when the sponsor dies: `fail`, `pause`, `transfer` (hand off to another eligible villager), or `turn_in_to_village`. |
+
+### Shared failure and retry rules
+
+Projects accept the [failure fields](#failure--deadlines) used by quests, with shared-project
+semantics. `deadline_ticks`, `deadline_time`, and `require_weather` are checked before accepting
+contributions and while polling active projects. The clock starts when the instance is created;
+an older save without a failure clock starts one on its first eligible check. A completed final
+phase is protected from a subsequent deadline check.
+
+`fail_on_giver_death` and `fail_on_target_lost` refer to the project's bound sponsors: the death of
+any bound sponsor fails the shared instance when either option is enabled. Otherwise,
+`sponsor.on_death` controls loss of the last sponsor. Failure records the terminal state once,
+applies `failure_hearts` between participants and sponsors (banking offline hearts), applies
+`reputation.on_fail`, fires the project failure event, and notifies online participants.
+
+`retry_after` permits a fresh instance after that many ticks; omission permits an immediate
+fresh attempt. `block_retry` prevents retry. This differs from individual quests, whose omitted
+`retry_after` follows their repeat rule. Old failed project records without a retry timestamp
+remain terminal rather than being unexpectedly restarted by an upgrade. A new attempt does not
+inherit contributions or redirect rewards owed by the old instance.
+
+Paused instances, missing definitions or dimensions, changed scopes, disabled projects, and unavailable
+required integrations freeze deadline time. Restore the original definition or capability to
+resume. `follow_up` and `unlock` reward targets must have the same scope as their source project.
 
 ### Reputation deltas
 
@@ -1437,8 +1483,8 @@ Projects add a `projects` block to the common config plus two client keys (full 
 At load, projects are validated; problems are listed by `/mcaquests project validate`, and with
 `strictJsonValidation = true` hard errors abort the load. Checks include:
 
-- **Errors:** unknown scope / objective / reward type ids (codec), no `phases`, a `follow_up` pointing
-  at an unknown or disabled project, and circular `follow_up` chains.
+- **Errors:** unknown scope / objective / reward type ids (codec), no `phases`, a `follow_up` or `unlock`
+  pointing at an unknown/disabled project or an incompatible scope, and circular `follow_up` chains.
 - **Warnings:** a non-final phase with no objectives, an MCA-dependent scope while MCA isn't loaded, a
   `command` reward while disabled, a `sponsor_village` target with no village, and a
   `top_contributor`/`contributors` target on an objective-less phase.
@@ -1973,10 +2019,14 @@ happens to a save when Capitals is removed.)*
 MCA Capitals makes one MCA villager the sovereign of a capital, assigns offices in the hierarchy below them, and manages diplomatic relations between capitals. This integration turns that into things a quest can read and react to: five conditions for gating on capital state, three rewards for granting titles and writing chronicle entries, a new villager target mode for finding officeholders, and two situation triggers for succession and war.
 
 **They are registered whether or not Capitals is installed**, so a datapack using them parses and
-validates identically either way. What changes is the answer: with Capitals absent every
-`capital_*` condition is **not met** (so the content is never offered), every `capital_*` reward
-no-ops, and an already-accepted quest **suspends** — it keeps its progress,
-stays abandonable, and resumes exactly where it was if Capitals comes back. Nothing fails and nothing is lost.
+validates identically either way. With Capitals absent, its leaf conditions are **not met**, including
+their `present:false` forms: unavailable data does not prove absence. Use
+`compat_capability` with `present:false` to author an explicit missing-mod alternative.
+Required Capitals capabilities are also checked for objectives and rewards, so a quest needing
+only a title reward is withheld when that reward cannot be granted. Accepted quests **pause** their
+progress and deadlines while required capabilities are unavailable and resume when they return.
+This does not recheck changing court politics at completion: losing a player role is different from
+losing the ability to read roles. `any_of` alternatives retain their optional dependency semantics.
 
 **Open every Capitals quest with `capital_present`.** It is the most basic gate and ensures the giver has an active capital. Without it your content will be offered even when no capital can be found.
 
@@ -1990,7 +2040,12 @@ stays abandonable, and resumes exactly where it was if Capitals comes back. Noth
 
 `{ "mode": "capital_role", "role": "sovereign" }` names a villager who holds a specific court office in the giver's capital. The `role` field is required and must be one of: `sovereign`, `consort`, `dowager`, `heir`, `royal_child`, `hand`, `commander`, `herald`, `grand_maester`, `master_of_laws`, `ambassador`, `duke`, `lord`, `knight`, `royal_guard`, or `member` (any member of the court).
 
-The holder is **bound to one concrete villager when the quest is accepted** and never re-resolves, just like `family` targets — a quest accepted before this existed binds on its next tick. Because of that binding, the objective must deliver to **the villager the quest named**, not just anyone who holds that office.
+Direct villager objectives (delivery, escort, protection, healing, curing, defense, finding and trading)
+**bind one concrete villager when accepted**. Unbound saved quests bind on their next resolution,
+even if that villager is unloaded. Later succession never changes that UUID. Multiple holders are
+chosen deterministically. Location anchors remain live unless their anchor type freezes; reward
+selectors resolve when the reward is granted. The `capital_role` selector always uses the giver's
+capital and does not select an allied court.
 
 If the giver has no active capital, or if the office has no villager holder (it may be held by a player, or be empty), the objective is **unofferable** with reason `mcaquests.unofferable.no_capital_role` (using the role label and capital name as arguments). A quest that does not bind successfully suspends rather than failing; if Capitals is later installed or a new officeholder is appointed, the same quest picks up where it was.
 
@@ -2047,8 +2102,8 @@ Follow this scheme and your keys will read the same way as the shipped ones:
 
 | Locale | Coverage |
 |---|---|
-| `en_us` | Source of truth — 2,891 keys |
-| `pt_br` (Português do Brasil) | Complete — all 2,891 keys |
+| `en_us` | Source of truth |
+| `pt_br` (Português do Brasil) | Complete parity with `en_us` |
 
 `LocaleParityTest` enforces the rules that keep this honest: every locale must cover all of `en_us` and define nothing `en_us` lacks, placeholders must agree between a translation and its source, no value may be blank or left as a `TODO` marker, no value may mix in a non-Latin writing system, and no built-in data file may go back to hard-coding English via `text`.
 

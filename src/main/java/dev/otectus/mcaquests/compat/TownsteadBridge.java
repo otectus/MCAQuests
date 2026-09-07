@@ -44,6 +44,10 @@ public interface TownsteadBridge {
      */
     Optional<String> variant();
 
+    /** Discards data-derived views on reload/world changes; reflection bindings remain valid. */
+    default void invalidateDataCaches() {
+    }
+
     // ---------------------------------------------------------------- reads
 
     Optional<TownsteadVillagerView> villager(Entity entity);

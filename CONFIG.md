@@ -123,7 +123,7 @@ modded operation; biome searches remain synchronous.
 ### `[debug]`
 | Option | Default | What it does |
 |---|---|---|
-| `strictJsonValidation` | `false` | Treat any malformed/unknown quest JSON as a hard error instead of skipping it. |
+| `strictJsonValidation` | `false` | Reject reloads containing malformed definitions instead of skipping affected resources. Invalid optional quest/project rules are errors; omitted fields keep defaults. |
 | `debugLogging` | `false` | Verbose logging for troubleshooting. |
 
 ### `[progression]`
@@ -164,7 +164,7 @@ modded operation; biome searches remain synchronous.
 |---|---|---|
 | `enabled` | `true` | Master switch for the optional MCA Capitals integration. When false, every Capitals capability reports unavailable, so gated quests are never offered and any a player already holds pause rather than break. The registry probe still runs, so `/mcaquests compat capitals status` keeps telling the truth about what is installed. Role gating is done through `capital_role` conditions in quest JSON, not through config. |
 | `enableBuiltinContent` | `true` | Whether MCA: Quests mounts its own MCA Capitals quest pack. Turn this off to keep the capability probing and the `compat_capability` condition, but author all court content yourself. |
-| `pollIntervalTicks` | `200` | How often (ticks) the capital situation poller samples thrones and diplomacy. This is the ceiling on how long a vacant throne or a fresh war can go unnoticed before a situation fires. Polled rather than event-driven because Capitals resolves a succession on its own death handler, and reading the throne from beside it would race. Clamp `20`–`6000`. |
+| `pollIntervalTicks` | `200` | How often (ticks) the capital situation poller samples thrones and diplomacy. Persistent changes are normally detected within this interval; a vacancy that starts and ends between samples can be missed. The first successful sample establishes the baseline without replaying existing events. Failed samples preserve the baseline. Polled because reading beside Capitals' own succession handler would race. Clamp `20`–`6000`. |
 
 ### `[compat.ftbquests]`
 | Option | Default | What it does |

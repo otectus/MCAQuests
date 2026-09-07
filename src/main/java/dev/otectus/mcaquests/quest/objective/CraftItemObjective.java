@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
@@ -28,7 +30,7 @@ public record CraftItemObjective(ItemTarget target, int count,
 
     public static final Codec<CraftItemObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(CraftItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(CraftItemObjective::count),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(CraftItemObjective::count),
             SourceHint.FIELD.forGetter(CraftItemObjective::source)
     ).apply(instance, CraftItemObjective::new));
 

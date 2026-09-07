@@ -54,8 +54,7 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            SituationDefinition.CODEC.parse(JsonOps.INSTANCE, entry.getValue())
-                    .resultOrPartial(message -> recordError(errors, strict, "Situation '" + fileId + "': " + message))
+            dev.otectus.mcaquests.data.StrictCodecs.parse(SituationDefinition.CODEC, JsonOps.INSTANCE, entry.getValue(), message -> recordError(errors, strict, "Situation '" + fileId + "': " + message))
                     .ifPresent(def -> {
                         if (loaded.containsKey(def.id())) {
                             recordError(errors, strict, "Duplicate situation id '" + def.id() + "' (from " + fileId + ")");

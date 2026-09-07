@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.project;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;
@@ -33,11 +35,11 @@ public record SponsorSpec(List<ResourceLocation> professions,
     public static final SponsorSpec ANY = new SponsorSpec(List.of(), 1, true, List.of(), Optional.empty());
 
     public static final Codec<SponsorSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.listOf().optionalFieldOf("professions", List.of()).forGetter(SponsorSpec::professions),
-            Codec.intRange(1, 100).optionalFieldOf("required_count", 1).forGetter(SponsorSpec::requiredCount),
-            Codec.BOOL.optionalFieldOf("adult_only", true).forGetter(SponsorSpec::adultOnly),
-            UUIDUtil.STRING_CODEC.listOf().optionalFieldOf("pinned_sponsors", List.of()).forGetter(SponsorSpec::pinnedSponsors),
-            SponsorDeathBehavior.CODEC.optionalFieldOf("on_death").forGetter(SponsorSpec::onDeath)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "professions", List.of()).forGetter(SponsorSpec::professions),
+            StrictCodecs.strictOptional(Codec.intRange(1, 100), "required_count", 1).forGetter(SponsorSpec::requiredCount),
+            StrictCodecs.strictOptional(Codec.BOOL, "adult_only", true).forGetter(SponsorSpec::adultOnly),
+            StrictCodecs.strictOptional(UUIDUtil.STRING_CODEC.listOf(), "pinned_sponsors", List.of()).forGetter(SponsorSpec::pinnedSponsors),
+            StrictCodecs.strictOptional(SponsorDeathBehavior.CODEC, "on_death").forGetter(SponsorSpec::onDeath)
     ).apply(instance, SponsorSpec::new));
 
     public boolean isGeneric() {

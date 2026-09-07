@@ -1,6 +1,9 @@
 package dev.otectus.mcaquests.state;
 
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
+import dev.otectus.mcaquests.quest.FailureSpec;
+import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
+import dev.otectus.mcaquests.quest.situation.state.SituationStatus;
 import dev.otectus.mcaquests.quest.target.FrozenLocation;
 import dev.otectus.mcaquests.support.TestBootstrap;
 import net.minecraft.core.BlockPos;
@@ -98,6 +101,49 @@ class SaveFixtureRoundTripTest {
         assertEquals(42, quest.frozenReward(0).orElse(-1));
         assertFalse(quest.rewardClaimed());
         assertEquals(0L, quest.suspendedTicks());
+        assertEquals(0L, quest.situationSuspendedTicks());
+    }
+
+    @Test
+    void localAndSharedPausesAccumulateSeparatelyAndSurviveReload() {
+        PlayerQuestData data = load(fixture("active_quest_ordinary.snbt"));
+        ActiveQuest quest = data.active().get(0);
+        long start = quest.startGameTime();
+        SituationInstance instance = new SituationInstance(UUID.randomUUID(),
+                new ResourceLocation("mcaquests", "capitals_the_empty_throne"), 12,
+                null, null, start, start + 1000L, 0L, SituationStatus.OPEN);
+        quest.addSuspendedTicks(100L); // an earlier local objective pause
+        instance.updateSuspension(start + 200L, true);
+        instance.updateSuspension(start + 300L, false);
+        quest.addSituationSuspendedTicks(instance.missingSuspendedTicks(
+                quest.situationSuspendedTicks(), start + 300L));
+        assertEquals(200L, quest.suspendedTicks(), "the local pause cannot replace the later shared pause");
+        assertEquals(100L, quest.situationSuspendedTicks());
+
+        ActiveQuest restored = load(data.save()).active().get(0);
+        assertEquals(200L, restored.suspendedTicks());
+        assertEquals(100L, restored.situationSuspendedTicks());
+        assertEquals(0L, instance.missingSuspendedTicks(
+                restored.situationSuspendedTicks(), start + 400L),
+                "reloading must not credit the same shared interval twice");
+    }
+
+    @Test
+    void lateSituationAcceptanceRetainsOriginalTimeOfDayDeadline() {
+        CompoundTag saved = fixture("active_quest_ordinary.snbt");
+        CompoundTag activeTag = saved.getList("active", Tag.TAG_COMPOUND).getCompound(0);
+        activeTag.putLong("start", 0L);
+        activeTag.putLong("start_day", 0L);
+        ActiveQuest lateCopy = load(saved).active().get(0);
+        lateCopy.addSituationSuspendedTicks(7000L);
+        FailureSpec failure = new FailureSpec(Optional.of(24000), Optional.of(6000), Optional.empty(),
+                false, 0, Optional.empty(), false);
+
+        assertEquals(6000L, failure.deadlineGameTime(lateCopy.startGameTime(), lateCopy.startDayTime(),
+                13000L, 13000L).orElseThrow());
+        assertEquals(5999L, lateCopy.effectiveNow(12999L));
+        assertEquals(6000L, lateCopy.effectiveNow(13000L),
+                "a 7000-tick pause delays the original 6000 deadline to 13000, not the next day");
     }
 
     @Test
@@ -111,6 +157,7 @@ class SaveFixtureRoundTripTest {
         assertEquals(1200L, quest.progress(1).elapsedTicks());
         assertEquals(2, quest.progress(1).visitedCount());
         assertEquals(2400L, quest.suspendedTicks());
+        assertEquals(0L, quest.situationSuspendedTicks(), "legacy pause time has no shared credit");
         FrozenLocation frozen = quest.frozenLocation("other_village/2048/nearest_to_giver");
         assertNotNull(frozen, "the escort destination was not kept");
         assertEquals(11, frozen.villageId().orElse(-1));
@@ -206,6 +253,7 @@ class SaveFixtureRoundTripTest {
         assertEquals(a.rewardClaimed(), b.rewardClaimed(), where + ": claimed");
         assertEquals(a.readyNotified(), b.readyNotified(), where + ": ready notified");
         assertEquals(a.suspendedTicks(), b.suspendedTicks(), where + ": suspended ticks");
+        assertEquals(a.situationSuspendedTicks(), b.situationSuspendedTicks(), where + ": situation suspended ticks");
 
         // frozenRewards and frozenLocations have per-key accessors only, so the fixture's own saved tag
         // supplies the key sets to look up.

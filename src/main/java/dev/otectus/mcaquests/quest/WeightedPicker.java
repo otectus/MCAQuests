@@ -29,12 +29,13 @@ public final class WeightedPicker {
         Random random = new Random(seed);
         int picks = Math.min(count, pool.size());
         for (int i = 0; i < picks; i++) {
-            int total = 0;
+            long total = 0;
             for (T item : pool) {
                 total += Math.max(1, weight.applyAsInt(item));
             }
-            int roll = random.nextInt(total);
-            int accumulated = 0;
+            // Keep existing deterministic draws for normal packs; large legal weights need a long.
+            long roll = total <= Integer.MAX_VALUE ? random.nextInt((int) total) : random.nextLong(total);
+            long accumulated = 0;
             int index = pool.size() - 1;
             for (int j = 0; j < pool.size(); j++) {
                 accumulated += Math.max(1, weight.applyAsInt(pool.get(j)));

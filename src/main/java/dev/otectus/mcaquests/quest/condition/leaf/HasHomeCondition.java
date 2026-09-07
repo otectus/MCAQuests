@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
@@ -14,7 +16,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 public record HasHomeCondition(boolean value) implements QuestCondition {
 
     public static final Codec<HasHomeCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.BOOL.optionalFieldOf("value", true).forGetter(HasHomeCondition::value)
+            StrictCodecs.strictOptional(Codec.BOOL, "value", true).forGetter(HasHomeCondition::value)
     ).apply(instance, HasHomeCondition::new));
 
     @Override

@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.quest.template;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
@@ -45,7 +46,7 @@ public record TemplateSpec(Map<String, TemplateVariable> variables, JsonElement 
                     Codec.unboundedMap(Codec.STRING, TemplateVariable.CODEC).fieldOf("variables")
                             .forGetter(TemplateSpec::variables),
                     JSON.fieldOf("objectives").forGetter(TemplateSpec::objectives),
-                    JSON.optionalFieldOf("rewards", new JsonArray()).forGetter(TemplateSpec::rewards)
+                    StrictCodecs.strictOptional(JSON, "rewards", new JsonArray()).forGetter(TemplateSpec::rewards)
             ).apply(instance, TemplateSpec::new));
 
     /** The concrete objectives/rewards produced by substituting a {@link ResolvedTemplate}. */

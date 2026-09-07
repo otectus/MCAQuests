@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.capitals.CapitalRef;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
 import dev.otectus.mcaquests.data.StrictCodecs;
@@ -63,11 +64,14 @@ public record CapitalPresentCondition(Subject subject, boolean present) implemen
 
     @Override
     public boolean test(QuestContext context) {
+        if (!CapitalsCompat.bridge().has(CapitalsCapability.REGISTRY)) {
+            return false;
+        }
         Optional<CapitalRef> capital = subject == Subject.GIVER
                 ? CapitalsQueries.giverCapital(context.villager())
                 : CapitalsQueries.playerVillageCapital(context.player());
         boolean active = capital.map(CapitalsCompat.bridge()::isActive).orElse(false);
-        return active == present;
+        return CapitalsCompat.bridge().has(CapitalsCapability.REGISTRY) && active == present;
     }
 
     @Override

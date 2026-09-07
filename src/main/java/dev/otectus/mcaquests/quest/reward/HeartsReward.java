@@ -59,8 +59,7 @@ public record HeartsReward(int amount) implements QuestReward {
 
     /** Amount after the configured multiplier and min/max clamp. */
     public int effectiveAmount() {
-        int scaled = Math.round(amount * McaQuestsConfig.COMMON.heartsRewardMultiplier.get().floatValue());
-        return Mth.clamp(scaled,
+        return RewardAmounts.hearts(amount, McaQuestsConfig.COMMON.heartsRewardMultiplier.get(),
                 McaQuestsConfig.COMMON.minHeartsReward.get(),
                 McaQuestsConfig.COMMON.maxHeartsReward.get());
     }

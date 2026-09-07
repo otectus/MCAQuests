@@ -1,0 +1,44 @@
+{
+  "format_version": 1,
+  "id": "civicworks:the_apothecary_round",
+  "weight": 8,
+  "title": { "text": "The Apothecary Round" },
+  "category": "culture",
+  "scope": { "scope": "profession", "professions": ["minecraft:cleric"], "fallback_radius": 64 },
+  "sponsor": {
+    "professions": ["minecraft:cleric"],
+    "on_death": "pause"
+  },
+  "conditions": { "type": "mcaquests:village_reputation", "min": 5 },
+  "reputation": { "on_phase_complete": 2, "on_project_complete": 8 },
+  "phases": [
+    {
+      "key": "gather_simples",
+      "dialogue": {
+        "offer": { "text": "Between the three of us we have one jar of dried nettle and a great deal of optimism. Flowers, honey, anything that grows." },
+        "in_progress": { "text": "Keep them dry. Damp herbs are worse than none." }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "tag": "minecraft:flowers", "count": 64, "per_player_cap": 16 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:honey_bottle", "count": 8 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 25 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "teach_the_round",
+      "dialogue": {
+        "offer": { "text": "Now walk the round with each of us, so the knowledge is not in one head." },
+        "in_progress": { "text": "All three of us. Especially the difficult one." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_talk_to_profession", "profession": "minecraft:cleric", "count": 3 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:effect", "effect": "minecraft:health_boost", "duration": 2400, "amplifier": 0 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:hearts_with_sponsor", "amount": 10 }, "target": "contributors" }
+      ]
+    }
+  ]
+}

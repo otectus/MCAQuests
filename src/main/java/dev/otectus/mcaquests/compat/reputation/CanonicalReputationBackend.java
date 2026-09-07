@@ -124,9 +124,13 @@ public final class CanonicalReputationBackend implements ReputationBackend {
 
     @Override
     public int award(ReputationAward award) {
+        return record(award).map(ReputationResult::newScore).orElse(0);
+    }
+
+    private Optional<ReputationResult> record(ReputationAward award) {
         Optional<CommunityKey> community = key(award.dimension(), award.villageId());
         if (community.isEmpty()) {
-            return 0;
+            return Optional.empty();
         }
         ResourceLocation incidentType = award.incidentType() != null
                 ? award.incidentType()
@@ -152,7 +156,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
             McaQuests.LOGGER.debug("[MCA: Quests] reputation award for {} was not applied ({})",
                     award.player(), result.reason());
         }
-        return result.newScore();
+        return Optional.of(result);
     }
 
     @Override
@@ -258,7 +262,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
 
     @Override
     public boolean recordIncident(ReputationAward award) {
-        return award(award) != 0 || award.delta() == 0;
+        return record(award).map(ReputationResult::applied).orElse(false);
     }
 
     // ------------------------------------------------------------------

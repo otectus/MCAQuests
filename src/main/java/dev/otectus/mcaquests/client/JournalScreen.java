@@ -196,7 +196,7 @@ public class JournalScreen extends McaQuestsScreen {
                 link.setHeight(12);
                 addScrolledWidget(link, y, 12);
             }
-            y += row.height();
+            y += rowHeight(row);
         }
         view.setContentHeight(y);
     }
@@ -231,7 +231,7 @@ public class JournalScreen extends McaQuestsScreen {
         int y = 0;
         for (Row row : rows) {
             renderRow(graphics, row, y);
-            y += row.height();
+            y += rowHeight(row);
         }
         endContentClip(graphics);
         renderScrollbar(graphics, mouseX, mouseY);
@@ -246,16 +246,30 @@ public class JournalScreen extends McaQuestsScreen {
         }
         if (!row.text().getString().isEmpty()) {
             CardText.draw(graphics, this.font, row.text(), x, screenY,
-                    Math.max(1, wrapWidth() - row.indent() - (row.deeds() != null ? DEEDS_W + 4 : 0)),
+                    rowWidth(row),
                     row.colour());
         }
         if (row.bar() != null) {
-            Panel.bar(graphics, x, screenY + 11, wrapWidth() - row.indent() - 8,
+            Panel.bar(graphics, x, screenY + textHeight(row) + 2, wrapWidth() - row.indent() - 8,
                     row.bar()[0], row.bar()[1], GuiTextures.BAR_GREEN);
         }
         if (row.heading()) {
-            Panel.divider(graphics, contentLeft(), screenY + 9, contentWidth());
+            Panel.divider(graphics, contentLeft(), screenY + textHeight(row), contentWidth());
         }
+    }
+
+    private int rowWidth(Row row) {
+        return Math.max(1, wrapWidth() - row.indent() - (row.deeds() != null ? DEEDS_W + 4 : 0));
+    }
+
+    private int textHeight(Row row) {
+        return row.text().getString().isEmpty() ? 0 : CardText.height(this.font, row.text(), rowWidth(row));
+    }
+
+    /** Keep wrapped translations, datapack titles, bars and following controls in distinct rows. */
+    private int rowHeight(Row row) {
+        int decoration = row.bar() != null ? BAR_ROW + 2 : row.heading() ? 3 : 1;
+        return Math.max(row.height(), textHeight(row) + decoration);
     }
 
     private Component section(String key) {

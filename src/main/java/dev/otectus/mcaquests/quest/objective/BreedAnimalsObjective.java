@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
@@ -25,9 +27,9 @@ public record BreedAnimalsObjective(EntityTarget animal, Optional<LocationAnchor
 
     public static final Codec<BreedAnimalsObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             EntityTarget.MAP_CODEC.fieldOf("animal").forGetter(BreedAnimalsObjective::animal),
-            LocationAnchor.CODEC.optionalFieldOf("near").forGetter(BreedAnimalsObjective::near),
-            Codec.intRange(1, 256).optionalFieldOf("radius", 32).forGetter(BreedAnimalsObjective::radius),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(BreedAnimalsObjective::count)
+            StrictCodecs.strictOptional(LocationAnchor.CODEC, "near").forGetter(BreedAnimalsObjective::near),
+            StrictCodecs.strictOptional(Codec.intRange(1, 256), "radius", 32).forGetter(BreedAnimalsObjective::radius),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(BreedAnimalsObjective::count)
     ).apply(instance, BreedAnimalsObjective::new));
 
     @Override

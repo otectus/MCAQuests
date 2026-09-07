@@ -44,7 +44,16 @@ class McaCompatSafeFailTest {
                         + "path rather than an artefact of the arguments. If this fails, MCA has leaked "
                         + "back onto testRuntimeClasspath.");
         assertFalse(McaHandles.available());
+        assertFalse(McaHandles.canMaterializeRelatives());
+        assertTrue(McaCompat.nearestSpouseWithin(null, 8).isEmpty());
+        assertTrue(McaCompat.maxSpouseHeartsWithin(null, 8).isEmpty());
         assertNotNull(McaBinding.describe(), "The debug report must work even with nothing bound.");
+    }
+
+    @Test
+    void unboundIdentityReadersDoNotInventVillageOrBuildingZero() {
+        assertEquals(Integer.MIN_VALUE, McaHandles.villageId(new Object()));
+        assertEquals(-1, McaHandles.buildingId(new Object()));
     }
 
     // --- identity / display ----------------------------------------------------------------------

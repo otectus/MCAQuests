@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.situation.SituationSignalType;
@@ -34,9 +35,18 @@ public record CapitalInterregnumTrigger(String sovereign) implements SituationTr
     private static final String VILLAGER_END = "vacant";
     private static final String PLAYER_END = "vacant_player";
 
+    private static final Codec<String> SOVEREIGN_CODEC = Codec.STRING.comapFlatMap(value -> {
+        String normalized = value.toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "any", "villager", "player" -> DataResult.success(normalized);
+            default -> DataResult.error(() -> "Unknown sovereign filter: '" + value
+                    + "' (expected any/villager/player)");
+        };
+    }, value -> value);
+
     public static final Codec<CapitalInterregnumTrigger> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
-                    StrictCodecs.strictOptional(Codec.STRING, "sovereign", "any")
+                    StrictCodecs.strictOptional(SOVEREIGN_CODEC, "sovereign", "any")
                             .forGetter(CapitalInterregnumTrigger::sovereign)
             ).apply(instance, CapitalInterregnumTrigger::new));
 
@@ -52,11 +62,16 @@ public record CapitalInterregnumTrigger(String sovereign) implements SituationTr
 
     @Override
     public boolean matches(TriggerSignal signal) {
-        Optional<String> wanted = switch (sovereign.toLowerCase(Locale.ROOT)) {
-            case "villager" -> Optional.of(VILLAGER_END);
-            case "player" -> Optional.of(PLAYER_END);
-            default -> Optional.empty(); // "any", and anything the pack made up: no narrowing
+        if (sovereign == null) {
+            return false;
+        }
+        return switch (sovereign.toLowerCase(Locale.ROOT)) {
+            case "villager" -> signal.signalContext()
+                    .map(context -> context.matchesTo(Optional.of(VILLAGER_END))).orElse(false);
+            case "player" -> signal.signalContext()
+                    .map(context -> context.matchesTo(Optional.of(PLAYER_END))).orElse(false);
+            case "any" -> true;
+            default -> false;
         };
-        return signal.signalContext().map(context -> context.matchesTo(wanted)).orElse(wanted.isEmpty());
     }
 }

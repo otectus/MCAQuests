@@ -28,6 +28,7 @@ public final class ReputationTierValidator {
         boolean ok = true;
         Set<String> seen = new HashSet<>();
         int previous = Integer.MIN_VALUE;
+        boolean first = true;
         for (ReputationTier tier : tiers) {
             if (!seen.add(tier.id())) {
                 errors.add("Reputation tier set '" + id + "' has duplicate tier id '" + tier.id() + "'.");
@@ -38,12 +39,13 @@ public final class ReputationTierValidator {
                         + "(reserved as the ladder|tier separator in the FTB editor known-ids sync, spec section 20).");
                 ok = false;
             }
-            if (tier.threshold() <= previous) {
+            if (!first && tier.threshold() <= previous) {
                 errors.add("Reputation tier set '" + id + "' thresholds must strictly ascend; '"
                         + tier.id() + "' (" + tier.threshold() + ") is not greater than the previous (" + previous + ").");
                 ok = false;
             }
             previous = tier.threshold();
+            first = false;
         }
         if (tiers.get(0).threshold() > 0) {
             errors.add("Reputation tier set '" + id + "' lowest tier threshold must be <= 0 to act as a floor (got "

@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
@@ -97,11 +98,11 @@ public record RepeatRule(RepeatType type, Optional<Integer> declaredCooldownTick
     }
 
     public static final Codec<RepeatRule> BASE_CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            RepeatType.CODEC.optionalFieldOf("type", RepeatType.COOLDOWN).forGetter(RepeatRule::type),
-            Codec.INT.optionalFieldOf("cooldown_ticks").forGetter(RepeatRule::declaredCooldownTicks),
-            TownsteadPeriod.CODEC.optionalFieldOf("period").forGetter(RepeatRule::period),
-            RepeatScope.CODEC.optionalFieldOf("scope", RepeatScope.GIVER).forGetter(RepeatRule::scope),
-            Codec.INT.optionalFieldOf("fallback_cooldown_ticks", 24000)
+            StrictCodecs.strictOptional(RepeatType.CODEC, "type", RepeatType.COOLDOWN).forGetter(RepeatRule::type),
+            StrictCodecs.strictOptional(net.minecraft.util.ExtraCodecs.NON_NEGATIVE_INT, "cooldown_ticks").forGetter(RepeatRule::declaredCooldownTicks),
+            StrictCodecs.strictOptional(TownsteadPeriod.CODEC, "period").forGetter(RepeatRule::period),
+            StrictCodecs.strictOptional(RepeatScope.CODEC, "scope", RepeatScope.GIVER).forGetter(RepeatRule::scope),
+            StrictCodecs.strictOptional(Codec.INT, "fallback_cooldown_ticks", 24000)
                     .forGetter(RepeatRule::fallbackCooldownTicks)
     ).apply(instance, RepeatRule::new));
 

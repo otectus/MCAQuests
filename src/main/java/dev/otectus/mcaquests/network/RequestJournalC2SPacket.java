@@ -19,7 +19,7 @@ public record RequestJournalC2SPacket() {
 
     public static void handle(RequestJournalC2SPacket msg, Supplier<NetworkEvent.Context> ctx) {
         NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> {
+        PacketRequests.enqueue(context, () -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 JournalService.sendSnapshot(player);

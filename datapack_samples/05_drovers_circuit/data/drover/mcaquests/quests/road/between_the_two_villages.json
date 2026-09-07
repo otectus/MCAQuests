@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "id": "drover:between_the_two_villages",
+  "weight": 10,
+  "category": "exploration",
+  "difficulty": "medium",
+  "offer_group": "drove_road",
+  "title": { "text": "Between the Two Villages" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": {
+    "professions": ["minecraft:shepherd", "minecraft:cartographer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "Nobody has walked the drove road since the bridge went. Get yourself to the next village and back, and tell me whether it is still a road or just a rumour." },
+    "accept": { "text": "Keep the river on your left and you cannot miss it." },
+    "decline": { "text": "Then it stays a rumour." },
+    "in_progress": { "text": "The next village along, not this one." },
+    "ready": { "text": "You have been. I can see the mud on you." },
+    "complete": { "text": "Then it is a road. I shall tell the drovers." },
+    "failed": { "text": "Two days. It should not take two days." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:reach_location",
+      "location": { "anchor": "nearest_other_village", "radius": 2048 },
+      "radius": 16,
+      "min_journey": 200
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 40 },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "failure": {
+    "deadline_ticks": 48000,
+    "failure_hearts": 0,
+    "retry_after": 24000
+  }
+}

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.ReputationAward;
@@ -36,9 +38,9 @@ public record RecordIncidentReward(ResourceLocation incident, Optional<Integer> 
     public static final Codec<RecordIncidentReward> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
                     ResourceLocation.CODEC.fieldOf("incident").forGetter(RecordIncidentReward::incident),
-                    Codec.INT.optionalFieldOf("delta").forGetter(RecordIncidentReward::delta),
-                    Codec.STRING.optionalFieldOf("visibility").forGetter(RecordIncidentReward::visibility),
-                    Codec.STRING.listOf().optionalFieldOf("tags", List.of())
+                    StrictCodecs.strictOptional(Codec.INT, "delta").forGetter(RecordIncidentReward::delta),
+                    StrictCodecs.strictOptional(Codec.STRING, "visibility").forGetter(RecordIncidentReward::visibility),
+                    StrictCodecs.strictOptional(Codec.STRING.listOf(), "tags", List.of())
                             .forGetter(RecordIncidentReward::tags)
             ).apply(instance, RecordIncidentReward::new));
 

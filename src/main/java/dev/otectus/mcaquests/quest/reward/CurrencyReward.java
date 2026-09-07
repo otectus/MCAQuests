@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
@@ -39,9 +41,9 @@ public record CurrencyReward(Optional<Integer> min, Optional<Integer> max,
                              Optional<QuestDifficulty> difficulty) implements QuestReward {
 
     public static final Codec<CurrencyReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.INT.optionalFieldOf("min").forGetter(CurrencyReward::min),
-            Codec.INT.optionalFieldOf("max").forGetter(CurrencyReward::max),
-            QuestDifficulty.CODEC.optionalFieldOf("difficulty").forGetter(CurrencyReward::difficulty)
+            StrictCodecs.strictOptional(Codec.INT, "min").forGetter(CurrencyReward::min),
+            StrictCodecs.strictOptional(Codec.INT, "max").forGetter(CurrencyReward::max),
+            StrictCodecs.strictOptional(QuestDifficulty.CODEC, "difficulty").forGetter(CurrencyReward::difficulty)
     ).apply(instance, CurrencyReward::new));
 
     @Override
@@ -74,7 +76,9 @@ public record CurrencyReward(Optional<Integer> min, Optional<Integer> max,
         // would apply the multiplier twice, paying 4x at a multiplier of 2.
         int low = rawMin();
         int high = Math.max(low, rawMax());
-        int rolled = low >= high ? low : low + random.nextInt(high - low + 1);
+        long width = (long) high - low + 1;
+        int rolled = low >= high ? low : width <= Integer.MAX_VALUE ? low + random.nextInt((int) width)
+                : (int) (low + (random.nextLong() >>> 1) % width);
         return scale(rolled);
     }
 
@@ -100,13 +104,7 @@ public record CurrencyReward(Optional<Integer> min, Optional<Integer> max,
         if (item == null) {
             return; // provider unavailable and currencyFallback = DISABLE; already logged once
         }
-        int remaining = amount;
-        int maxStack = new ItemStack(item).getMaxStackSize();
-        while (remaining > 0) {
-            int give = Math.min(remaining, maxStack);
-            ItemHandlerHelper.giveItemToPlayer(player, new ItemStack(item, give));
-            remaining -= give;
-        }
+        ItemRewardDelivery.grant(player, item, amount);
     }
 
     /** The band's (or the explicit) low end, after scaling — the number shown to the player. */
@@ -138,8 +136,7 @@ public record CurrencyReward(Optional<Integer> min, Optional<Integer> max,
     }
 
     private static int scale(int amount) {
-        double scaled = amount * McaQuestsConfig.COMMON.currencyRewardMultiplier.get();
-        return Math.max(0, (int) Math.round(scaled));
+        return RewardAmounts.positiveScaled(amount, McaQuestsConfig.COMMON.currencyRewardMultiplier.get());
     }
 
     private static int bandMin(QuestDifficulty band) {

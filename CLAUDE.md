@@ -16,7 +16,7 @@ and `pack.mcmeta`. Never hard-code one elsewhere, this file included.
 ## Build
 - `./gradlew compileJava` - the normal iteration loop
 - `./gradlew test` - plain JUnit in `src/test/java`; no GameTest source set
-- `./gradlew build` - also runs `verifyReobfJar` (build.gradle:331), which fails the build if the jar still carries SRG member names
+- `./gradlew build` - also runs `verifyReobfJar` (build.gradle:331), which inspects actual Minecraft member references and rejects dev-mapped jars; `artifactVerifierTest` proves rejection
 - `./gradlew installMod -PmodsDir=<dir>` - copies the verified jar into a mods folder (or `$MCAQUESTS_MODS_DIR`)
 - `townsteadProbeTest` / `mapProbeTest` / `iceAndFireProbeTest` / `bountifulProbeTest` / `capitalsProbeTest` - replay a binding manifest against real third-party jars; need `-PtownsteadModernJar=` / `-PjourneymapJar=` / `-PiceandfireCeJar=` / `-PiceandfireOriginalJar=` / `-PbountifulJar=` / `-PcapitalsJar=` etc., so they are not part of `check`
 - `McaBindingProbeTest` replays the MCA manifest against every build listed in `mca_probe_versions`, each in its own class loader
@@ -28,7 +28,7 @@ api/        public extension points for add-ons - changes here are source-breaki
 client/     screens, HUD, toasts, client-side mirrors of server state
 command/    /mcaquests admin and debug commands
 compat/     shared CompatProvider/CompatRegistry framework, pack/* conditional embedded datapacks, 
-            and one subpackage per optional mod; all third-party access is reflective
+            reflective adapters plus isolated typed FTB, Reputation and JourneyMap packages
 data/       datapack loaders and validators (quests, tiers, titles, situations)
 event/      Forge event handlers
 mixin/      client-only config mcaquests.mixins.json (two classes) and compat/ for bountiful 
@@ -44,6 +44,7 @@ Conditional embedded datapacks (e.g., `iafce_quests`, `bountiful_core`) are stor
 
 ## Key Dependencies
 - MCA Reborn - mandatory at runtime, never a compile dependency; `mca_dev_version` only picks what dev runs launch with
+- MCA: Reputation - compile-only sibling API; build `../MCAReputation` first or pass `-PmcaReputationClasses=<dir>`; optional at runtime.
 - FTB Quests stack - `compileOnly`, never shipped; set `enableFtbqInDev=true` to get it in dev runs
 - MCA Capitals - optional; set `enableCapitalsInDev=true` to get it in dev runs
 
@@ -52,7 +53,8 @@ Conditional embedded datapacks (e.g., `iafce_quests`, `bountiful_core`) are stor
 - `@Mod.EventBusSubscriber` with no `bus=` (FORGE) is the default; MOD bus appears only where mod setup needs it (client/QuestClientSetup.java:15). A few compat bridges register manually on `MinecraftForge.EVENT_BUS` to control class-load timing (compat/ftbq/FtbqEventBridge.java:31).
 - No access transformer. Cross-mod access goes through reflection/MethodHandles instead.
 - Config is `ForgeConfigSpec` in `McaQuestsConfig.java`, split into `COMMON_SPEC` (server-safe) and `CLIENT_SPEC`. Every key is documented in `CONFIG.md`.
-- Optional mods (MCA, Townstead, FTB Quests, MCA: Reputation, Xaero, Ice & Fire, Bountiful, MCA Capitals) are gated on `ModList.get().isLoaded(...)` and reached only through a binding in `compat/<mod>/` that resolves types by name at runtime - MCA included, since it has moved its package root before. Nothing in `src/main/java` may statically import a third-party mod type; `NoMcaStaticLinkTest`, `NoIceAndFireStaticLinkTest`, `NoBountifulStaticLinkTest`, and `NoCapitalsStaticLinkTest` enforce that, and each integration has a Noop bridge for the absent case. **Exception:** `compat/journeymap/` is typed against JourneyMap's compile-only API 2.0 and loaded only via JourneyMap's plugin discovery (not reflectively); `NoMinimapStaticLinkTest` allows `journeymap/` references only under `dev/otectus/mcaquests/compat/journeymap/`. The map layer uses an empty registry instead of a Noop bridge. Bountiful's binding is reached through the common mixin `mcaquests.compat.mixins.json`, which itself carries `required: false` and is plugin-gated to apply only when Bountiful is installed.
+- MCA, Townstead, Xaero, Ice & Fire, Bountiful and Capitals are resolved by name/registry behind compatibility gates; static-link tests enforce isolation. Typed compile-only adapters are deliberate exceptions: FTB Quests under `compat/ftbq/`, MCA: Reputation under `compat/reputation/`, and JourneyMap under `compat/journeymap/`. FTB and Reputation are initialized only after their mod presence gates; JourneyMap discovers its plugin. None of these dependencies is bundled. The Bountiful mixin is optional and plugin-gated.
+
 - Mixins: two configs. `mcaquests.mixins.json` is client-only with two classes (Plain SpongePowered Mixin, no MixinExtras). `mcaquests.compat.mixins.json` is common with one class targeting Bountiful's `io.ejekta.bountiful.bounty.BountyData.tryCashIn`, marked `required: false` and plugin-gated by `compat/bountiful/BountifulMixinPlugin`. It observes the return value only and never cancels or mutates. Other mods can inject into the same method; coexistence is safe.
 - Common code must not import `net.minecraft.client`; exception: the two client mixins `mixin/MinecraftGlowMixin.java` and `mixin/ScreenAccessor.java` import client classes.
 - Commands: `/mcaquests` runs on the server command dispatcher (common), while `/mcaquestsclient` runs on the client dispatcher from `client/ClientCommands.java` when the player is in-game.

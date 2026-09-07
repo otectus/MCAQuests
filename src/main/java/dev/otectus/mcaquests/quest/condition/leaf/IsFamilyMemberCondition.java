@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -27,7 +29,7 @@ public record IsFamilyMemberCondition(String relation) implements QuestCondition
     // See DispatchedCodecInlinesTest.
     public static final Codec<IsFamilyMemberCondition> CODEC = RecordCodecBuilder.<IsFamilyMemberCondition>mapCodec(
             instance -> instance.group(
-                    Codec.STRING.optionalFieldOf("relation", "any").forGetter(IsFamilyMemberCondition::relation)
+                    StrictCodecs.strictOptional(Codec.STRING, "relation", "any").forGetter(IsFamilyMemberCondition::relation)
             ).apply(instance, IsFamilyMemberCondition::new)).flatXmap(IsFamilyMemberCondition::validate, IsFamilyMemberCondition::validate).codec();
 
     private static DataResult<IsFamilyMemberCondition> validate(IsFamilyMemberCondition condition) {

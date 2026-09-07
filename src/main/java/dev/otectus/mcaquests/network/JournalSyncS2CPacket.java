@@ -7,7 +7,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -27,9 +26,9 @@ public record JournalSyncS2CPacket(List<Component> globalTitles, List<JournalVil
     }
 
     public static JournalSyncS2CPacket decode(FriendlyByteBuf buf) {
-        List<Component> globalTitles = buf.readCollection(ArrayList::new, FriendlyByteBuf::readComponent);
-        List<JournalVillageEntry> villages = buf.readCollection(ArrayList::new, JournalVillageEntry::decode);
-        List<JournalArchiveEntry> archive = buf.readCollection(ArrayList::new, JournalArchiveEntry::decode);
+        List<Component> globalTitles = PacketCollections.readList(buf, FriendlyByteBuf::readComponent);
+        List<JournalVillageEntry> villages = PacketCollections.readList(buf, JournalVillageEntry::decode);
+        List<JournalArchiveEntry> archive = PacketCollections.readList(buf, JournalArchiveEntry::decode);
         boolean reputationPresent = buf.readBoolean();
         return new JournalSyncS2CPacket(globalTitles, villages, archive, reputationPresent);
     }

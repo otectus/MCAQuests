@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "crossroads:a_hot_meal_at_the_dock",
+  "weight": 14,
+  "category": "care",
+  "difficulty": "easy",
+  "offer_group": "crossroads_townstead",
+  "title": { "text": "A Hot Meal at the Dock" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["minecraft:fisherman", "minecraft:farmer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "I have been on the boats since first light and I have not eaten since the day before that. Six loaves - into my hands, not onto the counter." },
+    "accept": { "text": "Into my hands. I will eat them where I stand." },
+    "decline": { "text": "Then I shall keep working and keep not eating." },
+    "in_progress": { "text": "Bread. Any bread." },
+    "ready": { "text": "Give it here." },
+    "complete": { "text": "That is the first thing I have tasted all week. Thank you." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:bread",
+      "count": 6,
+      "destination": { "type": "townstead_villager_inventory", "target": "giver" }
+    },
+    {
+      "type": "mcaquests:townstead_change",
+      "source": "villager",
+      "target": "giver",
+      "path": "needs.hunger",
+      "operator": "gte",
+      "value": 0,
+      "direction": "increase",
+      "amount": 30,
+      "minimum_final": 60,
+      "baseline_on_accept": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 8 },
+    { "type": "mcaquests:townstead_reaction", "target": "giver", "task": "eat" }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": ["READ_VILLAGER", "READ_NEEDS", "MUTATE_NEEDS"]
+      },
+      {
+        "type": "mcaquests:townstead_value",
+        "source": "villager",
+        "target": "giver",
+        "path": "needs.hunger",
+        "operator": "lte",
+        "value": 30,
+        "missing": false
+      }
+    ]
+  }
+}

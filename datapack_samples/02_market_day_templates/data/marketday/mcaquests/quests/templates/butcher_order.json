@@ -1,0 +1,69 @@
+{
+  "format_version": 1,
+  "id": "marketday:template_butcher_order",
+  "weight": 14,
+  "category": "delivery",
+  "difficulty": "easy",
+  "offer_group": "market_order",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["minecraft:butcher"],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "marketday.quest.butcher_order.title",
+    "with": ["{cut_name}"]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "marketday.quest.butcher_order.offer",
+      "with": ["{count}", "{cut_name}", "{player}"]
+    },
+    "accept": { "translate": "marketday.quest.butcher_order.accept" },
+    "decline": { "translate": "marketday.quest.butcher_order.decline" },
+    "in_progress": {
+      "translate": "marketday.quest.butcher_order.in_progress",
+      "with": ["{cut_name}"]
+    },
+    "ready": { "translate": "marketday.quest.butcher_order.ready" },
+    "complete": {
+      "translate": "marketday.quest.butcher_order.complete",
+      "with": ["{pay}"]
+    }
+  },
+  "template": {
+    "variables": {
+      "cut": {
+        "kind": "item",
+        "tags": ["marketday:market_cuts"]
+      },
+      "count": {
+        "kind": "int",
+        "min": 6,
+        "max": 14,
+        "per_player_level": 0.4,
+        "limit": 32
+      },
+      "pay": {
+        "kind": "int",
+        "min": 2,
+        "max": 5,
+        "per_heart": 0.05,
+        "limit": 12
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:item_delivery",
+        "item": "{cut}",
+        "count": "{count}",
+        "consume": true
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:item", "item": "minecraft:emerald", "count": "{pay}" },
+      { "type": "mcaquests:xp", "amount": "{count}" },
+      { "type": "mcaquests:hearts", "amount": 4 }
+    ]
+  }
+}

@@ -20,7 +20,7 @@ public final class ProjectLifecycleEvents {
     private ProjectLifecycleEvents() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public static void onSponsorDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide() || !McaCompat.isMcaVillager(event.getEntity())) {
             return;

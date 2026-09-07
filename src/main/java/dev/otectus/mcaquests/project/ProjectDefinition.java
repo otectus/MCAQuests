@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.QuestText;
@@ -36,17 +37,17 @@ public record ProjectDefinition(
 
     public static final Codec<ProjectDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("id").forGetter(ProjectDefinition::id),
-            Codec.BOOL.optionalFieldOf("enabled", true).forGetter(ProjectDefinition::enabled),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("weight", 1).forGetter(ProjectDefinition::weight),
-            QuestText.CODEC.optionalFieldOf("title").forGetter(ProjectDefinition::title),
-            Codec.STRING.optionalFieldOf("category").forGetter(ProjectDefinition::category),
+            StrictCodecs.strictOptional(Codec.BOOL, "enabled", true).forGetter(ProjectDefinition::enabled),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "weight", 1).forGetter(ProjectDefinition::weight),
+            StrictCodecs.strictOptional(QuestText.CODEC, "title").forGetter(ProjectDefinition::title),
+            StrictCodecs.strictOptional(Codec.STRING, "category").forGetter(ProjectDefinition::category),
             ProjectScopeSpec.CODEC.fieldOf("scope").forGetter(ProjectDefinition::scope),
-            SponsorSpec.CODEC.optionalFieldOf("sponsor", SponsorSpec.ANY).forGetter(ProjectDefinition::sponsor),
-            ProjectPhase.CODEC.listOf().optionalFieldOf("phases", List.of()).forGetter(ProjectDefinition::phases),
-            ConditionTypes.CODEC.optionalFieldOf("conditions").forGetter(ProjectDefinition::conditions),
-            ReputationSpec.CODEC.optionalFieldOf("reputation", ReputationSpec.NONE).forGetter(ProjectDefinition::reputation),
-            ResourceLocation.CODEC.optionalFieldOf("follow_up").forGetter(ProjectDefinition::followUp),
-            FailureSpec.CODEC.optionalFieldOf("failure").forGetter(ProjectDefinition::failure)
+            StrictCodecs.strictOptional(SponsorSpec.CODEC, "sponsor", SponsorSpec.ANY).forGetter(ProjectDefinition::sponsor),
+            StrictCodecs.strictOptional(ProjectPhase.CODEC.listOf(), "phases", List.of()).forGetter(ProjectDefinition::phases),
+            StrictCodecs.strictOptional(ConditionTypes.CODEC, "conditions").forGetter(ProjectDefinition::conditions),
+            StrictCodecs.strictOptional(ReputationSpec.CODEC, "reputation", ReputationSpec.NONE).forGetter(ProjectDefinition::reputation),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "follow_up").forGetter(ProjectDefinition::followUp),
+            StrictCodecs.strictOptional(FailureSpec.CODEC, "failure").forGetter(ProjectDefinition::failure)
     ).apply(instance, ProjectDefinition::new));
 
     /** Translation key for this project's display title, e.g. {@code mcaquests.project.<path>.title}. */

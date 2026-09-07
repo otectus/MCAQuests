@@ -25,7 +25,7 @@ import java.nio.file.Path;
  * change, or a world opened with a different mod set, mounts exactly what is usable now, and a pack
  * that stops being usable simply is not offered on the next build.
  *
- * <p>Mounted at {@link Pack.Position#TOP} and marked built-in, so a datapack an owner installs still
+ * <p>Mounted at {@link Pack.Position#BOTTOM} and marked built-in, so a datapack an owner installs still
  * wins: our content is a default to be overridden, not a claim on the path.
  */
 @Mod.EventBusSubscriber(modid = McaQuests.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -69,22 +69,25 @@ public final class CompatPackFinder {
                               ConditionalCompatPack pack) {
         String packId = McaQuests.MOD_ID + "/" + pack.id();
         Path root = modFile.findResource(ROOT, pack.folder());
-        Pack built = Pack.readMetaAndCreate(packId,
-                Component.translatable("mcaquests.compatpack." + pack.id()),
-                true,
-                id -> new PathPackResources(id, true, root),
-                PackType.SERVER_DATA,
-                Pack.Position.TOP,
-                PackSource.BUILT_IN);
+        Pack built = createPack(packId, pack.id(), root);
         if (built == null) {
-            // readMetaAndCreate answers null for a missing or unreadable pack.mcmeta. That is a build
-            // problem, not a player one, so it is reported and skipped rather than thrown.
             McaQuests.LOGGER.info("[MCA: Quests] Compat datapack '{}' has no readable pack.mcmeta at {}; "
                     + "skipping it.", packId, root);
             return;
         }
         consumer.accept(built);
         McaQuests.LOGGER.info("[MCA: Quests] Mounted compat datapack '{}'.", packId);
+    }
+
+    /** Kept separate from mod discovery so resource priority is exercised with a real repository. */
+    static Pack createPack(String packId, String descriptionId, Path root) {
+        return Pack.readMetaAndCreate(packId,
+                Component.translatable("mcaquests.compatpack." + descriptionId),
+                true,
+                id -> new PathPackResources(id, true, root),
+                PackType.SERVER_DATA,
+                Pack.Position.BOTTOM,
+                PackSource.BUILT_IN);
     }
 
     /** This mod's own jar (or classes directory in dev), or {@code null} if Forge cannot name it. */

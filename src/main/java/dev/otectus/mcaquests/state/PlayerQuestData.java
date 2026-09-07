@@ -18,10 +18,15 @@ import java.util.UUID;
 public final class PlayerQuestData {
 
     private final List<ActiveQuest> active = new ArrayList<>();
+    /** Unreadable entries survive a save for recovery without preventing the player from logging in. */
+    private final List<CompoundTag> unreadableActive = new ArrayList<>();
     private final QuestHistory history = new QuestHistory();
     private final PlayerTitles titles = new PlayerTitles();
     private final ProgressionStats stats = new ProgressionStats();
     private final OfferSessions offers = new OfferSessions();
+    private final PendingItemRewards pendingItems = new PendingItemRewards();
+
+    public PendingItemRewards pendingItems() { return pendingItems; }
 
     /** The quest the marker, the guidance line and the villager outline are all about. */
     private TrackedQuest tracked;
@@ -123,16 +128,14 @@ public final class PlayerQuestData {
 
     public void remove(ActiveQuest quest) {
         active.remove(quest);
+        if (tracked != null && tracked.matches(quest)) {
+            tracked = null;
+        }
     }
 
     public void copyFrom(PlayerQuestData other) {
-        active.clear();
-        active.addAll(other.active);
-        history.copyFrom(other.history);
-        titles.copyFrom(other.titles);
-        stats.copyFrom(other.stats);
-        offers.copyFrom(other.offers);
-        tracked = other.tracked;
+        // Player cloning must not share mutable objective/offer state with the dead entity.
+        load(other.save());
     }
 
     public CompoundTag save() {
@@ -141,11 +144,13 @@ public final class PlayerQuestData {
         for (ActiveQuest quest : active) {
             list.add(quest.save());
         }
+        unreadableActive.forEach(entry -> list.add(entry.copy()));
         tag.put("active", list);
         tag.put("history", history.save());
         tag.put("titles", titles.save());
         tag.put("stats", stats.save());
         tag.put("offers", offers.save());
+        if (!pendingItems.isEmpty()) { tag.put("pending_items", pendingItems.save()); }
         // Written only when something is tracked, so a save that never used the feature is byte-for-byte
         // what it was — the same discipline ActiveQuest applies to its own optional fields.
         if (tracked != null) {
@@ -156,14 +161,23 @@ public final class PlayerQuestData {
 
     public void load(CompoundTag tag) {
         active.clear();
+        unreadableActive.clear();
         ListTag list = tag.getList("active", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
-            active.add(ActiveQuest.load(list.getCompound(i)));
+            CompoundTag entry = list.getCompound(i);
+            try {
+                active.add(ActiveQuest.load(entry));
+            } catch (RuntimeException failure) {
+                unreadableActive.add(entry.copy());
+                dev.otectus.mcaquests.McaQuests.LOGGER.warn(
+                        "[MCA: Quests] preserving unreadable active quest '{}' for recovery", entry.getString("quest"), failure);
+            }
         }
         history.load(tag.getCompound("history"));
         titles.load(tag.getCompound("titles")); // absent on pre-0.7.0 saves -> empty
         stats.load(tag.getCompound("stats")); // absent on pre-1.0.0 saves -> empty
         offers.load(tag.getCompound("offers")); // absent on pre-1.4.3 saves -> empty, so offers redraw
+        pendingItems.load(tag.getCompound("pending_items"));
         // Absent on pre-1.5.0 saves -> nothing tracked, and the next quest accepted picks itself up.
         tracked = TrackedQuest.load(tag.getCompound("tracked")).orElse(null);
     }

@@ -1,0 +1,57 @@
+{
+  "format_version": 1,
+  "id": "winterkiln:kiln_3_the_glazed_hearth",
+  "weight": 10,
+  "category": "building",
+  "difficulty": "hard",
+  "offer_group": "kiln_arc",
+  "priority": 3,
+  "title": { "text": "The Glazed Hearth" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:mason"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "One hearth, brick by brick, at my own door. If it draws properly the whole row stays warm this winter." },
+    "accept": { "text": "Twelve courses. Take your time with the corners." },
+    "decline": { "text": "It will stand there half-built and shame us both." },
+    "in_progress": { "text": "Corners square, {player}. The rest forgives itself." },
+    "ready": { "text": "It draws. Listen to it draw." },
+    "complete": { "text": "My father's kiln, your hands. That is how a village keeps anything at all." },
+    "failed": { "text": "There is nobody left to build it for." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:bricks",
+      "location": { "anchor": "bed", "villager": { "mode": "self" } },
+      "radius": 8,
+      "count": 12
+    },
+    { "type": "mcaquests:place_block", "block": "minecraft:campfire", "count": 1 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:xp_levels", "levels": 3 },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 8 }
+  ],
+  "failure": {
+    "fail_on_giver_death": true,
+    "block_retry": true
+  },
+  "conditions": {
+    "any_of": [
+      { "type": "mcaquests:quest_completed", "quest": "winterkiln:kiln_2_fire_the_kiln", "scope": "giver" },
+      { "type": "mcaquests:quest_completed", "quest": "winterkiln:kiln_2b_make_amends", "scope": "giver" }
+    ]
+  },
+  "chain": {
+    "chain": "winterkiln:the_winter_kiln",
+    "stage": 3,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Winter Kiln" },
+    "chapter": { "text": "The Glazed Hearth" }
+  }
+}

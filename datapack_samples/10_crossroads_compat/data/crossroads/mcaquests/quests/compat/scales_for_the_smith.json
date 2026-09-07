@@ -1,0 +1,37 @@
+{
+  "format_version": 1,
+  "id": "crossroads:scales_for_the_smith",
+  "weight": 4,
+  "category": "combat",
+  "difficulty": "hard",
+  "offer_group": "crossroads_hunt",
+  "title": { "text": "Scales for the Smith" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 120000 },
+  "giver": {
+    "professions": ["minecraft:weaponsmith", "mca:adventurer"],
+    "adult_only": true,
+    "min_hearts": 40
+  },
+  "dialogue": {
+    "offer": { "text": "There is a fire drake in the hills and I will not pretend this is a fair request. One of them. Bring me back something that proves it." },
+    "accept": { "text": "Take a shield you do not mind losing." },
+    "decline": { "text": "Sensible. Nobody has ever called that sensible before." },
+    "in_progress": { "text": "It is still up there. I can see the smoke from the yard." },
+    "ready": { "text": "You did it. You actually did it." },
+    "complete": { "text": "I will forge something out of this that outlasts the both of us." }
+  },
+  "objectives": [
+    { "type": "mcaquests:kill_entity", "tag": "crossroads:dragons", "count": 1 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:xp_levels", "levels": 5 },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 12 }
+  ],
+  "conditions": {
+    "type": "mcaquests:compat_capability",
+    "provider": "iceandfire",
+    "capability": "iceandfire.fire_dragon"
+  }
+}

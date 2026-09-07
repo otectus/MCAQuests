@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.target;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -26,8 +28,8 @@ import java.util.Optional;
 public record BiomeTarget(Optional<ResourceLocation> biome, Optional<TagKey<Biome>> tag) {
 
     public static final MapCodec<BiomeTarget> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceLocation.CODEC.optionalFieldOf("biome").forGetter(BiomeTarget::biome),
-            TagKey.codec(Registries.BIOME).optionalFieldOf("tag").forGetter(BiomeTarget::tag)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "biome").forGetter(BiomeTarget::biome),
+            StrictCodecs.strictOptional(TagKey.codec(Registries.BIOME), "tag").forGetter(BiomeTarget::tag)
     ).apply(instance, BiomeTarget::new));
 
     public boolean matches(Holder<Biome> holder) {

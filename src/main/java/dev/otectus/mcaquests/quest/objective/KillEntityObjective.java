@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.CompatRegistry;
@@ -30,7 +32,7 @@ public record KillEntityObjective(EntityTarget target, int count,
 
     public static final Codec<KillEntityObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(KillEntityObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(KillEntityObjective::count),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(KillEntityObjective::count),
             SourceHint.FIELD.forGetter(KillEntityObjective::source)
     ).apply(instance, KillEntityObjective::new));
 

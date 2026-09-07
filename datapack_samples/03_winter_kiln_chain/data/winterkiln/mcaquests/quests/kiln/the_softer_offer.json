@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "winterkiln:the_softer_offer",
+  "weight": 9,
+  "category": "errand",
+  "difficulty": "easy",
+  "offer_group": "kiln_work",
+  "title": { "text": "No Hurry This Time" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": {
+    "professions": ["minecraft:mason"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "You did not fancy racing the rain, and I do not blame you. Here is the version with no clock on it: eight clay balls, whenever you pass the river." },
+    "accept": { "text": "Whenever. I mean it." },
+    "decline": { "text": "Then we are simply two people who said no. Good day." },
+    "in_progress": { "text": "No hurry." },
+    "ready": { "text": "There we are." },
+    "complete": { "text": "Easier all round, was it not?" }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:clay_ball",
+      "count": 8,
+      "consume": true,
+      "source": { "block": "minecraft:clay" }
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ],
+  "conditions": {
+    "type": "mcaquests:quest_declined",
+    "quest": "winterkiln:dry_the_moulds",
+    "scope": "giver"
+  }
+}

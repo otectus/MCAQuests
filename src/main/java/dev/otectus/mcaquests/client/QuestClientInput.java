@@ -77,10 +77,14 @@ public final class QuestClientInput {
             }
         }
         while (QuestClientSetup.TOGGLE_HUD.consumeClick()) {
-            ClientQuestData.toggleHud();
+            if (minecraft.player != null && minecraft.screen == null) {
+                ClientQuestData.toggleHud();
+            }
         }
         while (QuestClientSetup.CYCLE_TRACKED.consumeClick()) {
-            cycleTracked();
+            if (minecraft.player != null && minecraft.screen == null) {
+                cycleTracked();
+            }
         }
         while (QuestClientSetup.OPEN_JOURNAL.consumeClick()) {
             if (minecraft.player != null && minecraft.screen == null) {

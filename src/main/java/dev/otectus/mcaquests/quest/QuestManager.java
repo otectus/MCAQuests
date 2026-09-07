@@ -33,6 +33,7 @@ import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ItemDeliveryObjective;
+import dev.otectus.mcaquests.quest.objective.InventoryTransfer;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.objective.ObjectiveSupport;
 import dev.otectus.mcaquests.quest.objective.TownsteadObjective;
@@ -531,6 +532,10 @@ public final class QuestManager {
             resolver = new PlaceholderResolver(frozen, mcaName);
         }
 
+        if (!CapitalsQuestRequirements.allowsOffer(accepted)) {
+            return false;
+        }
+
         // A situation offer is anchored to its open instance: start time = the instance's open time so
         // the quest's deadline lands on the situation's master deadline, and the link lets completion /
         // expiry resolve the shared situation (0.8.0). A situation that closed between offer and accept
@@ -541,6 +546,7 @@ public final class QuestManager {
         // on the clock sleeping and /time set move (1.5.1).
         long startDayTime = ((ServerLevel) player.level()).getDayTime();
         UUID situationLink = null;
+        long situationPausedTicks = 0L;
         if (SituationIds.isSyntheticId(questId)) {
             MinecraftServer server = player.getServer();
             Optional<SituationInstance> instanceOpt = server == null
@@ -549,6 +555,7 @@ public final class QuestManager {
                 return false;
             }
             startTime = instanceOpt.get().openGameTime();
+            situationPausedTicks = instanceOpt.get().suspendedTicks(now);
             // Wind the world clock back by the same amount, so an anchored quest's time-of-day deadline
             // is the one the situation opened on rather than the one this player happened to accept on.
             startDayTime -= now - startTime;
@@ -567,6 +574,7 @@ public final class QuestManager {
                 player.level().dimension().location(),
                 startTime, OptionalLong.of(startDayTime), villageId,
                 accepted.objectives().size(), frozen, situationLink);
+        active.addSituationSuspendedTicks(situationPausedTicks);
         freezeRandomizedRewards(player, accepted, active);
         bindVillagerTargets(player, villager, accepted, active);
         data.add(active);
@@ -578,6 +586,7 @@ public final class QuestManager {
         }
         if (situationLink != null && player.getServer() != null) {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
+            SituationManager.refreshParticipantRequirements(player, situationLink, data.active());
         }
         MinecraftForge.EVENT_BUS.post(new QuestAcceptedEvent(player, villager, accepted));
         TownsteadLifecycle.dispatch(player, active, villager, TownsteadLifecycle.Phase.ACCEPTED);
@@ -661,11 +670,12 @@ public final class QuestManager {
     public static void selfComplete(ServerPlayer player, ActiveQuest active) {
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
         Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(active.questId());
-        if (dataOpt.isEmpty() || defOpt.isEmpty() || active.rewardClaimed()) {
+        if (dataOpt.isEmpty() || defOpt.isEmpty() || active.rewardClaimed()
+                || !dataOpt.get().active().contains(active)) {
             return;
         }
         QuestDefinition def = active.resolve(defOpt.get());
-        if (!isComplete(player, def, active)) {
+        if (def.turnIn().mode() != TurnInMode.SELF_COMPLETE || !isComplete(player, def, active)) {
             return;
         }
         completeQuest(player, resolveGiver(player, active), def, active, dataOpt.get());
@@ -713,10 +723,16 @@ public final class QuestManager {
         }
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
-            if (!(objectives.get(i) instanceof VillagerTargeted targeted)) {
+            QuestObjective objective = objectives.get(i);
+            VillagerTarget selector;
+            if (objective instanceof VillagerTargeted targeted) {
+                selector = targeted.targetSelector();
+            } else if (objective instanceof dev.otectus.mcaquests.quest.objective.TradeWithVillagerObjective trade
+                    && trade.villager().filter(t -> t.mode() == VillagerTarget.Mode.CAPITAL_ROLE).isPresent()) {
+                selector = trade.villager().get();
+            } else {
                 continue;
             }
-            VillagerTarget selector = targeted.targetSelector();
             switch (selector.mode()) {
                 // Binds the relative who satisfies the target's own require, not merely the first entry
                 // in MCA's walk. Without the filter this wrote whatever came back — including a UUID with
@@ -776,21 +792,33 @@ public final class QuestManager {
      * inventory is full refuses the hand-over and says so, rather than the player paying for a transfer
      * that cannot happen.
      */
-    private static boolean deliveriesCanLand(ServerPlayer player, QuestDefinition def, ActiveQuest active,
-                                             @Nullable Entity giver) {
+    private static InventoryTransfer.Plan prepareDeliveries(ServerPlayer player, QuestDefinition def,
+                                                            ActiveQuest active, @Nullable Entity giver) {
+        InventoryTransfer.Plan plan = new InventoryTransfer.Plan(player.getInventory());
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
             if (!(objectives.get(i) instanceof ItemDeliveryObjective delivery)
-                    || !delivery.destination().isTransfer()
                     || active.progress(i).extra().getBoolean("delivered")) {
                 continue;
             }
-            if (!delivery.canDeliver(player, giver)) {
-                player.sendSystemMessage(delivery.refusalReason(player, giver));
-                return false;
+            net.minecraft.world.Container destination = null;
+            if (delivery.destination().isTransfer()) {
+                destination = delivery.destination().resolveContainer(player, giver).orElse(null);
+                if (destination == null) {
+                    player.sendSystemMessage(delivery.refusalReason(player, giver));
+                    return null;
+                }
+            } else if (!delivery.consume()) {
+                continue;
+            }
+            if (!plan.reserve(delivery.item(), delivery.count(), destination)) {
+                if (destination != null) {
+                    player.sendSystemMessage(delivery.refusalReason(player, giver));
+                }
+                return null;
             }
         }
-        return true;
+        return plan;
     }
 
     /**
@@ -858,7 +886,7 @@ public final class QuestManager {
      */
     private static boolean completeQuest(ServerPlayer player, Entity grantVillager,
                                          QuestDefinition def, ActiveQuest active, PlayerQuestData data) {
-        if (active.rewardClaimed()) {
+        if (active.rewardClaimed() || !data.active().contains(active)) {
             return false;
         }
         // Optional strictness (Townstead spec 5.5). Off by default, because refusing a turn-in the
@@ -870,15 +898,23 @@ public final class QuestManager {
         }
         // A delivery with nowhere to go always blocks, whatever the reward policy says: consuming the
         // goods into a villager who cannot hold them would take them off the player for nothing.
-        if (!deliveriesCanLand(player, def, active, grantVillager)) {
+        InventoryTransfer.Plan deliveries = prepareDeliveries(player, def, active, grantVillager);
+        if (deliveries == null) {
             return false;
         }
         active.setRewardClaimed(true);
+        if (!deliveries.commit()) {
+            active.setRewardClaimed(false);
+            return false;
+        }
 
         for (int i = 0; i < def.objectives().size(); i++) {
             QuestObjective objective = def.objectives().get(i);
             if (objective instanceof ItemDeliveryObjective delivery) {
-                delivery.deliver(player, grantVillager, active.progress(i));
+                if (delivery.destination().isTransfer()) {
+                    active.progress(i).extra().putBoolean("delivered", true);
+                }
+                continue; // the complete item hand-over was committed together above
             }
             objective.consumeOnTurnIn(player, active.progress(i));
         }
@@ -1002,11 +1038,7 @@ public final class QuestManager {
         if (authored.isPresent()) {
             outcome = authored.get();
         } else if ("complete".equals(outcomeKey)) {
-            int legacyAmount = def.rewards().stream()
-                    .filter(r -> r instanceof dev.otectus.mcaquests.quest.reward.VillageReputationReward)
-                    .mapToInt(r -> ((dev.otectus.mcaquests.quest.reward.VillageReputationReward) r).amount())
-                    .sum();
-            int amount = legacyAmount != 0 ? legacyAmount : defaultCompletionReputation(def);
+            int amount = completionReputationAmount(def);
             if (amount == 0) {
                 debugNoReputation(def, outcomeKey, "the quest authors no reputation outcome and the "
                         + "configured default for its difficulty band is 0");
@@ -1052,6 +1084,15 @@ public final class QuestManager {
      * difficulty band it already declares for its currency reward. A quest with no declared difficulty
      * uses the medium band, which is the same fallback {@code CurrencyReward} has always used.
      */
+    static int completionReputationAmount(QuestDefinition def) {
+        List<dev.otectus.mcaquests.quest.reward.VillageReputationReward> legacy = def.rewards().stream()
+                .filter(dev.otectus.mcaquests.quest.reward.VillageReputationReward.class::isInstance)
+                .map(dev.otectus.mcaquests.quest.reward.VillageReputationReward.class::cast).toList();
+        if (legacy.isEmpty()) { return defaultCompletionReputation(def); }
+        long total = legacy.stream().mapToLong(dev.otectus.mcaquests.quest.reward.VillageReputationReward::amount).sum();
+        return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, total));
+    }
+
     private static int defaultCompletionReputation(QuestDefinition def) {
         return switch (def.difficulty().orElse(QuestDifficulty.DEFAULT)) {
             case EASY -> McaQuestsConfig.COMMON.easyQuestReputation.get();
@@ -1103,9 +1144,12 @@ public final class QuestManager {
         }
         data.remove(active);
         TownsteadLifecycle.dispatch(player, active, villager, TownsteadLifecycle.Phase.ABANDONED);
+        active.situationInstance().ifPresent(id ->
+                SituationManager.refreshParticipantRequirements(player, id, data.active()));
         QuestDefinitions.resolve(active.questId()).ifPresent(def -> {
             releaseEscortMovement(player, active.resolve(def), active);
             data.history().recordOutcome(def.id(), active.villagerUuid(), QuestHistory.Outcome.ABANDONED);
+            grantQuestReputation(player, villager, active.resolve(def), active, "abandon");
             MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
         });
         return true;
@@ -1126,7 +1170,7 @@ public final class QuestManager {
         if (!data.active().contains(active)) {
             return; // already reached a terminal state this tick — never fail (or double-fail) twice
         }
-        if (isSuspended(player, def, active)) {
+        if (reason != QuestFailedEvent.Reason.TARGET_LOST && isSuspended(player, def, active)) {
             // The quest cannot be played right now, so it cannot be lost right now either. Guarding the
             // funnel every failure path routes through covers deadlines, weather, and the protect /
             // escort / giver death handlers in one place.
@@ -1149,6 +1193,9 @@ public final class QuestManager {
         });
         releaseEscortMovement(player, def, active);
         data.remove(active);
+        active.situationInstance().ifPresent(id ->
+                SituationManager.refreshParticipantRequirements(player, id, data.active()));
+        grantQuestReputation(player, resolvedGiver, def, active, "fail");
         // Tell the client now. The per-tick resync only runs for a player who still has active quests, so
         // failing the last one left it sitting in the log and on the tracker until the next relog.
         syncLog(player);
@@ -1203,8 +1250,12 @@ public final class QuestManager {
     // ---------------------------------------------------------------- helpers
 
     public static boolean isComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
+            return false;
+        }
         ServerLevel level = (ServerLevel) player.level();
         List<QuestObjective> objectives = def.objectives();
+        InventoryTransfer.Plan items = null;
         for (int i = 0; i < objectives.size(); i++) {
             QuestObjective objective = objectives.get(i);
             ObjectiveProgress progress = active.progress(i);
@@ -1214,6 +1265,16 @@ public final class QuestManager {
             if (objective.unavailableReason(player, active, progress, level).isPresent()
                     || !objective.isSatisfied(player, progress)) {
                 return false;
+            }
+            if (objective instanceof ItemDeliveryObjective delivery
+                    && (delivery.consume() || delivery.destination().isTransfer())
+                    && !progress.extra().getBoolean("delivered")) {
+                if (items == null) {
+                    items = new InventoryTransfer.Plan(player.getInventory());
+                }
+                if (!items.reserve(delivery.item(), delivery.count(), null)) {
+                    return false; // two delivery rows cannot spend the same stack twice
+                }
             }
         }
         return true;
@@ -1226,6 +1287,10 @@ public final class QuestManager {
      */
     public static Optional<Component> suspensionReason(ServerPlayer player, QuestDefinition def,
                                                        ActiveQuest active) {
+        Optional<Component> capitals = CapitalsQuestRequirements.unavailableReason(def);
+        if (capitals.isPresent()) {
+            return capitals;
+        }
         ServerLevel level = (ServerLevel) player.level();
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
@@ -1253,6 +1318,7 @@ public final class QuestManager {
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
             if (objectives.get(i) instanceof VillagerTargeted targeted
+                    && active.progress(i).targetUuid() != null
                     && ObjectiveSupport.boundTargetLost(targeted.targetSelector(), active,
                             active.progress(i), level).isPresent()) {
                 return true;
@@ -1412,13 +1478,17 @@ public final class QuestManager {
                 continue;
             }
             QuestDefinition def = active.resolve(base);
+            if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
+                continue;
+            }
             List<QuestObjective> objectives = def.objectives();
             for (int i = 0; i < objectives.size(); i++) {
                 QuestObjective objective = objectives.get(i);
                 if (objective instanceof ExternalSignalObjective signal
                         && signal.matchesSignal(signalId, villagerUuid)) {
                     ObjectiveProgress progress = active.progress(i);
-                    if (progress.count() < objective.required()) {
+                    if (objective.unavailableReason(player, active, progress, player.serverLevel()).isEmpty()
+                            && progress.count() < objective.required()) {
                         progress.add(1);
                         advanced = true;
                     }
@@ -1648,6 +1718,10 @@ public final class QuestManager {
     private static List<CardObjective> objectiveLines(ServerPlayer player, QuestDefinition def,
                                                       @Nullable ActiveQuest active) {
         List<CardObjective> lines = new ArrayList<>();
+        Optional<Component> capitals = active == null ? Optional.empty()
+                : CapitalsQuestRequirements.unavailableReason(def);
+        capitals.ifPresent(reason -> lines.add(new CardObjective(reason, 0, 0,
+                CardObjective.State.UNAVAILABLE, ItemStack.EMPTY)));
         List<QuestObjective> objectives = def.objectives();
         for (int i = 0; i < objectives.size(); i++) {
             QuestObjective objective = objectives.get(i);
@@ -1659,6 +1733,11 @@ public final class QuestManager {
             ItemStack icon = objective.icon();
             if (active == null) {
                 lines.add(CardObjective.offered(line, objective.required(), icon));
+                continue;
+            }
+            if (capitals.isPresent()) {
+                lines.add(new CardObjective(line, active.progress(i).count(), objective.required(),
+                        CardObjective.State.UNAVAILABLE, icon));
                 continue;
             }
             Optional<Component> unavailable = objective.unavailableReason(
@@ -1807,6 +1886,9 @@ public final class QuestManager {
     /** The provider owning a {@code compat/<provider>/…} quest path, when one is registered. */
     private static Optional<CompatProvider> providerFromQuestPath(CompatRegistry registry,
                                                                   ResourceLocation questId) {
+        if (CapitalsQuestRequirements.isBundled(questId)) {
+            return registry.provider("mcacapitals");
+        }
         String path = questId.getPath();
         String prefix = "compat/";
         if (!path.startsWith(prefix)) {
@@ -1842,6 +1924,9 @@ public final class QuestManager {
                             .map(failure -> failure.deadlineGameTime(active.startGameTime(),
                                     active.startDayTime(), level.getGameTime(), level.getDayTime()))
                             .orElse(java.util.OptionalLong.empty());
+                    if (deadline.isPresent()) {
+                        deadline = java.util.OptionalLong.of(deadline.getAsLong() + active.suspendedTicks());
+                    }
                     PlaceholderResolver resolver = active.textResolver(mcaName);
                     entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), def.title(resolver),
                             active.villagerName(), chainLabel(def, resolver), objectiveLines(player, def, active),

@@ -55,8 +55,7 @@ public record HeartsWithSponsorReward(int amount) implements QuestReward {
     }
 
     public int effectiveAmount() {
-        int scaled = Math.round(amount * McaQuestsConfig.COMMON.heartsRewardMultiplier.get().floatValue());
-        return Mth.clamp(scaled,
+        return RewardAmounts.hearts(amount, McaQuestsConfig.COMMON.heartsRewardMultiplier.get(),
                 McaQuestsConfig.COMMON.minHeartsReward.get(),
                 McaQuestsConfig.COMMON.maxHeartsReward.get());
     }

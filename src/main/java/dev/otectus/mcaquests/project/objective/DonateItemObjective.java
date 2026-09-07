@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.project.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.project.state.SharedObjectiveProgress;
@@ -20,8 +22,8 @@ public record DonateItemObjective(ItemTarget target, int count, int perPlayerCap
 
     public static final Codec<DonateItemObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(DonateItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(DonateItemObjective::count),
-            ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("per_player_cap", 0).forGetter(DonateItemObjective::perPlayerCap)
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(DonateItemObjective::count),
+            StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "per_player_cap", 0).forGetter(DonateItemObjective::perPlayerCap)
     ).apply(instance, DonateItemObjective::new));
 
     @Override

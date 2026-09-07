@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
@@ -16,6 +17,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 import javax.annotation.Nullable;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -31,13 +37,20 @@ import java.util.Optional;
  * <p>Rendered <b>server-side</b>, because Capitals' chronicle stores flat strings rather than
  * components — the line is written once, in the server's locale, and read by everyone in that form.
  */
-public record CapitalChronicleReward(String key, boolean herald) implements QuestReward {
+public record CapitalChronicleReward(String key, boolean herald, Optional<String> fallback) implements QuestReward {
+
+    /** Compatibility for add-ons constructing the original reward shape. */
+    public CapitalChronicleReward(String key, boolean herald) {
+        this(key, herald, Optional.empty());
+    }
 
     public static final Codec<CapitalChronicleReward> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
                     Codec.STRING.fieldOf("key").forGetter(CapitalChronicleReward::key),
                     StrictCodecs.strictOptional(Codec.BOOL, "herald", true)
-                            .forGetter(CapitalChronicleReward::herald)
+                            .forGetter(CapitalChronicleReward::herald),
+                    StrictCodecs.strictOptional(Codec.STRING, "fallback")
+                            .forGetter(CapitalChronicleReward::fallback)
             ).apply(instance, CapitalChronicleReward::new));
 
     @Override
@@ -71,8 +84,36 @@ public record CapitalChronicleReward(String key, boolean herald) implements Ques
                     + "village it was accepted in is no longer the seat of a capital.", context.questId());
             return;
         }
-        String entry = Component.translatable(key, player.getGameProfile().getName(),
-                CapitalsQueries.capitalName(level, capital.get()).orElse("")).getString();
+        String entry = entryText(player.getGameProfile().getName(),
+                CapitalsQueries.capitalName(level, capital.get()).orElse(""));
         bridge.addChronicleEntry(level, capital.get(), entry, herald);
+    }
+
+    /** Dedicated servers do not load client resource-pack translations before flattening components. */
+    String entryText(String playerName, String capitalName) {
+        return Component.translatableWithFallback(key,
+                fallback.orElseGet(() -> BundledText.ENGLISH.get(key)), playerName, capitalName).getString();
+    }
+
+    private static final class BundledText {
+        private static final Map<String, String> ENGLISH = load();
+
+        private static Map<String, String> load() {
+            try (InputStream stream = CapitalChronicleReward.class
+                    .getResourceAsStream("/assets/mcaquests/lang/en_us.json")) {
+                if (stream == null) return Map.of();
+                Map<String, String> entries = new HashMap<>();
+                JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
+                        .getAsJsonObject().entrySet().forEach(entry -> {
+                            if (entry.getKey().startsWith("mcaquests.chronicle.")) {
+                                entries.put(entry.getKey(), entry.getValue().getAsString());
+                            }
+                        });
+                return Map.copyOf(entries);
+            } catch (Exception exception) {
+                McaQuests.LOGGER.warn("[MCA: Quests] Could not read bundled chronicle translations", exception);
+                return Map.of();
+            }
+        }
     }
 }

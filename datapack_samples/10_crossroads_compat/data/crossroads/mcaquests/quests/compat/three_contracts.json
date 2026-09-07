@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "crossroads:three_contracts",
+  "weight": 10,
+  "category": "combat",
+  "difficulty": "medium",
+  "offer_group": "crossroads_board",
+  "title": { "text": "Three Contracts" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": {
+    "professions": ["mca:mercenary", "mca:guard"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "The board is full and nobody in this village will touch it. Take three off it - and not the easy three." },
+    "accept": { "text": "Uncommon or better. I will know." },
+    "decline": { "text": "Then the board stays full." },
+    "in_progress": { "text": "Three. Cashed in, not just accepted." },
+    "ready": { "text": "Three contracts closed. The board looks almost reasonable." },
+    "complete": { "text": "You are the reason we can post work here at all." }
+  },
+  "objectives": [
+    { "type": "mcaquests:bountiful_bounties", "count": 3, "min_rarity": "UNCOMMON" }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 60 },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:compat_capability", "provider": "bountiful", "capability": "bountiful.cash_in_hook" },
+      { "type": "mcaquests:compat_capability", "provider": "bountiful", "capability": "bountiful.read_rarity" }
+    ]
+  }
+}

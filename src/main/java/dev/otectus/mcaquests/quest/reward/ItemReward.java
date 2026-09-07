@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.data.RegistryEntryCodec;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
@@ -19,8 +22,8 @@ import java.util.List;
 public record ItemReward(Item item, int count) implements QuestReward {
 
     public static final Codec<ItemReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemReward::item),
-            ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(ItemReward::count)
+            RegistryEntryCodec.of(BuiltInRegistries.ITEM).fieldOf("item").forGetter(ItemReward::item),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ItemReward::count)
     ).apply(instance, ItemReward::new));
 
     @Override
@@ -45,14 +48,7 @@ public record ItemReward(Item item, int count) implements QuestReward {
 
     @Override
     public void grant(ServerPlayer player, @Nullable Entity villager) {
-        int remaining = count;
-        int maxStack = new ItemStack(item).getMaxStackSize();
-        while (remaining > 0) {
-            int give = Math.min(remaining, maxStack);
-            // giveItemToPlayer inserts what it can and drops the remainder at the player's feet.
-            ItemHandlerHelper.giveItemToPlayer(player, new ItemStack(item, give));
-            remaining -= give;
-        }
+        ItemRewardDelivery.grant(player, item, count);
         McaQuests.LOGGER.debug("Granted {}x {} to {}", count, item, player.getGameProfile().getName());
     }
 }

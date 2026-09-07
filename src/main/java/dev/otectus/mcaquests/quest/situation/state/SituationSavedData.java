@@ -31,6 +31,7 @@ public final class SituationSavedData extends SavedData {
     public static final String DATA_NAME = "mcaquests_situations";
 
     private final Map<UUID, SituationInstance> instances = new LinkedHashMap<>();
+    private final List<CompoundTag> unreadableInstances = new ArrayList<>();
     /** Key {@code "<villageId>|<defId>"} -> earliest game time the definition may re-open in the village. */
     private final Map<String, Long> cooldownUntil = new LinkedHashMap<>();
     /** Village id -> earliest game time <em>any</em> situation may open there (global anti-spam). */
@@ -131,6 +132,7 @@ public final class SituationSavedData extends SavedData {
         for (SituationInstance instance : instances.values()) {
             instanceList.add(instance.save());
         }
+        unreadableInstances.forEach(entry -> instanceList.add(entry.copy()));
         tag.put("instances", instanceList);
 
         CompoundTag cooldowns = new CompoundTag();
@@ -147,8 +149,15 @@ public final class SituationSavedData extends SavedData {
         SituationSavedData data = new SituationSavedData();
         ListTag instanceList = tag.getList("instances", Tag.TAG_COMPOUND);
         for (int i = 0; i < instanceList.size(); i++) {
-            SituationInstance instance = SituationInstance.load(instanceList.getCompound(i));
-            data.instances.put(instance.instanceId(), instance);
+            CompoundTag entry = instanceList.getCompound(i);
+            try {
+                SituationInstance instance = SituationInstance.load(entry);
+                data.instances.put(instance.instanceId(), instance);
+            } catch (RuntimeException failure) {
+                data.unreadableInstances.add(entry.copy());
+                dev.otectus.mcaquests.McaQuests.LOGGER.warn(
+                        "[MCA: Quests] preserving unreadable situation for recovery", failure);
+            }
         }
         CompoundTag cooldowns = tag.getCompound("cooldowns");
         for (String key : cooldowns.getAllKeys()) {

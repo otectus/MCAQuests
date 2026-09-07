@@ -8,7 +8,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -65,7 +64,7 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
                 buf.readVarInt(),
                 buf.readComponent(),
                 buf.readEnum(QuestMenuStatus.class),
-                buf.readCollection(ArrayList::new, QuestCard::decode));
+                PacketCollections.readList(buf, QuestCard::decode));
     }
 
     public static void handle(QuestMenuDataS2CPacket msg, Supplier<NetworkEvent.Context> ctx) {

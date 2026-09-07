@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -64,7 +66,9 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  * <p>The mod jars are <b>not</b> deobfuscated first, for the reason the Townstead probe gives: only
  * Minecraft's methods and fields carry SRG names in a production jar, never its class names, so the
- * {@code BlockPos} and {@code ResourceLocation} parameter hints line up exactly as they are.
+ * {@code BlockPos} and {@code ResourceLocation} parameter hints line up exactly as they are. Palette
+ * constants are inspected as enum fields without initializing the class: a shipped Forge palette's
+ * initializer calls SRG-named Minecraft methods which cannot execute in the mapped test runtime.
  */
 class MapBindingProbeTest {
 
@@ -171,16 +175,27 @@ class MapBindingProbeTest {
                     assertEquals(List.of(), resolution.missingOptional(),
                             "Xaero's WaypointColor/WaypointPurpose enums moved; every quest waypoint "
                                     + "would fall back to the first colour in the palette");
-                    assertTrue(resolution.enumConstant(XaeroWaypoints.PURPOSE_ENUM, "NORMAL")
-                            instanceof Enum<?>, "WaypointPurpose.NORMAL did not resolve");
+                    assertTrue(declaredEnumConstants(resolution.cls(XaeroWaypoints.PURPOSE_ENUM))
+                            .contains("NORMAL"), "WaypointPurpose.NORMAL is not declared");
+                    Set<String> palette = declaredEnumConstants(resolution.cls(XaeroWaypoints.COLOUR_ENUM));
                     for (GuidanceKind kind : GuidanceKind.values()) {
                         String colour = MarkerColours.xaeroColourName(kind);
-                        assertTrue(resolution.enumConstant(XaeroWaypoints.COLOUR_ENUM, colour)
-                                        instanceof Enum<?>,
-                                "WaypointColor." + colour + " did not resolve, so " + kind
+                        assertTrue(palette.contains(colour),
+                                "WaypointColor." + colour + " is not declared, so " + kind
                                         + " waypoints would fall back to the first colour");
                     }
                 });
+    }
+
+    /** Checks the actual public enum declarations without executing Minecraft-dependent initializers. */
+    static Set<String> declaredEnumConstants(Class<?> type) {
+        assertTrue(type != null && type.isEnum(), "the shipped palette must be an enum");
+        return Stream.of(type.getDeclaredFields())
+                .filter(field -> field.isEnumConstant()
+                        && java.lang.reflect.Modifier.isPublic(field.getModifiers())
+                        && java.lang.reflect.Modifier.isStatic(field.getModifiers())
+                        && field.getType() == type)
+                .map(java.lang.reflect.Field::getName).collect(Collectors.toSet());
     }
 
     /** A loader that answers for {@code journeymap.*} itself and defers everything else upwards. */
@@ -229,8 +244,8 @@ class MapBindingProbeTest {
      * Resolves the manifest and hands the result to {@code check} <b>while the loader is still open</b>.
      *
      * <p>A {@code Resolution} outlives nothing: it holds method handles and classes, and anything that
-     * asks it to load one more class - {@code enumConstant} does, to read an ordinal off Xaero's
-     * palette - gets a {@code ClassNotFoundException} the moment the loader is closed. Returning the
+     * asks it to load one more class while inspecting a member gets a {@code ClassNotFoundException}
+     * the moment the loader is closed. Returning the
      * resolution and closing on the way out looks correct and fails only on the assertions that matter.
      */
     private static void probe(List<URL> urls, String modName, String root, String probeClass,

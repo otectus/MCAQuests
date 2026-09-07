@@ -5,6 +5,11 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.compat.capitals.CapitalRole;
+import dev.otectus.mcaquests.compat.CompatRegistry;
+import dev.otectus.mcaquests.compat.capitals.CapitalsBridge;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
+import dev.otectus.mcaquests.compat.capitals.NoopCapitalsBridge;
 import dev.otectus.mcaquests.quest.condition.leaf.CapitalAllegianceCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.CapitalInterregnumCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.CapitalPresentCondition;
@@ -13,9 +18,12 @@ import dev.otectus.mcaquests.quest.condition.leaf.CapitalRoleCondition;
 import dev.otectus.mcaquests.support.TestBootstrap;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
+import java.lang.reflect.Proxy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,6 +39,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * silently apply.
  */
 class CapitalConditionsTest {
+
+    @AfterEach
+    void resetCompat() {
+        CompatRegistry.get().clearForTest();
+    }
+
+    private static void capabilities(Set<CapitalsCapability> capabilities) {
+        NoopCapitalsBridge absent = new NoopCapitalsBridge(false);
+        CapitalsCompat compat = new CapitalsCompat();
+        compat.setBridgeForTest((CapitalsBridge) Proxy.newProxyInstance(
+                CapitalsBridge.class.getClassLoader(), new Class<?>[]{CapitalsBridge.class},
+                (proxy, method, args) -> method.getName().equals("has")
+                        ? capabilities.contains(args[0]) : method.invoke(absent, args)));
+        CompatRegistry.get().register(compat);
+    }
 
     static {
         TestBootstrap.ensureBootstrapped();
@@ -129,9 +152,23 @@ class CapitalConditionsTest {
 
         assertEquals(CapitalRelationCondition.Other.ANY, condition.other());
         assertEquals(List.of("alliance", "truce"), condition.states());
+        assertTrue(condition.present());
         assertEquals(CapitalRelationCondition.Other.ALLEGIANCE,
                 ((CapitalRelationCondition) parse("{\"type\":\"mcaquests:capital_relation\","
                         + "\"other\":\"allegiance\",\"state\":[\"war\"]}")).other());
+    }
+
+    @Test
+    @DisplayName("capital_relation honors its documented present field and preserves it on encode")
+    void relationCanBeNegated() {
+        CapitalRelationCondition condition = (CapitalRelationCondition) parse(
+                "{\"type\":\"mcaquests:capital_relation\",\"state\":[\"war\"],\"present\":false}");
+        assertFalse(condition.present());
+        assertEquals(condition, ConditionTypes.CODEC.parse(JsonOps.INSTANCE,
+                ConditionTypes.CODEC.encodeStart(JsonOps.INSTANCE, condition).result().orElseThrow())
+                .result().orElseThrow());
+        assertTrue(error("{\"type\":\"mcaquests:capital_relation\",\"state\":[\"war\"],\"present\":\"false\"}")
+                .contains("present"));
     }
 
     @Test
@@ -155,6 +192,8 @@ class CapitalConditionsTest {
     @Test
     @DisplayName("with no giver capital the observation is false, and 'present': false therefore passes")
     void noCapitalRespectsPresent() {
+        capabilities(Set.of(CapitalsCapability.REGISTRY, CapitalsCapability.INTERREGNUM,
+                CapitalsCapability.DIPLOMACY));
         assertFalse(parse("{\"type\":\"mcaquests:capital_present\"}").test(emptyContext()));
         assertTrue(parse("{\"type\":\"mcaquests:capital_present\",\"present\":false}").test(emptyContext()));
         assertFalse(parse("{\"type\":\"mcaquests:capital_interregnum\"}").test(emptyContext()));
@@ -162,6 +201,32 @@ class CapitalConditionsTest {
                 .test(emptyContext()));
         assertFalse(parse("{\"type\":\"mcaquests:capital_relation\",\"state\":[\"war\"]}")
                 .test(emptyContext()),
-                "capital_relation has no 'present' half, so no capital is simply no relation");
+                "a positive relation condition still requires a matching relation");
+        assertTrue(parse("{\"type\":\"mcaquests:capital_relation\",\"state\":[\"war\"],\"present\":false}")
+                .test(emptyContext()));
+    }
+
+    @Test
+    @DisplayName("negative capital conditions cannot turn absent, disabled or missing capabilities into eligibility")
+    void absentCapabilitiesDoNotMatchNegativeConditions() {
+        List<String> negative = List.of(
+                "{\"type\":\"mcaquests:capital_present\",\"present\":false}",
+                "{\"type\":\"mcaquests:capital_role\",\"role\":\"knight\",\"present\":false}",
+                "{\"type\":\"mcaquests:capital_role\",\"subject\":\"giver\",\"role\":\"herald\",\"present\":false}",
+                "{\"type\":\"mcaquests:capital_allegiance\",\"present\":false}",
+                "{\"type\":\"mcaquests:capital_interregnum\",\"present\":false}",
+                "{\"type\":\"mcaquests:capital_relation\",\"state\":[\"war\"],\"present\":false}");
+        for (boolean disabled : List.of(false, true)) {
+            CapitalsCompat compat = new CapitalsCompat();
+            compat.setBridgeForTest(new NoopCapitalsBridge(disabled));
+            CompatRegistry.get().register(compat);
+            for (String json : negative) {
+                assertFalse(parse(json).test(emptyContext()), json);
+            }
+        }
+        capabilities(Set.of(CapitalsCapability.REGISTRY));
+        for (String json : negative.subList(1, negative.size())) {
+            assertFalse(parse(json).test(emptyContext()), "registry alone cannot satisfy " + json);
+        }
     }
 }

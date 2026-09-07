@@ -1,0 +1,44 @@
+{
+  "format_version": 1,
+  "id": "winterkiln:kiln_1_clay_from_the_bank",
+  "weight": 14,
+  "category": "gathering",
+  "difficulty": "easy",
+  "offer_group": "kiln_arc",
+  "title": { "text": "Clay from the Bank" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:mason"],
+    "adult_only": true,
+    "min_hearts": 5
+  },
+  "dialogue": {
+    "offer": { "text": "The kiln has been cold since my father's time. I mean to light it before the frost — but I need clay, and the river bank is a long stoop for my back." },
+    "accept": { "text": "Thirty-two balls of it. Wet is fine; I will dry them." },
+    "decline": { "text": "Cold hearths all winter, then." },
+    "in_progress": { "text": "The bank is downstream, where the reeds are." },
+    "ready": { "text": "That is good clay. Grey, not brown — you chose well." },
+    "complete": { "text": "Now we have something to work with. Come back tomorrow and we will fire it." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:clay_ball",
+      "count": 32,
+      "source": { "block": "minecraft:clay" }
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ],
+  "chain": {
+    "chain": "winterkiln:the_winter_kiln",
+    "stage": 1,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Winter Kiln" },
+    "chapter": { "text": "Clay from the Bank" },
+    "unlocks": ["winterkiln:kiln_2_fire_the_kiln"]
+  }
+}
