@@ -18,8 +18,8 @@ MCA: Quests changes.
 
 ## Install
 
-1. Install **MCA Reborn**, **MCA: Quests**, and **Townstead** (`[0.7.5,0.8)`; verified against
-   **0.7.6**). Townstead requires **Patchouli** — if the game will not start, check that first, it is
+1. Install **MCA Reborn**, **MCA: Quests**, and **Townstead** (`[0.7.5,)`; verified against
+   **0.7.6** through the reflective bridge and **0.8.0** through the public API). Townstead requires **Patchouli** — if the game will not start, check that first, it is
    the most common cause and has nothing to do with this integration.
 2. Start the server. That is all — no configuration is needed.
 
