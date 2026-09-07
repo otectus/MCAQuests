@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -29,8 +31,8 @@ public record ReputationTierCondition(String minTier, Optional<String> maxTier,
 
     public static final MapCodec<ReputationTierCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.STRING.fieldOf("min_tier").forGetter(ReputationTierCondition::minTier),
-            Codec.STRING.lenientOptionalFieldOf("max_tier").forGetter(ReputationTierCondition::maxTier),
-            ResourceLocation.CODEC.lenientOptionalFieldOf("ladder").forGetter(ReputationTierCondition::ladder)
+            StrictCodecs.strictOptional(Codec.STRING, "max_tier").forGetter(ReputationTierCondition::maxTier),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "ladder").forGetter(ReputationTierCondition::ladder)
     ).apply(instance, ReputationTierCondition::new));
 
     @Override

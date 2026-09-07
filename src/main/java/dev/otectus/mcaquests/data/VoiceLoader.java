@@ -58,8 +58,7 @@ public final class VoiceLoader extends SimpleJsonResourceReloadListener {
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            VoicePool.CODEC.parse(JsonOps.INSTANCE, entry.getValue())
-                    .resultOrPartial(message -> recordError(errors, strict, "Dialogue pool '" + fileId + "': " + message))
+            dev.otectus.mcaquests.data.StrictCodecs.parse(VoicePool.CODEC, JsonOps.INSTANCE, entry.getValue(), message -> recordError(errors, strict, "Dialogue pool '" + fileId + "': " + message))
                     .ifPresent(pool -> loaded.put(fileId, pool));
         }
 

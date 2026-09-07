@@ -4,6 +4,76 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-09-06
+
+Stabilization and compatibility refinement for the NeoForge 1.21.1 release.
+
+### Fixed — Stabilization and refinement
+
+- Strengthened NeoForge archive checks and negative fixtures, corrected probe-launcher
+  inheritance, and verified the actual Ice & Fire CE 2.1.2 multipart layout.
+- Aligned guidance readiness with aggregate payment and hand-in eligibility; protected search
+  queue completion callbacks that clear or repopulate work during reload.
+- Bounded large item/currency payouts and saved the exact remainder for later inventory delivery,
+  including logout, death/respawn and missing-item recovery. Clamped reward arithmetic and respected
+  the project command-reward opt-in and configured hearts ceiling.
+- Made nested text, dialogue, trigger and reward fields reject malformed present values; unknown
+  concrete item/block registry IDs no longer turn into air.
+- Bounded collection decoding and client request processing within NeoForge's directional payload
+  registration. Valid large quest collections retain their existing wire format and protocol.
+- Made built-in item handovers reserve all source items and destination capacity before committing,
+  retain stack metadata, support tag-selected payloads, and avoid partial consumption on failure.
+- Restored target-loss failure rules and preserved them on situation offers. Canceled gameplay
+  events no longer count as successful actions or premature quest failures.
+- Enforced project offer limits, sponsor selection, unlock conditions and contribution limits on
+  the server. Implemented documented project deadlines, weather and sponsor-loss failures, retry
+  rules, paused timing, failure outcomes and localized notifications.
+- Bound offline project rewards to the original instance and frozen payout. Missing definitions,
+  malformed records and unknown future entries are retained for recovery; one broken entry cannot
+  discard the rest of a player's rewards. Clone/save copies no longer alias mutable quest state.
+- Prevented overflow in progress, offer weights, template ranges and scaling, and pending hearts.
+- Rejected partial datapack definitions and malformed optional rules instead of silently removing
+  objectives or gates. Omitted fields keep their defaults. Quarantine diagnostics retain declared
+  ids even when they differ from filenames; failed strict reloads retain the previous catalogue.
+- Corrected negated composite validation and made long dependency-chain validation stack-safe.
+- Tightened MCA radius checks, spouse selection and cross-dimension relative recovery to prevent
+  duplicate villagers. Hardened optional integration initialization, bounty deduplication, cached
+  Townstead data and failed minimap cleanup/retries.
+- Gave newly inserted compatibility packs low default priority so owner datapacks can override them.
+  Explicit pack ordering already saved in a world remains authoritative.
+- Fixed wrapped journal rows, small scrollbar geometry, stale quest-log coordinate actions, delayed
+  menu replies, repeated menu scroll resets and quest keybinds outside gameplay.
+- Corrected platform compatibility documentation, build prerequisites and current feature descriptions.
+  Added regression and resource integrity coverage; see `docs/audit/STABILIZATION.md` for results
+  and runtime checks.
+
+### Added — Sample datapacks
+
+- Added a top-level `datapack_samples/` folder: ten complete, installable sample datapacks plus an
+  index `README.md`. Together they exercise quests, quest chains, templates, failure and deadlines,
+  village projects, situations, voice pools, reputation ladders, titles, MCA: Reputation incidents,
+  and optional-mod gating for Townstead, Ice & Fire, Bountiful, FTB Quests and MCA Capitals.
+  `09_trim_and_retune` demonstrates disabling and overriding the mod's own bundled content by
+  shadowing its resource paths.
+- Added `SampleDatapacksParseTest`, which parses each sample quest, project, situation, reputation
+  ladder, title and voice pool through the real codecs. Objectives, conditions and rewards are also
+  parsed individually, since an optional codec can otherwise empty a list silently without failing
+  the enclosing definition. It then runs the same reload-time validators a live reload runs —
+  chain, template, failure, objective, target-gate, age-eligibility and project — giving the
+  samples the same treatment `BuiltinPackParsesTest` and `BuiltinPackValidatesTest` already give
+  the bundled pack.
+- The samples are documentation and example content only: they ship in the repository, not in the
+  built jar, and change no runtime behaviour.
+
+### Fixed — Datapack format corrections
+
+- Corrected `compatpacks/capitals_court/pack.mcmeta`, which had carried over the Forge 1.20.1
+  `pack_format` value of `15` instead of declaring `48` like its three sibling compat packs.
+- Corrected the `pack.mcmeta` guidance in the datapack walkthrough of `DATAPACK.md`, which told
+  authors to declare `pack_format: 34` for a standalone datapack; `34` is the 1.21.1 resource-pack
+  format, and `48` is the 1.21.1 data-pack format that this mod's own bundled compat packs use.
+  Packs authored against the old advice will have been flagged as an incompatible pack format.
+
 ## [1.6.1] - 2026-09-06
 
 ### Fixed — Structure guidance stalls

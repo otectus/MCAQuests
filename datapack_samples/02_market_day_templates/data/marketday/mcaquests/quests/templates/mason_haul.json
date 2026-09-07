@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "marketday:template_mason_haul",
+  "weight": 10,
+  "category": "gathering",
+  "difficulty": "medium",
+  "offer_group": "market_order",
+  "repeat": { "type": "cooldown", "cooldown_ticks": 36000 },
+  "giver": {
+    "professions": ["minecraft:mason"],
+    "adult_only": true
+  },
+  "title": {
+    "translate": "marketday.quest.mason_haul.title",
+    "with": ["{stone_name}"]
+  },
+  "dialogue": {
+    "offer": {
+      "translate": "marketday.quest.mason_haul.offer",
+      "with": ["{stone_name}", "{count}"]
+    },
+    "accept": { "translate": "marketday.quest.mason_haul.accept" },
+    "decline": { "translate": "marketday.quest.mason_haul.decline" },
+    "in_progress": { "translate": "marketday.quest.mason_haul.in_progress" },
+    "ready": { "translate": "marketday.quest.mason_haul.ready" },
+    "complete": { "translate": "marketday.quest.mason_haul.complete" }
+  },
+  "template": {
+    "variables": {
+      "stone": {
+        "kind": "block",
+        "ids": [
+          "minecraft:andesite",
+          "minecraft:diorite",
+          "minecraft:granite",
+          "minecraft:tuff",
+          "minecraft:deepslate"
+        ]
+      },
+      "count": {
+        "kind": "int",
+        "min": 16,
+        "max": 40,
+        "per_player_level": 1.0,
+        "limit": 96
+      }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:break_block",
+        "block": "{stone}",
+        "count": "{count}",
+        "source": { "block_tag": "minecraft:base_stone_overworld" }
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:currency" },
+      { "type": "mcaquests:xp", "amount": "{count}" },
+      { "type": "mcaquests:hearts", "amount": 4 }
+    ]
+  }
+}

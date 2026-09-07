@@ -66,6 +66,12 @@ public record TownsteadSpiritProjectObjective(Optional<String> spirit, OptionalI
     }
 
     @Override
+    public boolean isAvailable(ServerLevel level, ProjectState state) {
+        return state.villageId().isPresent()
+                && TownsteadBridge.Holder.get().has(TownsteadCapability.READ_SPIRIT);
+    }
+
+    @Override
     public boolean poll(MinecraftServer server, ServerLevel level, ProjectDefinition definition,
                         ProjectState state, SharedObjectiveProgress progress) {
         OptionalInt village = state.villageId();
@@ -85,7 +91,7 @@ public record TownsteadSpiritProjectObjective(Optional<String> spirit, OptionalI
         } else {
             if (!progress.extra().contains(K_BASELINE)) {
                 progress.extra().putInt(K_BASELINE, points);
-                return false; // the pass that sets the start line makes no progress along it
+                return true; // the baseline is persistent state even though the visible counter is unchanged
             }
             reached = Math.max(0, points - progress.extra().getInt(K_BASELINE));
         }

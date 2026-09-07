@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.quest.target;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.data.RegistryEntryCodec;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -72,17 +75,17 @@ public record SourceHint(Optional<ResourceLocation> structure, Optional<TagKey<S
     private static final int BLOCK_ARRIVE_RADIUS = 3;
 
     public static final Codec<SourceHint> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceLocation.CODEC.lenientOptionalFieldOf("structure").forGetter(SourceHint::structure),
-            TagKey.codec(Registries.STRUCTURE).lenientOptionalFieldOf("structure_tag").forGetter(SourceHint::structureTag),
-            ResourceLocation.CODEC.lenientOptionalFieldOf("biome").forGetter(SourceHint::biome),
-            TagKey.codec(Registries.BIOME).lenientOptionalFieldOf("biome_tag").forGetter(SourceHint::biomeTag),
-            BuiltInRegistries.BLOCK.byNameCodec().lenientOptionalFieldOf("block").forGetter(SourceHint::block),
-            TagKey.codec(Registries.BLOCK).lenientOptionalFieldOf("block_tag").forGetter(SourceHint::blockTag),
-            ResourceLocation.CODEC.lenientOptionalFieldOf("dimension").forGetter(SourceHint::dimension),
-            LocationAnchor.CODEC.lenientOptionalFieldOf("anchor").forGetter(SourceHint::anchor)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "structure").forGetter(SourceHint::structure),
+            StrictCodecs.strictOptional(TagKey.codec(Registries.STRUCTURE), "structure_tag").forGetter(SourceHint::structureTag),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "biome").forGetter(SourceHint::biome),
+            StrictCodecs.strictOptional(TagKey.codec(Registries.BIOME), "biome_tag").forGetter(SourceHint::biomeTag),
+            StrictCodecs.strictOptional(RegistryEntryCodec.of(BuiltInRegistries.BLOCK), "block").forGetter(SourceHint::block),
+            StrictCodecs.strictOptional(TagKey.codec(Registries.BLOCK), "block_tag").forGetter(SourceHint::blockTag),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "dimension").forGetter(SourceHint::dimension),
+            StrictCodecs.strictOptional(LocationAnchor.CODEC, "anchor").forGetter(SourceHint::anchor)
     ).apply(instance, SourceHint::new));
 
-    public static final MapCodec<Optional<SourceHint>> FIELD = CODEC.lenientOptionalFieldOf("source");
+    public static final MapCodec<Optional<SourceHint>> FIELD = StrictCodecs.strictOptional(CODEC, "source");
 
     private Optional<StructureTarget> structureTarget() {
         return structure.isPresent() || structureTag.isPresent()

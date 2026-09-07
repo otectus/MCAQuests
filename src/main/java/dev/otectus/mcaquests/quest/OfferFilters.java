@@ -154,6 +154,9 @@ public final class OfferFilters {
         if (!TownsteadContentGate.allowsQuest(def.id(), def.category(), def.offerGroup())) {
             return Result.fail("CONTENT_DISABLED (a compat.townstead.content switch is off)");
         }
+        if (!CapitalsQuestRequirements.allowsOffer(def)) {
+            return Result.fail("CAPITALS_UNAVAILABLE (required capability or bundled content is disabled)");
+        }
         // effectiveConditions() folds chain prerequisites into the condition gate, so a later stage can
         // never be offered before its prerequisites are completed.
         QuestContext context = pass.contextFor(def);

@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.BlockTarget;
@@ -28,7 +31,7 @@ public record PlaceBlockObjective(BlockTarget target, int count,
 
     public static final MapCodec<PlaceBlockObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(PlaceBlockObjective::target),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(PlaceBlockObjective::count),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(PlaceBlockObjective::count),
             SourceHint.FIELD.forGetter(PlaceBlockObjective::source)
     ).apply(instance, PlaceBlockObjective::new));
 

@@ -169,7 +169,15 @@ public final class JourneyMapWaypointBackend implements MapWaypointBackend {
         // add() is also the update call: JourneyMap keys on the waypoint's own id, so re-adding a
         // mutated object moves and re-colours it rather than producing a second marker.
         if (!add(waypoint) || !readBack(waypoint)) {
-            applied.remove(spec.key());
+            // A write may land before its read-back fails. Keep ownership until cleanup succeeds,
+            // otherwise the next retry creates a second waypoint and the first becomes an orphan.
+            if (remove(waypoint)) {
+                applied.remove(spec.key());
+                pendingRemoval.remove(spec.key());
+            } else {
+                applied.put(spec.key(), new Applied(waypoint, spec));
+                pendingRemoval.add(spec.key());
+            }
             return MapMutationResult.FAILED;
         }
         applied.put(spec.key(), new Applied(waypoint, spec));
@@ -197,11 +205,9 @@ public final class JourneyMapWaypointBackend implements MapWaypointBackend {
     public void clearAutomatic(ClearCause cause) {
         // One removal per waypoint we put there, and never removeAllWaypoints(modId): that is the
         // call that took the player's own saved pins with it.
-        for (Applied entry : List.copyOf(applied.values())) {
-            remove(entry.waypoint());
+        for (String key : List.copyOf(applied.keySet())) {
+            withdraw(key);
         }
-        applied.clear();
-        pendingRemoval.clear();
         McaQuests.LOGGER.debug("[MCA: Quests] JourneyMap quest waypoints cleared ({})", cause);
     }
 

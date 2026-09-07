@@ -54,6 +54,8 @@ public final class JournalService {
         ProjectSavedData saved = ProjectSavedData.get(level.getServer());
         ReputationTierSet ladder = ReputationTiers.getDefault();
 
+        dev.otectus.mcaquests.quest.reputation.QuestReputation.globalTitles(level.getServer(), player.getUUID())
+                .forEach(data.titles()::grantGlobal);
         List<Component> globalTitles = new ArrayList<>();
         data.titles().global().forEach(id -> globalTitles.add(Titles.displayName(id)));
 

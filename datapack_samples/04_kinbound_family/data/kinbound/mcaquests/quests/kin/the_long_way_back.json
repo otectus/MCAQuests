@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "id": "kinbound:the_long_way_back",
+  "weight": 16,
+  "category": "relations",
+  "difficulty": "hard",
+  "offer_group": "kin_crisis",
+  "title": { "text": "The Long Way Back" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "adult_only": true,
+    "min_hearts": 25
+  },
+  "dialogue": {
+    "offer": { "text": "They went out past the treeline in the spring and nobody has seen them since. I am not asking you to bring them home. I am asking you to find out." },
+    "accept": { "text": "Deep in the woods. Further than you think is sensible." },
+    "decline": { "text": "No. I would not know where to start either." },
+    "in_progress": { "text": "Further out. They would not have stopped this close." },
+    "ready": { "text": "You found them. You actually found them." },
+    "complete": { "text": "Alive. Thin, and stubborn, and alive." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:find_missing_relative",
+      "relative": { "mode": "family", "relation": "child", "require": "missing" },
+      "biome": { "tag": "minecraft:is_forest" },
+      "min_distance": 160,
+      "discover_radius": 24,
+      "spawn_distance": 12
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 10 }
+  ],
+  "conditions": {
+    "type": "mcaquests:related_villager_status",
+    "relation": "child",
+    "status": "missing"
+  }
+}

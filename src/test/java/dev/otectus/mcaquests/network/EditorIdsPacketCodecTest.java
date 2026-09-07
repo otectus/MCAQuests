@@ -88,4 +88,28 @@ class EditorIdsPacketCodecTest {
                 List.of("mcaquests:a"), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
         assertEquals(1, packet.questIds().size());
     }
+
+    @Test
+    void truncationPreservesPrefixWhenASmallerLaterEntryWouldFit() {
+        FtbqEditorIdsS2CPacket packet = FtbqEditorIdsS2CPacket.build(
+                List.of("x".repeat(32760), "y".repeat(32760), "z".repeat(100), "small"),
+                List.of("c|C"), List.of(), List.of(), List.of(), List.of(), List.of());
+        assertEquals(2, packet.questIds().size());
+        assertTrue(packet.chainEntries().isEmpty());
+    }
+
+    @Test
+    void oversizedIndividualStringIsDroppedBeforeItCanFailEncoding() {
+        FtbqEditorIdsS2CPacket packet = FtbqEditorIdsS2CPacket.build(
+                List.of("x".repeat(Short.MAX_VALUE + 1)), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of());
+        assertTrue(packet.questIds().isEmpty());
+        RegistryFriendlyByteBuf buf = TestRegistries.buffer();
+        try {
+            packet.encode(buf);
+            assertEquals(packet, FtbqEditorIdsS2CPacket.decode(buf));
+        } finally {
+            buf.release();
+        }
+    }
 }

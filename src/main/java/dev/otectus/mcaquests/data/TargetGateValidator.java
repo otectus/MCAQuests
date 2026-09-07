@@ -204,11 +204,11 @@ public final class TargetGateValidator {
     private static void collect(QuestCondition condition, boolean polarity,
                                 List<RelatedVillagerStatusCondition> out) {
         if (condition instanceof AllOfCondition all) {
-            all.conditions().forEach(child -> collect(child, polarity, out));
+            if (polarity) all.conditions().forEach(child -> collect(child, true, out));
         } else if (condition instanceof NotCondition not) {
             collect(not.condition(), !polarity, out);
-        } else if (condition instanceof AnyOfCondition) {
-            // A disjunction guarantees nothing on its own, so it establishes nothing.
+        } else if (condition instanceof AnyOfCondition any) {
+            if (!polarity) any.conditions().forEach(child -> collect(child, false, out));
         } else if (polarity && condition instanceof RelatedVillagerStatusCondition related) {
             out.add(related);
         }

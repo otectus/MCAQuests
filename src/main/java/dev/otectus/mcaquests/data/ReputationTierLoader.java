@@ -59,8 +59,7 @@ public final class ReputationTierLoader extends SimpleJsonResourceReloadListener
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            ReputationTierSet.CODEC.parse(JsonOps.INSTANCE, entry.getValue())
-                    .resultOrPartial(message -> recordError(errors, strict, "Reputation tiers '" + fileId + "': " + message))
+            dev.otectus.mcaquests.data.StrictCodecs.parse(ReputationTierSet.CODEC, JsonOps.INSTANCE, entry.getValue(), message -> recordError(errors, strict, "Reputation tiers '" + fileId + "': " + message))
                     .ifPresent(set -> {
                         if (ReputationTierValidator.validate(fileId, set, errors)) {
                             loaded.put(fileId, set);

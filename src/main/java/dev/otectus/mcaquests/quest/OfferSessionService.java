@@ -200,7 +200,15 @@ public final class OfferSessionService {
             return false;
         }
         return QuestDefinitions.resolve(slot.questId())
-                .map(def -> OfferFilters.passes(pass, def))
+                .map(def -> {
+                    if (slot.frozenValues() != null && def.template().isPresent()) {
+                        Optional<TemplateSpec.Concrete> concrete = def.template().get().toConcrete(slot.frozenValues());
+                        if (concrete.isEmpty() || !CapitalsQuestRequirements.allowsOffer(def.withConcrete(concrete.get()))) {
+                            return false;
+                        }
+                    }
+                    return OfferFilters.passes(pass, def);
+                })
                 .orElse(false);
     }
 
@@ -262,6 +270,9 @@ public final class OfferSessionService {
             values = maybe.get();
             resolved = def.withConcrete(concrete.get());
             resolver = new PlaceholderResolver(values, McaCompat.getPlayerName(player));
+        }
+        if (!CapitalsQuestRequirements.allowsOffer(resolved)) {
+            return Optional.empty();
         }
         Component fallback = resolved.dialogueOr(QuestDefinition.OFFER, resolved.title(resolver), resolver);
         Component voiced = QuestDialogueHooks.resolve(player, villager, resolved, QuestDefinition.OFFER, fallback);

@@ -17,6 +17,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ScrollViewTest {
 
+    @Test
+    void scrollbarThumbFitsEvenWhenViewportIsShorterThanMinimumThumb() {
+        ScrollView view = new ScrollView();
+        view.setViewport(30, 33);
+        view.setContentHeight(1000);
+        assertEquals(3, view.thumbHeight());
+        view.scrollBy(Integer.MAX_VALUE);
+        assertEquals(33, view.thumbTop() + view.thumbHeight());
+    }
+
+    @Test
+    void largeScrollDeltaSaturatesInsteadOfWrappingBackToTop() {
+        ScrollView view = new ScrollView();
+        view.setViewport(0, 100);
+        view.setContentHeight(1000);
+        view.scrollBy(10);
+        view.scrollBy(Integer.MAX_VALUE);
+        assertEquals(900, view.scroll());
+    }
+
     /** A 100px window (y 50..150) onto 300px of content. */
     private static ScrollView view() {
         ScrollView view = new ScrollView();

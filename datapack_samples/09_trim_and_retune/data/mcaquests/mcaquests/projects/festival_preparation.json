@@ -1,0 +1,9 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:festival_preparation",
+  "enabled": false,
+  "scope": "village",
+  "phases": [
+    { "key": "disabled_by_datapack", "objectives": [] }
+  ]
+}

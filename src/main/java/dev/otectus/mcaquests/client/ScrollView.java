@@ -37,8 +37,7 @@ final class ScrollView {
 
     /** Scrolls by {@code dy} content pixels (positive scrolls down), clamped to the content. */
     void scrollBy(int dy) {
-        scroll += dy;
-        clampScroll();
+        scroll = (int) Math.max(0L, Math.min(maxScroll(), (long) scroll + dy));
     }
 
     int top() {
@@ -114,7 +113,7 @@ final class ScrollView {
             return viewportHeight();
         }
         int proportional = (int) ((long) viewportHeight() * viewportHeight() / contentHeight);
-        return Math.max(MIN_THUMB_HEIGHT, Math.min(viewportHeight(), proportional));
+        return Math.min(viewportHeight(), Math.max(MIN_THUMB_HEIGHT, proportional));
     }
 
     private void clampScroll() {

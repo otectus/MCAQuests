@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -30,8 +32,8 @@ public record BuildNearLocationObjective(BlockTarget block, LocationAnchor locat
     public static final MapCodec<BuildNearLocationObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(BuildNearLocationObjective::block),
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(BuildNearLocationObjective::location),
-            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 8).forGetter(BuildNearLocationObjective::radius),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 8).forGetter(BuildNearLocationObjective::count)
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "radius", 8).forGetter(BuildNearLocationObjective::radius),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 8).forGetter(BuildNearLocationObjective::count)
     ).apply(instance, BuildNearLocationObjective::new));
 
     /** Never offered when this objective's destination is a place the giver does not have. */

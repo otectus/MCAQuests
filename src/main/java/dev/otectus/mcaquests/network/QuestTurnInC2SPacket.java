@@ -35,7 +35,7 @@ public record QuestTurnInC2SPacket(UUID villagerUuid, ResourceLocation questId) 
     }
 
     public static void handle(QuestTurnInC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player)) {
             return;
         }
         QuestManager.turnInFromPacket(player, msg.villagerUuid, msg.questId);

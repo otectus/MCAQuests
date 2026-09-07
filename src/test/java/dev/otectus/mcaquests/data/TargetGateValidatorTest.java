@@ -8,6 +8,7 @@ import dev.otectus.mcaquests.quest.TurnInSpec;
 import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.condition.composite.AllOfCondition;
 import dev.otectus.mcaquests.quest.condition.composite.AnyOfCondition;
+import dev.otectus.mcaquests.quest.condition.composite.NotCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.RelatedVillagerStatusCondition;
 import dev.otectus.mcaquests.quest.objective.DeliverToVillagerObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
@@ -104,6 +105,21 @@ class TargetGateValidatorTest {
         assertEquals(List.of(),
                 errorsFor(quest(family("sibling", "same_village"),
                         Optional.of(gate("sibling", "same_village")))));
+    }
+
+    @Test
+    void aNegatedConjunctionDoesNotProveARelativeExists() {
+        QuestCondition sibling = gate("sibling", "same_village");
+        QuestCondition unrelated = gate("spouse", "alive");
+        var condition = new NotCondition(new AllOfCondition(List.of(new NotCondition(sibling), unrelated)));
+        assertFalse(errorsFor(quest(family("sibling", "same_village"), Optional.of(condition))).isEmpty());
+    }
+
+    @Test
+    void negatedDisjunctionCanProveARelativeExists() {
+        QuestCondition sibling = gate("sibling", "same_village");
+        QuestCondition condition = new NotCondition(new AnyOfCondition(List.of(new NotCondition(sibling))));
+        assertTrue(errorsFor(quest(family("sibling", "same_village"), Optional.of(condition))).isEmpty());
     }
 
     @Test

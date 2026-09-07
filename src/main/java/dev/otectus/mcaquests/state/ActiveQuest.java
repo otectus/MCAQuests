@@ -103,6 +103,12 @@ public final class ActiveQuest {
     private long suspendedTicks;
 
     /**
+     * The portion of {@link #suspendedTicks} credited by the shared situation clock. Kept separately
+     * so an earlier local objective pause cannot consume credit for a later Capitals outage.
+     */
+    private long situationSuspendedTicks;
+
+    /**
      * Lifecycle phases already announced to Townstead, one bit per
      * {@code TownsteadLifecycle.Phase} (Townstead spec 7.1). Persisted so a reconnect or a restart
      * cannot make a villager react a second time to something that happened days ago. Absent on saves
@@ -354,6 +360,18 @@ public final class ActiveQuest {
         }
     }
 
+    public long situationSuspendedTicks() {
+        return situationSuspendedTicks;
+    }
+
+    /** Credits shared pause time once, recording both its source and the total deadline offset. */
+    public void addSituationSuspendedTicks(long delta) {
+        if (delta > 0L) {
+            situationSuspendedTicks += delta;
+            addSuspendedTicks(delta);
+        }
+    }
+
     /**
      * "Now", with suspended time removed — the value every deadline comparison must use so a quest is
      * never failed for time that passed while it could not be played.
@@ -421,6 +439,9 @@ public final class ActiveQuest {
         if (suspendedTicks != 0L) {
             tag.putLong("suspended_ticks", suspendedTicks);
         }
+        if (situationSuspendedTicks != 0L) {
+            tag.putLong("situation_suspended_ticks", situationSuspendedTicks);
+        }
         if (!dispatchedPhases.isEmpty()) {
             tag.putByteArray("townstead_phases", dispatchedPhases.toByteArray());
         }
@@ -449,9 +470,14 @@ public final class ActiveQuest {
     }
 
     public static ActiveQuest load(CompoundTag tag) {
-        Component name = NbtComponents.fromJsonString(tag.getString("villager_name"));
+        Component name;
+        try {
+            name = NbtComponents.fromJsonString(tag.getString("villager_name"));
+        } catch (RuntimeException malformedName) {
+            name = Component.literal(tag.getString("villager_name"));
+        }
         ResourceLocation profession = tag.contains("profession")
-                ? ResourceLocation.parse(tag.getString("profession")) : null;
+                ? ResourceLocation.tryParse(tag.getString("profession")) : null;
         List<ObjectiveProgress> progress = new ArrayList<>();
         ListTag list = tag.getList("progress", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
@@ -459,7 +485,7 @@ public final class ActiveQuest {
         }
         ResolvedTemplate template = tag.contains("template")
                 ? ResolvedTemplate.load(tag.getCompound("template")) : null;
-        UUID situationInstance = tag.contains("situation") ? tag.getUUID("situation") : null;
+        UUID situationInstance = tag.hasUUID("situation") ? tag.getUUID("situation") : null;
         ActiveQuest quest = new ActiveQuest(
                 ResourceLocation.parse(tag.getString("quest")),
                 tag.getUUID("villager"),
@@ -474,7 +500,9 @@ public final class ActiveQuest {
                 situationInstance);
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");
-        quest.suspendedTicks = tag.getLong("suspended_ticks"); // 0 when absent
+        quest.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks")); // 0 when absent
+        quest.situationSuspendedTicks = Math.max(0L,
+                Math.min(quest.suspendedTicks, tag.getLong("situation_suspended_ticks")));
         if (tag.contains("townstead_phases", Tag.TAG_BYTE_ARRAY)) {
             quest.dispatchedPhases.or(java.util.BitSet.valueOf(tag.getByteArray("townstead_phases")));
         }

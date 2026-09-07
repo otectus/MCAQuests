@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -23,7 +25,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record VillagerDeathTrigger(String relation) implements SituationTrigger {
 
     public static final MapCodec<VillagerDeathTrigger> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.lenientOptionalFieldOf("relation", "any").forGetter(VillagerDeathTrigger::relation)
+            StrictCodecs.strictOptional(Codec.STRING, "relation", "any").forGetter(VillagerDeathTrigger::relation)
     ).apply(instance, VillagerDeathTrigger::new));
 
     @Override

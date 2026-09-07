@@ -68,7 +68,7 @@ public class QuestMenuScreen extends McaQuestsScreen {
     private static final int PORTRAIT_H = 42;
     private static final int PORTRAIT_SCALE = 20;
 
-    private final QuestMenuDataS2CPacket data;
+    private QuestMenuDataS2CPacket data;
     /** Card tops in content space (0 = first card), turned into screen y through {@link #view}. */
     private final List<Integer> cardTops = new ArrayList<>();
 
@@ -81,6 +81,17 @@ public class QuestMenuScreen extends McaQuestsScreen {
         super(Component.translatable("mcaquests.screen.quests.title"));
         this.data = data;
     }
+
+    java.util.UUID villagerUuid() {
+        return data.villagerUuid();
+    }
+
+    /** Keep the current scroll position when a decision refreshes this conversation. */
+    void refresh(QuestMenuDataS2CPacket updated) {
+        this.data = updated;
+        rebuildWidgets();
+    }
+
 
     @Override
     protected int extraHeaderHeight() {

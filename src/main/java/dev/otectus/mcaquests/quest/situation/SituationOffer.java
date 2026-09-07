@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.quest.situation;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.GiverSpec;
 import dev.otectus.mcaquests.quest.OfferShaping;
@@ -47,18 +48,20 @@ public record SituationOffer(
     public static final String CATEGORY = "situation";
 
     public static final Codec<SituationOffer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            net.minecraft.util.ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("weight", 1).forGetter(SituationOffer::weight),
-            QuestText.CODEC.lenientOptionalFieldOf("title").forGetter(SituationOffer::title),
-            GiverSpec.CODEC.lenientOptionalFieldOf("giver", GiverSpec.ANY).forGetter(SituationOffer::giver),
-            Codec.unboundedMap(Codec.STRING, QuestText.CODEC).lenientOptionalFieldOf("dialogue", Map.of())
+            StrictCodecs.strictOptional(net.minecraft.util.ExtraCodecs.POSITIVE_INT, "weight", 1).forGetter(SituationOffer::weight),
+            StrictCodecs.strictOptional(QuestText.CODEC, "title").forGetter(SituationOffer::title),
+            StrictCodecs.strictOptional(GiverSpec.CODEC, "giver", GiverSpec.ANY).forGetter(SituationOffer::giver),
+            StrictCodecs.strictOptional(Codec.unboundedMap(Codec.STRING, QuestText.CODEC), "dialogue", Map.of())
                     .forGetter(SituationOffer::dialogue),
-            ObjectiveTypes.CODEC.listOf().lenientOptionalFieldOf("objectives", List.of()).forGetter(SituationOffer::objectives),
-            RewardTypes.CODEC.listOf().lenientOptionalFieldOf("rewards", List.of()).forGetter(SituationOffer::rewards),
-            TurnInSpec.CODEC.lenientOptionalFieldOf("turn_in", TurnInSpec.DEFAULT).forGetter(SituationOffer::turnIn),
-            FailureSpec.CODEC.lenientOptionalFieldOf("failure").forGetter(SituationOffer::failure),
-            TemplateSpec.CODEC.lenientOptionalFieldOf("template").forGetter(SituationOffer::template),
+            StrictCodecs.strictOptional(ObjectiveTypes.CODEC.listOf(), "objectives", List.of())
+                    .forGetter(SituationOffer::objectives),
+            StrictCodecs.strictOptional(RewardTypes.CODEC.listOf(), "rewards", List.of())
+                    .forGetter(SituationOffer::rewards),
+            StrictCodecs.strictOptional(TurnInSpec.CODEC, "turn_in", TurnInSpec.DEFAULT).forGetter(SituationOffer::turnIn),
+            StrictCodecs.strictOptional(FailureSpec.CODEC, "failure").forGetter(SituationOffer::failure),
+            StrictCodecs.strictOptional(TemplateSpec.CODEC, "template").forGetter(SituationOffer::template),
             OfferShaping.MAP_CODEC.forGetter(SituationOffer::offerShaping),
-            ConditionTypes.CODEC.lenientOptionalFieldOf("conditions").forGetter(SituationOffer::conditions)
+            StrictCodecs.strictOptional(ConditionTypes.CODEC, "conditions").forGetter(SituationOffer::conditions)
     ).apply(instance, SituationOffer::new));
 
     /** The pre-1.4.1 shape, for callers and tests that predate offer conditions. */

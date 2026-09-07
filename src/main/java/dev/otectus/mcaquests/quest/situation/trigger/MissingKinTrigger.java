@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -22,7 +24,7 @@ import java.util.UUID;
 public record MissingKinTrigger(String relation) implements SituationTrigger {
 
     public static final MapCodec<MissingKinTrigger> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.STRING.lenientOptionalFieldOf("relation", "any").forGetter(MissingKinTrigger::relation)
+            StrictCodecs.strictOptional(Codec.STRING, "relation", "any").forGetter(MissingKinTrigger::relation)
     ).apply(instance, MissingKinTrigger::new));
 
     @Override

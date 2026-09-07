@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
@@ -35,12 +36,12 @@ public record SituationDefinition(
 
     public static final Codec<SituationDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("id").forGetter(SituationDefinition::id),
-            Codec.BOOL.lenientOptionalFieldOf("enabled", true).forGetter(SituationDefinition::enabled),
-            SituationScope.CODEC.lenientOptionalFieldOf("scope", SituationScope.VILLAGE).forGetter(SituationDefinition::scope),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("duration_ticks", 24000).forGetter(SituationDefinition::durationTicks),
-            ExtraCodecs.NON_NEGATIVE_INT.lenientOptionalFieldOf("cooldown_ticks", 24000).forGetter(SituationDefinition::cooldownTicks),
+            StrictCodecs.strictOptional(Codec.BOOL, "enabled", true).forGetter(SituationDefinition::enabled),
+            StrictCodecs.strictOptional(SituationScope.CODEC, "scope", SituationScope.VILLAGE).forGetter(SituationDefinition::scope),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "duration_ticks", 24000).forGetter(SituationDefinition::durationTicks),
+            StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "cooldown_ticks", 24000).forGetter(SituationDefinition::cooldownTicks),
             SituationTriggerTypes.CODEC.fieldOf("trigger").forGetter(SituationDefinition::trigger),
-            SituationOutcomes.CODEC.lenientOptionalFieldOf("outcomes", SituationOutcomes.NONE).forGetter(SituationDefinition::outcomes),
+            StrictCodecs.strictOptional(SituationOutcomes.CODEC, "outcomes", SituationOutcomes.NONE).forGetter(SituationDefinition::outcomes),
             SituationOffer.CODEC.fieldOf("offer").forGetter(SituationDefinition::offer)
     ).apply(instance, SituationDefinition::new));
 
@@ -73,6 +74,7 @@ public record SituationDefinition(
                 author != null && author.failOnGiverDeath(),
                 author != null ? author.failureHearts() : 0,
                 author != null ? author.retryAfterTicks() : Optional.empty(),
-                author != null && author.blockRetry());
+                author != null && author.blockRetry(),
+                author != null && author.failOnTargetLost());
     }
 }

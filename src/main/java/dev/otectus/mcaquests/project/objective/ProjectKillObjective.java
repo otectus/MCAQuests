@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.project.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.EntityTarget;
@@ -16,7 +19,7 @@ public record ProjectKillObjective(EntityTarget target, int count) implements Pr
 
     public static final MapCodec<ProjectKillObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(ProjectKillObjective::target),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ProjectKillObjective::count)
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ProjectKillObjective::count)
     ).apply(instance, ProjectKillObjective::new));
 
     @Override

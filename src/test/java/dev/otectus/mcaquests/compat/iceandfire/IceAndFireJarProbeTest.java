@@ -14,11 +14,13 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -66,9 +68,24 @@ class IceAndFireJarProbeTest {
             Set<String> entities = constants(zip, CE_ENTITIES);
             assertMissing(entities, IceAndFireRegistryManifest.QUEST_SAFE_ENTITIES,
                     "quest-safe entities absent from " + CE_ENTITIES);
-            assertTrue(contains(entities, "cylcops_multipart"),
-                    "Community Edition still registers the misspelt 'cylcops_multipart'; if that has "
-                            + "been corrected upstream, EXCLUDED_TECHNICAL must follow it.");
+            // NeoForge CE 2.1.2 uses PartEntity children, not separately registered multipart types.
+            // Verify that actual replacement and the remaining technical registry declarations;
+            // do not infer a corrected registry spelling merely because the legacy typo vanished.
+            Set<String> legacyParts = Set.of("dragon_multipart", "multipart", "hydra_multipart",
+                    "cylcops_multipart");
+            assertMissing(entities, IceAndFireRegistryManifest.EXCLUDED_TECHNICAL.stream()
+                    .filter(id -> !legacyParts.contains(id.getPath())).toList(),
+                    "technical entities absent from " + CE_ENTITIES);
+            if (!contains(entities, "cylcops_multipart")) {
+                assertFalse(contains(entities, "cyclops_multipart"),
+                        "CE registered a corrected multipart ID; update the technical exclusion manifest");
+                assertTrue(constants(zip, "com/iafenvoy/iceandfire/entity/CyclopsEyeEntity.class")
+                        .contains("com/iafenvoy/iceandfire/entity/MultipartPartEntity"),
+                        "CE cyclops multipart implementation changed");
+                assertTrue(constants(zip, "com/iafenvoy/iceandfire/entity/MultipartPartEntity.class")
+                        .contains("net/neoforged/neoforge/entity/PartEntity"),
+                        "CE no longer uses NeoForge PartEntity for multipart children");
+            }
 
             for (ResourceLocation myrmex : IceAndFireRegistryManifest.MYRMEX_ENTITIES) {
                 assertFalse(contains(entities, myrmex.getPath()),
@@ -80,6 +97,7 @@ class IceAndFireJarProbeTest {
             Set<String> items = constants(zip, CE_ITEMS);
             assertMissing(items, IceAndFireRegistryManifest.DRAGON_SEEKERS,
                     "Dragon Seekers absent from " + CE_ITEMS);
+            assertNetheriteArmorDeclarations(zip, items);
         }
     }
 
@@ -110,6 +128,36 @@ class IceAndFireJarProbeTest {
     }
 
     // --- helpers ---------------------------------------------------------------------------------
+
+    /** CE derives dragon armor IDs; verify the generator inputs and the recipes' exact result IDs. */
+    private static void assertNetheriteArmorDeclarations(ZipFile zip, Set<String> items) throws IOException {
+        assertTrue(items.contains("dragonarmor_%s_%s"), "CE dragon armor registration format changed");
+        Set<String> materials = constants(zip, "com/iafenvoy/iceandfire/data/DragonArmorMaterial.class");
+        assertTrue(materials.contains("netherite"), "CE no longer declares the netherite material ID");
+        Set<String> parts = constants(zip, "com/iafenvoy/iceandfire/data/DragonArmorPart.class");
+        for (ResourceLocation armor : IceAndFireRegistryManifest.NETHERITE_DRAGON_ARMOR) {
+            String part = armor.getPath().substring("dragonarmor_netherite_".length());
+            assertTrue(parts.contains(part.toUpperCase(Locale.ROOT)), "CE armor part missing: " + part);
+            assertTrue(items.contains(armor.getPath().toUpperCase(Locale.ROOT)),
+                    "CE armor registry declaration missing: " + armor);
+            assertRecipeResult(zip, armor);
+        }
+        ResourceLocation hippogryph = IceAndFireRegistryManifest.NETHERITE_HIPPOGRYPH_ARMOR;
+        assertTrue(items.contains(hippogryph.getPath()), "CE hippogryph armor registration ID changed");
+        assertRecipeResult(zip, hippogryph);
+    }
+
+    private static void assertRecipeResult(ZipFile zip, ResourceLocation item) throws IOException {
+        ZipEntry recipe = zip.getEntry("data/iceandfire/recipes/" + item.getPath() + ".json");
+        if (recipe == null) recipe = zip.getEntry("data/iceandfire/recipe/" + item.getPath() + ".json");
+        assertTrue(recipe != null, "CE armor recipe missing: " + item);
+        try (InputStream input = zip.getInputStream(recipe)) {
+            var root = com.google.gson.JsonParser.parseString(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+            var result = root.getAsJsonObject().getAsJsonObject("result");
+            var id = result.has("item") ? result.get("item") : result.get("id");
+            assertEquals(item.toString(), id.getAsString(), "CE armor recipe targets a different registry ID");
+        }
+    }
 
     /** The supplied jar, or a skipped test when this run was not given one. */
     private static Path jar(String property) {

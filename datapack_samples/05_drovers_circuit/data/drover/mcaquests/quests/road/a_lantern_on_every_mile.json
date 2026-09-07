@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "id": "drover:a_lantern_on_every_mile",
+  "weight": 8,
+  "category": "building",
+  "difficulty": "medium",
+  "offer_group": "drove_road",
+  "title": { "text": "A Lantern on Every Mile" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 96000 },
+  "giver": {
+    "professions": ["minecraft:cartographer", "mca:guard"],
+    "adult_only": true,
+    "min_hearts": 15
+  },
+  "dialogue": {
+    "offer": { "text": "Light the far end of the road, not this end. Twelve lanterns around the other village and a drover can walk it after dark without praying." },
+    "accept": { "text": "The far end. I will know if you cheat." },
+    "decline": { "text": "Then the road closes at dusk, as it always has." },
+    "in_progress": { "text": "The other village. Not this square." },
+    "ready": { "text": "You can see it from the ridge. Twelve lights." },
+    "complete": { "text": "The road is open at night now. That is a real thing you did." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:lantern",
+      "location": { "anchor": "nearest_other_village", "radius": 2048 },
+      "radius": 48,
+      "count": 12
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 40 },
+    { "type": "mcaquests:hearts", "amount": 8 },
+    { "type": "mcaquests:village_reputation", "amount": 8 }
+  ]
+}

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -61,9 +63,9 @@ public record VillagerOpinionCondition(Optional<String> minTier, Optional<String
 
     public static final MapCodec<VillagerOpinionCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
-                    Codec.STRING.lenientOptionalFieldOf("min_tier").forGetter(VillagerOpinionCondition::minTier),
-                    Codec.STRING.lenientOptionalFieldOf("max_tier").forGetter(VillagerOpinionCondition::maxTier),
-                    BASIS_CODEC.lenientOptionalFieldOf("basis", List.of())
+                    StrictCodecs.strictOptional(Codec.STRING, "min_tier").forGetter(VillagerOpinionCondition::minTier),
+                    StrictCodecs.strictOptional(Codec.STRING, "max_tier").forGetter(VillagerOpinionCondition::maxTier),
+                    StrictCodecs.strictOptional(BASIS_CODEC, "basis", List.of())
                             .forGetter(VillagerOpinionCondition::basis)
             ).apply(instance, VillagerOpinionCondition::new));
 

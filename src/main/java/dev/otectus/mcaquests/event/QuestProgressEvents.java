@@ -10,6 +10,7 @@ import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
 import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
+import dev.otectus.mcaquests.quest.CapitalsQuestRequirements;
 import dev.otectus.mcaquests.quest.QuestManager;
 import dev.otectus.mcaquests.quest.guidance.GuidanceService;
 import dev.otectus.mcaquests.quest.TurnInMode;
@@ -44,6 +45,8 @@ import dev.otectus.mcaquests.quest.situation.CapitalsSituationDetector;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.quest.situation.SituationDetectors;
 import dev.otectus.mcaquests.quest.situation.SituationManager;
+import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
+import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.DeadGiversData;
 import dev.otectus.mcaquests.state.PlayerQuestData;
@@ -118,6 +121,22 @@ public final class QuestProgressEvents {
             // Before the log is synced, so a quest whose giver died while this player was offline is
             // already gone from it rather than appearing for a moment and then vanishing.
             reconcileDeadGivers(player);
+            if (player.getServer() != null) {
+                QuestCapabilities.get(player).ifPresent(data -> {
+                    for (SituationInstance instance : SituationManager.openInstances(player.getServer())) {
+                        if (!instance.participants().contains(player.getUUID())) {
+                            continue;
+                        }
+                        SituationManager.refreshParticipantRequirements(player, instance.instanceId(), data.active());
+                        for (ActiveQuest active : data.active()) {
+                            if (active.situationInstance().map(instance.instanceId()::equals).orElse(false)) {
+                                active.addSituationSuspendedTicks(instance.missingSuspendedTicks(
+                                        active.situationSuspendedTicks(), player.level().getGameTime()));
+                            }
+                        }
+                    }
+                });
+            }
             QuestManager.syncLog(player);
             // Task M5.1: FTB editor known-ids sync (no-op unless FTB Quests is loaded + syncFtbqEditorIds).
             FtbqEditorIdsSync.maybeSend(player);
@@ -196,7 +215,7 @@ public final class QuestProgressEvents {
         return Optional.of(credited);
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onEntityKilled(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide()) {
             return;
@@ -229,7 +248,7 @@ public final class QuestProgressEvents {
      * event is never cancelled and never consumed: an objective observes the interaction, it does not
      * take part in it.
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
             return;
@@ -329,7 +348,7 @@ public final class QuestProgressEvents {
      * Runs for every online player so a quest fails even if the protected villager died to something
      * other than the player. Collects-then-acts so completion never mutates {@code active()} mid-loop.
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onProtectedDeath(LivingDeathEvent event) {
         LivingEntity dead = event.getEntity();
         // Protect targets are always MCA villagers; skip the common case (any mob dying) cheaply.
@@ -383,7 +402,7 @@ public final class QuestProgressEvents {
      * escortee is held invulnerable and cannot reach here; the {@code engaged} guard also makes a forced
      * ({@code /kill}) Phase-A death a no-op, per the design.
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onEscortTargetDeath(LivingDeathEvent event) {
         LivingEntity dead = event.getEntity();
         if (dead.level().isClientSide() || !McaCompat.isMcaVillager(dead)) {
@@ -593,7 +612,7 @@ public final class QuestProgressEvents {
     }
 
     /** Opens a {@code villager_death} situation when an MCA villager with a home village dies (0.8.0). */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onVillagerDeathSituation(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide() || !McaCompat.isMcaVillager(event.getEntity())) {
             return;
@@ -605,7 +624,7 @@ public final class QuestProgressEvents {
         SituationDetectors.onVillagerDeath(server, (ServerLevel) event.getEntity().level(), event.getEntity());
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onBlockBroken(BlockEvent.BreakEvent event) {
         // A canceled interaction never happened, so it never counts (QuestEventHandlers.onEntityInteract).
         if (event.isCanceled()) {
@@ -634,6 +653,7 @@ public final class QuestProgressEvents {
         if (player.tickCount % 20 != 0) {
             return; // ~once per second is plenty for location checks
         }
+        dev.otectus.mcaquests.quest.reward.ItemRewardDelivery.flush(player);
         forActiveObjectives(player, VisitBiomeObjective.class,
                 (objective, progress) -> {
                     if (progress.count() == 0 && objective.matches(player)) {
@@ -812,7 +832,25 @@ public final class QuestProgressEvents {
      */
     private static void accrueSuspendedTime(ServerPlayer player) {
         QuestCapabilities.get(player).ifPresent(data -> {
+            MinecraftServer server = player.getServer();
+            long now = player.level().getGameTime();
             for (ActiveQuest active : data.active()) {
+                if (server != null && active.situationInstance().isPresent()) {
+                    SituationSavedData situations = SituationSavedData.get(server);
+                    SituationInstance instance = situations.getInstance(active.situationInstance().get())
+                            .filter(SituationInstance::isOpen).orElse(null);
+                    if (instance != null) {
+                        SituationManager.refreshParticipantRequirements(player, instance.instanceId(), data.active());
+                        // Align before any failure check, even when this player just returned after
+                        // an outage. The shared clock covers offline participants and late joiners.
+                        boolean sharedPause = SituationManager.pauseUnavailableSituation(situations, instance, now);
+                        active.addSituationSuspendedTicks(instance.missingSuspendedTicks(
+                                active.situationSuspendedTicks(), now));
+                        if (sharedPause) {
+                            continue; // the shared elapsed time replaces the normal +20 accrual
+                        }
+                    }
+                }
                 QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base -> {
                     if (QuestManager.isSuspended(player, active.resolve(base), active)) {
                         active.addSuspendedTicks(POLL_INTERVAL_TICKS);
@@ -911,7 +949,7 @@ public final class QuestProgressEvents {
      * {@code failQuestIfGiverDies} config is on and the quest is turned in to its original giver. All
      * failures route through {@link QuestManager#failQuest} (spec section 17).
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onGiverDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide() || !McaCompat.isMcaVillager(event.getEntity())) {
             return;
@@ -963,7 +1001,7 @@ public final class QuestProgressEvents {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
         // A canceled interaction never happened, so it never counts (QuestEventHandlers.onEntityInteract).
         if (event.isCanceled()) {
@@ -998,7 +1036,7 @@ public final class QuestProgressEvents {
                 (objective, active, progress) -> objective.onTrade(player, active, progress, merchant, level));
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onAnimalTamed(AnimalTameEvent event) {
         if (!(event.getTamer() instanceof ServerPlayer player)) {
             return;
@@ -1012,7 +1050,7 @@ public final class QuestProgressEvents {
                 (objective, active, progress) -> objective.onTame(player, active, progress, animal, level));
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onBabySpawn(BabyEntitySpawnEvent event) {
         if (!(event.getCausedByPlayer() instanceof ServerPlayer player)) {
             return;
@@ -1039,7 +1077,7 @@ public final class QuestProgressEvents {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onItemFished(ItemFishedEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
@@ -1062,7 +1100,7 @@ public final class QuestProgressEvents {
      * <p>Conversation credit is <em>not</em> done here: {@link QuestEventHandlers} owns that decision so
      * the empty-hand / non-canceled gate lives in exactly one place.
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
     public static void onTalkToVillager(PlayerInteractEvent.EntityInteract event) {
         // A canceled interaction never happened, so it never counts (QuestEventHandlers.onEntityInteract).
         if (event.isCanceled()) {
@@ -1162,7 +1200,11 @@ public final class QuestProgressEvents {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     // Resolve template values so progress is tracked against this copy's concrete objectives.
                     ServerLevel level = (ServerLevel) player.level();
-                    List<QuestObjective> objectives = active.resolve(base).objectives();
+                    QuestDefinition def = active.resolve(base);
+                    if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
+                        return;
+                    }
+                    List<QuestObjective> objectives = def.objectives();
                     for (int i = 0; i < objectives.size(); i++) {
                         QuestObjective objective = objectives.get(i);
                         if (!type.isInstance(objective)) {

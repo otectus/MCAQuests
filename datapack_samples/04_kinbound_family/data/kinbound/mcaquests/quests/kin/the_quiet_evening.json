@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "kinbound:the_quiet_evening",
+  "weight": 8,
+  "category": "relations",
+  "difficulty": "easy",
+  "offer_group": "kin_life",
+  "title": { "text": "The Quiet Evening" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": {
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "No errand tonight. Bring a cake home, sleep in your own bed for once, and let the village manage without you until morning." },
+    "accept": { "text": "A whole night. I shall hold you to it." },
+    "decline": { "text": "Off you go, then. Mind the ladders." },
+    "in_progress": { "text": "Bed. Cake. In whichever order you like." },
+    "ready": { "text": "Morning, and you are still here. Good." },
+    "complete": { "text": "That is the best day's work you have done all week, {player}." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:cake", "count": 1, "consume": true },
+    { "type": "mcaquests:sleep_or_rest", "require_morning": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:effect", "effect": "minecraft:regeneration", "duration": 1200, "amplifier": 0 },
+    { "type": "mcaquests:hearts", "amount": 14 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:is_player_spouse" },
+      { "type": "mcaquests:relationship_state", "states": ["married_to_player"] },
+      { "type": "mcaquests:mood", "min": -20 }
+    ]
+  }
+}

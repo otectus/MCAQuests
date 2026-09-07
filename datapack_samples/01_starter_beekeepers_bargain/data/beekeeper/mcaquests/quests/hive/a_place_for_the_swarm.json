@@ -1,0 +1,50 @@
+{
+  "format_version": 1,
+  "id": "beekeeper:a_place_for_the_swarm",
+  "weight": 8,
+  "category": "building",
+  "difficulty": "medium",
+  "offer_group": "hive_work",
+  "title": { "text": "A Place for the Swarm" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": {
+    "professions": ["minecraft:farmer", "minecraft:shepherd"],
+    "adult_only": true,
+    "min_hearts": 10
+  },
+  "dialogue": {
+    "offer": { "text": "A swarm went looking for a home and found my thatch. Give them flowers and a hive of their own, out by the houses." },
+    "accept": { "text": "Six flowers at least. Bees are particular." },
+    "decline": { "text": "Then I shall be sweeping bees off the table again." },
+    "in_progress": { "text": "Flowers first, then the hive. They will not settle for less." },
+    "ready": { "text": "Look at them go. You have a gentle hand." },
+    "complete": { "text": "A proper apiary. The village owes you a summer of honey." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "tag": "minecraft:flowers",
+      "location": { "anchor": "home_village" },
+      "radius": 24,
+      "count": 6
+    },
+    {
+      "type": "mcaquests:place_block",
+      "block": "minecraft:beehive",
+      "count": 1
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:item", "item": "minecraft:honeycomb", "count": 8 },
+    { "type": "mcaquests:xp", "amount": 30 },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "turn_in": { "mode": "same_profession" },
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:time", "period": "DAY" },
+      { "type": "mcaquests:dimension", "dimension": "minecraft:overworld" },
+      { "not": { "type": "mcaquests:weather", "weather": "THUNDER" } }
+    ]
+  }
+}

@@ -85,13 +85,10 @@ public class McaHeartsReward extends McaRewardBase {
         McaCompat.addHearts(player, villager.get(), clampedAmount());
     }
 
-    /**
-     * Reuses the "best hearts nearby, then confirm it's the spouse" idiom the FTBQ {@code hearts}
-     * <em>task</em>'s {@code spouse_only} mode and the M3.1 banked-delivery path both already use.
-     */
+    /** Resolve the spouse directly; a better-liked friend must not defer a deliverable reward. */
     private void claimSpouse(ServerPlayer player) {
-        Optional<Entity> candidate = McaCompat.bestHeartsVillagerWithin(player, VILLAGER_RESOLUTION_RADIUS);
-        if (candidate.isEmpty() || !McaCompat.isPlayerSpouse(player, candidate.get())) {
+        Optional<Entity> candidate = McaCompat.nearestSpouseWithin(player, VILLAGER_RESOLUTION_RADIUS);
+        if (candidate.isEmpty()) {
             bank(player, Target.SPOUSE);
             return;
         }

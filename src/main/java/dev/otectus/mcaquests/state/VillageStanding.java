@@ -130,6 +130,12 @@ public final class VillageStanding {
     public Set<String> communities(UUID player) {
         Set<String> keys = new LinkedHashSet<>(scores.getOrDefault(player, Map.of()).keySet());
         keys.addAll(titles.getOrDefault(player, Map.of()).keySet());
+        for (String key : highWater.getOrDefault(player, Map.of()).keySet()) {
+            int separator = key.indexOf('|');
+            if (separator >= 0 && separator + 1 < key.length()) {
+                keys.add(key.substring(separator + 1));
+            }
+        }
         return keys;
     }
 

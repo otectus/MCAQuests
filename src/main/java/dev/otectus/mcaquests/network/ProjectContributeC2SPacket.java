@@ -40,7 +40,7 @@ public record ProjectContributeC2SPacket(UUID villagerUuid, ResourceLocation pro
     }
 
     public static void handle(ProjectContributeC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player)) {
             return;
         }
         ProjectManager.contributeFromPacket(player, msg.villagerUuid, msg.projectId);

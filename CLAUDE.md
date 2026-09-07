@@ -28,7 +28,7 @@ Version numbers live only in `gradle.properties`; `processResources` expands the
 
 ```ps1
 ./gradlew compileJava          # normal iteration loop
-./gradlew test                 # plain JUnit; 955 run / 16 skipped
+./gradlew test                 # unit suite and real MCA binding probes
 ./gradlew build                # also runs jarSmokeCheck (asserts metadata present, no third-party classes bundled)
 ./gradlew runClient            # launches the mod's client dev environment
 ./gradlew runServer            # launches the mod's server dev environment
@@ -40,13 +40,13 @@ Optional probe tasks (need supplied jars; see [Runtime verification](#runtime-ve
 ```ps1
 ./gradlew townsteadProbeTest -PtownsteadModernJar=<path>         # replays Townstead binding
 ./gradlew mapProbeTest -PjourneymapJar=<path> -PxaeroJar=<path>  # replays map binding
-./gradlew McaBindingProbeTest  # replays MCA binding against S2Ln2tIn (7.7.36) and YKhJZ85x (7.7.22)
+./gradlew test --tests "*McaBindingProbeTest"  # replays MCA binding against S2Ln2tIn (7.7.36) and YKhJZ85x (7.7.22)
 ./gradlew iceAndFireProbeTest -PiceandfireCeJar=<path> [-PiceandfireOriginalJar=<path>]  # replays Ice & Fire binding
 ./gradlew bountifulProbeTest -PbountifulJar=<path>  # replays Bountiful binding
 ./gradlew capitalsProbeTest -PcapitalsJar=<path>  # replays Capitals binding
 ```
 
-Use `./gradlew-quiet.ps1 -Task <task>` for cleaner output (errors only + result line).
+Use `./gradlew <task> --console=plain` for plain build output.
 
 ### Dependencies
 
@@ -77,7 +77,7 @@ If `--project` is omitted, it reads 1.20.1 sources. With this directory specifie
 api/        public extension points for add-ons - changes here are source-breaking downstream
 client/     screens, HUD, toasts, client-side mirrors of server state
 command/    /mcaquests admin and debug commands
-compat/     one subpackage per optional mod; all third-party access is reflective; includes shared CompatProvider/CompatRegistry framework and compat/pack/ for conditional embedded datapacks
+compat/     one subpackage per optional mod; reflective adapters except typed compile-only FTB, Reputation and JourneyMap packages; includes shared CompatProvider/CompatRegistry framework and compat/pack/ for conditional embedded datapacks
 data/       datapack loaders and validators (quests, tiers, titles, situations)
 event/      NeoForge event handlers
 mixin/      two client mixins plus mixin/compat/ (one common, plugin-gated mixin); the only client-importing code outside client/

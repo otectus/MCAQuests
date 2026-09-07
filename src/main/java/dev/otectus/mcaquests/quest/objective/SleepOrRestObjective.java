@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -21,7 +23,7 @@ import java.util.Optional;
 public record SleepOrRestObjective(boolean requireMorning) implements QuestObjective {
 
     public static final MapCodec<SleepOrRestObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.BOOL.lenientOptionalFieldOf("require_morning", true).forGetter(SleepOrRestObjective::requireMorning)
+            StrictCodecs.strictOptional(Codec.BOOL, "require_morning", true).forGetter(SleepOrRestObjective::requireMorning)
     ).apply(instance, SleepOrRestObjective::new));
 
     @Override

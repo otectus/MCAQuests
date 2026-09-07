@@ -1,0 +1,52 @@
+{
+  "format_version": 1,
+  "id": "civicworks:the_aqueduct",
+  "weight": 8,
+  "title": { "text": "The Aqueduct" },
+  "category": "infrastructure",
+  "scope": { "scope": "village", "fallback_radius": 64 },
+  "sponsor": {
+    "professions": ["minecraft:mason", "minecraft:toolsmith"],
+    "required_count": 2,
+    "on_death": "transfer"
+  },
+  "conditions": { "type": "mcaquests:village_reputation", "min": 10 },
+  "reputation": { "on_phase_complete": 4, "on_project_complete": 16, "on_fail": -6 },
+  "failure": {
+    "deadline_ticks": 336000,
+    "failure_hearts": 0,
+    "retry_after": 48000
+  },
+  "phases": [
+    {
+      "key": "cut_the_channel",
+      "dialogue": {
+        "offer": { "text": "The bathhouse needs water and the well will not carry it. Bricks, buckets, and a channel from the spring." },
+        "in_progress": { "text": "Keep the fall even. Water does not forgive a lazy gradient." }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:brick", "count": 96, "per_player_cap": 48 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:bucket", "count": 4 },
+        { "type": "mcaquests:project_place_block", "tag": "minecraft:slabs", "count": 32 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp_levels", "levels": 2 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "let_it_run",
+      "dialogue": {
+        "offer": { "text": "Open the head and let it run. If we have got it wrong we will know inside a minute." },
+        "in_progress": { "text": "Watch the joints." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_talk_to_profession", "profession": "minecraft:mason", "count": 3 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:loot_table", "loot_table": "minecraft:chests/village/village_mason" }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:village_reputation", "amount": 8 }, "target": "sponsor_village" },
+        { "reward": { "type": "mcaquests:unlock", "target": "civicworks:the_lantern_rounds" }, "target": "sponsor_village" }
+      ]
+    }
+  ]
+}

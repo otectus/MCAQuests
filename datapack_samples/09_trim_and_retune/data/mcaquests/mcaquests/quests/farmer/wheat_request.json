@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:farmer_wheat_request",
+  "enabled": true,
+  "weight": 8,
+  "category": "delivery",
+  "difficulty": "easy",
+  "offer_group": "core_errand",
+  "repeat": {
+    "type": "cooldown",
+    "cooldown_ticks": 72000
+  },
+  "giver": {
+    "professions": ["minecraft:farmer"],
+    "adult_only": true,
+    "min_hearts": 0
+  },
+  "dialogue": {
+    "offer": { "translate": "mcaquests.quest.farmer_wheat_request.offer" },
+    "accept": { "translate": "mcaquests.quest.farmer_wheat_request.accept" },
+    "decline": { "translate": "mcaquests.quest.farmer_wheat_request.decline" },
+    "in_progress": { "translate": "mcaquests.quest.farmer_wheat_request.in_progress" },
+    "ready": { "translate": "mcaquests.quest.farmer_wheat_request.ready" },
+    "complete": { "translate": "mcaquests.quest.farmer_wheat_request.complete" }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:wheat",
+      "count": 12,
+      "consume": true,
+      "source": { "block": "minecraft:wheat" }
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "min": 1, "max": 2 },
+    { "type": "mcaquests:xp", "amount": 10 },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ]
+}

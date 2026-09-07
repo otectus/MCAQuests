@@ -49,6 +49,16 @@ class ReputationTierTest {
     }
 
     @Test
+    void validatorAcceptsTheMinimumIntegerAsTheFirstFloor() {
+        ReputationTierSet ladder = new ReputationTierSet(List.of(
+                new ReputationTier("lowest", Integer.MIN_VALUE, "Lowest", Optional.empty()),
+                new ReputationTier("neutral", 0, "Neutral", Optional.empty())));
+        List<String> errors = new ArrayList<>();
+        assertTrue(ReputationTierValidator.validate(id("full_range"), ladder, errors));
+        assertTrue(errors.isEmpty());
+    }
+
+    @Test
     void validatorRejectsNonAscendingThresholds() {
         ReputationTierSet bad = new ReputationTierSet(List.of(
                 new ReputationTier("a", 0, "A", Optional.empty()),

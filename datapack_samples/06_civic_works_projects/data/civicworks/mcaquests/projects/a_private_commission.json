@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "id": "civicworks:a_private_commission",
+  "weight": 6,
+  "title": { "text": "A Private Commission" },
+  "category": "culture",
+  "scope": "player",
+  "sponsor": {
+    "professions": ["minecraft:cartographer"],
+    "on_death": "fail"
+  },
+  "phases": [
+    {
+      "key": "the_commission",
+      "dialogue": {
+        "offer": { "text": "This one is between you and me. Paper, ink and glass, and I will draw you the whole coast." },
+        "in_progress": { "text": "Your commission, your pace. Nobody else is paying into this one." }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:paper", "count": 48 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:ink_sac", "count": 6 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:glass_pane", "count": 4 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:map", "count": 1 }, "target": "contributors" },
+        { "reward": { "type": "mcaquests:xp_levels", "levels": 2 }, "target": "contributors" },
+        { "reward": { "type": "mcaquests:hearts_with_sponsor", "amount": 14 }, "target": "contributors" }
+      ]
+    }
+  ]
+}

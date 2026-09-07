@@ -125,7 +125,7 @@ modded operation; biome searches remain synchronous.
 ### `[debug]`
 | Option | Default | What it does |
 |---|---|---|
-| `strictJsonValidation` | `false` | Treat any malformed/unknown quest JSON as a hard error instead of skipping it. |
+| `strictJsonValidation` | `false` | Reject reloads containing malformed definitions instead of skipping affected resources. Invalid optional quest/project rules are errors; omitted fields keep defaults. |
 | `debugLogging` | `false` | Verbose logging for troubleshooting. |
 
 ### `[progression]`

@@ -3198,5 +3198,7 @@
   "mcaquests.chronicle.capitals.the_accolade": "%s was dubbed a knight of %s.",
   "mcaquests.chronicle.capitals.coronation_gift": "%s laid a gilded crown before the throne of %s.",
   "mcaquests.chronicle.capitals.the_chroniclers_request": "%s brought fresh pages to the chronicle of %s.",
-  "mcaquests.compatpack.capitals_court": "MCA: Quests — MCA Capitals content"
+  "mcaquests.compatpack.capitals_court": "MCA: Quests — MCA Capitals content",
+  "mcaquests.message.project_failed": "Community project failed: %s",
+  "mcaquests.reward.items_pending": "Additional reward saved: %s × %s. Make room in your inventory to collect it."
 }

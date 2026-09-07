@@ -112,6 +112,18 @@ public interface CapitalsBridge {
     /** Every capital with a vacant throne right now, keyed by capital id. */
     Map<UUID, InterregnumView> interregnums(ServerLevel level);
 
+    /**
+     * A successful snapshot, including a genuinely empty one, or empty when succession cannot be
+     * read. Pollers must preserve their previous baseline when a read fails.
+     */
+    default Optional<Map<UUID, InterregnumView>> interregnumSnapshot(ServerLevel level) {
+        if (level == null || !has(CapitalsCapability.INTERREGNUM)) {
+            return Optional.empty();
+        }
+        Map<UUID, InterregnumView> snapshot = interregnums(level);
+        return has(CapitalsCapability.INTERREGNUM) ? Optional.of(snapshot) : Optional.empty();
+    }
+
     /** This capital's vacant throne, if its throne is vacant. */
     Optional<InterregnumView> interregnum(ServerLevel level, CapitalRef capital);
 

@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest.situation;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
@@ -20,9 +21,9 @@ public record SituationOutcomes(Outcome success, Outcome failure, Outcome cleare
     public static final SituationOutcomes NONE = new SituationOutcomes(Outcome.NONE, Outcome.NONE, Outcome.NONE);
 
     public static final Codec<SituationOutcomes> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Outcome.CODEC.lenientOptionalFieldOf("success", Outcome.NONE).forGetter(SituationOutcomes::success),
-            Outcome.CODEC.lenientOptionalFieldOf("failure", Outcome.NONE).forGetter(SituationOutcomes::failure),
-            Outcome.CODEC.lenientOptionalFieldOf("cleared", Outcome.NONE).forGetter(SituationOutcomes::cleared)
+            StrictCodecs.strictOptional(Outcome.CODEC, "success", Outcome.NONE).forGetter(SituationOutcomes::success),
+            StrictCodecs.strictOptional(Outcome.CODEC, "failure", Outcome.NONE).forGetter(SituationOutcomes::failure),
+            StrictCodecs.strictOptional(Outcome.CODEC, "cleared", Outcome.NONE).forGetter(SituationOutcomes::cleared)
     ).apply(instance, SituationOutcomes::new));
 
     /** A single outcome branch: a village-reputation delta and a villager-hearts delta. */
@@ -31,8 +32,8 @@ public record SituationOutcomes(Outcome success, Outcome failure, Outcome cleare
         public static final Outcome NONE = new Outcome(0, 0);
 
         public static final Codec<Outcome> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Codec.INT.lenientOptionalFieldOf("reputation", 0).forGetter(Outcome::reputation),
-                Codec.INT.lenientOptionalFieldOf("hearts", 0).forGetter(Outcome::hearts)
+                StrictCodecs.strictOptional(Codec.INT, "reputation", 0).forGetter(Outcome::reputation),
+                StrictCodecs.strictOptional(Codec.INT, "hearts", 0).forGetter(Outcome::hearts)
         ).apply(instance, Outcome::new));
     }
 }

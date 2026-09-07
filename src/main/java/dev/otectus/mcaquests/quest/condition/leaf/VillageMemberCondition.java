@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,7 +17,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 public record VillageMemberCondition(boolean value) implements QuestCondition {
 
     public static final MapCodec<VillageMemberCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.BOOL.lenientOptionalFieldOf("value", true).forGetter(VillageMemberCondition::value)
+            StrictCodecs.strictOptional(Codec.BOOL, "value", true).forGetter(VillageMemberCondition::value)
     ).apply(instance, VillageMemberCondition::new));
 
     @Override

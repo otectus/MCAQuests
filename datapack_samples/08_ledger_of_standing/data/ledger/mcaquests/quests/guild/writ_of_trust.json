@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "ledger:writ_of_trust",
+  "weight": 10,
+  "category": "guild",
+  "difficulty": "hard",
+  "offer_group": "guild_ledger",
+  "priority": 2,
+  "title": { "text": "Writ of Trust" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:librarian", "minecraft:cartographer"],
+    "adult_only": true,
+    "min_hearts": 40
+  },
+  "dialogue": {
+    "offer": { "text": "A writ of trust is not a favour, it is a liability we accept on your behalf. Ink, and the word of three of us, and it is done." },
+    "accept": { "text": "Speak to all three. Especially the one who will say no first." },
+    "decline": { "text": "Then the ledger stays as it is, which is no bad thing." },
+    "in_progress": { "text": "Three signatures. Ink for the seal." },
+    "ready": { "text": "Three of three. I did not expect the third." },
+    "complete": { "text": "Signed and sealed. That writ is good in any village that knows our mark." }
+  },
+  "objectives": [
+    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:librarian", "count": 3 },
+    { "type": "mcaquests:item_delivery", "item": "minecraft:ink_sac", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 40 },
+    { "type": "mcaquests:grant_title", "title": "ledger:hand_of_the_guild", "scope": "global" }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:reputation_tier", "min_tier": "sworn", "ladder": "ledger:guild" },
+      { "type": "mcaquests:village_reputation", "min": 60 }
+    ]
+  }
+}

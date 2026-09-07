@@ -1,0 +1,36 @@
+{
+  "marketday.quest.butcher_order.title": "Market Order: %1$s",
+  "marketday.quest.butcher_order.offer": "Market day tomorrow and my counter is bare. Bring me %1$s of the %2$s, %3$s, and I will pay properly.",
+  "marketday.quest.butcher_order.accept": "Good. Wrapped and cold, if you can manage it.",
+  "marketday.quest.butcher_order.decline": "Then it is bread and regret for the whole square.",
+  "marketday.quest.butcher_order.in_progress": "Any luck with that %1$s?",
+  "marketday.quest.butcher_order.ready": "That is the counter filled. Come round the back.",
+  "marketday.quest.butcher_order.complete": "Here — %1$s emeralds, and the first cut of the morning.",
+
+  "marketday.quest.mason_haul.title": "Stone Order: %1$s",
+  "marketday.quest.mason_haul.offer": "I am short of %1$s. Cut me %2$s blocks of it and the wall gets finished before the frost.",
+  "marketday.quest.mason_haul.accept": "Take a good pick. The cheap ones shatter.",
+  "marketday.quest.mason_haul.decline": "The wall waits. It always waits.",
+  "marketday.quest.mason_haul.in_progress": "Still swinging, are you?",
+  "marketday.quest.mason_haul.ready": "That is the load. Tip it by the scaffold.",
+  "marketday.quest.mason_haul.complete": "Now that is stone worth laying. My thanks.",
+
+  "marketday.quest.ranger_cull.title": "Bounty: %1$s",
+  "marketday.quest.ranger_cull.offer": "The market road is not safe. %1$s of the %2$s, and take the reward from the strongbox.",
+  "marketday.quest.ranger_cull.accept": "Keep to the lantern line and you will find them.",
+  "marketday.quest.ranger_cull.decline": "Then we post a double watch and lose the sleep.",
+  "marketday.quest.ranger_cull.in_progress": "Still %1$s out there, by the sound of it.",
+  "marketday.quest.ranger_cull.ready": "The road is quiet again. I heard it stop.",
+  "marketday.quest.ranger_cull.complete": "Traders will sleep tonight. So will I.",
+
+  "marketday.quest.wanderer_route.title": "Route Survey: %1$s",
+  "marketday.quest.wanderer_route.offer": "I am drawing the trade routes wider. See the %1$s for yourself, and set foot in %2$s while you are about it — %3$s.",
+  "marketday.quest.wanderer_route.accept": "Walk it, do not guess it. Guessed maps kill people.",
+  "marketday.quest.wanderer_route.decline": "Then the map keeps its blank edge a while longer.",
+  "marketday.quest.wanderer_route.in_progress": "Have you laid eyes on the %1$s yet?",
+  "marketday.quest.wanderer_route.ready": "You have been. I can tell by the boots.",
+  "marketday.quest.wanderer_route.complete": "The route is real now. Somebody will get rich on this.",
+
+  "marketday.flavor.rumour.tall_tale": "though I only half believe the stories",
+  "marketday.flavor.rumour.old_map": "there is an old chart that disagrees with me"
+}

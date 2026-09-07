@@ -1,0 +1,50 @@
+{
+  "format_version": 1,
+  "id": "drover:walk_with_me_to_market",
+  "weight": 10,
+  "category": "escort",
+  "difficulty": "hard",
+  "offer_group": "drove_road",
+  "title": { "text": "Walk With Me to Market" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 72000 },
+  "giver": {
+    "professions": ["minecraft:shepherd", "minecraft:butcher"],
+    "adult_only": true,
+    "min_hearts": 20
+  },
+  "dialogue": {
+    "offer": { "text": "I will not get a fair price here and you know it. Come with me to the next village, stand behind me while I haggle, and buy something yourself so I do not look desperate." },
+    "accept": { "text": "Lead on. I will keep up, mostly." },
+    "decline": { "text": "Then I sell here at their price." },
+    "in_progress": { "text": "Do not get ahead of me. I am carrying everything." },
+    "ready": { "text": "A proper market. Look at the size of it." },
+    "complete": { "text": "Twice what they offered at home. Half of that is yours in goodwill." },
+    "failed": { "text": "I never made it. The road took the lot." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:escort_entity",
+      "villager": { "mode": "self" },
+      "destination": { "anchor": "nearest_other_village", "radius": 2048, "selection": "nearest_to_player_at_accept" },
+      "radius": 16,
+      "follow": true,
+      "min_journey": 96
+    },
+    {
+      "type": "mcaquests:trade_with_villager",
+      "profession": "minecraft:butcher",
+      "count": 2
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:xp", "amount": 50 },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 6 }
+  ],
+  "failure": {
+    "fail_on_giver_death": true,
+    "failure_hearts": -6,
+    "retry_after": 48000
+  }
+}

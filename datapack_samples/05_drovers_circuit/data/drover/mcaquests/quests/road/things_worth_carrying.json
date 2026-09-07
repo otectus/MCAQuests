@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "id": "drover:things_worth_carrying",
+  "weight": 4,
+  "category": "gathering",
+  "difficulty": "hard",
+  "offer_group": "drove_road",
+  "title": { "text": "Things Worth Carrying" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["mca:adventurer", "minecraft:cartographer"],
+    "adult_only": true,
+    "min_hearts": 30
+  },
+  "dialogue": {
+    "offer": { "text": "A drover carries what the next village cannot get for itself. Here is my list, and every line of it is somewhere different." },
+    "accept": { "text": "Take a year over it if you must. I have waited longer." },
+    "decline": { "text": "Fair. It is an unreasonable list." },
+    "in_progress": { "text": "Follow the marker. It changes as you tick things off." },
+    "ready": { "text": "All five. You have been everywhere." },
+    "complete": { "text": "That is a trader's inventory, that is. Well travelled." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:prismarine_shard",
+      "count": 8,
+      "source": { "structure_tag": "mcaquests:ocean_ruins" }
+    },
+    {
+      "type": "mcaquests:kill_entity",
+      "entity": "minecraft:blaze",
+      "count": 4,
+      "source": { "structure": "minecraft:fortress" }
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:sweet_berries",
+      "count": 12,
+      "source": { "block": "minecraft:sweet_berry_bush" }
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:raw_iron",
+      "count": 6,
+      "source": { "block_tag": "minecraft:iron_ores" }
+    },
+    {
+      "type": "mcaquests:obtain_item",
+      "item": "minecraft:red_sand",
+      "count": 16,
+      "source": { "biome_tag": "minecraft:is_badlands" }
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:xp_levels", "levels": 3 },
+    { "type": "mcaquests:hearts", "amount": 14 }
+  ]
+}

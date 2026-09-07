@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.project;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.project.objective.ProjectObjective;
 import dev.otectus.mcaquests.project.objective.ProjectObjectiveTypes;
@@ -39,11 +40,11 @@ public record ProjectPhase(Optional<String> key,
                            Optional<QuestCondition> unlock) {
 
     public static final Codec<ProjectPhase> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.STRING.lenientOptionalFieldOf("key").forGetter(ProjectPhase::key),
-            Codec.unboundedMap(Codec.STRING, QuestText.CODEC).lenientOptionalFieldOf("dialogue", Map.of()).forGetter(ProjectPhase::dialogue),
-            ProjectObjectiveTypes.CODEC.listOf().lenientOptionalFieldOf("objectives", List.of()).forGetter(ProjectPhase::objectives),
-            SharedReward.CODEC.listOf().lenientOptionalFieldOf("rewards", List.of()).forGetter(ProjectPhase::rewards),
-            ConditionTypes.CODEC.lenientOptionalFieldOf("unlock").forGetter(ProjectPhase::unlock)
+            StrictCodecs.strictOptional(Codec.STRING, "key").forGetter(ProjectPhase::key),
+            StrictCodecs.strictOptional(Codec.unboundedMap(Codec.STRING, QuestText.CODEC), "dialogue", Map.of()).forGetter(ProjectPhase::dialogue),
+            StrictCodecs.strictOptional(ProjectObjectiveTypes.CODEC.listOf(), "objectives", List.of()).forGetter(ProjectPhase::objectives),
+            StrictCodecs.strictOptional(SharedReward.CODEC.listOf(), "rewards", List.of()).forGetter(ProjectPhase::rewards),
+            StrictCodecs.strictOptional(ConditionTypes.CODEC, "unlock").forGetter(ProjectPhase::unlock)
     ).apply(instance, ProjectPhase::new));
 
     public String keyOr(int index) {

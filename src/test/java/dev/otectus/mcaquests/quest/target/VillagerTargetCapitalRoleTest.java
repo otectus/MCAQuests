@@ -79,6 +79,17 @@ class VillagerTargetCapitalRoleTest {
     }
 
     @Test
+    @DisplayName("invalid optional role values fail decoding rather than disappearing")
+    void invalidRoleIsNotSilentlyDropped() {
+        for (String role : List.of("\"sovereegn\"", "{}")) {
+            DataResult<VillagerTarget> result = VillagerTarget.CODEC.parse(JsonOps.INSTANCE,
+                    JsonParser.parseString("{\"mode\":\"capital_role\",\"role\":" + role + "}"));
+            assertTrue(result.error().isPresent());
+            assertTrue(result.error().orElseThrow().message().contains("role"));
+        }
+    }
+
+    @Test
     @DisplayName("a rank no villager can hold is rejected, since it could only ever resolve to nobody")
     void playerOnlyRoleRejected() {
         List<String> errors = validationErrors(parse("{\"mode\":\"capital_role\",\"role\":\"archduke\"}"));

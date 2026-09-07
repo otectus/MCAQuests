@@ -6,9 +6,12 @@ import dev.otectus.mcaquests.compat.TownsteadContentGate;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.api.event.SituationResolvedEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.SituationToastS2CPacket;
 import dev.otectus.mcaquests.quest.QuestManager;
+import dev.otectus.mcaquests.quest.CapitalsQuestRequirements;
 import dev.otectus.mcaquests.quest.WeightedPicker;
 import dev.otectus.mcaquests.quest.reputation.ReputationService;
 import dev.otectus.mcaquests.quest.situation.SituationOutcomes.Outcome;
@@ -33,6 +36,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -77,6 +81,7 @@ public final class SituationManager {
                 .filter(def -> def.trigger().signalType() == signal.type())
                 .filter(def -> def.trigger().matches(signal))
                 .filter(def -> TownsteadContentGate.allowsSituation(def.id(), readsTownstead(def)))
+                .filter(CapitalsQuestRequirements::allowsSituation)
                 .toList();
         if (matches.isEmpty()) {
             return;
@@ -214,6 +219,9 @@ public final class SituationManager {
     public static void resolveFailure(MinecraftServer server, UUID instanceId) {
         SituationSavedData data = SituationSavedData.get(server);
         data.getInstance(instanceId).filter(SituationInstance::isOpen).ifPresent(instance -> {
+            if (pauseUnavailableSituation(data, instance, server.overworld().getGameTime())) {
+                return;
+            }
             SituationRegistry.get(instance.defId())
                     .ifPresent(def -> applyOutcome(server, instance, def.outcomes().failure(), null));
             failOutstandingCopies(server, instanceId);
@@ -258,8 +266,12 @@ public final class SituationManager {
             return;
         }
         long now = server.overworld().getGameTime();
-        for (SituationInstance instance : SituationSavedData.get(server).allInstances()) {
+        SituationSavedData data = SituationSavedData.get(server);
+        for (SituationInstance instance : data.allInstances()) {
             if (!instance.isOpen()) {
+                continue;
+            }
+            if (pauseUnavailableSituation(data, instance, now)) {
                 continue;
             }
             boolean expired = instance.isExpiredAt(now);
@@ -270,6 +282,56 @@ public final class SituationManager {
                 case NONE -> { /* still running */ }
             }
         }
+    }
+
+    /** Accepted work keeps its shared deadline while Capitals content or a required capability is absent. */
+    public static boolean pauseUnavailableSituation(SituationSavedData data, SituationInstance instance,
+                                                     long now) {
+        boolean unavailable = instance.hasActiveParticipants() && (instance.needsUnavailableCapability(
+                CapitalsCompat.bridge()::has) || SituationRegistry.get(instance.defId())
+                .map(def -> CapitalsQuestRequirements.unavailableReason(def.offer().toQuestDefinition(
+                        SituationIds.syntheticId(def.id()), def.enabled(), Optional.empty())).isPresent())
+                .orElse(CapitalsQuestRequirements.isBundled(instance.defId())));
+        return pauseUnavailableSituation(data, instance, now, unavailable);
+    }
+
+    /** Pure maintenance step, also used to protect direct failure resolution from missing dependencies. */
+    public static boolean pauseUnavailableSituation(SituationSavedData data, SituationInstance instance,
+                                                    long now, boolean unavailable) {
+        boolean suspended = instance.isOpen() && instance.hasActiveParticipants() && unavailable;
+        if (instance.updateSuspension(now, suspended)) {
+            data.setDirty();
+        }
+        return suspended;
+    }
+
+    /** Persists the resolved requirements of all this player's active copies, or releases their pause claim. */
+    public static void refreshParticipantRequirements(ServerPlayer player, UUID instanceId,
+                                                       List<ActiveQuest> activeQuests) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        SituationSavedData data = SituationSavedData.get(server);
+        data.getInstance(instanceId).filter(SituationInstance::isOpen).ifPresent(instance -> {
+            Set<CapitalsCapability> required = EnumSet.noneOf(CapitalsCapability.class);
+            boolean found = false;
+            for (ActiveQuest active : activeQuests) {
+                if (!active.situationInstance().map(instanceId::equals).orElse(false)) {
+                    continue;
+                }
+                found = true;
+                QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base ->
+                                required.addAll(CapitalsQuestRequirements.requiredCapabilities(active.resolve(base))),
+                        () -> required.addAll(instance.participantRequirements(player.getUUID())));
+            }
+            boolean changed = found ? instance.setParticipantRequirements(player.getUUID(), required)
+                    : instance.removeActiveParticipant(player.getUUID());
+            if (changed) {
+                data.setDirty();
+            }
+            pauseUnavailableSituation(data, instance, server.overworld().getGameTime());
+        });
     }
 
     /** Pure tick state machine, extracted for unit testing. */

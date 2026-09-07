@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.dialogue;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -50,7 +52,7 @@ public record VoicePool(String state, int priority, List<VoiceLine> lines) {
 
     public static final Codec<VoicePool> CODEC = RecordCodecBuilder.<VoicePool>create(instance -> instance.group(
             Codec.STRING.fieldOf("state").forGetter(VoicePool::state),
-            Codec.INT.lenientOptionalFieldOf("priority", 0).forGetter(VoicePool::priority),
+            StrictCodecs.strictOptional(Codec.INT, "priority", 0).forGetter(VoicePool::priority),
             VoiceLine.CODEC.listOf().fieldOf("lines").forGetter(VoicePool::lines)
     ).apply(instance, VoicePool::new)).flatXmap(VoicePool::validate, VoicePool::validate);
 

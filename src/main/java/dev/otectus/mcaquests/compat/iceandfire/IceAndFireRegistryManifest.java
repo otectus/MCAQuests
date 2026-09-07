@@ -72,8 +72,8 @@ public final class IceAndFireRegistryManifest {
             id("dragon_multipart"),
             id("multipart"),
             id("hydra_multipart"),
-            // Upstream spelling. Both builds register "cylcops_multipart" with the l and y swapped;
-            // correcting it here would mean looking for an id that does not exist.
+            // Legacy upstream spelling. CE 2.1.2 uses NeoForge PartEntity children and registers
+            // neither spelling; keep legacy exclusions without inventing a corrected registry ID.
             id("cylcops_multipart"),
             id("dragon_egg"),
             id("dragon_arrow"),

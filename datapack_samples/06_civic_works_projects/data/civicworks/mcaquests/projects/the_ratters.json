@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "id": "civicworks:the_ratters",
+  "weight": 10,
+  "title": { "text": "The Ratters" },
+  "category": "defense",
+  "scope": { "scope": "villager", "fallback_radius": 32 },
+  "sponsor": {
+    "professions": ["minecraft:butcher"],
+    "required_count": 2,
+    "on_death": "pause"
+  },
+  "phases": [
+    {
+      "key": "clear_the_cellar",
+      "dialogue": {
+        "offer": { "text": "Something is living under my floor and it is eating better than I am. Bring a cat, bring a sword, I do not care." },
+        "in_progress": { "text": "Under the floor. Listen for the scratching." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_kill_entity", "entity": "minecraft:silverfish", "count": 12 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:cooked_cod", "count": 4 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_sponsor", "amount": 10 }, "target": "contributors" },
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:cooked_beef", "count": 6 }, "target": "all_participants" }
+      ]
+    }
+  ]
+}

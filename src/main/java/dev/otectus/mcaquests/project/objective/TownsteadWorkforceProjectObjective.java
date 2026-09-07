@@ -70,6 +70,13 @@ public record TownsteadWorkforceProjectObjective(List<String> professions, int m
     }
 
     @Override
+    public boolean isAvailable(ServerLevel level, ProjectState state) {
+        return state.villageId().isPresent()
+                && TownsteadBridge.Holder.get().has(TownsteadCapability.READ_PROFESSION)
+                && TownsteadBridge.Holder.get().has(TownsteadCapability.READ_PROFESSION_SPEC);
+    }
+
+    @Override
     public boolean poll(MinecraftServer server, ServerLevel level, ProjectDefinition definition,
                         ProjectState state, SharedObjectiveProgress progress) {
         OptionalInt village = state.villageId();

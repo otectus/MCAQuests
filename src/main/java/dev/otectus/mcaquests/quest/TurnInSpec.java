@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 
@@ -29,8 +30,8 @@ public record TurnInSpec(Optional<TurnInMode> declaredMode, List<ResourceLocatio
     }
 
     public static final Codec<TurnInSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            TurnInMode.CODEC.lenientOptionalFieldOf("mode").forGetter(TurnInSpec::declaredMode),
-            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("professions", List.of()).forGetter(TurnInSpec::professions)
+            StrictCodecs.strictOptional(TurnInMode.CODEC, "mode").forGetter(TurnInSpec::declaredMode),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "professions", List.of()).forGetter(TurnInSpec::professions)
     ).apply(instance, TurnInSpec::new));
 
     /**

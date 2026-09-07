@@ -1,0 +1,44 @@
+{
+  "format_version": 1,
+  "id": "drover:hold_the_camp",
+  "weight": 14,
+  "category": "combat",
+  "difficulty": "medium",
+  "offer_group": "drove_watch",
+  "title": { "text": "Hold the Camp" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["mca:guard", "minecraft:shepherd"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "Something has been picking off the flock at the edge of the village every night this week. Stand where the fires are and put six of them down." },
+    "accept": { "text": "Do not chase them into the dark. That is how they get you." },
+    "decline": { "text": "Then we lose another ewe tonight." },
+    "in_progress": { "text": "Stay by the village. That is where they come." },
+    "ready": { "text": "Six. And the flock is whole." },
+    "complete": { "text": "Sleep in tomorrow. You have earned an hour of it." },
+    "failed": { "text": "Dawn, and they are still out there. We move the flock." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:defend_location",
+      "location": { "anchor": "nearest_village", "radius": 128 },
+      "threat": { "tag": "minecraft:skeletons" },
+      "radius": 24,
+      "count": 6
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 35 },
+    { "type": "mcaquests:hearts", "amount": 8 },
+    { "type": "mcaquests:village_reputation", "amount": 4 }
+  ],
+  "conditions": { "type": "mcaquests:time", "period": "NIGHT" },
+  "failure": {
+    "deadline_time": 23000,
+    "failure_hearts": -4,
+    "retry_after": 24000
+  }
+}

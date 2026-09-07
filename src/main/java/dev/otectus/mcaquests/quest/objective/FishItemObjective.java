@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
@@ -28,7 +31,7 @@ public record FishItemObjective(ItemTarget target, int count,
 
     public static final MapCodec<FishItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ItemTarget.MAP_CODEC.forGetter(FishItemObjective::target),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(FishItemObjective::count),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(FishItemObjective::count),
             SourceHint.FIELD.forGetter(FishItemObjective::source)
     ).apply(instance, FishItemObjective::new));
 

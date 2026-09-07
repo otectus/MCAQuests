@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -45,15 +47,15 @@ public record HasIncidentCondition(Optional<ResourceLocation> incident, List<Str
 
     public static final MapCodec<HasIncidentCondition> CODEC = RecordCodecBuilder.mapCodec(
             instance -> instance.group(
-                    ResourceLocation.CODEC.lenientOptionalFieldOf("incident")
+                    StrictCodecs.strictOptional(ResourceLocation.CODEC, "incident")
                             .forGetter(HasIncidentCondition::incident),
-                    Codec.STRING.listOf().lenientOptionalFieldOf("status", List.of())
+                    StrictCodecs.strictOptional(Codec.STRING.listOf(), "status", List.of())
                             .forGetter(HasIncidentCondition::status),
-                    Codec.STRING.listOf().lenientOptionalFieldOf("tags", List.of())
+                    StrictCodecs.strictOptional(Codec.STRING.listOf(), "tags", List.of())
                             .forGetter(HasIncidentCondition::tags),
-                    Codec.BOOL.lenientOptionalFieldOf("known_to_giver", false)
+                    StrictCodecs.strictOptional(Codec.BOOL, "known_to_giver", false)
                             .forGetter(HasIncidentCondition::knownToGiver),
-                    Codec.BOOL.lenientOptionalFieldOf("negate", false).forGetter(HasIncidentCondition::negate)
+                    StrictCodecs.strictOptional(Codec.BOOL, "negate", false).forGetter(HasIncidentCondition::negate)
             ).apply(instance, HasIncidentCondition::new));
 
     public HasIncidentCondition {

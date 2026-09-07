@@ -63,14 +63,17 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
             // quarantined under the namespace its error blamed, which is what lets the quest log tell
             // a player "this needs content from X" instead of "unknown quest". See QuestRegistry.
             String[] failure = new String[1];
-            Optional<QuestDefinition> parsed = QuestDefinition.CODEC.parse(JsonOps.INSTANCE, entry.getValue())
-                    .resultOrPartial(message -> {
+            Optional<QuestDefinition> parsed = StrictCodecs.parse(QuestDefinition.CODEC,
+                    JsonOps.INSTANCE, entry.getValue(), message -> {
                         failure[0] = message;
                         recordError(errors, strict, "Quest '" + fileId + "': " + message);
                     });
             if (parsed.isEmpty()) {
                 String namespace = offendingNamespace(failure[0]);
                 quarantined.put(fileId, namespace);
+                // Datapacks may declare an id different from the resource path. Active saves refer
+                // to that declared id, so retain both names for suspension diagnostics.
+                declaredId(entry.getValue()).ifPresent(id -> quarantined.put(id, namespace));
                 logQuarantine(fileId, namespace);
                 continue;
             }
@@ -105,6 +108,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
             throw new QuestValidationException(errors.get(errors.size() - 1));
         }
 
+        loaded.keySet().forEach(quarantined::remove);
         QuestRegistry.replaceAll(loaded, errors, warnings, quarantined);
         warnings.forEach(w -> McaQuests.LOGGER.warn("[MCA: Quests] {}", w));
         McaQuests.LOGGER.info("Loaded {} MCA quest(s) with {} error(s), {} warning(s).",
@@ -126,6 +130,15 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         }
         Matcher matcher = RESOURCE_ID.matcher(message);
         return matcher.find() ? matcher.group(1) : "";
+    }
+
+    private static Optional<ResourceLocation> declaredId(JsonElement json) {
+        if (!json.isJsonObject()) return Optional.empty();
+        JsonElement id = json.getAsJsonObject().get("id");
+        if (id == null || !id.isJsonPrimitive() || !id.getAsJsonPrimitive().isString()) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(ResourceLocation.tryParse(id.getAsString()));
     }
 
     /**

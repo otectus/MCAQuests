@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -41,9 +43,9 @@ public record TimeCondition(TimePeriod period, Optional<Integer> minTick, Option
     }
 
     public static final MapCodec<TimeCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            TimePeriod.CODEC.lenientOptionalFieldOf("period", TimePeriod.ANY).forGetter(TimeCondition::period),
-            Codec.INT.lenientOptionalFieldOf("min").forGetter(TimeCondition::minTick),
-            Codec.INT.lenientOptionalFieldOf("max").forGetter(TimeCondition::maxTick)
+            StrictCodecs.strictOptional(TimePeriod.CODEC, "period", TimePeriod.ANY).forGetter(TimeCondition::period),
+            StrictCodecs.strictOptional(Codec.INT, "min").forGetter(TimeCondition::minTick),
+            StrictCodecs.strictOptional(Codec.INT, "max").forGetter(TimeCondition::maxTick)
     ).apply(instance, TimeCondition::new));
 
     @Override

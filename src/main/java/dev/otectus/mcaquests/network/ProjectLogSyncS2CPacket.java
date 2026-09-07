@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /** Server to client: the player's participating community projects, for the quest log + HUD (spec 0.4.0). */
@@ -29,7 +28,6 @@ public record ProjectLogSyncS2CPacket(List<ProjectLogEntry> entries) implements 
     }
 
     public static ProjectLogSyncS2CPacket decode(RegistryFriendlyByteBuf buf) {
-        return new ProjectLogSyncS2CPacket(buf.readCollection(ArrayList::new,
-                b -> ProjectLogEntry.decode((RegistryFriendlyByteBuf) b)));
+        return new ProjectLogSyncS2CPacket(PacketCollections.readList(buf, b -> ProjectLogEntry.decode((RegistryFriendlyByteBuf) b)));
     }
 }

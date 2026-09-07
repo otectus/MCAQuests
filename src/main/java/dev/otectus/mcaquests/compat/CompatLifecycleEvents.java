@@ -2,7 +2,9 @@ package dev.otectus.mcaquests.compat;
 
 import dev.otectus.mcaquests.McaQuests;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -35,5 +37,17 @@ public final class CompatLifecycleEvents {
     @SubscribeEvent
     public static void onServerAboutToStart(ServerAboutToStartEvent event) {
         CompatRegistry.get().reprobeAll("server_start", null);
+    }
+
+    @SubscribeEvent
+    public static void onDatapackSync(OnDatapackSyncEvent event) {
+        // Reload listeners can consult an old definition during preparation. Clear once more after
+        // every loader has applied; a login's sync is harmless and does not rebind third-party classes.
+        TownsteadBridge.Holder.get().invalidateDataCaches();
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        TownsteadBridge.Holder.get().invalidateDataCaches();
     }
 }

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.reward;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -22,7 +24,7 @@ public record HeartsWithParticipantsReward(int amount, boolean includeResidents)
 
     public static final MapCodec<HeartsWithParticipantsReward> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.INT.fieldOf("amount").forGetter(HeartsWithParticipantsReward::amount),
-            Codec.BOOL.lenientOptionalFieldOf("include_residents", false).forGetter(HeartsWithParticipantsReward::includeResidents)
+            StrictCodecs.strictOptional(Codec.BOOL, "include_residents", false).forGetter(HeartsWithParticipantsReward::includeResidents)
     ).apply(instance, HeartsWithParticipantsReward::new));
 
     @Override
@@ -41,8 +43,7 @@ public record HeartsWithParticipantsReward(int amount, boolean includeResidents)
     }
 
     public int effectiveAmount() {
-        int scaled = Math.round(amount * McaQuestsConfig.COMMON.heartsRewardMultiplier.get().floatValue());
-        return Mth.clamp(scaled,
+        return RewardAmounts.hearts(amount, McaQuestsConfig.COMMON.heartsRewardMultiplier.get(),
                 McaQuestsConfig.COMMON.minHeartsReward.get(),
                 McaQuestsConfig.COMMON.maxHeartsReward.get());
     }

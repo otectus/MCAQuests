@@ -39,7 +39,7 @@ public final class FailureValidator {
 
             if (!failure.hasTrigger()) {
                 errors.add("Quest '" + id + "': has a 'failure' block but declares no trigger "
-                        + "(none of deadline_ticks, deadline_time, require_weather, fail_on_giver_death) "
+                        + "(none of deadline_ticks, deadline_time, require_weather, fail_on_giver_death, fail_on_target_lost) "
                         + "— it can never fail.");
             }
             if (Math.abs(failure.failureHearts()) > heartsClamp) {

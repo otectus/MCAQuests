@@ -48,11 +48,13 @@ public final class ConditionRefs {
 
     private static void collectRequired(QuestCondition c, boolean polarity, List<Ref> out) {
         if (c instanceof AllOfCondition all) {
-            all.conditions().forEach(child -> collectRequired(child, polarity, out));
+            // NOT (A AND B) means NOT A OR NOT B: neither branch is individually required.
+            if (polarity) all.conditions().forEach(child -> collectRequired(child, true, out));
         } else if (c instanceof NotCondition not) {
             collectRequired(not.condition(), !polarity, out);
-        } else if (c instanceof AnyOfCondition) {
-            // disjunction — nothing inside is individually required, so it contributes nothing.
+        } else if (c instanceof AnyOfCondition any) {
+            // NOT (A OR B) means NOT A AND NOT B: both branches are required to be false.
+            if (!polarity) any.conditions().forEach(child -> collectRequired(child, false, out));
         } else if (c instanceof QuestCompletedCondition qc) {
             out.add(new Ref(Ref.Kind.COMPLETED, qc.quest(), qc.scope(), polarity));
         } else if (c instanceof QuestNotCompletedCondition qnc) {

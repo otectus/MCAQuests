@@ -62,7 +62,7 @@ public record QuestTrackC2SPacket(Optional<UUID> villagerUuid, Optional<Resource
     }
 
     public static void handle(QuestTrackC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player)) {
             return;
         }
         if (msg.villagerUuid.isPresent() && msg.questId.isPresent()) {

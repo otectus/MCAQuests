@@ -105,6 +105,7 @@ public record FtbqEditorIdsS2CPacket(List<String> questIds, List<String> chainEn
         private int remaining;
         private int kept;
         private int total;
+        private boolean exhausted;
 
         Budget(int budget) {
             this.originalBudget = budget;
@@ -116,8 +117,9 @@ public record FtbqEditorIdsS2CPacket(List<String> questIds, List<String> chainEn
             for (String entry : entries) {
                 total++;
                 int cost = entry.getBytes(StandardCharsets.UTF_8).length + PER_ENTRY_OVERHEAD;
-                if (remaining < cost) {
-                    continue; // budget exhausted: skip this entry and (since remaining only shrinks) every later one
+                if (exhausted || entry.length() > Short.MAX_VALUE || remaining < cost) {
+                    exhausted = true;
+                    continue; // Preserve one prefix across all seven lists, as documented.
                 }
                 remaining -= cost;
                 out.add(entry);
@@ -151,6 +153,6 @@ public record FtbqEditorIdsS2CPacket(List<String> questIds, List<String> chainEn
     }
 
     private static List<String> readList(RegistryFriendlyByteBuf buf) {
-        return buf.readCollection(ArrayList::new, b -> b.readUtf(Short.MAX_VALUE));
+        return PacketCollections.readList(buf, b -> b.readUtf(Short.MAX_VALUE));
     }
 }

@@ -28,7 +28,7 @@ public final class ReputationBridge {
     /** The Reputation API generation this build was written against (see {@code McaReputationApi}). */
     public static final int REQUIRED_API_VERSION = 1;
 
-    private static ReputationBackend backend = new LegacyReputationBackend();
+    private static volatile ReputationBackend backend = new LegacyReputationBackend();
     private static boolean initialised;
 
     private ReputationBridge() {
@@ -69,6 +69,7 @@ public final class ReputationBridge {
             McaQuests.LOGGER.info("[MCA: Quests] MCA: Reputation detected; village standing, tiers, and "
                     + "titles now delegate to it, and Quests keeps a mirrored fallback copy.");
         } catch (Throwable t) {
+            backend = new LegacyReputationBackend();
             McaQuests.LOGGER.error("[MCA: Quests] MCA: Reputation is installed but the integration could "
                     + "not start; falling back to the built-in store. Quests remains fully playable.", t);
         }

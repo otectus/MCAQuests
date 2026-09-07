@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -30,8 +32,8 @@ public record DefendLocationObjective(LocationAnchor location, EntityTarget thre
     public static final MapCodec<DefendLocationObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             LocationAnchor.MAP_CODEC.fieldOf("location").forGetter(DefendLocationObjective::location),
             EntityTarget.MAP_CODEC.fieldOf("threat").forGetter(DefendLocationObjective::threat),
-            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 16).forGetter(DefendLocationObjective::radius),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 5).forGetter(DefendLocationObjective::count)
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "radius", 16).forGetter(DefendLocationObjective::radius),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 5).forGetter(DefendLocationObjective::count)
     ).apply(instance, DefendLocationObjective::new));
 
     /** Never offered when this objective's destination is a place the giver does not have. */

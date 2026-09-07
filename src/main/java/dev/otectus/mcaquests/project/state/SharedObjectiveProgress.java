@@ -26,6 +26,7 @@ public final class SharedObjectiveProgress {
     private int count;
     private final Map<UUID, Integer> contributions = new HashMap<>();
     private final Set<UUID> talkedTo = new HashSet<>();
+    private final Set<Long> placedPositions = new HashSet<>();
     /**
      * Lazily-created scratch, the community analogue of {@code ObjectiveProgress.extra()}. A polled
      * project objective needs somewhere to freeze a starting reading -- "the village had 40 spirit
@@ -46,7 +47,7 @@ public final class SharedObjectiveProgress {
     }
 
     public void add(int delta) {
-        setCount(this.count + delta);
+        this.count = (int) Math.max(0L, Math.min(Integer.MAX_VALUE, (long) this.count + delta));
     }
 
     public int contributionOf(UUID player) {
@@ -54,10 +55,11 @@ public final class SharedObjectiveProgress {
     }
 
     public void addContribution(UUID player, int delta) {
-        if (delta == 0) {
+        if (delta <= 0) {
             return;
         }
-        contributions.merge(player, delta, Integer::sum);
+        contributions.merge(player, delta,
+                (before, amount) -> (int) Math.min(Integer.MAX_VALUE, (long) before + amount));
     }
 
     public Map<UUID, Integer> contributions() {
@@ -81,9 +83,14 @@ public final class SharedObjectiveProgress {
         return talkedTo.contains(villager);
     }
 
+    public boolean markPlaced(net.minecraft.core.BlockPos pos) { return placedPositions.add(pos.asLong()); }
+
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("count", count);
+        if (!placedPositions.isEmpty()) {
+            tag.putLongArray("placed", placedPositions.stream().mapToLong(Long::longValue).toArray());
+        }
         if (!contributions.isEmpty()) {
             CompoundTag c = new CompoundTag();
             contributions.forEach((uuid, amount) -> c.putInt(uuid.toString(), amount));
@@ -103,12 +110,13 @@ public final class SharedObjectiveProgress {
 
     public static SharedObjectiveProgress load(CompoundTag tag) {
         SharedObjectiveProgress progress = new SharedObjectiveProgress();
-        progress.count = tag.getInt("count");
+        progress.setCount(tag.getInt("count"));
+        for (long pos : tag.getLongArray("placed")) { progress.placedPositions.add(pos); }
         if (tag.contains("contributions")) {
             CompoundTag c = tag.getCompound("contributions");
             for (String key : c.getAllKeys()) {
                 try {
-                    progress.contributions.put(UUID.fromString(key), c.getInt(key));
+                    progress.addContribution(UUID.fromString(key), c.getInt(key));
                 } catch (IllegalArgumentException ignored) {
                     // skip a malformed UUID key rather than failing the whole load
                 }
@@ -125,7 +133,7 @@ public final class SharedObjectiveProgress {
             }
         }
         if (tag.contains("extra", Tag.TAG_COMPOUND)) {
-            progress.extra = tag.getCompound("extra");
+            progress.extra = tag.getCompound("extra").copy();
         }
         return progress;
     }

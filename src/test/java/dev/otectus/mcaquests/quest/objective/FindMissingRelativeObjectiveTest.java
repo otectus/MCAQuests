@@ -76,13 +76,13 @@ class FindMissingRelativeObjectiveTest {
         }
 
         @Test
-        @DisplayName("an out-of-range optional falls back to its default rather than failing the quest")
-        void outOfRangeOptionalFallsBackToTheDefault() {
-            // DFU's optionalFieldOf cannot tell "absent" from "present but invalid", so a bad value reads
-            // as absent. That is how every optional field in the objective layer already behaves; pinned
-            // here so nobody later reads the intRange bound as a load-time guarantee.
-            assertEquals(24, parse("{\"relative\":{\"mode\":\"family\"},\"discover_radius\":0}").discoverRadius(),
-                    "an unusable radius must degrade to the default, never to a zero that cannot complete");
+        @DisplayName("an invalid discovery radius is rejected while an omitted radius keeps its default")
+        void outOfRangeOptionalIsRejected() {
+            var invalid = FindMissingRelativeObjective.CODEC.codec().parse(JsonOps.INSTANCE,
+                    JsonParser.parseString("{\"relative\":{\"mode\":\"family\"},\"discover_radius\":0}"));
+            assertTrue(invalid.error().isPresent());
+            assertTrue(invalid.result().isEmpty());
+            assertEquals(24, parse("{\"relative\":{\"mode\":\"family\"}}").discoverRadius());
         }
     }
 

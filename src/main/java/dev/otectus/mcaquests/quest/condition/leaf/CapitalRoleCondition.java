@@ -7,6 +7,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.capitals.CapitalRef;
 import dev.otectus.mcaquests.compat.capitals.CapitalRole;
 import dev.otectus.mcaquests.compat.capitals.CapitalsBridge;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
 import dev.otectus.mcaquests.data.StrictCodecs;
@@ -115,7 +116,17 @@ public record CapitalRoleCondition(Subject subject, CapitalRole role, Scope capi
 
     @Override
     public boolean test(QuestContext context) {
-        return (capital == Scope.GIVER ? heldInGiverCapital(context) : heldAnywhere(context)) == present;
+        CapitalsBridge bridge = CapitalsCompat.bridge();
+        if (!bridge.has(CapitalsCapability.REGISTRY)
+                || !bridge.has(subject == Subject.PLAYER
+                        ? CapitalsCapability.PLAYER_TITLES : CapitalsCapability.ROLES)) {
+            return false;
+        }
+        boolean held = capital == Scope.GIVER ? heldInGiverCapital(context) : heldAnywhere(context);
+        return bridge.has(CapitalsCapability.REGISTRY)
+                && bridge.has(subject == Subject.PLAYER
+                        ? CapitalsCapability.PLAYER_TITLES : CapitalsCapability.ROLES)
+                && held == present;
     }
 
     private boolean heldInGiverCapital(QuestContext context) {
@@ -129,6 +140,9 @@ public record CapitalRoleCondition(Subject subject, CapitalRole role, Scope capi
     }
 
     private boolean heldAnywhere(QuestContext context) {
+        if (context.player() == null) {
+            return false;
+        }
         MinecraftServer server = context.level().getServer();
         CapitalsBridge bridge = CapitalsCompat.bridge();
         for (CapitalRef cap : bridge.allCapitals()) {
@@ -143,7 +157,8 @@ public record CapitalRoleCondition(Subject subject, CapitalRole role, Scope capi
     private boolean holds(ServerLevel level, CapitalRef cap, QuestContext context) {
         CapitalsBridge bridge = CapitalsCompat.bridge();
         return subject == Subject.PLAYER
-                ? bridge.playerHasRole(level, cap, context.player().getUUID(), role)
+                ? context.player() != null
+                        && bridge.playerHasRole(level, cap, context.player().getUUID(), role)
                 : context.villager() != null
                         && bridge.villagerHasRole(level, cap, context.villager().getUUID(), role);
     }

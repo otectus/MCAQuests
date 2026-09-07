@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "state": "greeting",
+  "priority": 5,
+  "lines": [
+    {
+      "when": {
+        "all_of": [
+          { "type": "mcaquests:time", "period": "NIGHT" },
+          { "type": "mcaquests:weather", "weather": "THUNDER" }
+        ]
+      },
+      "text": "Come in out of it. Whatever you want, ask it by the fire.",
+      "weight": 3
+    },
+    {
+      "when": { "type": "mcaquests:weather", "weather": "RAIN" },
+      "text": "Filthy weather. Say your piece before we are both soaked."
+    },
+    {
+      "when": { "type": "mcaquests:personality", "personalities": ["grumpy", "greedy", "lazy"] },
+      "text": "What. I am working."
+    },
+    {
+      "when": { "type": "mcaquests:personality", "personalities": ["peppy", "confident", "flirty"] },
+      "text": "There you are! I was hoping somebody useful would wander past.",
+      "weight": 2
+    },
+    {
+      "when": { "type": "mcaquests:hearts", "min": 60 },
+      "text": "Well, if it is not my favourite pair of hands.",
+      "weight": 2
+    },
+    { "text": "Good day to you. There is always something wanting doing." }
+  ]
+}

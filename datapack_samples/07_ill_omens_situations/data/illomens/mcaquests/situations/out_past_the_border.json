@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "id": "illomens:out_past_the_border",
+  "scope": "villager",
+  "duration_ticks": 12000,
+  "cooldown_ticks": 36000,
+  "trigger": {
+    "type": "mcaquests:villager_stranded",
+    "minimum_distance": 128,
+    "hold_ticks": 900,
+    "require_night": true
+  },
+  "outcomes": {
+    "success": { "reputation": 10, "hearts": 14 },
+    "failure": { "reputation": -8, "hearts": -4 },
+    "cleared": { "reputation": 0 }
+  },
+  "offer": {
+    "weight": 12,
+    "difficulty": "medium",
+    "offer_group": "omen_night",
+    "priority": 4,
+    "giver": { "adult_only": true },
+    "title": { "text": "Out Past the Border" },
+    "dialogue": {
+      "offer": { "text": "They have not come back and it is fully dark. Get to them, stay with them, and do not try to move them until it is light." },
+      "accept": { "text": "Take a torch. Take two." },
+      "decline": { "text": "Then I shall go myself, and there will be two of us out there." },
+      "in_progress": { "text": "Are you with them? Stay with them." },
+      "ready": { "text": "Both of you. Both of you are all right." },
+      "complete": { "text": "I will not forget that you went out in that." },
+      "failed": { "text": "We found them in the morning. Do not tell me the details." }
+    },
+    "objectives": [
+      {
+        "type": "mcaquests:reach_location",
+        "location": { "anchor": "villager", "villager": { "mode": "situation_focus" } },
+        "radius": 8,
+        "min_journey": 0
+      },
+      {
+        "type": "mcaquests:protect_entity",
+        "villager": { "mode": "situation_focus" },
+        "duration_ticks": 2400,
+        "require_near_player": true,
+        "near_radius": 12,
+        "fail_on_death": true
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:currency" },
+      { "type": "mcaquests:xp", "amount": 40 },
+      { "type": "mcaquests:hearts", "amount": 14 }
+    ],
+    "weight_bonus": [
+      { "when": { "type": "mcaquests:weather", "weather": "THUNDER" }, "amount": 8 }
+    ]
+  }
+}

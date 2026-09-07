@@ -1,0 +1,50 @@
+{
+  "format_version": 1,
+  "id": "crossroads:the_throne_stands_empty",
+  "scope": "village",
+  "duration_ticks": 36000,
+  "cooldown_ticks": 120000,
+  "trigger": { "type": "mcaquests:capital_interregnum", "sovereign": "any" },
+  "outcomes": {
+    "success": { "reputation": 18 },
+    "failure": { "reputation": -12 },
+    "cleared": { "reputation": 0 }
+  },
+  "offer": {
+    "weight": 12,
+    "difficulty": "hard",
+    "offer_group": "crossroads_court",
+    "priority": 5,
+    "giver": { "adult_only": true },
+    "title": { "text": "The Throne Stands Empty" },
+    "dialogue": {
+      "offer": { "text": "There is nobody on the seat and every hall in the realm knows it. Keep the court standing until somebody sits down." },
+      "accept": { "text": "Guard the hall. Say nothing to anyone." },
+      "decline": { "text": "Then we will see who walks in first." },
+      "in_progress": { "text": "Still empty. Still dangerous." },
+      "ready": { "text": "The court held. Whatever comes next, it held." },
+      "complete": { "text": "A realm that survives an empty throne survives most things." },
+      "failed": { "text": "They came while the seat was cold, and we were not enough." }
+    },
+    "conditions": { "type": "mcaquests:capital_interregnum", "present": true },
+    "objectives": [
+      {
+        "type": "mcaquests:defend_location",
+        "location": { "anchor": "home_village" },
+        "threat": { "tag": "mcaquests:common_undead" },
+        "radius": 32,
+        "count": 12
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:currency", "difficulty": "hard" },
+      { "type": "mcaquests:hearts", "amount": 14 },
+      {
+        "type": "mcaquests:capital_chronicle",
+        "key": "crossroads.chronicle.held_the_court",
+        "herald": true,
+        "fallback": "%1$s held the court of %2$s through the interregnum."
+      }
+    ]
+  }
+}

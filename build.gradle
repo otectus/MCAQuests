@@ -160,8 +160,8 @@ dependencies {
     // compat.mca.McaBinding resolves every MCA class and member by name at runtime (that is what lets
     // one jar serve both MCA's forge.net.mca.* layout and the renamed net.conczin.mca.* one). A
     // compile dependency would only invite the static linkage back -- NoMcaStaticLinkTest fails the
-    // build if it ever returns. runtimeOnly also keeps MCA off testRuntimeClasspath, so the unit
-    // suite exercises the genuine "MCA absent" degradation path rather than a half-bound one.
+    // build if it ever returns. The explicit testRuntimeClasspath exclusion above keeps MCA absent,
+    // so the unit suite exercises the genuine "MCA absent" degradation path.
     runtimeOnly "maven.modrinth:minecraft-comes-alive-reborn:${mcaDevVersion}"
 
     // The probe fleet (see ext.mcaProbeVersions), one configuration per Modrinth version id.
@@ -204,7 +204,7 @@ dependencies {
 
     // JourneyMap optional integration -- compile-time only. NEVER shipped, NEVER 'implementation'.
     //
-    // The one exception to this mod's "all third-party access is reflective" rule, and it is forced:
+    // Like the guarded FTB Quests and Reputation adapters, this package uses typed compile-only APIs:
     // JourneyMap's entry point is a class carrying @JourneyMapPlugin and implementing IClientPlugin,
     // and neither an annotation nor an implements clause can be produced reflectively. Only
     // compat/journeymap/ names these types, and NoMinimapStaticLinkTest fails the build if anything
@@ -495,6 +495,12 @@ afterEvaluate {
             classpath = base.classpath
             testClassesDirs = base.testClassesDirs
             jvmArgs = base.jvmArgs
+            // MDG supplies fml.modFolders lazily through a provider. Without it the optional
+            // mixin plugin lands in the app loader instead of sharing FML's Mixin interface.
+            jvmArgumentProviders.addAll(base.jvmArgumentProviders)
+            javaLauncher = base.javaLauncher
+            // Includes MDG's generated launch files and manifest stub without running `test`.
+            dependsOn { base.taskDependencies.getDependencies(base) }
             base.systemProperties.each { key, value -> systemProperty(key, value) }
             workingDir = base.workingDir
             environment base.environment
@@ -550,45 +556,114 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << '-Xmaxerrs' << '2000'
 }
 
-// Replaces the ForgeGradle-era verifyReobfJar: under ModDevGradle there is no reobfuscation to check,
-// but the two failure modes that mattered still exist -- a jar missing its loader metadata or mixin
-// config, and a jar that swallowed a third-party dependency it must never ship.
+// NeoForge uses official runtime mappings, so there is no SRG reobfuscation check. Verify complete
+// metadata, isolated classes and the Java 21 ceiling directly from the finished archive instead.
+def verifyNeoQuestArchive = { File archive ->
+    int classCount = 0
+    new java.util.zip.ZipFile(archive).withCloseable { zip ->
+        ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json', 'mcaquests.compat.mixins.json',
+         'pack.mcmeta', 'compatpacks/iafce_quests/pack.mcmeta', 'compatpacks/bountiful_core/pack.mcmeta',
+         'compatpacks/bountiful_iafce/pack.mcmeta', 'assets/mcaquests/lang/en_us.json',
+         'assets/mcaquests/lang/pt_br.json'].each { required ->
+            def entry = zip.getEntry(required)
+            if (entry == null) throw new GradleException("${archive.name}: missing ${required}")
+            zip.getInputStream(entry).withCloseable { input ->
+                if (input.getText('UTF-8').contains('${')) {
+                    throw new GradleException("${archive.name}: unexpanded metadata in ${required}")
+                }
+            }
+        }
+        zip.entries().each { entry ->
+            if (!entry.name.endsWith('.class')) return
+            if (!entry.name.startsWith('dev/otectus/mcaquests/')) {
+                throw new GradleException("${archive.name}: unexpected bundled class ${entry.name}")
+            }
+            new DataInputStream(zip.getInputStream(entry)).withCloseable { input ->
+                if (input.readInt() != (int) 0xCAFEBABE) {
+                    throw new GradleException("${entry.name}: invalid class header")
+                }
+                input.readUnsignedShort()
+                int major = input.readUnsignedShort()
+                if (major > 65) throw new GradleException("${entry.name}: requires newer than Java 21")
+            }
+            classCount++
+        }
+    }
+    if (classCount == 0) throw new GradleException("${archive.name}: no mod classes")
+    logger.lifecycle("${archive.name}: verified metadata, ${classCount} isolated classes and Java 21.")
+}
+
 tasks.register('jarSmokeCheck') {
     group = 'verification'
-    description = 'Fails if the built jar is missing its metadata or bundles a third-party dependency.'
+    description = 'Verifies release metadata, class isolation and Java 21 compatibility.'
     dependsOn 'jar'
     def builtJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
     inputs.file(builtJar)
     doLast {
-        def jarFile = builtJar.get().asFile
-        // Jar-relative entry paths (zipTree explodes into a staging dir, so use relativePath).
-        def names = []
-        zipTree(jarFile).visit { details -> if (!details.directory) names << details.relativePath.pathString }
-        def contains = { String entry -> names.contains(entry) }
-        ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json', 'mcaquests.compat.mixins.json',
-         'pack.mcmeta', 'compatpacks/iafce_quests/pack.mcmeta', 'compatpacks/bountiful_core/pack.mcmeta',
-         'compatpacks/bountiful_iafce/pack.mcmeta'].each { required ->
-            if (!contains(required)) {
-                throw new GradleException("${jarFile.name} is missing ${required}.")
+        verifyNeoQuestArchive(builtJar.get().asFile)
+    }
+}
+
+tasks.register('artifactVerifierTest') {
+    group = 'verification'
+    description = 'Proves archive verification rejects foreign classes, invalid metadata and newer bytecode.'
+    dependsOn 'jar'
+    doLast {
+        File builtJar = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        // Establish a valid baseline first. Every fixture copies it and changes exactly one property;
+        // an unrelated missing metadata file must not masquerade as successful class-isolation coverage.
+        verifyNeoQuestArchive(builtJar)
+        Map<String, byte[]> entries = new LinkedHashMap<>()
+        new java.util.zip.ZipFile(builtJar).withCloseable { zip ->
+            zip.entries().each { entry ->
+                if (entry.isDirectory()) return
+                zip.getInputStream(entry).withCloseable { input -> entries[entry.name] = input.bytes }
             }
         }
-        // Top-level package prefixes only: the mod's own dev/otectus/mcaquests/compat/journeymap/**
-        // must not be mistaken for a bundled JourneyMap.
-        def forbidden = ['net/minecraftforge/', 'net/conczin/', 'net/mca/', 'forge/net/mca/',
-                         'dev/ftb/', 'journeymap/', 'xaero/', 'dev/architectury/',
-                         'dev/otectus/mcareputation/', 'io/ejekta/', 'com/iafenvoy/',
-                         'com/github/alexthe666/']
-        def bundled = names.findAll { name -> forbidden.any { name.startsWith(it) } }
-        if (!bundled.isEmpty()) {
-            throw new GradleException("${jarFile.name} bundles third-party classes: " +
-                    "${bundled.take(10).join(', ')} (${bundled.size()} entries).")
+        String classEntry = entries.keySet().find { it.endsWith('.class') }
+        byte[] futureClass = java.util.Arrays.copyOf(entries[classEntry], entries[classEntry].length)
+        futureClass[6] = (byte) 0
+        futureClass[7] = (byte) 66
+        def fixtures = [
+                [name: 'foreign-class', reason: 'unexpected bundled class',
+                 changes: ['forge/net/conczin/mca/Unexpected.class': entries[classEntry]]],
+                [name: 'missing-metadata', reason: 'missing META-INF/neoforge.mods.toml',
+                 changes: ['META-INF/neoforge.mods.toml': null]],
+                [name: 'unexpanded-metadata', reason: 'unexpanded metadata',
+                 changes: ['META-INF/neoforge.mods.toml': 'modId="${fixture}"'.getBytes('UTF-8')]],
+                [name: 'future-bytecode', reason: 'requires newer than Java 21',
+                 changes: [(classEntry): futureClass]]
+        ]
+        fixtures.each { fixture ->
+            Map<String, byte[]> altered = new LinkedHashMap<>(entries)
+            fixture.changes.each { name, bytes ->
+                if (bytes == null) altered.remove(name)
+                else altered[name] = bytes
+            }
+            File scratch = layout.buildDirectory.file("artifact-verifier/${fixture.name}.jar").get().asFile
+            scratch.parentFile.mkdirs()
+            new java.util.zip.ZipOutputStream(new FileOutputStream(scratch)).withCloseable { output ->
+                altered.each { name, bytes ->
+                    output.putNextEntry(new java.util.zip.ZipEntry(name))
+                    output.write(bytes)
+                    output.closeEntry()
+                }
+            }
+            boolean rejected = false
+            try {
+                verifyNeoQuestArchive(scratch)
+            } catch (GradleException expected) {
+                if (!expected.message.contains(fixture.reason)) throw expected
+                rejected = true
+            }
+            if (!rejected) throw new GradleException("Archive verifier accepted ${fixture.name}")
         }
-        logger.lifecycle("${jarFile.name}: metadata present, no third-party classes bundled.")
+        logger.lifecycle('Archive verifier rejected all four targeted corruptions.')
     }
 }
 
 tasks.named('check') {
-    dependsOn 'jarSmokeCheck'
+    dependsOn 'jarSmokeCheck', 'artifactVerifierTest'
 }
 
 // Installs the finished jar into a mods folder, so nobody has to copy build/libs by hand. The folder

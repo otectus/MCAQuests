@@ -1,0 +1,56 @@
+{
+  "format_version": 1,
+  "id": "winterkiln:kiln_2_fire_the_kiln",
+  "weight": 10,
+  "category": "crafting",
+  "difficulty": "medium",
+  "offer_group": "kiln_arc",
+  "priority": 2,
+  "title": { "text": "Fire the Kiln" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:mason"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "A kiln lit at dusk is a kiln drawn at dawn — no later, or the bricks come out sugar. Sixteen bricks and four courses laid before the sun is up, {player}." },
+    "accept": { "text": "Charcoal, not coal. It burns kinder." },
+    "decline": { "text": "Another night cold, then." },
+    "in_progress": { "text": "Watch the colour of the smoke, not the clock." },
+    "ready": { "text": "Sixteen, and true. Draw them before they cool." },
+    "complete": { "text": "My father would have said nothing at all, which from him was praise." },
+    "failed": { "text": "Dawn came and the kiln was still burning. The whole load is spoiled — and I set my name to it." }
+  },
+  "objectives": [
+    { "type": "mcaquests:obtain_item", "item": "minecraft:brick", "count": 16 },
+    {
+      "type": "mcaquests:place_block",
+      "block": "minecraft:bricks",
+      "count": 4
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 40 },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "failure": {
+    "deadline_time": 23000,
+    "fail_on_giver_death": true,
+    "failure_hearts": -4,
+    "retry_after": 48000
+  },
+  "weight_bonus": [
+    { "when": { "type": "mcaquests:hearts", "min": 40 }, "amount": 6 },
+    { "when": { "type": "mcaquests:quest_completed", "quest": "winterkiln:kiln_1_clay_from_the_bank", "scope": "giver" }, "amount": 4 }
+  ],
+  "chain": {
+    "chain": "winterkiln:the_winter_kiln",
+    "stage": 2,
+    "stage_total": 3,
+    "relationship_arc": { "text": "The Winter Kiln" },
+    "chapter": { "text": "Fire the Kiln" },
+    "prerequisites": ["winterkiln:kiln_1_clay_from_the_bank"],
+    "unlocks": ["winterkiln:kiln_2b_make_amends", "winterkiln:kiln_3_the_glazed_hearth"]
+  }
+}

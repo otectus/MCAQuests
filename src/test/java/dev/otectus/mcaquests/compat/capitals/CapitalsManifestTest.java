@@ -5,6 +5,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -73,6 +75,34 @@ class CapitalsManifestTest {
     }
 
     @Test
+    void sharedPersistenceMemberBelongsToRecordMutationsOnly() {
+        assertEquals(Set.of(CapitalsCapability.CHRONICLE, CapitalsCapability.VILLAGER_TITLES),
+                CapitalsBinding.MARK_DIRTY.requiredBy());
+        assertEquals(Set.of(), CapitalsBinding.VILLAGER_IS_FEMALE.requiredBy(),
+                "optional gender detection must not disable title grants");
+    }
+
+    @Test
+    void newlyAmbiguousOverloadFailsBindingInsteadOfChoosingJvmOrder() throws Exception {
+        Method bind = CapitalsBinding.class.getDeclaredMethod("bindMethod", MethodHandles.Lookup.class,
+                Method[].class, CapitalsBinding.Member.class);
+        bind.setAccessible(true);
+        Method first = AmbiguousLookup.class.getMethod("getCapital", Object.class);
+        Method second = AmbiguousLookup.class.getMethod("getCapital", java.util.UUID.class);
+        assertNull(bind.invoke(null, MethodHandles.lookup(), new Method[] {first, second},
+                CapitalsBinding.CAPITAL_BY_ID));
+        assertNull(bind.invoke(null, MethodHandles.lookup(), new Method[] {second, first},
+                CapitalsBinding.CAPITAL_BY_ID));
+        assertNotNull(bind.invoke(null, MethodHandles.lookup(), new Method[] {first},
+                CapitalsBinding.CAPITAL_BY_ID));
+    }
+
+    public static final class AmbiguousLookup {
+        public static Object getCapital(Object id) { return id; }
+        public static Object getCapital(java.util.UUID id) { return id; }
+    }
+
+    @Test
     @DisplayName("an absent Capitals resolves to nothing, with working stubs")
     void absentIsBoring() {
         CapitalsBinding.Resolution resolution = CapitalsBinding.absent();
@@ -122,8 +152,9 @@ class CapitalsManifestTest {
                 CapitalsCompat.select(true, false, CapitalsBinding.absent()).status(),
                 "Installed but switched off must say so, or the owner who switched it off goes "
                         + "looking for a missing jar.");
-        assertEquals(CompatStatus.ABSENT,
+        assertEquals(CompatStatus.PARTIAL,
                 CapitalsCompat.select(true, true, CapitalsBinding.absent()).status(),
-                "Enabled with nothing resolved still reports what the resolution says.");
+                "Forge knows the mod is installed, so a missing probe class is an incompatibility.");
+        assertFalse(CapitalsCompat.select(true, true, CapitalsBinding.absent()).unresolvedMembers().isEmpty());
     }
 }

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.title;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
@@ -13,6 +15,6 @@ public record TitleDefinition(String name, TitleScope scope) {
 
     public static final Codec<TitleDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("name").forGetter(TitleDefinition::name),
-            TitleScope.CODEC.lenientOptionalFieldOf("scope", TitleScope.VILLAGE).forGetter(TitleDefinition::scope)
+            StrictCodecs.strictOptional(TitleScope.CODEC, "scope", TitleScope.VILLAGE).forGetter(TitleDefinition::scope)
     ).apply(instance, TitleDefinition::new));
 }

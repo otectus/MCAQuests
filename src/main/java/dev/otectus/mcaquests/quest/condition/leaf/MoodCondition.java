@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -27,9 +29,9 @@ public record MoodCondition(Optional<Integer> min, Optional<Integer> max, Option
     // "value" key, which optionalFieldOf would then swallow silently.
     // See DispatchedCodecInlinesTest.
     public static final MapCodec<MoodCondition> CODEC = RecordCodecBuilder.<MoodCondition>mapCodec(instance -> instance.group(
-            Codec.INT.lenientOptionalFieldOf("min").forGetter(MoodCondition::min),
-            Codec.INT.lenientOptionalFieldOf("max").forGetter(MoodCondition::max),
-            McaConditionCodecs.lowercaseNonEmptyList("mood").lenientOptionalFieldOf("moods").forGetter(MoodCondition::moods)
+            StrictCodecs.strictOptional(Codec.INT, "min").forGetter(MoodCondition::min),
+            StrictCodecs.strictOptional(Codec.INT, "max").forGetter(MoodCondition::max),
+            StrictCodecs.strictOptional(McaConditionCodecs.lowercaseNonEmptyList("mood"), "moods").forGetter(MoodCondition::moods)
     ).apply(instance, MoodCondition::new)).flatXmap(MoodCondition::validate, MoodCondition::validate);
 
     private static DataResult<MoodCondition> validate(MoodCondition condition) {

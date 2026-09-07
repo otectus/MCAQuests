@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 
@@ -33,7 +34,11 @@ public final class ProjectState {
     private final ResourceLocation anchorDimension;
     private final BlockPos anchorPos;
     private final OptionalInt villageId;
-    private final long startGameTime;
+    private long startGameTime;
+    private OptionalLong startDayTime = OptionalLong.empty();
+    private long suspendedTicks;
+    private long lastClockSample = Long.MIN_VALUE;
+    private long retryAt = Long.MAX_VALUE;
 
     private int currentPhase;
     private List<SharedObjectiveProgress> progress;
@@ -119,6 +124,37 @@ public final class ProjectState {
         return startGameTime;
     }
 
+    public void setStartDayTime(long dayTime) { startDayTime = OptionalLong.of(dayTime); }
+
+    /** Pre-stabilization projects never ran failure clocks; give those saves a fresh grace period. */
+    public void initializeFailureClock(long gameTime, long dayTime) {
+        if (startDayTime.isEmpty()) {
+            startGameTime = gameTime;
+            startDayTime = OptionalLong.of(dayTime);
+            suspendedTicks = 0;
+            lastClockSample = gameTime;
+        }
+    }
+
+    public OptionalLong startDayTime() { return startDayTime; }
+
+    public long suspendedTicks() { return suspendedTicks; }
+
+    /** Accounts for unavailable/paused time once per server sweep. */
+    public void sampleClock(long now, boolean suspended) {
+        if (lastClockSample != Long.MIN_VALUE && suspended && now > lastClockSample) {
+            long elapsed = now - lastClockSample;
+            suspendedTicks = suspendedTicks > Long.MAX_VALUE - elapsed ? Long.MAX_VALUE : suspendedTicks + elapsed;
+        }
+        lastClockSample = now;
+    }
+
+    public void allowRetryAt(long gameTime) { retryAt = gameTime; }
+
+    public boolean canRetry(long now) {
+        return status == ProjectStatus.FAILED && retryAt != Long.MAX_VALUE && now >= retryAt;
+    }
+
     public int currentPhase() {
         return currentPhase;
     }
@@ -128,6 +164,9 @@ public final class ProjectState {
     }
 
     public SharedObjectiveProgress progress(int index) {
+        while (index >= progress.size()) {
+            progress.add(new SharedObjectiveProgress());
+        }
         return progress.get(index);
     }
 
@@ -220,6 +259,10 @@ public final class ProjectState {
         tag.putLong("anchor", anchorPos.asLong());
         villageId.ifPresent(id -> tag.putInt("village_id", id));
         tag.putLong("start", startGameTime);
+        startDayTime.ifPresent(value -> tag.putLong("start_day", value));
+        if (suspendedTicks != 0L) { tag.putLong("suspended_ticks", suspendedTicks); }
+        if (lastClockSample != Long.MIN_VALUE) { tag.putLong("clock_sample", lastClockSample); }
+        if (retryAt != Long.MAX_VALUE) { tag.putLong("retry_at", retryAt); }
         tag.putInt("phase", currentPhase);
         tag.putString("status", status.lower());
         tag.putByteArray("distributed", phaseRewardsDistributed.toByteArray());
@@ -266,6 +309,10 @@ public final class ProjectState {
                 tag.getInt("phase"),
                 progress);
         state.status = ProjectStatus.fromString(tag.getString("status"));
+        if (tag.contains("start_day")) { state.startDayTime = OptionalLong.of(tag.getLong("start_day")); }
+        state.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks"));
+        if (tag.contains("clock_sample")) { state.lastClockSample = tag.getLong("clock_sample"); }
+        if (tag.contains("retry_at")) { state.retryAt = tag.getLong("retry_at"); }
         state.phaseRewardsDistributed.or(BitSet.valueOf(tag.getByteArray("distributed")));
         ListTag sponsorList = tag.getList("sponsors", Tag.TAG_STRING);
         for (int i = 0; i < sponsorList.size(); i++) {

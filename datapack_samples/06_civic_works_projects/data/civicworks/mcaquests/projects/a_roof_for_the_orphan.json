@@ -1,0 +1,52 @@
+{
+  "format_version": 1,
+  "id": "civicworks:a_roof_for_the_orphan",
+  "weight": 12,
+  "title": { "text": "A Roof for the Orphan" },
+  "category": "relations",
+  "scope": { "scope": "family", "fallback_radius": 48 },
+  "sponsor": {
+    "required_count": 1,
+    "adult_only": true,
+    "on_death": "transfer"
+  },
+  "reputation": { "on_phase_complete": 2, "on_project_complete": 10, "on_fail": -8 },
+  "failure": {
+    "deadline_ticks": 240000,
+    "fail_on_giver_death": false,
+    "failure_hearts": -4,
+    "retry_after": 72000
+  },
+  "phases": [
+    {
+      "key": "timber_and_thatch",
+      "dialogue": {
+        "offer": { "text": "The child is ours now — all of ours — and there is no room in either house. Timber, wool, glass. Before the cold." },
+        "in_progress": { "text": "Before the cold. That is the only deadline that matters." }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "tag": "minecraft:planks", "count": 96, "per_player_cap": 32 },
+        { "type": "mcaquests:donate_item", "tag": "minecraft:wool", "count": 12 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:glass", "count": 8 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 30 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "raise_it",
+      "dialogue": {
+        "offer": { "text": "Now put it up where we can all see the door from our own." },
+        "in_progress": { "text": "A little further from the road. They will want to sleep." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_place_block", "tag": "minecraft:planks", "count": 40 },
+        { "type": "mcaquests:project_place_block", "block": "minecraft:crafting_table", "count": 1 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 12, "include_residents": true }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 8 }, "target": "top_contributor" }
+      ]
+    }
+  ]
+}

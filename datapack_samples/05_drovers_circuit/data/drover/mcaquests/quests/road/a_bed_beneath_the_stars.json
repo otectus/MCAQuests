@@ -1,0 +1,32 @@
+{
+  "format_version": 1,
+  "id": "drover:a_bed_beneath_the_stars",
+  "weight": 8,
+  "category": "exploration",
+  "difficulty": "easy",
+  "offer_group": "drove_road",
+  "title": { "text": "A Bed Beneath the Stars" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": {
+    "professions": ["minecraft:shepherd", "mca:adventurer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "You have never slept a night away from a roof, have you. Walk into the woods, walk into the next village, and sleep somewhere that is not your own house." },
+    "accept": { "text": "Take a bed with you. Or make friends quickly." },
+    "decline": { "text": "Suit yourself, homebody." },
+    "in_progress": { "text": "Woods, village, morning. In that order or any other." },
+    "ready": { "text": "You look like a person who has slept outdoors. That is a compliment." },
+    "complete": { "text": "Now you know what the drovers mean by a short night." }
+  },
+  "objectives": [
+    { "type": "mcaquests:visit_biome", "tag": "minecraft:is_forest" },
+    { "type": "mcaquests:enter_structure", "structure_tag": "minecraft:village" },
+    { "type": "mcaquests:sleep_or_rest", "require_morning": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:xp", "amount": 20 },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ]
+}

@@ -69,7 +69,8 @@ public final class PendingHeartsData extends SavedData {
             return;
         }
         Map<UUID, Integer> perPlayer = owed.computeIfAbsent(villager, key -> new LinkedHashMap<>());
-        int total = perPlayer.merge(player, amount, Integer::sum);
+        int total = perPlayer.merge(player, amount, (before, delta) ->
+                (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, (long) before + delta)));
         if (total == 0) {
             perPlayer.remove(player);
         }

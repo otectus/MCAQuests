@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -26,12 +28,12 @@ public record ProtectEntityObjective(VillagerTarget villager, int durationTicks,
                                      boolean failOnDeath) implements QuestObjective, VillagerTargeted {
 
     public static final MapCodec<ProtectEntityObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            VillagerTarget.CODEC.lenientOptionalFieldOf("villager", VillagerTarget.SELF).forGetter(ProtectEntityObjective::villager),
-            Codec.intRange(20, Integer.MAX_VALUE).lenientOptionalFieldOf("duration_ticks", 2400)
+            StrictCodecs.strictOptional(VillagerTarget.CODEC, "villager", VillagerTarget.SELF).forGetter(ProtectEntityObjective::villager),
+            StrictCodecs.strictOptional(Codec.intRange(20, Integer.MAX_VALUE), "duration_ticks", 2400)
                     .forGetter(ProtectEntityObjective::durationTicks),
-            Codec.BOOL.lenientOptionalFieldOf("require_near_player", false).forGetter(ProtectEntityObjective::requireNearPlayer),
-            Codec.intRange(1, 64).lenientOptionalFieldOf("near_radius", 16).forGetter(ProtectEntityObjective::nearRadius),
-            Codec.BOOL.lenientOptionalFieldOf("fail_on_death", true).forGetter(ProtectEntityObjective::failOnDeath)
+            StrictCodecs.strictOptional(Codec.BOOL, "require_near_player", false).forGetter(ProtectEntityObjective::requireNearPlayer),
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "near_radius", 16).forGetter(ProtectEntityObjective::nearRadius),
+            StrictCodecs.strictOptional(Codec.BOOL, "fail_on_death", true).forGetter(ProtectEntityObjective::failOnDeath)
     ).apply(instance, ProtectEntityObjective::new));
 
     @Override

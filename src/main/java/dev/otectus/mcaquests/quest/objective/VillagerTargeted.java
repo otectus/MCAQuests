@@ -81,7 +81,8 @@ public interface VillagerTargeted extends QuestObjective {
     @Override
     default Optional<Component> unavailableReason(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        return ObjectiveSupport.boundTargetLost(targetSelector(), active, progress, level);
+        return isSatisfied(player, progress) ? Optional.empty()
+                : ObjectiveSupport.boundTargetLost(targetSelector(), active, progress, level);
     }
 
     /**
@@ -103,7 +104,11 @@ public interface VillagerTargeted extends QuestObjective {
      */
     @Override
     default Optional<Component> unofferableReason(QuestContext context) {
-        VillagerTarget selector = targetSelector();
+        return unofferableReason(targetSelector(), context);
+    }
+
+    /** Shared with optional merchant selectors that need the same court-office offer gate. */
+    static Optional<Component> unofferableReason(VillagerTarget selector, QuestContext context) {
         return switch (selector.mode()) {
             case FAMILY -> {
                 List<RelativeCandidate> pool = context.mca().relativeCandidates(selector.effectiveRelation());

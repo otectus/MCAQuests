@@ -258,6 +258,10 @@ final class TownsteadHandles {
      */
     private static final Map<String, TownsteadProfessionTrackView> TRACKS = new ConcurrentHashMap<>();
 
+    static void invalidateDataCaches() {
+        TRACKS.clear();
+    }
+
     // --- reads -----------------------------------------------------------------------------------
 
     /**
@@ -502,7 +506,7 @@ final class TownsteadHandles {
      * than by reading a thresholds accessor. Two reasons: the spec's tier boundaries are whatever that
      * method says they are, including for a data-driven definition that computes them; and it needs no
      * member beyond the four already bound, so a renamed accessor cannot cost the capability.
-     * Runs once per profession per game run — see {@link #TRACKS}.
+     * Runs once per profession per data reload — see {@link #TRACKS}.
      */
     private static List<Integer> thresholds(Object spec, int maxTier, int maxXp) {
         List<Integer> out = new ArrayList<>(maxTier);
@@ -635,6 +639,10 @@ final class TownsteadHandles {
      * would leave one standing up still carrying whatever floored them.
      */
     static TownsteadMutationResult changeNeeds(Entity villager, NeedMutation mutation) {
+        if (mutation == null || mutation.need() == null || mutation.mode() == null
+                || !Double.isFinite(mutation.amount())) {
+            return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INVALID_VALUE);
+        }
         if (!R.has(TownsteadCapability.MUTATE_NEEDS)) {
             return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
         }
@@ -726,7 +734,7 @@ final class TownsteadHandles {
         if (!R.has(TownsteadCapability.AWARD_PROFESSION_XP)) {
             return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.CAPABILITY_MISSING);
         }
-        if (requested <= 0) {
+        if (requested <= 0 || professionId == null || professionId.isBlank()) {
             return TownsteadMutationResult.failed(TownsteadMutationResult.Reason.INVALID_VALUE);
         }
         Object state = statik(H_VILLAGERS_GET, villager);
@@ -826,7 +834,7 @@ final class TownsteadHandles {
             }
             for (Object constant : constants) {
                 String id = str(H_XP_TYPE_ID, constant);
-                if (!id.isEmpty() && professionId.toLowerCase(Locale.ROOT).endsWith(id.toLowerCase(Locale.ROOT))) {
+                if (sameProfessionPath(professionId, id)) {
                     return constant;
                 }
             }
@@ -834,6 +842,16 @@ final class TownsteadHandles {
             // Fall through to the general path, which serves every profession anyway.
         }
         return null;
+    }
+
+    /** Namespace aliases are supported; similarly suffixed custom professions are distinct tracks. */
+    static boolean sameProfessionPath(String requested, String builtIn) {
+        if (requested == null || builtIn == null || requested.isBlank() || builtIn.isBlank()) {
+            return false;
+        }
+        String requestedPath = requested.substring(requested.indexOf(':') + 1);
+        String builtInPath = builtIn.substring(builtIn.indexOf(':') + 1);
+        return !requestedPath.isEmpty() && requestedPath.equalsIgnoreCase(builtInPath);
     }
 
     static Set<ResourceLocation> learnedSkills(Entity villager) {

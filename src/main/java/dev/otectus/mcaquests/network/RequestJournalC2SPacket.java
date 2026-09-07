@@ -31,7 +31,7 @@ public record RequestJournalC2SPacket() implements CustomPacketPayload {
     }
 
     public static void handle(RequestJournalC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player)) {
             return;
         }
         JournalService.sendSnapshot(player);

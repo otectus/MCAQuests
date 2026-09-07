@@ -1,9 +1,12 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.DisplayNames;
+import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.network.chat.Component;
@@ -25,9 +28,9 @@ public record TradeWithVillagerObjective(Optional<VillagerTarget> villager,
                                          Optional<ResourceLocation> profession, int count) implements QuestObjective {
 
     public static final MapCodec<TradeWithVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            VillagerTarget.CODEC.lenientOptionalFieldOf("villager").forGetter(TradeWithVillagerObjective::villager),
-            ResourceLocation.CODEC.lenientOptionalFieldOf("profession").forGetter(TradeWithVillagerObjective::profession),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(TradeWithVillagerObjective::count)
+            StrictCodecs.strictOptional(VillagerTarget.CODEC, "villager").forGetter(TradeWithVillagerObjective::villager),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "profession").forGetter(TradeWithVillagerObjective::profession),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(TradeWithVillagerObjective::count)
     ).apply(instance, TradeWithVillagerObjective::new));
 
     @Override
@@ -64,6 +67,10 @@ public record TradeWithVillagerObjective(Optional<VillagerTarget> villager,
             return Optional.empty();
         }
         if (villager.isPresent()) {
+            if (villager.get().mode() == VillagerTarget.Mode.CAPITAL_ROLE) {
+                return ObjectiveSupport.resolveLocked(villager.get(), player, active, progress, level)
+                        .map(TradeWithVillagerObjective::mark);
+            }
             return villager.get()
                     .resolveFrom(player, level.getEntity(active.villagerUuid()), level)
                     .map(TradeWithVillagerObjective::mark);
@@ -109,6 +116,19 @@ public record TradeWithVillagerObjective(Optional<VillagerTarget> villager,
         return true;
     }
 
+    @Override
+    public Optional<Component> unofferableReason(QuestContext context) {
+        return villager.filter(target -> target.mode() == VillagerTarget.Mode.CAPITAL_ROLE)
+                .flatMap(target -> VillagerTargeted.unofferableReason(target, context));
+    }
+
+    @Override
+    public Optional<Component> unavailableReason(ServerPlayer player, ActiveQuest active,
+                                                ObjectiveProgress progress, ServerLevel level) {
+        return villager.filter(target -> target.mode() == VillagerTarget.Mode.CAPITAL_ROLE)
+                .flatMap(target -> ObjectiveSupport.boundTargetLost(target, active, progress, level));
+    }
+
     /** Credit one completed trade with {@code merchant} if it matches the configured filter. */
     public void onTrade(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
                         LivingEntity merchant, ServerLevel level) {
@@ -116,7 +136,11 @@ public record TradeWithVillagerObjective(Optional<VillagerTarget> villager,
             return;
         }
         if (villager.isPresent()) {
-            if (!villager.get().matches(merchant, player, active, level)) {
+            VillagerTarget target = villager.get();
+            boolean matches = target.mode() == VillagerTarget.Mode.CAPITAL_ROLE
+                    ? ObjectiveSupport.matchesLocked(target, merchant, player, active, progress, level)
+                    : target.matches(merchant, player, active, level);
+            if (!matches) {
                 return;
             }
         } else if (profession.isPresent()

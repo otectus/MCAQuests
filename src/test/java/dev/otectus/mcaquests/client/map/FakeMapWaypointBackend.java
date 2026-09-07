@@ -43,6 +43,7 @@ final class FakeMapWaypointBackend implements MapWaypointBackend {
     private final List<WaypointSpec> pins = new ArrayList<>();
 
     private boolean usable = true;
+    private boolean failNextClear;
     private MapBackendStatus.Failure lastFailure;
 
     FakeMapWaypointBackend(String id) {
@@ -72,6 +73,11 @@ final class FakeMapWaypointBackend implements MapWaypointBackend {
 
     FakeMapWaypointBackend usable(boolean value) {
         this.usable = value;
+        return this;
+    }
+
+    FakeMapWaypointBackend failNextClear() {
+        failNextClear = true;
         return this;
     }
 
@@ -150,6 +156,11 @@ final class FakeMapWaypointBackend implements MapWaypointBackend {
     public void clearAutomatic(ClearCause cause) {
         calls.add("clear:" + cause);
         clears.add(cause);
+        if (failNextClear) {
+            failNextClear = false;
+            fail(MapMutationResult.FAILED);
+            return;
+        }
         applied.clear();
     }
 

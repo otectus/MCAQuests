@@ -22,7 +22,7 @@ public final class RetryBackoff {
 
     /** Whether a backend that failed last time may be called again. Always true before a failure. */
     public boolean isDue(long nowMillis) {
-        return consecutiveFailures == 0 || nowMillis >= nextAttemptAtMillis;
+        return nextAttemptAtMillis == 0L || nowMillis >= nextAttemptAtMillis;
     }
 
     /** Records a failed pass and schedules the next attempt. */
@@ -30,6 +30,11 @@ public final class RetryBackoff {
         long delay = DELAYS_MILLIS[Math.min(consecutiveFailures, DELAYS_MILLIS.length - 1)];
         consecutiveFailures++;
         nextAttemptAtMillis = nowMillis + delay;
+    }
+
+    /** A map that is still starting needs another pass even if no new guidance ever arrives. */
+    public void recordRetry(long nowMillis) {
+        nextAttemptAtMillis = nowMillis + DELAYS_MILLIS[0];
     }
 
     /** Back to trying every pass. */
@@ -45,7 +50,7 @@ public final class RetryBackoff {
 
     /** When the next attempt is allowed, or 0 when one is allowed now. */
     public long nextAttemptAtMillis() {
-        return consecutiveFailures == 0 ? 0L : nextAttemptAtMillis;
+        return nextAttemptAtMillis;
     }
 
     /** How many passes in a row have failed, for diagnostics. */

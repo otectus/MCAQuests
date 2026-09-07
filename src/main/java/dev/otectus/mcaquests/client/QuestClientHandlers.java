@@ -32,8 +32,15 @@ public final class QuestClientHandlers {
      */
     public static void openMenu(QuestMenuDataS2CPacket data) {
         Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.level == null) {
+            return;
+        }
         Screen screen = minecraft.screen;
-        if (screen == null || screen instanceof McaQuestsScreen
+        if (screen instanceof QuestMenuScreen open && open.villagerUuid().equals(data.villagerUuid())) {
+            open.refresh(data);
+            return;
+        }
+        if (screen == null || screen instanceof QuestMenuScreen
                 || McaScreenButtons.isMcaInteractScreen(screen)) {
             minecraft.setScreen(new QuestMenuScreen(data));
         }

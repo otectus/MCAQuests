@@ -29,7 +29,7 @@ import java.util.Optional;
  * change, or a world opened with a different mod set, mounts exactly what is usable now, and a pack
  * that stops being usable simply is not offered on the next build.
  *
- * <p>Mounted at {@link Pack.Position#TOP} and marked built-in, so a datapack an owner installs still
+ * <p>Mounted at {@link Pack.Position#BOTTOM} and marked built-in, so a datapack an owner installs still
  * wins: our content is a default to be overridden, not a claim on the path.
  */
 @EventBusSubscriber(modid = McaQuests.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
@@ -73,28 +73,31 @@ public final class CompatPackFinder {
                               ConditionalCompatPack pack) {
         String packId = McaQuests.MOD_ID + "/" + pack.id();
         Path root = modFile.findResource(ROOT, pack.folder());
-        // Built exactly the way NeoForge's own AddPackFindersEvent.addPackFinders builds one, minus
-        // its KnownPack: that helper decides at event time, and this pack's answer is only true at
-        // repository-build time. No known-pack entry, because the content a client is told to skip
-        // syncing must be content it can be assumed to have, and this pack's presence depends on a
-        // third mod.
-        PackLocationInfo location = new PackLocationInfo(packId,
-                Component.translatable("mcaquests.compatpack." + pack.id()),
-                PackSource.BUILT_IN,
-                Optional.empty());
-        Pack built = Pack.readMetaAndCreate(location,
-                BuiltInPackSource.fromName(path -> new PathPackResources(path, root)),
-                PackType.SERVER_DATA,
-                new PackSelectionConfig(true, Pack.Position.TOP, false));
+        Pack built = createPack(packId, pack.id(), root);
         if (built == null) {
-            // readMetaAndCreate answers null for a missing or unreadable pack.mcmeta. That is a build
-            // problem, not a player one, so it is reported and skipped rather than thrown.
             McaQuests.LOGGER.info("[MCA: Quests] Compat datapack '{}' has no readable pack.mcmeta at {}; "
                     + "skipping it.", packId, root);
             return;
         }
         consumer.accept(built);
         McaQuests.LOGGER.info("[MCA: Quests] Mounted compat datapack '{}'.", packId);
+    }
+
+    /** Kept separate from mod discovery so resource priority is exercised with a real repository. */
+    static Pack createPack(String packId, String descriptionId, Path root) {
+        // Built exactly the way NeoForge's own AddPackFindersEvent.addPackFinders builds one, minus
+        // its KnownPack: that helper decides at event time, and this pack's answer is only true at
+        // repository-build time. No known-pack entry, because the content a client is told to skip
+        // syncing must be content it can be assumed to have, and this pack's presence depends on a
+        // third mod.
+        PackLocationInfo location = new PackLocationInfo(packId,
+                Component.translatable("mcaquests.compatpack." + descriptionId),
+                PackSource.BUILT_IN,
+                Optional.empty());
+        return Pack.readMetaAndCreate(location,
+                BuiltInPackSource.fromName(path -> new PathPackResources(path, root)),
+                PackType.SERVER_DATA,
+                new PackSelectionConfig(true, Pack.Position.BOTTOM, false));
     }
 
     /** This mod's own jar (or classes directory in dev), or {@code null} if FML cannot name it. */

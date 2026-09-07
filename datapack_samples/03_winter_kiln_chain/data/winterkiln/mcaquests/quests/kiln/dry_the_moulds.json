@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "winterkiln:dry_the_moulds",
+  "weight": 8,
+  "category": "errand",
+  "difficulty": "easy",
+  "offer_group": "kiln_work",
+  "title": { "text": "Dry the Moulds" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["minecraft:mason"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "Dry weather and a spare hour — that is all a mould wants. Bring me eight bricks while the sky holds and they will set hard." },
+    "accept": { "text": "Quickly, mind. I do not like that cloud." },
+    "decline": { "text": "Sensible. It will rain before noon." },
+    "in_progress": { "text": "While it is dry. Only while it is dry." },
+    "ready": { "text": "Eight, and not a crack in them." },
+    "complete": { "text": "Set them under the eaves. Good work." },
+    "failed": { "text": "Rain. Of course it is rain. The moulds are slurry again." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:brick", "count": 8, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ],
+  "conditions": { "type": "mcaquests:weather", "weather": "CLEAR" },
+  "failure": {
+    "require_weather": "clear",
+    "failure_hearts": 0,
+    "retry_after": 6000
+  }
+}

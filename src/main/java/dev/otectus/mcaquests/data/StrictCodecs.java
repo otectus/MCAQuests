@@ -8,15 +8,15 @@ import com.mojang.serialization.MapLike;
 import com.mojang.serialization.RecordBuilder;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
  * Optional datapack fields that <b>report</b> a malformed value instead of quietly substituting the
  * default.
  *
- * <p>DataFixerUpper's {@code Codec.lenientOptionalFieldOf} cannot tell "absent" from "present but
- * invalid" — both yield the default. For a datapack format that is the wrong trade. A pack author
- * who writes
+ * <p>DataFixerUpper's {@code Codec.optionalFieldOf} cannot tell "absent" from "present but invalid" —
+ * both yield the default. For a datapack format that is the wrong trade. A pack author who writes
  *
  * <pre>{@code "recipients": "phase_contributers"}</pre>
  *
@@ -24,13 +24,30 @@ import java.util.stream.Stream;
  * symptom would be players saying the project "did not pay". Making absence lenient and malformation
  * loud is the whole point.
  *
- * <p>PORT: DFU 8 (1.21) turned {@code optionalFieldOf} strict and moved the old forgiving behaviour
- * to {@code lenientOptionalFieldOf}. This mod's fields default to the forgiving form, so
- * {@code strictOptional} stays the deliberate opt-in wherever malformation should be loud.
+ * <p>Minecraft 1.20.1 has no {@code ExtraCodecs.strictOptionalField}; later versions ship an
+ * equivalent and this class can be retired against them.
  */
 public final class StrictCodecs {
 
     private StrictCodecs() {
+    }
+
+    /**
+     * Loads a complete definition or reports its error. DFU partial values can omit invalid list
+     * entries, so accepting them can remove objectives or eligibility gates from authored content.
+     * A broken add-on codec is isolated to its resource just like an ordinary decoding error.
+     */
+    public static <A, T> Optional<A> parse(Codec<A> codec, DynamicOps<T> ops, T input,
+                                         Consumer<String> onError) {
+        DataResult<A> result;
+        try {
+            result = codec.parse(ops, input);
+        } catch (RuntimeException | LinkageError failure) {
+            onError.accept(failure.toString());
+            return Optional.empty();
+        }
+        result.error().ifPresent(error -> onError.accept(error.message()));
+        return result.result();
     }
 
     /** Absent → empty; present and valid → value; present and invalid → error naming the field. */

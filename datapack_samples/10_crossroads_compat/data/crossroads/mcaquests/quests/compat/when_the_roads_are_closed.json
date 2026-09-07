@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "id": "crossroads:when_the_roads_are_closed",
+  "weight": 10,
+  "category": "care",
+  "difficulty": "easy",
+  "offer_group": "crossroads_townstead",
+  "title": { "text": "Something Warm, Anyway" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["minecraft:fisherman", "minecraft:farmer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "Long day, empty stomach, and no one keeping count of either. Six loaves and I will not ask where they came from." },
+    "accept": { "text": "Good of you." },
+    "decline": { "text": "Fair enough." },
+    "in_progress": { "text": "Bread, when you get a moment." },
+    "ready": { "text": "That is the day rescued." },
+    "complete": { "text": "Thank you. Truly." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 6, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:compat_capability", "provider": "mca", "capability": "villagers" },
+      { "type": "mcaquests:compat_capability", "provider": "townstead", "capability": "read_needs", "present": false }
+    ]
+  }
+}

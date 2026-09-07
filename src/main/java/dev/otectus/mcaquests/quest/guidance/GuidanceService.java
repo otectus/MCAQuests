@@ -1,9 +1,9 @@
 package dev.otectus.mcaquests.quest.guidance;
 
-import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.network.QuestGuidanceS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.quest.QuestDefinition;
+import dev.otectus.mcaquests.quest.QuestManager;
 import dev.otectus.mcaquests.quest.TurnInMode;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
@@ -235,22 +235,19 @@ public final class GuidanceService {
         if (mode == TurnInMode.SELF_COMPLETE || mode == TurnInMode.ANY_VILLAGER) {
             return Focus.NONE;
         }
+        // A specified-profession hand-in may exclude the original giver. Only highlight a
+        // villager that the authoritative hand-in path will actually accept.
         if (!(level.getEntity(active.villagerUuid()) instanceof LivingEntity giver)
-                || !McaCompat.isMcaVillager(giver)) {
+                || !QuestManager.canTurnInAt(active, def, giver)) {
             return Focus.NONE;
         }
         return new Focus(Optional.of(GuidanceTarget.ofEntity(giver, GuidanceKind.VILLAGER,
                 active.villagerName())), Optional.of(giver));
     }
 
-    private static boolean isComplete(ServerPlayer player, ActiveQuest active, QuestDefinition def) {
-        List<QuestObjective> objectives = def.objectives();
-        for (int i = 0; i < objectives.size(); i++) {
-            if (!objectives.get(i).isSatisfied(player, active.progress(i))) {
-                return false;
-            }
-        }
-        return true;
+    static boolean isComplete(ServerPlayer player, ActiveQuest active, QuestDefinition def) {
+        // Readiness must include suspension and aggregate payment checks, just as the hand-in does.
+        return QuestManager.isComplete(player, def, active);
     }
 
     /** Sends {@code snapshot} to {@code player} if it differs from what they were last sent. */

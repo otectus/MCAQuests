@@ -45,7 +45,7 @@ public record QuestAbandonFromLogC2SPacket(UUID villagerUuid, ResourceLocation q
     }
 
     public static void handle(QuestAbandonFromLogC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player)) {
             return;
         }
         QuestManager.abandonFromLog(player, msg.villagerUuid, msg.questId);

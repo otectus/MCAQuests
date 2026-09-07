@@ -29,7 +29,7 @@ class CompatRegistryTest {
     }
 
     /** A provider with one present and one absent capability, counting its own re-probes. */
-    private static final class FakeProvider implements CompatProvider {
+    private static class FakeProvider implements CompatProvider {
 
         private int reprobes;
 
@@ -120,6 +120,22 @@ class CompatRegistryTest {
         CompatRegistry.get().reprobeAll("test", null);
         assertEquals(2, fake.reprobes);
         assertEquals(before + 2, CompatRegistry.get().reprobeCount());
+    }
+
+    @Test
+    void registrationOrderAndNamespacePrecedenceSurviveReplacement() {
+        CompatRegistry registry = CompatRegistry.get();
+        for (String id : List.of("zeta", "alpha", "omega", "beta")) {
+            registry.register(new FakeProvider() {
+                @Override public String id() { return id; }
+            });
+        }
+        registry.register(new FakeProvider() {
+            @Override public String id() { return "alpha"; }
+        });
+        assertEquals(List.of("fakemod", "zeta", "alpha", "omega", "beta"),
+                registry.providers().stream().map(CompatProvider::id).toList());
+        assertEquals("fakemod", registry.forNamespace("fakemod_extra").orElseThrow().id());
     }
 
     @Test

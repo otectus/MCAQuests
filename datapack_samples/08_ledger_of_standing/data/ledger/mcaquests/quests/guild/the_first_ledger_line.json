@@ -1,0 +1,32 @@
+{
+  "format_version": 1,
+  "id": "ledger:the_first_ledger_line",
+  "weight": 12,
+  "category": "guild",
+  "difficulty": "easy",
+  "offer_group": "guild_ledger",
+  "title": { "text": "The First Ledger Line" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:librarian", "minecraft:cartographer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "Everybody who works with us gets a line in the ledger, and everybody's first line is paper. Twenty-four sheets and four bound books, and I will write your name at the top of a page." },
+    "accept": { "text": "Your name, in ink, in a book that outlives us both." },
+    "decline": { "text": "The page will keep." },
+    "in_progress": { "text": "Paper, then books. The order matters to nobody but me." },
+    "ready": { "text": "Bound properly, too. You have done this before." },
+    "complete": { "text": "There. You are in the ledger. Everything after this is arithmetic." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:paper", "count": 24, "consume": true },
+    { "type": "mcaquests:craft_item", "item": "minecraft:book", "count": 4 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 4 },
+    { "type": "mcaquests:village_reputation", "amount": 25 },
+    { "type": "mcaquests:grant_title", "title": "ledger:apprentice_of_the_guild", "scope": "village" }
+  ]
+}

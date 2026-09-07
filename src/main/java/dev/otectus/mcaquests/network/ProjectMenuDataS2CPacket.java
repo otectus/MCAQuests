@@ -6,7 +6,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +34,6 @@ public record ProjectMenuDataS2CPacket(UUID villagerUuid, List<ProjectCard> card
 
     public static ProjectMenuDataS2CPacket decode(RegistryFriendlyByteBuf buf) {
         return new ProjectMenuDataS2CPacket(buf.readUUID(),
-                buf.readCollection(ArrayList::new, b -> ProjectCard.decode((RegistryFriendlyByteBuf) b)));
+                PacketCollections.readList(buf, b -> ProjectCard.decode((RegistryFriendlyByteBuf) b)));
     }
 }

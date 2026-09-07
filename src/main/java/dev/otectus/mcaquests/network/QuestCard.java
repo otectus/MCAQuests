@@ -5,7 +5,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -52,10 +51,9 @@ public record QuestCard(ResourceLocation questId, Component title, Component cha
                 NetComponents.read(buf),
                 NetComponents.read(buf),
                 NetComponents.read(buf),
-                buf.readCollection(ArrayList::new, b -> CardObjective.decode((RegistryFriendlyByteBuf) b)),
-                buf.readCollection(ArrayList::new, NetComponents::read),
-                buf.readCollection(ArrayList::new,
-                        b -> ItemStack.OPTIONAL_STREAM_CODEC.decode((RegistryFriendlyByteBuf) b)),
+                PacketCollections.readList(buf, b -> CardObjective.decode((RegistryFriendlyByteBuf) b)),
+                PacketCollections.readList(buf, NetComponents::read),
+                PacketCollections.readList(buf, b -> ItemStack.OPTIONAL_STREAM_CODEC.decode((RegistryFriendlyByteBuf) b)),
                 buf.readUtf());
     }
 }

@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.project;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -24,8 +26,8 @@ public record ProjectScopeSpec(ProjectScope scope, List<ResourceLocation> profes
 
     private static final Codec<ProjectScopeSpec> RECORD_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ProjectScope.CODEC.fieldOf("scope").forGetter(ProjectScopeSpec::scope),
-            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("professions", List.of()).forGetter(ProjectScopeSpec::professions),
-            Codec.INT.lenientOptionalFieldOf("fallback_radius").forGetter(ProjectScopeSpec::fallbackRadius)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "professions", List.of()).forGetter(ProjectScopeSpec::professions),
+            StrictCodecs.strictOptional(Codec.INT, "fallback_radius").forGetter(ProjectScopeSpec::fallbackRadius)
     ).apply(instance, ProjectScopeSpec::new));
 
     public static final Codec<ProjectScopeSpec> CODEC = Codec.either(ProjectScope.CODEC, RECORD_CODEC).xmap(

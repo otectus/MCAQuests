@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "id": "civicworks:the_bathhouse",
+  "enabled": true,
+  "weight": 10,
+  "title": { "text": "Raise the Bathhouse" },
+  "category": "infrastructure",
+  "scope": { "scope": "village", "fallback_radius": 64 },
+  "sponsor": {
+    "professions": ["minecraft:mason"],
+    "required_count": 1,
+    "adult_only": true,
+    "on_death": "transfer"
+  },
+  "reputation": { "on_phase_complete": 3, "on_project_complete": 12, "on_fail": -4 },
+  "follow_up": "civicworks:the_aqueduct",
+  "phases": [
+    {
+      "key": "gather_stone",
+      "dialogue": {
+        "offer": { "text": "Every village I have ever seen has a bathhouse except this one. Stone and two cauldrons and I will build it myself." },
+        "in_progress": { "text": "Stone in the yard, cauldrons by the door. We are getting there." }
+      },
+      "objectives": [
+        { "type": "mcaquests:donate_item", "item": "minecraft:stone", "count": 128, "per_player_cap": 64 },
+        { "type": "mcaquests:donate_item", "item": "minecraft:cauldron", "count": 2 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:xp", "amount": 30 }, "target": "contributors" }
+      ]
+    },
+    {
+      "key": "raise_the_walls",
+      "unlock": { "type": "mcaquests:village_reputation", "min": 5 },
+      "dialogue": {
+        "offer": { "text": "Now the walls. Smooth courses, and no windows on the north side." },
+        "in_progress": { "text": "Mind the corners. People will look at those corners for a century." }
+      },
+      "objectives": [
+        { "type": "mcaquests:project_place_block", "block": "minecraft:stone_bricks", "count": 48 },
+        { "type": "mcaquests:project_place_block", "block": "minecraft:campfire", "count": 2 }
+      ],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_sponsor", "amount": 8 }, "target": "contributors" },
+        { "reward": { "type": "mcaquests:item", "item": "minecraft:emerald", "count": 6 }, "target": "top_contributor" }
+      ]
+    },
+    {
+      "key": "opening_day",
+      "dialogue": {
+        "offer": { "text": "It is done. Everybody in, and mind the hot side." },
+        "in_progress": { "text": "Everybody in." }
+      },
+      "objectives": [],
+      "rewards": [
+        { "reward": { "type": "mcaquests:hearts_with_participants", "amount": 10, "include_residents": true }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:effect", "effect": "minecraft:regeneration", "duration": 1200, "amplifier": 0 }, "target": "all_participants" },
+        { "reward": { "type": "mcaquests:village_reputation", "amount": 6 }, "target": "sponsor_village" }
+      ]
+    }
+  ]
+}

@@ -7,10 +7,14 @@ import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.compat.capitals.CapitalRole;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.support.TestBootstrap;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -87,6 +91,15 @@ class CapitalRewardsTest {
     }
 
     @Test
+    @DisplayName("female_title rejects malformed fields and titles Capitals cannot grant")
+    void invalidFemaleTitleIsNotSilentlyDropped() {
+        assertTrue(error("{\"type\":\"mcaquests:capital_title\",\"title\":\"knight\",\"female_title\":{}}")
+                .contains("female_title"));
+        assertTrue(error("{\"type\":\"mcaquests:capital_title\",\"title\":\"knight\",\"female_title\":\"queen\"}")
+                .contains("unknown female_title 'queen'"));
+    }
+
+    @Test
     @DisplayName("capital_chronicle keeps its key and heralds by default")
     void chronicleCodec() {
         CapitalChronicleReward reward = assertInstanceOf(CapitalChronicleReward.class,
@@ -95,8 +108,31 @@ class CapitalRewardsTest {
 
         assertEquals("mcaquests.chronicle.capitals.royal_escort", reward.key());
         assertTrue(reward.herald());
+        assertEquals(Optional.empty(), reward.fallback());
         assertFalse(((CapitalChronicleReward) parse("{\"type\":\"mcaquests:capital_chronicle\","
                 + "\"key\":\"k\",\"herald\":false}")).herald());
+    }
+
+    @Test
+    @DisplayName("chronicle entries render bundled translations on a dedicated server")
+    void chronicleUsesBundledTextWithoutClientLanguage() {
+        CapitalChronicleReward reward = new CapitalChronicleReward(
+                "mcaquests.chronicle.capitals.royal_escort", true);
+        String entry = reward.entryText("Alex", "Oakvale");
+        assertTrue(entry.contains("Alex"), entry);
+        assertTrue(entry.contains("Oakvale"), entry);
+        assertFalse(entry.contains("mcaquests.chronicle."), entry);
+    }
+
+    @Test
+    @DisplayName("custom chronicle rewards can provide server fallback text")
+    void chronicleCustomFallback() {
+        CapitalChronicleReward reward = (CapitalChronicleReward) parse(
+                "{\"type\":\"mcaquests:capital_chronicle\",\"key\":\"example:service\","
+                        + "\"fallback\":\"%s served %s faithfully.\"}");
+        assertEquals("Alex served Oakvale faithfully.", reward.entryText("Alex", "Oakvale"));
+        assertTrue(error("{\"type\":\"mcaquests:capital_chronicle\",\"key\":\"example:service\",\"fallback\":{}}")
+                .contains("fallback"));
     }
 
     @Test
@@ -122,5 +158,33 @@ class CapitalRewardsTest {
         assertEquals(VillagerTarget.Mode.CAPITAL_ROLE, reward.villager().mode());
         assertEquals(Optional.of(CapitalRole.HEIR), reward.villager().role());
         assertEquals("DAME", reward.nobleTitleConstant(true));
+    }
+
+    @Test
+    @DisplayName("villager title rewards validate target requirements during decoding")
+    void villagerTitleRejectsUnresolvableTargets() {
+        for (String target : new String[]{"{\"mode\":\"capital_role\"}",
+                "{\"mode\":\"capital_role\",\"role\":\"archduke\"}", "{\"mode\":\"uuid\"}",
+                "{\"mode\":\"profession\"}", "{\"mode\":\"family\",\"relation\":\"cousin\"}"}) {
+            assertTrue(error("{\"type\":\"mcaquests:capital_villager_title\",\"villager\":"
+                    + target + ",\"title\":\"knight\"}").contains("capital_villager_title"), target);
+        }
+    }
+
+    @Test
+    @DisplayName("a title's giver or explicit recipient need not be loaded when the reward lands")
+    void persistentRecipientsDoNotNeedLoadedEntities() {
+        UUID originalGiver = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID explicitRecipient = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        QuestReward.RewardContext context = new QuestReward.RewardContext(originalGiver,
+                Component.literal("Original giver"), ResourceLocation.parse("minecraft:the_nether"),
+                OptionalInt.of(1), ResourceLocation.parse("mcaquests:test"));
+        CapitalVillagerTitleReward self = (CapitalVillagerTitleReward) parse(
+                "{\"type\":\"mcaquests:capital_villager_title\",\"title\":\"lord\"}");
+        CapitalVillagerTitleReward explicit = (CapitalVillagerTitleReward) parse(
+                "{\"type\":\"mcaquests:capital_villager_title\",\"title\":\"lord\","
+                        + "\"villager\":{\"mode\":\"uuid\",\"uuid\":\"" + explicitRecipient + "\"}}");
+        assertEquals(Optional.of(originalGiver), self.recipientUuid(null, null, null, context, null));
+        assertEquals(Optional.of(explicitRecipient), explicit.recipientUuid(null, null, null, context, null));
     }
 }

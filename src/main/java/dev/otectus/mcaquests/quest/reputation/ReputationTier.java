@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.reputation;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
@@ -18,6 +20,6 @@ public record ReputationTier(String id, int threshold, String name, Optional<Res
             Codec.STRING.fieldOf("id").forGetter(ReputationTier::id),
             Codec.INT.fieldOf("threshold").forGetter(ReputationTier::threshold),
             Codec.STRING.fieldOf("name").forGetter(ReputationTier::name),
-            ResourceLocation.CODEC.lenientOptionalFieldOf("grants_title").forGetter(ReputationTier::grantsTitle)
+            StrictCodecs.strictOptional(ResourceLocation.CODEC, "grants_title").forGetter(ReputationTier::grantsTitle)
     ).apply(instance, ReputationTier::new));
 }

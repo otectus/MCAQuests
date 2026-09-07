@@ -8,13 +8,19 @@ import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcaquests.state.VillageStanding;
 import dev.otectus.mcareputation.api.LegacyImportProvider;
 import dev.otectus.mcareputation.api.LegacyImportRequest;
+import dev.otectus.mcareputation.api.McaReputationApi;
 import dev.otectus.mcareputation.community.CommunityKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Hands MCA: Reputation the standing a pre-Reputation Quests world already had (spec §32.2).
@@ -26,6 +32,10 @@ import java.util.Set;
  * not invent deeds. Each legacy village score becomes a non-decaying <b>baseline</b> with no incident
  * attached, which preserves the number the player used to see while making everything from that point
  * on correct and per player.
+ *
+ * <p>Current Quests saves already have a per-player, dimension-aware v2 snapshot. That snapshot takes
+ * precedence over the retained v1 tags. Communities already present in Reputation are excluded because
+ * the Quests snapshot can be their fallback mirror; importing it again would double their score.
  *
  * <h2>Who is eligible</h2>
  *
@@ -40,10 +50,8 @@ import java.util.Set;
  */
 public final class QuestsLegacyImportProvider implements LegacyImportProvider {
 
-    /** The marker written on success; the same string forever, since it means "v1 has been read". */
+    /** Stable across snapshot versions so an existing successful import is never replayed. */
     public static final String SOURCE_ID = "mcaquests:legacy_reputation_v1";
-
-    private static final ResourceLocation LEGACY_DIMENSION = ResourceLocation.withDefaultNamespace("overworld");
 
     @Override
     public String providerName() {
@@ -55,11 +63,9 @@ public final class QuestsLegacyImportProvider implements LegacyImportProvider {
     public Optional<LegacyImportRequest> buildRequest(MinecraftServer server, ServerPlayer player,
                                                       boolean force) {
         ProjectSavedData data = ProjectSavedData.get(server);
-        Set<String> legacyKeys = data.reputationKeys();
-        if (legacyKeys.isEmpty()) {
-            return Optional.empty();
-        }
-        if (!force && !isEligible(player)) {
+        boolean eligible = force || isEligible(player);
+        boolean hasCurrent = !data.standing().communities(player.getUUID()).isEmpty();
+        if (!hasCurrent && !eligible) {
             McaQuests.LOGGER.debug("[MCA: Quests] {} has no pre-Reputation Quests history; starting at 0 "
                     + "rather than inheriting the world's shared legacy standing",
                     player.getGameProfile().getName());
@@ -68,36 +74,37 @@ public final class QuestsLegacyImportProvider implements LegacyImportProvider {
 
         LegacyImportRequest.Builder request = LegacyImportRequest
                 .builder(server, player.getUUID(), SOURCE_ID)
-                .version("1");
+                .version(hasCurrent ? "2" : "1");
 
-        int communities = 0;
-        for (String identity : legacyKeys) {
-            Optional<Integer> villageId = VillageStanding.parseLegacyVillageId(identity);
-            if (villageId.isEmpty()) {
-                continue; // a non-village scope identity; not standing with a community
-            }
-            Optional<CommunityKey> community = CommunityKey.of(LEGACY_DIMENSION, villageId.get());
-            if (community.isEmpty()) {
-                continue;
-            }
-            int score = data.reputation(identity);
-            if (score != 0) {
-                request.baseline(community.get(), score);
-                communities++;
-            }
-            String highWater = data.tierHighWater(identity);
-            if (highWater != null && !highWater.isBlank()) {
-                request.tierHighWater(community.get(), ReputationTiers.DEFAULT_ID, highWater);
-            }
-            dev.otectus.mcaquests.compat.McaCompat.villageName(server.overworld(), villageId.get())
-                    .ifPresent(name -> request.communityName(community.get(), name));
-            copyTitles(player, community.get(), request);
+        Map<String, Integer> sharedScores = new LinkedHashMap<>();
+        Map<String, String> sharedHighWater = new LinkedHashMap<>();
+        for (String identity : data.reputationKeys()) {
+            sharedScores.put(identity, data.reputation(identity));
+            sharedHighWater.put(identity, data.tierHighWater(identity));
         }
-
-        if (communities == 0) {
-            return Optional.empty();
+        Set<String> canonical = McaReputationApi.knownCommunities(server, player.getUUID()).stream()
+                .map(CommunityKey::asString).collect(Collectors.toSet());
+        var selected = QuestsStandingImport.select(data.standing(), player.getUUID(), sharedScores,
+                sharedHighWater, eligible, canonical);
+        for (var entry : selected.entrySet()) {
+            var identity = entry.getKey();
+            var snapshot = entry.getValue();
+            CommunityKey community = new CommunityKey(identity.dimension(), identity.villageId());
+            // Keep zero-score communities too: they can carry earned titles and a previous best tier.
+            request.baseline(community, snapshot.score());
+            snapshot.highWater().ifPresent(tier ->
+                    request.tierHighWater(community, ReputationTiers.DEFAULT_ID, tier));
+            snapshot.titles().forEach(title -> request.villageTitle(community, title));
+            ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, identity.dimension()));
+            if (level != null) {
+                dev.otectus.mcaquests.compat.McaCompat.villageName(level, identity.villageId())
+                        .ifPresent(name -> request.communityName(community, name));
+            }
+            copyTitles(player, community, request);
         }
-        return Optional.of(request.build());
+        QuestCapabilities.get(player).ifPresent(quests -> quests.titles().global().forEach(request::globalTitle));
+        LegacyImportRequest built = request.build();
+        return built.hasAnything() ? Optional.of(built) : Optional.empty();
     }
 
     /** Village and global titles the player already holds, so migration does not cost them a badge. */

@@ -11,18 +11,13 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
-
-import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
  * {@code mcaquests:hearts} (spec §15.9) — has the player earned {@code hearts} relationship points with
  * an MCA villager? {@code spouse_only} narrows the check to the player's spouse specifically, using the
- * sanctioned simpler check: among loaded villagers within the config scan radius, is the
- * <em>best-hearts</em> one the player's spouse and at/above the threshold (rather than separately
- * locating the spouse entity — one bounded scan either way, and a player is realistically closest with
- * their own spouse).
+ * same bounded scan after filtering to spouses. A friend with more hearts must not hide a qualifying
+ * spouse who is also within the configured radius.
  *
  * <p><b>Performance contract</b> (spec §15.9): the MCA scan behind this check only ever runs from this
  * task's own poll — {@link McaBooleanTaskBase#autoSubmitOnPlayerTick()} (default every 5s) — because
@@ -51,12 +46,8 @@ public class McaHeartsTask extends McaBooleanTaskBase {
     @Override
     protected boolean check(ServerPlayer player) {
         double radius = McaQuestsConfig.COMMON.ftbqHeartsScanRadius.get();
-        if (spouseOnly) {
-            Optional<Entity> best = McaCompat.bestHeartsVillagerWithin(player, radius);
-            return best.filter(villager -> McaCompat.isPlayerSpouse(player, villager)
-                    && McaCompat.getHearts(player, villager) >= hearts).isPresent();
-        }
-        OptionalInt max = McaCompat.maxHeartsWithin(player, radius);
+        OptionalInt max = spouseOnly ? McaCompat.maxSpouseHeartsWithin(player, radius)
+                : McaCompat.maxHeartsWithin(player, radius);
         return max.isPresent() && max.getAsInt() >= hearts;
     }
 

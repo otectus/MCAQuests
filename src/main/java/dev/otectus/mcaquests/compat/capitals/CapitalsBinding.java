@@ -30,7 +30,7 @@ import java.util.Set;
  *
  * <h2>Capabilities, not a boolean</h2>
  *
- * <p>Each {@link Member} belongs to exactly one capability. A capability is bound only when every
+ * <p>Each {@link Member} declares the capabilities that require it. A capability is bound only when every
  * required member it declares bound, so one moved data accessor in a Capitals point release disables
  * exactly the feature that read it — the chronicle reward stops being granted, and the throne quests
  * carry on.
@@ -75,9 +75,11 @@ public final class CapitalsBinding {
         private final int arity;
         private final CapitalsCapability capability;
         private final boolean optional;
+        private final Set<CapitalsCapability> requiredBy;
 
         private Member(Kind kind, String ownerRelative, String name, Class<?> returnType, int arity,
-                       CapitalsCapability capability, boolean optional) {
+                       CapitalsCapability capability, boolean optional,
+                       CapitalsCapability... additionalCapabilities) {
             this.kind = kind;
             this.ownerRelative = ownerRelative;
             this.name = name;
@@ -85,11 +87,18 @@ public final class CapitalsBinding {
             this.arity = arity;
             this.capability = capability;
             this.optional = optional;
+            this.requiredBy = optional ? Set.of()
+                    : Collections.unmodifiableSet(EnumSet.of(capability, additionalCapabilities));
         }
 
-        /** The capability this member belongs to. Never null: nothing here is core-without-capability. */
+        /** The primary capability this member belongs to. */
         public CapitalsCapability capability() {
             return capability;
+        }
+
+        /** Capabilities disabled when this member cannot bind or fails at runtime. */
+        public Set<CapitalsCapability> requiredBy() {
+            return requiredBy;
         }
 
         /** The owner, relative to {@link #PACKAGE}. */
@@ -147,8 +156,9 @@ public final class CapitalsBinding {
     }
 
     private static Member statik(String ownerRelative, String name, Class<?> ret, int arity,
-                                 CapitalsCapability capability) {
-        return new Member(Kind.STATIC, ownerRelative, name, ret, arity, capability, false);
+                                 CapitalsCapability capability, CapitalsCapability... additionalCapabilities) {
+        return new Member(Kind.STATIC, ownerRelative, name, ret, arity, capability, false,
+                additionalCapabilities);
     }
 
     /** A {@link Member#optional() best-effort} static; see that method for when this is right. */
@@ -213,7 +223,8 @@ public final class CapitalsBinding {
     public static final Member CAPITAL_BY_ID = statik(O_MANAGER, "getCapital", Object.class, 1, REGISTRY);
     public static final Member CAPITAL_LEVEL = statik(O_MANAGER, "getCapitalLevel", Object.class, 2, REGISTRY);
     public static final Member CAPITAL_OF_RESIDENT = statik(O_MANAGER, "getCapitalForResident", Object.class, 1, REGISTRY);
-    public static final Member MARK_DIRTY = statik(O_DATA, "markDirty", void.class, 1, REGISTRY);
+    // Persistence is shared by these record mutations; read-only registry queries do not need it.
+    public static final Member MARK_DIRTY = statik(O_DATA, "markDirty", void.class, 1, CHRONICLE, VILLAGER_TITLES);
     public static final Member REC_CAPITAL_ID = virtual(O_RECORD, "getCapitalId", Object.class, 0, REGISTRY);
     public static final Member REC_VILLAGE_ID = virtual(O_RECORD, "getVillageId", Object.class, 0, REGISTRY);
     public static final Member REC_DIMENSION = virtual(O_RECORD, "getVillageDimensionId", String.class, 0, REGISTRY);
@@ -251,6 +262,10 @@ public final class CapitalsBinding {
     public static final Member REC_IS_DISINHERITED = optionalVirtual(O_RECORD, "isDisinheritedRoyalChild", boolean.class, 1, ROLES);
     public static final Member REC_IS_LEGITIMIZED = optionalVirtual(O_RECORD, "isLegitimizedRoyalChild", boolean.class, 1, ROLES);
     public static final Member REC_IS_DISGRACED_GUARD = optionalVirtual(O_RECORD, "isDisgracedRoyalGuard", boolean.class, 1, ROLES);
+    public static final Member REC_HOUSEHOLD = optionalVirtual(O_RECORD, "getRoyalHousehold", Object.class, 0, ROLES);
+    public static final Member REC_DISINHERITED = optionalVirtual(O_RECORD, "getDisinheritedRoyalChildren", Object.class, 0, ROLES);
+    public static final Member REC_LEGITIMIZED = optionalVirtual(O_RECORD, "getLegitimizedRoyalChildren", Object.class, 0, ROLES);
+    public static final Member REC_DISGRACED_GUARDS = optionalVirtual(O_RECORD, "getDisgracedRoyalGuards", Object.class, 0, ROLES);
 
     /** The ambassador is the one office Capitals keeps off the record, in its diplomacy store. */
     public static final Member AMBASSADOR = statik(O_AMBASSADOR, "getAmbassador", Object.class, 2, ROLES);
@@ -309,6 +324,7 @@ public final class CapitalsBinding {
             REC_IS_ROYAL_CHILD, REC_IS_DUKE, REC_IS_LORD, REC_IS_KNIGHT, REC_IS_ROYAL_GUARD,
             REC_ROYAL_CHILDREN, REC_DUKES, REC_LORDS, REC_KNIGHTS, REC_ROYAL_GUARDS,
             REC_IS_HOUSEHOLD, REC_IS_DISINHERITED, REC_IS_LEGITIMIZED, REC_IS_DISGRACED_GUARD,
+            REC_HOUSEHOLD, REC_DISINHERITED, REC_LEGITIMIZED, REC_DISGRACED_GUARDS,
             AMBASSADOR,
             REC_IS_PLAYER_SOVEREIGN, REC_IS_PLAYER_CONSORT, REC_PLAYER_SOVEREIGN_ID,
             REC_PLAYER_CONSORT_ID, GRANTED_TITLE, PLAYER_IS_HAND, PLAYER_IS_COMMANDER,
@@ -332,7 +348,7 @@ public final class CapitalsBinding {
             // Required members only: a capability whose every member were optional could never be
             // found missing, and would report as bound on a Capitals that has none of it.
             if (!member.optional) {
-                declared.add(member.capability);
+                declared.addAll(member.requiredBy);
             }
         }
         return Collections.unmodifiableSet(declared);
@@ -412,6 +428,12 @@ public final class CapitalsBinding {
         return new Resolution(CompatStatus.ABSENT, Set.of(), Map.of(), Map.of(), List.of());
     }
 
+    /** Installed according to Forge, but even the probe class could not load. */
+    public static Resolution unavailable() {
+        return new Resolution(CompatStatus.PARTIAL, Set.of(), Map.of(), Map.of(),
+                MANIFEST.stream().filter(member -> !member.optional()).map(Member::toString).toList());
+    }
+
     /**
      * Resolves the whole manifest against {@code loader}. Never throws: every failure is recorded and
      * turned into a stub.
@@ -462,7 +484,7 @@ public final class CapitalsBinding {
         EnumSet<CapitalsCapability> bound = EnumSet.copyOf(DECLARED_CAPABILITIES);
         for (Member member : MANIFEST) {
             if (!member.optional && !resolved.containsKey(member) && !types.containsKey(member)) {
-                bound.remove(member.capability);
+                bound.removeAll(member.requiredBy);
             }
         }
 
@@ -512,16 +534,25 @@ public final class CapitalsBinding {
      */
     @Nullable
     private static MethodHandle bindMethod(MethodHandles.Lookup lookup, Method[] candidates, Member member) {
+        Method match = null;
         for (Method candidate : candidates) {
             if (!candidate.getName().equals(member.name)
                     || candidate.getParameterCount() != member.arity
                     || Modifier.isStatic(candidate.getModifiers()) != (member.kind == Kind.STATIC)) {
                 continue;
             }
+            // A new overload with this same erased key is ambiguous. Never guess at a mutation's
+            // parameter ordering based on getMethods(), whose iteration order is unspecified.
+            if (match != null) {
+                return null;
+            }
+            match = candidate;
+        }
+        if (match != null) {
             try {
-                candidate.setAccessible(true);
-                return lookup.unreflect(candidate).asType(member.erasedType());
-            } catch (Throwable t) {
+                match.setAccessible(true);
+                return lookup.unreflect(match).asType(member.erasedType());
+            } catch (Throwable ignored) {
                 return null;
             }
         }

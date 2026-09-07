@@ -37,7 +37,7 @@ public record QuestDecisionC2SPacket(UUID villagerUuid, ResourceLocation questId
     }
 
     public static void handle(QuestDecisionC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player)) {
             return;
         }
         QuestManager.acceptFromPacket(player, msg.villagerUuid, msg.questId, msg.accept);

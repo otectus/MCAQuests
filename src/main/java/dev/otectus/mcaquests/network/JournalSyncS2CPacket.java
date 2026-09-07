@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,11 +37,9 @@ public record JournalSyncS2CPacket(List<Component> globalTitles, List<JournalVil
     }
 
     public static JournalSyncS2CPacket decode(RegistryFriendlyByteBuf buf) {
-        List<Component> globalTitles = buf.readCollection(ArrayList::new, NetComponents::read);
-        List<JournalVillageEntry> villages = buf.readCollection(ArrayList::new,
-                b -> JournalVillageEntry.decode((RegistryFriendlyByteBuf) b));
-        List<JournalArchiveEntry> archive = buf.readCollection(ArrayList::new,
-                b -> JournalArchiveEntry.decode((RegistryFriendlyByteBuf) b));
+        List<Component> globalTitles = PacketCollections.readList(buf, NetComponents::read);
+        List<JournalVillageEntry> villages = PacketCollections.readList(buf, b -> JournalVillageEntry.decode((RegistryFriendlyByteBuf) b));
+        List<JournalArchiveEntry> archive = PacketCollections.readList(buf, b -> JournalArchiveEntry.decode((RegistryFriendlyByteBuf) b));
         boolean reputationPresent = buf.readBoolean();
         return new JournalSyncS2CPacket(globalTitles, villages, archive, reputationPresent);
     }

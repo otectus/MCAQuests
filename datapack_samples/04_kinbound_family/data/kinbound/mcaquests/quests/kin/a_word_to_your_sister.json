@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "id": "kinbound:a_word_to_your_sister",
+  "weight": 12,
+  "category": "relations",
+  "difficulty": "easy",
+  "offer_group": "kin_errand",
+  "title": { "text": "A Word to Your Sister" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 48000 },
+  "giver": {
+    "adult_only": true,
+    "min_hearts": 10
+  },
+  "dialogue": {
+    "offer": { "text": "We have not spoken since midsummer and I am too proud to cross the square. Put this in her hand, would you, and do not read it." },
+    "accept": { "text": "Her hand. Not her doorstep." },
+    "decline": { "text": "Quite right. It is not your quarrel." },
+    "in_progress": { "text": "She will be at the well about now." },
+    "ready": { "text": "You gave it to her? And she read it?" },
+    "complete": { "text": "She is coming for supper. Nineteen years and she is coming for supper." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": { "mode": "family", "relation": "sibling", "require": "same_village" },
+      "item": "minecraft:paper",
+      "count": 1,
+      "consume": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency" },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "conditions": {
+    "all_of": [
+      { "type": "mcaquests:related_villager_status", "relation": "sibling", "status": "same_village" },
+      { "type": "mcaquests:village_member", "value": true }
+    ]
+  }
+}

@@ -48,6 +48,14 @@ public final class ProjectReputation {
     public static int apply(MinecraftServer server, ServerLevel level, ProjectState state,
                             ProjectDefinition def, ReputationOutcome outcome, String outcomeKey,
                             int phaseIndex) {
+        return applyTo(server, level, state, def, outcome, outcomeKey, phaseIndex,
+                recipients(state, outcome.recipients(), phaseIndex));
+    }
+
+    /** Applies a shared reward to its exact recipient set, including a single top contributor. */
+    public static int applyTo(MinecraftServer server, ServerLevel level, ProjectState state,
+                               ProjectDefinition def, ReputationOutcome outcome, String outcomeKey,
+                               int phaseIndex, java.util.Collection<UUID> recipients) {
         if (outcome.isNoOp()) {
             return 0;
         }
@@ -61,15 +69,15 @@ public final class ProjectReputation {
             return 0;
         }
 
-        Set<UUID> recipients = recipients(state, outcome.recipients(), phaseIndex);
         if (recipients.isEmpty()) {
             return 0;
         }
         int credited = 0;
         for (UUID recipient : recipients) {
+            String instance = state.key().asString() + ":" + state.startGameTime();
             String dedupeKey = phaseIndex >= 0
-                    ? ReputationDedupe.projectPhase(def.id(), state.key().asString(), phaseIndex, recipient)
-                    : ReputationDedupe.projectOutcome(def.id(), state.key().asString(), outcomeKey, recipient);
+                    ? ReputationDedupe.projectPhase(def.id(), instance + ":" + outcomeKey, phaseIndex, recipient)
+                    : ReputationDedupe.projectOutcome(def.id(), instance, outcomeKey, recipient);
             ReputationAward.Builder award = ReputationAward
                     .builder(server, recipient, community.get().dimension(), community.get().villageId(),
                             QuestReputation.SOURCE)
@@ -114,7 +122,10 @@ public final class ProjectReputation {
         if (villageId.isEmpty()) {
             return Optional.empty();
         }
-        ServerLevel resolved = level != null ? level : server.overworld();
+        ServerLevel resolved = level != null && level.dimension().location().equals(state.anchorDimension())
+                ? level : server.getLevel(net.minecraft.resources.ResourceKey.create(
+                        net.minecraft.core.registries.Registries.DIMENSION, state.anchorDimension()));
+        if (resolved == null) { return Optional.empty(); }
         return Optional.of(QuestReputation.inLevel(resolved, villageId.getAsInt()));
     }
 }

@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
 import dev.otectus.mcaquests.data.StrictCodecs;
@@ -61,13 +62,20 @@ public record CapitalAllegianceCondition(Match match, boolean present) implement
 
     @Override
     public boolean test(QuestContext context) {
+        if (!CapitalsCompat.bridge().has(CapitalsCapability.ALLEGIANCE)
+                || match == Match.GIVER && !CapitalsCompat.bridge().has(CapitalsCapability.REGISTRY)
+                || context.player() == null) {
+            return false;
+        }
         Optional<UUID> declared = CapitalsCompat.bridge()
                 .declaredAllegiance(context.level(), context.player().getUUID());
         boolean sworn = declared.isPresent() && (match == Match.ANY
                 || CapitalsQueries.giverCapital(context.villager())
                         .map(cap -> cap.capitalId().equals(declared.get()))
                         .orElse(false));
-        return sworn == present;
+        return CapitalsCompat.bridge().has(CapitalsCapability.ALLEGIANCE)
+                && (match == Match.ANY || CapitalsCompat.bridge().has(CapitalsCapability.REGISTRY))
+                && sworn == present;
     }
 
     @Override

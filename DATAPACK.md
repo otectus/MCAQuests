@@ -1,5 +1,11 @@
 # MCA: Quests — Datapack Format
 
+> Stabilization note: omitted optional fields retain their documented defaults, but malformed
+> quest/project rules and partially decoded definitions are rejected as a whole. In lenient mode
+> the affected resource is skipped and logged; strict validation rejects the reload. Correct the
+> reported field and reload to restore paused quests. Existing valid datapacks need no migration.
+
+
 Quests are data-driven. Drop JSON files into a datapack (or this mod's bundled data) at:
 
 ```
@@ -37,12 +43,12 @@ You don't need to make a mod — quests load from any datapack. To add your own 
 
    Use **your own namespace** for the folder under `data/` (here, `mypack`) and for each quest's `id` (`mypack:wood_run`). Don't reuse `mcaquests` — that's the bundled pack, and a same-id quest would collide. Subfolders under `quests/` (like `errands/`) are organizational only.
 
-2. **Add `pack.mcmeta`** (the `pack_format` for 1.21.1 is `34`; supported formats are 34–48):
+2. **Add `pack.mcmeta`** (the `pack_format` for a standalone 1.21.1 datapack is `48`). A folder that also ships an `assets/` half — so it doubles as a resource pack — needs `"supported_formats"` to span both formats (`34` for resources, `48` for data); either format can be the primary `pack_format`, as shown by this mod's own combined pack declaring `34` with `[34, 48]` (`src/main/resources/pack.mcmeta`) alongside `datapack_samples/02_market_day_templates/pack.mcmeta`, which declares `48` with the same range.
 
    ```json
    {
      "pack": {
-       "pack_format": 34,
+       "pack_format": 48,
        "description": "My MCA quests"
      }
    }
@@ -524,7 +530,9 @@ minimap installed at all.
 
 ## Rewards
 
-Granted atomically on turn-in (items insert-or-drop, then XP, effects, loot, and MCA hearts).
+Granted after turn-in inventory validation and the completion claim guard (items insert-or-drop,
+then XP, effects, loot, and MCA hearts). A broken reward is reported without preventing later
+rewards; arbitrary command or add-on side effects cannot be rolled back as an inventory transaction.
 
 | `type` | Fields | Notes |
 |---|---|---|
@@ -1188,6 +1196,20 @@ conditions naming unknown tiers.
 
 ---
 
+### Large item payouts
+
+Item and currency rewards preserve their full calculated amount while sharing a limit of 16 immediate
+stacks per player per game tick. Any remainder is saved on the player and announced in chat. While the player is alive,
+up to 16 stacks of queued rewards are inserted into available inventory space each second; make
+room to collect the rest. The queue survives logout and respawn, and keeps rewards for an absent
+item registry ID until the owning mod returns. Ordinary small payouts retain their existing
+inventory/drop behavior.
+
+Pending project rewards also keep the original instance identity, anchor dimension, and frozen
+payout. Missing definitions or unreadable saved entries are retained for recovery. Restoring
+content can make those entries deliverable again; a later reset or retry cannot claim ownership
+of a newer snapshot that was saved for an earlier instance.
+
 ## Village projects
 
 A **project** is a shared, multi-stage community goal that several players contribute to at once.
@@ -1227,7 +1249,7 @@ available project show the extra button.
 | `conditions` | object | no | none | Gate on whether the project is available at all. Reuses the **existing** quest [condition tree](#conditions). |
 | `reputation` | object | no | all `0` | Mod-side village reputation deltas. See [Reputation](#reputation-deltas). |
 | `follow_up` | resource location | no | none | Another project id seeded in the **same scope** when this one completes. |
-| `failure` | object | no | none | Same [`failure`](#failure--deadlines) block as quests. |
+| `failure` | object | no | none | Shared project deadlines, weather and sponsor-loss rules; see below. |
 | `phases` | array | **yes** | — | One or more phases, run **in order**. Non-empty. See [Phases](#phases). |
 
 ### Scope
@@ -1277,10 +1299,34 @@ villager dies. Omit it for "any adult villager".
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `professions` | list of resource locations | empty = **any** adult villager | Villager professions that may sponsor. |
-| `required_count` | int | `1` | How many eligible sponsors are needed. |
+| `required_count` | int | `1` | Desired sponsor count displayed on the project card; contributions are allowed before it is reached. |
 | `adult_only` | bool | `true` | Children never sponsor when `true`. |
 | `pinned_sponsors` | list of UUIDs | — | Specific villagers that always sponsor (by UUID). |
 | `on_death` | enum | config `defaultSponsorDeathBehavior` (`pause`) | What happens when the sponsor dies: `fail`, `pause`, `transfer` (hand off to another eligible villager), or `turn_in_to_village`. |
+
+### Shared failure and retry rules
+
+Projects accept the [failure fields](#failure--deadlines) used by quests, with shared-project
+semantics. `deadline_ticks`, `deadline_time`, and `require_weather` are checked before accepting
+contributions and while polling active projects. The clock starts when the instance is created;
+an older save without a failure clock starts one on its first eligible check. A completed final
+phase is protected from a subsequent deadline check.
+
+`fail_on_giver_death` and `fail_on_target_lost` refer to the project's bound sponsors: the death of
+any bound sponsor fails the shared instance when either option is enabled. Otherwise,
+`sponsor.on_death` controls loss of the last sponsor. Failure records the terminal state once,
+applies `failure_hearts` between participants and sponsors (banking offline hearts), applies
+`reputation.on_fail`, fires the project failure event, and notifies online participants.
+
+`retry_after` permits a fresh instance after that many ticks; omission permits an immediate
+fresh attempt. `block_retry` prevents retry. This differs from individual quests, whose omitted
+`retry_after` follows their repeat rule. Old failed project records without a retry timestamp
+remain terminal rather than being unexpectedly restarted by an upgrade. A new attempt does not
+inherit contributions or redirect rewards owed by the old instance.
+
+Paused instances, missing definitions or dimensions, changed scopes, disabled projects, and unavailable
+required integrations freeze deadline time. Restore the original definition or capability to
+resume. `follow_up` and `unlock` reward targets must have the same scope as their source project.
 
 ### Reputation deltas
 
@@ -1439,8 +1485,8 @@ Projects add a `projects` block to the common config plus two client keys (full 
 At load, projects are validated; problems are listed by `/mcaquests project validate`, and with
 `strictJsonValidation = true` hard errors abort the load. Checks include:
 
-- **Errors:** unknown scope / objective / reward type ids (codec), no `phases`, a `follow_up` pointing
-  at an unknown or disabled project, and circular `follow_up` chains.
+- **Errors:** unknown scope / objective / reward type ids (codec), no `phases`, a `follow_up` or `unlock`
+  pointing at an unknown/disabled project or an incompatible scope, and circular `follow_up` chains.
 - **Warnings:** a non-final phase with no objectives, an MCA-dependent scope while MCA isn't loaded, a
   `command` reward while disabled, a `sponsor_village` target with no village, and a
   `top_contributor`/`contributors` target on an objective-less phase.

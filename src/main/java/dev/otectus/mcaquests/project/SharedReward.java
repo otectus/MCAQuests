@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.project;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
@@ -15,6 +17,6 @@ public record SharedReward(QuestReward reward, SharedRewardTarget target) {
 
     public static final Codec<SharedReward> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RewardTypes.CODEC.fieldOf("reward").forGetter(SharedReward::reward),
-            SharedRewardTarget.CODEC.lenientOptionalFieldOf("target", SharedRewardTarget.CONTRIBUTORS).forGetter(SharedReward::target)
+            StrictCodecs.strictOptional(SharedRewardTarget.CODEC, "target", SharedRewardTarget.CONTRIBUTORS).forGetter(SharedReward::target)
     ).apply(instance, SharedReward::new));
 }

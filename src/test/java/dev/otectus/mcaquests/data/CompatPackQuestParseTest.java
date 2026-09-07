@@ -37,10 +37,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * would notice a quest here that stopped loading, and the failure would only appear on the
  * installations that have Ice &amp; Fire, which the CI machine does not.
  *
- * <p>The assertions are deliberately the tolerant ones. {@code iceandfire:fire_dragon} is not a
+ * <p>Resource-location targets deliberately remain tolerant. {@code iceandfire:fire_dragon} is not a
  * registered entity in a unit test, so what is checked is that the quest still <em>parses</em> and
  * that the objective reports itself unavailable — which is the whole design: a quest naming another
  * mod's content keeps its title and its progress and suspends, instead of vanishing at load.
+ * Registry-valued armor objectives instead require their item to exist; those five verified CE IDs
+ * use the same narrow structural stand-in as {@link BuiltinPackParsesTest}. Their other fields still
+ * use the real codec, and resource-location targets keep their original IDs for the absence tests.
  */
 class CompatPackQuestParseTest {
 
@@ -71,6 +74,12 @@ class CompatPackQuestParseTest {
     private static QuestDefinition parse(Path file) {
         try {
             JsonElement json = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8));
+            var objectives = json.getAsJsonObject().getAsJsonArray("objectives");
+            if (objectives != null) {
+                for (int i = 0; i < objectives.size(); i++) {
+                    objectives.set(i, BuiltinPackParsesTest.structuralObjective(file, objectives.get(i)));
+                }
+            }
             DataResult<QuestDefinition> result = QuestDefinition.CODEC.parse(JsonOps.INSTANCE, json);
             return result.result().orElseThrow(() -> new AssertionError(file + " did not parse: "
                     + result.error().map(DataResult.Error::message).orElse("?")));

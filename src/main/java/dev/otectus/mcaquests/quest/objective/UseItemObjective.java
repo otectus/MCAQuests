@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -43,8 +45,8 @@ public record UseItemObjective(ResourceLocation item, int count, boolean require
 
     public static final MapCodec<UseItemObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("item").forGetter(UseItemObjective::item),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(UseItemObjective::count),
-            Codec.BOOL.lenientOptionalFieldOf("require_success", false).forGetter(UseItemObjective::requireSuccess),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(UseItemObjective::count),
+            StrictCodecs.strictOptional(Codec.BOOL, "require_success", false).forGetter(UseItemObjective::requireSuccess),
             SourceHint.FIELD.forGetter(UseItemObjective::source)
     ).apply(instance, UseItemObjective::new));
 

@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /** Server to client: the player's current active quests, for the quest log + HUD tracker (spec §20/§21). */
@@ -29,7 +28,6 @@ public record QuestLogSyncS2CPacket(List<QuestLogEntry> entries) implements Cust
     }
 
     public static QuestLogSyncS2CPacket decode(RegistryFriendlyByteBuf buf) {
-        return new QuestLogSyncS2CPacket(buf.readCollection(ArrayList::new,
-                b -> QuestLogEntry.decode((RegistryFriendlyByteBuf) b)));
+        return new QuestLogSyncS2CPacket(PacketCollections.readList(buf, b -> QuestLogEntry.decode((RegistryFriendlyByteBuf) b)));
     }
 }

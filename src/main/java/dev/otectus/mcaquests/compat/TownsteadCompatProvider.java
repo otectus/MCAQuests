@@ -61,13 +61,12 @@ public final class TownsteadCompatProvider implements CompatProvider {
     }
 
     /**
-     * Deliberately a no-op. {@code TownsteadBinding} resolves once, lazily, against the classloader
-     * and is cached for the life of the JVM — a mod cannot be added or removed while the game runs,
-     * so there is nothing a second probe could learn. Re-probing would only re-enumerate every method
-     * of every Townstead class, which is the expensive half of binding.
+     * Reflection resolves once for the JVM. Profession definitions are reloadable, so only those
+     * derived views are discarded when a fresh pack repository or reload starts.
      */
     @Override
     public void reprobe(@Nullable RegistryAccess access) {
+        TownsteadBridge.Holder.get().invalidateDataCaches();
     }
 
     @Override

@@ -1,6 +1,5 @@
 package dev.otectus.mcaquests.data;
 
-import dev.otectus.mcaquests.support.TestPaths;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.DataResult;
@@ -12,6 +11,8 @@ import dev.otectus.mcaquests.quest.condition.QuestCondition;
 import dev.otectus.mcaquests.quest.QuestDifficulty;
 import dev.otectus.mcaquests.quest.situation.SituationDefinition;
 import dev.otectus.mcaquests.support.TestBootstrap;
+import dev.otectus.mcaquests.support.TestPaths;
+import dev.otectus.mcaquests.compat.iceandfire.IceAndFireRegistryManifest;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -270,13 +271,54 @@ class BuiltinPackParsesTest {
         int index = 0;
         for (JsonElement objective : objectives.getAsJsonArray()) {
             DataResult<dev.otectus.mcaquests.quest.objective.QuestObjective> parsed =
-                    dev.otectus.mcaquests.quest.objective.ObjectiveTypes.CODEC.parse(JsonOps.INSTANCE, objective);
+                    dev.otectus.mcaquests.quest.objective.ObjectiveTypes.CODEC.parse(JsonOps.INSTANCE,
+                            structuralObjective(file, objective));
             if (parsed.result().isEmpty()) {
                 lost.add(file + " objectives[" + index + "]: "
                         + parsed.error().map(DataResult.Error::message).orElse("?"));
             }
             index++;
         }
+    }
+
+    /**
+     * Exercise all fields of the optional armor objectives with a present registry entry. Only the
+     * five exact CE armor IDs, whose declarations and recipe results are checked by the real-jar
+     * probe, receive a test-only stand-in. Unknown IDs and malformed fields still fail their codec;
+     * production parsing never substitutes an item or falls back to AIR.
+     */
+    static JsonElement structuralObjective(Path file, JsonElement objective) {
+        if (!file.toString().replace('\\', '/').contains("/compatpacks/iafce_quests/")
+                || !objective.isJsonObject()) return objective;
+        var object = objective.getAsJsonObject();
+        JsonElement item = object.get("item");
+        if (item == null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()) return objective;
+        String id = item.getAsString();
+        boolean knownArmor = IceAndFireRegistryManifest.NETHERITE_DRAGON_ARMOR.stream()
+                .anyMatch(armor -> armor.toString().equals(id))
+                || IceAndFireRegistryManifest.NETHERITE_HIPPOGRYPH_ARMOR.toString().equals(id);
+        if (!knownArmor) return objective;
+        var copy = object.deepCopy();
+        copy.addProperty("item", "minecraft:stone");
+        return copy;
+    }
+
+    @Test
+    void optionalArmorStandInsDoNotHideUnknownIdsOrMalformedObjectiveFields() {
+        Path file = TestPaths.of("src/main/resources/compatpacks/iafce_quests/test.json");
+        var valid = JsonParser.parseString("{\"type\":\"mcaquests:obtain_item\","
+                + "\"item\":\"iceandfire:dragonarmor_netherite_head\",\"count\":1}");
+        var codec = dev.otectus.mcaquests.quest.objective.ObjectiveTypes.CODEC;
+        assertTrue(codec.parse(JsonOps.INSTANCE, valid).error().isPresent(), "the real registry remains absent");
+        assertTrue(codec.parse(JsonOps.INSTANCE, structuralObjective(file, valid)).result().isPresent());
+        for (String mutation : List.of("\"count\":0", "\"count\":\"bad\"")) {
+            var bad = JsonParser.parseString(valid.toString().replace("\"count\":1", mutation));
+            assertTrue(codec.parse(JsonOps.INSTANCE, structuralObjective(file, bad)).error().isPresent());
+        }
+        var unknown = JsonParser.parseString(valid.toString().replace("dragonarmor_netherite_head", "typo_armor"));
+        assertTrue(codec.parse(JsonOps.INSTANCE, structuralObjective(file, unknown)).error().isPresent());
+        assertTrue(codec.parse(JsonOps.INSTANCE, structuralObjective(DATA.resolve("quests/test.json"), valid))
+                .error().isPresent(), "base content receives no optional-registry substitution");
     }
 
     private static <T> void assertAllParse(String folder, com.mojang.serialization.Codec<T> codec) {

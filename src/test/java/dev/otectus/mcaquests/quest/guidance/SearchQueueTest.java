@@ -85,4 +85,28 @@ class SearchQueueTest {
         queue.tick(1, 8, 0);
         assertFalse(result.isDone());
     }
+
+    @Test
+    void completionCallbackMayClearRemainingWork() {
+        var first = queue.request("first", 0, () -> () -> SearchQueue.Step.finished(Optional.of(1)));
+        var second = queue.request("second", 0, () -> SearchQueue.Step::pending);
+        first.thenRun(queue::clear);
+        assertDoesNotThrow(() -> queue.tick(1, 8, Long.MAX_VALUE));
+        assertEquals(Optional.of(1), first.join());
+        assertEquals(Optional.empty(), second.join());
+    }
+
+    @Test
+    void clearCallbackMaySubmitFreshWork() {
+        var first = queue.request("first", 0, () -> SearchQueue.Step::pending);
+        var second = queue.request("second", 0, () -> SearchQueue.Step::pending);
+        var next = first.thenApply(ignored -> queue.request("next", 1,
+                () -> () -> SearchQueue.Step.finished(Optional.of(9))));
+        assertDoesNotThrow(queue::clear);
+        assertEquals(Optional.empty(), first.join());
+        assertEquals(Optional.empty(), second.join());
+        assertFalse(next.join().isDone(), "a callback's new generation survives clearing the old one");
+        queue.tick(2, 8, Long.MAX_VALUE);
+        assertEquals(Optional.of(9), next.join().join());
+    }
 }

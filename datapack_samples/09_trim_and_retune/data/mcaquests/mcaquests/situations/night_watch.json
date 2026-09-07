@@ -1,0 +1,7 @@
+{
+  "format_version": 1,
+  "id": "mcaquests:night_watch",
+  "enabled": false,
+  "trigger": { "type": "mcaquests:night" },
+  "offer": {}
+}

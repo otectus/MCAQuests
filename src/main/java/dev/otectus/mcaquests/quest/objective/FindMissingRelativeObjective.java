@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -63,11 +65,11 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
 
     public static final MapCodec<FindMissingRelativeObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.CODEC.fieldOf("relative").forGetter(FindMissingRelativeObjective::relative),
-            BiomeTarget.MAP_CODEC.codec().lenientOptionalFieldOf("biome").forGetter(FindMissingRelativeObjective::biome),
-            StructureTarget.MAP_CODEC.codec().lenientOptionalFieldOf("structure").forGetter(FindMissingRelativeObjective::structure),
-            Codec.intRange(0, 4096).lenientOptionalFieldOf("min_distance", 96).forGetter(FindMissingRelativeObjective::minDistance),
-            Codec.intRange(1, 64).lenientOptionalFieldOf("discover_radius", 24).forGetter(FindMissingRelativeObjective::discoverRadius),
-            Codec.intRange(1, 64).lenientOptionalFieldOf("spawn_distance", 12).forGetter(FindMissingRelativeObjective::spawnDistance)
+            StrictCodecs.strictOptional(BiomeTarget.MAP_CODEC.codec(), "biome").forGetter(FindMissingRelativeObjective::biome),
+            StrictCodecs.strictOptional(StructureTarget.MAP_CODEC.codec(), "structure").forGetter(FindMissingRelativeObjective::structure),
+            StrictCodecs.strictOptional(Codec.intRange(0, 4096), "min_distance", 96).forGetter(FindMissingRelativeObjective::minDistance),
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "discover_radius", 24).forGetter(FindMissingRelativeObjective::discoverRadius),
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "spawn_distance", 12).forGetter(FindMissingRelativeObjective::spawnDistance)
     ).apply(instance, FindMissingRelativeObjective::new));
 
     @Override

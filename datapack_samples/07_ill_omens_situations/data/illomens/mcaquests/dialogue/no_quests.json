@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "state": "no_quests",
+  "priority": 5,
+  "lines": [
+    {
+      "when": { "type": "mcaquests:time", "period": "NIGHT" },
+      "text": "Nothing at this hour. Whatever it is, it will still be broken in the morning."
+    },
+    {
+      "when": { "type": "mcaquests:personality", "personalities": ["shy", "sensitive", "gloomy"] },
+      "text": "Oh — no, nothing. Sorry. Nothing today."
+    },
+    {
+      "when": { "type": "mcaquests:mood", "max": -10 },
+      "text": "Not today. Ask somebody else."
+    },
+    { "text": "Nothing needs doing just now, which is its own small miracle." }
+  ]
+}

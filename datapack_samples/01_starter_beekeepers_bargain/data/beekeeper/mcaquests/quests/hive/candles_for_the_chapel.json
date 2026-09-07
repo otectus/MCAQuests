@@ -1,0 +1,44 @@
+{
+  "format_version": 1,
+  "id": "beekeeper:candles_for_the_chapel",
+  "weight": 10,
+  "category": "delivery",
+  "difficulty": "medium",
+  "offer_group": "chapel_supply",
+  "title": { "text": "Candles for the Chapel" },
+  "repeat": { "type": "repeatable" },
+  "giver": {
+    "professions": ["minecraft:cleric"],
+    "adult_only": true,
+    "min_hearts": 0,
+    "max_hearts": 80
+  },
+  "dialogue": {
+    "offer": { "text": "The chapel burns through candles faster than prayers. Four will see us to the new moon." },
+    "accept": { "text": "Beeswax, mind. Not tallow." },
+    "decline": { "text": "We shall sit in the dark and call it humility." },
+    "in_progress": { "text": "Four candles. I did ask twice." },
+    "ready": { "text": "Beeswax. You listened." },
+    "complete": { "text": "Light them yourself tonight. You have earned the first flame." },
+    "cooldown": { "text": "The sconces are full. Come back when they gutter." }
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "tag": "minecraft:candles", "count": 4 },
+    { "type": "mcaquests:obtain_item", "item": "minecraft:honeycomb", "count": 4 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:loot_table", "loot_table": "minecraft:chests/village/village_temple" },
+    { "type": "mcaquests:currency", "min": 3, "max": 7 },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ],
+  "turn_in": { "mode": "specified_profession", "professions": ["minecraft:cleric", "minecraft:librarian"] },
+  "conditions": {
+    "any_of": [
+      { "type": "mcaquests:advancement", "advancement": "minecraft:husbandry/safely_harvest_honey" },
+      { "all_of": [
+        { "type": "mcaquests:item_held", "tag": "minecraft:candles" },
+        { "type": "mcaquests:random_chance", "chance": 0.5 }
+      ] }
+    ]
+  }
+}

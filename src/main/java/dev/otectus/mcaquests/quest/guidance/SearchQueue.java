@@ -80,7 +80,10 @@ final class SearchQueue<K, V> {
         long started = System.nanoTime();
         int count = Math.min(steps, pending.size());
         for (int i = 0; i < count && System.nanoTime() - started < nanos; i++) {
-            Entry entry = pending.removeFirst();
+            // Completing a public future runs its callbacks inline. A callback may clear the
+            // queue (for example during a reload), so the original size is only an upper bound.
+            Entry entry = pending.pollFirst();
+            if (entry == null) break;
             if (expired(entry, now)) {
                 remove(entry);
                 continue;
@@ -118,8 +121,10 @@ final class SearchQueue<K, V> {
     }
 
     void clear() {
-        entries.values().forEach(entry -> entry.result.complete(Optional.empty()));
+        // Detach the old generation before completing anything: callbacks may submit fresh work.
+        var removed = new ArrayList<>(entries.values());
         entries.clear();
         pending.clear();
+        removed.forEach(entry -> entry.result.complete(Optional.empty()));
     }
 }

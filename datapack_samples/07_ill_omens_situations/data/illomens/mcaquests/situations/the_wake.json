@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "id": "illomens:the_wake",
+  "scope": "family",
+  "duration_ticks": 36000,
+  "cooldown_ticks": 120000,
+  "trigger": { "type": "mcaquests:villager_death", "relation": "spouse" },
+  "outcomes": {
+    "success": { "reputation": 10, "hearts": 18 },
+    "failure": { "reputation": -2 },
+    "cleared": { "reputation": 0 }
+  },
+  "offer": {
+    "weight": 10,
+    "difficulty": "easy",
+    "offer_group": "omen_grief",
+    "giver": { "adult_only": true },
+    "title": { "text": "The Wake" },
+    "dialogue": {
+      "offer": { "text": "The house will be full tonight whether I want it or not. Bread, candles, and somebody who did not know them well enough to cry." },
+      "accept": { "text": "Bread. Everybody brings flowers and nobody brings bread." },
+      "decline": { "text": "That is all right. It is a lot to ask of anybody." },
+      "in_progress": { "text": "They start arriving at dusk." },
+      "ready": { "text": "You brought enough for everyone. You counted." },
+      "complete": { "text": "Thank you for staying. That was the part I could not have done alone." },
+      "failed": { "text": "It is over. People went home hungry and I noticed." }
+    },
+    "objectives": [
+      { "type": "mcaquests:item_delivery", "item": "minecraft:bread", "count": 12, "consume": true },
+      {
+        "type": "mcaquests:build_near_location",
+        "tag": "minecraft:candles",
+        "location": { "anchor": "bed", "villager": { "mode": "self" } },
+        "radius": 10,
+        "count": 6
+      }
+    ],
+    "rewards": [
+      { "type": "mcaquests:hearts", "amount": 14 },
+      { "type": "mcaquests:village_reputation", "amount": 4 }
+    ]
+  }
+}

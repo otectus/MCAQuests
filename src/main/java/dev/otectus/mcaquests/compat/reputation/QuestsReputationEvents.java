@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.compat.reputation;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.api.event.ReputationTierReachedEvent;
 import dev.otectus.mcaquests.api.event.TitleGrantedEvent;
+import dev.otectus.mcaquests.compat.ReputationBridge;
 import dev.otectus.mcaquests.quest.title.TitleScope;
 import dev.otectus.mcareputation.api.McaReputationApi;
 import dev.otectus.mcareputation.api.event.ReputationTierChangedEvent;
@@ -50,6 +51,8 @@ public final class QuestsReputationEvents {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
+        if (!ReputationBridge.isCanonical()) return;
+        releaseRegistrations();
         MinecraftServer server = event.getServer();
         try {
             mirror = new QuestsReputationMirror(server);
@@ -69,23 +72,32 @@ public final class QuestsReputationEvents {
     /** Unregisters on shutdown so a second world in the same JVM does not mirror into the first. */
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
+        releaseRegistrations();
+    }
+
+    private static void releaseRegistrations() {
         try {
             if (mirror != null) {
+                mirror.close();
                 McaReputationApi.unregisterMirror(mirror);
                 mirror = null;
             }
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("[MCA: Quests] failed to unregister the Reputation mirror", t);
+        }
+        try {
             if (importProvider != null) {
                 McaReputationApi.unregisterImportProvider(importProvider);
                 importProvider = null;
             }
         } catch (Throwable t) {
-            McaQuests.LOGGER.debug("[MCA: Quests] failed to unregister from MCA: Reputation", t);
+            McaQuests.LOGGER.debug("[MCA: Quests] failed to unregister the Reputation import provider", t);
         }
     }
 
     @SubscribeEvent
     public static void onTierChanged(ReputationTierChangedEvent event) {
-        if (!event.upward() || !event.firstTime()) {
+        if (!ReputationBridge.isCanonical() || !event.upward() || !event.firstTime()) {
             return;
         }
         try {
@@ -106,6 +118,7 @@ public final class QuestsReputationEvents {
 
     @SubscribeEvent
     public static void onTitleGranted(ReputationTitleGrantedEvent event) {
+        if (!ReputationBridge.isCanonical()) return;
         try {
             event.player().ifPresent(player -> NeoForge.EVENT_BUS.post(new TitleGrantedEvent(
                     player,

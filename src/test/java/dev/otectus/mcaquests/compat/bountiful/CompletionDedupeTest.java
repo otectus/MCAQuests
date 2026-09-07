@@ -69,4 +69,27 @@ class CompletionDedupeTest {
         dedupe.sweep(tick.get());
         assertEquals(0, dedupe.size(), "everything expires; nothing is held past its window");
     }
+
+    @Test
+    void floodingOneTickCannotEvictAlreadyCreditedBounties() {
+        assertTrue(dedupe.accept("credited"));
+        for (int i = 0; i < 2048; i++) {
+            dedupe.accept("burst-" + i);
+        }
+        assertTrue(dedupe.size() <= 512);
+        assertFalse(dedupe.accept("credited"), "capacity pressure must never allow double credit");
+        tick.set(CompletionDedupe.TTL_TICKS);
+        assertTrue(dedupe.accept("next"), "capacity recovers with the ordinary expiry window");
+    }
+
+    @Test
+    void worldClockResetAndSessionCleanupReleaseOldKeys() {
+        tick.set(100);
+        assertTrue(dedupe.accept("bounty"));
+        tick.set(0);
+        assertTrue(dedupe.accept("bounty"));
+        dedupe.clear();
+        assertEquals(0, dedupe.size());
+        assertTrue(dedupe.accept("bounty"));
+    }
 }

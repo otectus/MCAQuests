@@ -37,7 +37,7 @@ public record OpenQuestMenuC2SPacket(UUID villagerUuid) implements CustomPacketP
     }
 
     public static void handle(OpenQuestMenuC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player)) {
             return;
         }
         QuestManager.openFromPacket(player, msg.villagerUuid);

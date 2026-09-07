@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
@@ -18,7 +21,7 @@ public record QuestFailedCondition(ResourceLocation quest, HistoryScope scope) i
 
     public static final MapCodec<QuestFailedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("quest").forGetter(QuestFailedCondition::quest),
-            HistoryScope.CODEC.lenientOptionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestFailedCondition::scope)
+            StrictCodecs.strictOptional(HistoryScope.CODEC, "scope", HistoryScope.GLOBAL).forGetter(QuestFailedCondition::scope)
     ).apply(instance, QuestFailedCondition::new));
 
     @Override

@@ -48,6 +48,7 @@ import java.util.function.Predicate;
 public final class WaypointReconciler {
 
     private final Map<String, RetryBackoff> backoffs = new HashMap<>();
+    private final Map<String, RetryBackoff> cleanupBackoffs = new HashMap<>();
     /** Keys a backend failed to remove. Retained so a failed cleanup is retried, not forgotten. */
     private final Map<String, Set<String>> pendingRemovals = new HashMap<>();
     /** Backend id plus failure fingerprint, so each distinct cause is warned about exactly once. */
@@ -78,13 +79,24 @@ public final class WaypointReconciler {
                                                long nowMillis) {
         RetryBackoff backoff = backoffs.computeIfAbsent(backend.id(), id -> new RetryBackoff());
         if (!enabled || !backend.capabilities().automaticWaypoints()) {
+            RetryBackoff cleanup = cleanupBackoffs.computeIfAbsent(backend.id(), id -> new RetryBackoff());
+            if (!cleanup.isDue(nowMillis)) {
+                return report(backend, enabled, Map.of(), cleanup);
+            }
             if (!backend.appliedKeys().isEmpty()) {
                 backend.clearAutomatic(ClearCause.DISABLED);
             }
+            if (!backend.appliedKeys().isEmpty()) {
+                cleanup.recordFailure(nowMillis);
+                warnOnce(backend);
+                return report(backend, enabled, Map.of(), cleanup);
+            }
             pendingRemovals.remove(backend.id());
+            cleanup.reset();
             backoff.reset();
             return report(backend, enabled, Map.of(), backoff);
         }
+        cleanupBackoffs.remove(backend.id());
         if (!backend.isUsable() || !backoff.isDue(nowMillis)) {
             return report(backend, true, Map.of(), backoff);
         }
@@ -119,7 +131,9 @@ public final class WaypointReconciler {
         if (failed) {
             backoff.recordFailure(nowMillis);
             warnOnce(backend);
-        } else if (!results.containsValue(MapMutationResult.RETRY_LATER)) {
+        } else if (results.containsValue(MapMutationResult.RETRY_LATER)) {
+            backoff.recordRetry(nowMillis);
+        } else {
             backoff.recordSuccess();
         }
         // Last, so that the pass which also withdraws a destination that has just changed dimension
@@ -165,6 +179,7 @@ public final class WaypointReconciler {
         for (MapWaypointBackend backend : backends) {
             backend.clearAutomatic(cause);
             pendingRemovals.remove(backend.id());
+            cleanupBackoffs.remove(backend.id());
             backoffs.computeIfAbsent(backend.id(), id -> new RetryBackoff()).reset();
         }
         warned.clear();

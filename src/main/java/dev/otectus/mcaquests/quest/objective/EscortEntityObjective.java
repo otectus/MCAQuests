@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.objective;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -49,14 +51,14 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         implements QuestObjective, VillagerTargeted {
 
     public static final MapCodec<EscortEntityObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            VillagerTarget.CODEC.lenientOptionalFieldOf("villager", VillagerTarget.SELF).forGetter(EscortEntityObjective::villager),
+            StrictCodecs.strictOptional(VillagerTarget.CODEC, "villager", VillagerTarget.SELF).forGetter(EscortEntityObjective::villager),
             LocationAnchor.MAP_CODEC.fieldOf("destination").forGetter(EscortEntityObjective::destination),
-            Codec.intRange(1, 64).lenientOptionalFieldOf("radius", 6).forGetter(EscortEntityObjective::radius),
-            Codec.BOOL.lenientOptionalFieldOf("follow", true).forGetter(EscortEntityObjective::follow),
-            Codec.BOOL.lenientOptionalFieldOf("lead", false).forGetter(EscortEntityObjective::lead),
-            Codec.intRange(1, 64).lenientOptionalFieldOf("wait_distance", 6).forGetter(EscortEntityObjective::waitDistance),
-            Codec.BOOL.lenientOptionalFieldOf("stage_until_near").forGetter(EscortEntityObjective::stageUntilNear),
-            Codec.intRange(0, 512).lenientOptionalFieldOf("min_journey").forGetter(EscortEntityObjective::minJourney)
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "radius", 6).forGetter(EscortEntityObjective::radius),
+            StrictCodecs.strictOptional(Codec.BOOL, "follow", true).forGetter(EscortEntityObjective::follow),
+            StrictCodecs.strictOptional(Codec.BOOL, "lead", false).forGetter(EscortEntityObjective::lead),
+            StrictCodecs.strictOptional(Codec.intRange(1, 64), "wait_distance", 6).forGetter(EscortEntityObjective::waitDistance),
+            StrictCodecs.strictOptional(Codec.BOOL, "stage_until_near").forGetter(EscortEntityObjective::stageUntilNear),
+            StrictCodecs.strictOptional(Codec.intRange(0, 512), "min_journey").forGetter(EscortEntityObjective::minJourney)
     ).apply(instance, EscortEntityObjective::new));
 
     /** How far the escortee must start from the destination, defaulting to {@code minEscortJourney}. */

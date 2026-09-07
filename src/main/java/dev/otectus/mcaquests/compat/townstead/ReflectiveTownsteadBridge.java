@@ -72,6 +72,11 @@ public final class ReflectiveTownsteadBridge implements TownsteadBridge {
     }
 
     @Override
+    public void invalidateDataCaches() {
+        TownsteadHandles.invalidateDataCaches();
+    }
+
+    @Override
     public java.util.List<String> unresolvedMembers() {
         return TownsteadHandles.resolution().unresolved();
     }

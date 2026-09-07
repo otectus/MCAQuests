@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "id": "crossroads:lanterns_along_the_dock",
+  "weight": 8,
+  "category": "building",
+  "difficulty": "medium",
+  "offer_group": "crossroads_townstead",
+  "title": { "text": "Lanterns Along the Dock" },
+  "repeat": {
+    "type": "period",
+    "period": "season",
+    "scope": "giver",
+    "fallback_cooldown_ticks": 96000
+  },
+  "giver": {
+    "professions": ["minecraft:fisherman"],
+    "adult_only": true,
+    "min_hearts": 15
+  },
+  "dialogue": {
+    "offer": { "text": "Boats come in after dark all season and the dock is black as a hole. Light it, and then help us make it a proper harbour." },
+    "accept": { "text": "Lanterns first. Then the timber." },
+    "decline": { "text": "Then we will keep unloading by feel." },
+    "in_progress": { "text": "Along the dock. Not the square." },
+    "ready": { "text": "You can see it from the water now." },
+    "complete": { "text": "Once a season somebody does something that lasts. This year it was you." }
+  },
+  "objectives": [
+    {
+      "type": "mcaquests:build_near_location",
+      "block": "minecraft:lantern",
+      "location": { "anchor": "townstead_building", "building_type": "dock", "minimum_level": 1 },
+      "radius": 24,
+      "count": 10
+    },
+    {
+      "type": "mcaquests:townstead_building_registered",
+      "building_type": "dock",
+      "minimum_level": 2,
+      "count": 1,
+      "require_new_or_upgraded": true
+    }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "hard" },
+    { "type": "mcaquests:hearts", "amount": 14 },
+    { "type": "mcaquests:village_reputation", "amount": 8 },
+    { "type": "mcaquests:townstead_needs", "target": "giver", "need": "energy", "mode": "delta", "amount": 4 }
+  ],
+  "conditions": {
+    "all_of": [
+      {
+        "type": "mcaquests:townstead_available",
+        "capabilities": ["READ_BUILDING", "READ_VILLAGER"]
+      },
+      {
+        "type": "mcaquests:townstead_building",
+        "building_type": "dock",
+        "minimum_level": 1,
+        "count": 1
+      }
+    ]
+  }
+}

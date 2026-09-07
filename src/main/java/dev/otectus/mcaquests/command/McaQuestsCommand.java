@@ -246,7 +246,7 @@ public final class McaQuestsCommand {
         }
         titles.byVillage().forEach((village, set) -> ctx.getSource().sendSuccess(
                 () -> Component.literal(" village " + village + ": " + set), false));
-        return titles.global().size() + titles.byVillage().size();
+        return titles.global().size() + titles.byVillage().values().stream().mapToInt(java.util.Set::size).sum();
     }
 
     private static int titleClear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -395,15 +395,15 @@ public final class McaQuestsCommand {
         return 1;
     }
 
-    private static int reputationGet(CommandContext<CommandSourceStack> ctx) {
+    private static int reputationGet(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         int village = IntegerArgumentType.getInteger(ctx, "village");
         MinecraftServer server = ctx.getSource().getServer();
         // Standing is per player from 1.1.0, so this reports the executor's own standing. An
         // administrator inspecting somebody else uses /mcareputation get <player>, which exists
         // precisely because this command's signature cannot name one.
-        ServerPlayer viewer = asPlayer(ctx);
-        int rep = viewer == null ? 0 : dev.otectus.mcaquests.quest.reputation.QuestReputation.score(viewer,
-                dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(server.overworld(), village));
+        ServerPlayer viewer = ctx.getSource().getPlayerOrException();
+        int rep = dev.otectus.mcaquests.quest.reputation.QuestReputation.score(viewer,
+                dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(ctx.getSource().getLevel(), village));
         ReputationTierSet ladder = ReputationTiers.getDefault();
         ReputationTier tier = ladder.tierFor(rep);
         String next = ladder.nextTier(rep)
@@ -414,27 +414,32 @@ public final class McaQuestsCommand {
         return rep;
     }
 
-    private static int reputationSet(CommandContext<CommandSourceStack> ctx) {
+    private static int reputationSet(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         int village = IntegerArgumentType.getInteger(ctx, "village");
         int amount = IntegerArgumentType.getInteger(ctx, "amount");
         MinecraftServer server = ctx.getSource().getServer();
-        ServerPlayer subject = asPlayer(ctx);
-        var community = dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(server.overworld(), village);
-        int current = subject == null ? 0 : dev.otectus.mcaquests.quest.reputation.QuestReputation.score(subject, community);
-        int newRep = subject == null ? current : dev.otectus.mcaquests.quest.reputation.QuestReputation.award(server, subject.getUUID(),
-                community, amount - current, null, null, null);
+        ServerPlayer subject = ctx.getSource().getPlayerOrException();
+        var community = dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(ctx.getSource().getLevel(), village);
+        int current = dev.otectus.mcaquests.quest.reputation.QuestReputation.score(subject, community);
+        long delta = (long) amount - current;
+        if (delta < Integer.MIN_VALUE || delta > Integer.MAX_VALUE) {
+            ctx.getSource().sendFailure(Component.literal("Requested reputation change is outside the supported integer range."));
+            return 0;
+        }
+        int newRep = dev.otectus.mcaquests.quest.reputation.QuestReputation.award(server, subject.getUUID(),
+                community, (int) delta, null, null, null);
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "Village #" + village + " reputation set to " + newRep + "."), true);
         return newRep;
     }
 
-    private static int reputationAdd(CommandContext<CommandSourceStack> ctx) {
+    private static int reputationAdd(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         int village = IntegerArgumentType.getInteger(ctx, "village");
         int delta = IntegerArgumentType.getInteger(ctx, "delta");
         MinecraftServer server = ctx.getSource().getServer();
-        ServerPlayer subject = asPlayer(ctx);
-        int newRep = subject == null ? 0 : dev.otectus.mcaquests.quest.reputation.QuestReputation.award(server, subject.getUUID(),
-                dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(server.overworld(), village), delta, null, null, null);
+        ServerPlayer subject = ctx.getSource().getPlayerOrException();
+        int newRep = dev.otectus.mcaquests.quest.reputation.QuestReputation.award(server, subject.getUUID(),
+                dev.otectus.mcaquests.quest.reputation.QuestReputation.inLevel(ctx.getSource().getLevel(), village), delta, null, null, null);
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "Village #" + village + " reputation now " + newRep + " (" + (delta >= 0 ? "+" : "") + delta + ")."), true);
         return newRep;
@@ -690,7 +695,12 @@ public final class McaQuestsCommand {
                         // chain, ladder, tier, title, project, or situation ids the editor dropdowns offer.
                         FtbqEditorIdsSync.maybeSend(player);
                     }
-                }, server);
+                }, server)
+                .exceptionally(error -> {
+                    McaQuests.LOGGER.error("[MCA: Quests] Datapack reload failed", error);
+                    server.execute(() -> src.sendFailure(Component.literal("Quest datapack reload failed; see the server log for details.")));
+                    return null;
+                });
         return 1;
     }
 

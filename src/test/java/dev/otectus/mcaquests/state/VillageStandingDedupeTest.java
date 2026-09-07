@@ -20,6 +20,16 @@ class VillageStandingDedupeTest {
     private static final UUID PLAYER = UUID.fromString("00000000-0000-0000-0000-0000000000a1");
 
     @Test
+    void zeroScoreTierCommunitiesRemainDiscoverableForMigration() {
+        VillageStanding standing = new VillageStanding();
+        var dimension = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("minecraft", "overworld");
+        standing.setTierHighWater(PLAYER, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("test", "ladder"),
+                dimension, 8, "friend");
+        assertTrue(standing.communities(PLAYER).contains("minecraft:overworld/8"));
+        assertTrue(VillageStanding.load(standing.save()).communities(PLAYER).contains("minecraft:overworld/8"));
+    }
+
+    @Test
     @DisplayName("the ring is bounded, evicts oldest first, and round-trips")
     void awardsAreBoundedAndPersist() {
         VillageStanding standing = new VillageStanding();

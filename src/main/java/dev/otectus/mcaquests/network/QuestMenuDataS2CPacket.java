@@ -8,7 +8,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -75,6 +74,6 @@ public record QuestMenuDataS2CPacket(UUID villagerUuid,
                 buf.readVarInt(),
                 NetComponents.read(buf),
                 buf.readEnum(QuestMenuStatus.class),
-                buf.readCollection(ArrayList::new, b -> QuestCard.decode((RegistryFriendlyByteBuf) b)));
+                PacketCollections.readList(buf, b -> QuestCard.decode((RegistryFriendlyByteBuf) b)));
     }
 }

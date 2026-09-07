@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.data.StrictCodecs;
+import dev.otectus.mcaquests.data.RegistryEntryCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import dev.otectus.mcaquests.quest.target.SourceHint;
@@ -59,9 +60,9 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
     private static final String K_DELIVERED = "delivered";
 
     public static final MapCodec<ItemDeliveryObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemDeliveryObjective::item),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("count", 1).forGetter(ItemDeliveryObjective::count),
-            Codec.BOOL.lenientOptionalFieldOf("consume", true).forGetter(ItemDeliveryObjective::consume),
+            RegistryEntryCodec.of(BuiltInRegistries.ITEM).fieldOf("item").forGetter(ItemDeliveryObjective::item),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ItemDeliveryObjective::count),
+            StrictCodecs.strictOptional(Codec.BOOL, "consume", true).forGetter(ItemDeliveryObjective::consume),
             StrictCodecs.strictOptional(DeliveryDestination.CODEC, "destination",
                     DeliveryDestination.CONSUMED).forGetter(ItemDeliveryObjective::destination),
             SourceHint.FIELD.forGetter(ItemDeliveryObjective::source)
@@ -151,7 +152,7 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
             return true;
         }
         Container container = destination.resolveContainer(player, giver).orElse(null);
-        return container != null && DeliveryDestination.roomFor(container, item, count) >= count;
+        return container != null && new InventoryTransfer.Plan(player.getInventory()).reserve(item, count, container);
     }
 
     /** Why the hand-over was refused, for the player. */
@@ -193,19 +194,9 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
         if (container == null) {
             return;
         }
-        progress.extra().putBoolean(K_DELIVERED, true);
-
-        int taken = take(player, count);
-        if (taken <= 0) {
-            return;
-        }
-        int bounced = DeliveryDestination.insert(container, item, taken);
-        if (bounced > 0) {
-            // The container filled between canDeliver and here. The goods are already off the player,
-            // so they must go back to them -- never dropped, and never left in limbo.
-            ItemHandlerHelper.giveItemToPlayer(player, new ItemStack(item, bounced));
-            McaQuests.LOGGER.debug("[MCA: Quests] Delivery of {} {} bounced {}; returned to the player.",
-                    taken, item, bounced);
+        InventoryTransfer.Plan plan = new InventoryTransfer.Plan(player.getInventory());
+        if (plan.reserve(item, count, container) && plan.commit()) {
+            progress.extra().putBoolean(K_DELIVERED, true);
         }
     }
 

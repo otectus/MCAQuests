@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
 /**
  * The two static methods the cash-in mixin calls, and everything that has to happen between them.
@@ -110,7 +111,7 @@ public final class BountifulHookEvents {
             BountyCompletion completion = new BountyCompletion(serverPlayer.getUUID(), gameTime,
                     pending.rarity() == BountyRarity.UNKNOWN ? "" : pending.rarity().name(),
                     pending.objectiveCount(), pending.dedupeKey());
-            if (DEDUPE.accept(serverPlayer.getUUID() + "@" + pending.dedupeKey() + "@" + gameTime)) {
+            if (DEDUPE.accept(serverPlayer.getUUID() + "@" + pending.dedupeKey())) {
                 BountifulCompat.dispatchCompletion(serverPlayer, completion);
             }
         } catch (Throwable t) {
@@ -127,6 +128,13 @@ public final class BountifulHookEvents {
     public static void onServerTick(ServerTickEvent.Post event) {
         gameTime = event.getServer().overworld().getGameTime();
         DEDUPE.sweep(gameTime);
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        DEDUPE.clear();
+        PENDING.remove();
+        gameTime = 0;
     }
 
     /**

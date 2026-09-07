@@ -1,5 +1,7 @@
 package dev.otectus.mcaquests.quest.situation.trigger;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -16,7 +18,7 @@ import dev.otectus.mcaquests.quest.situation.TriggerSignal;
 public record InfectionTrigger(float minProgress) implements SituationTrigger {
 
     public static final MapCodec<InfectionTrigger> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.floatRange(0.0f, 1.0f).lenientOptionalFieldOf("min_progress", 0.0f).forGetter(InfectionTrigger::minProgress)
+            StrictCodecs.strictOptional(Codec.floatRange(0.0f, 1.0f), "min_progress", 0.0f).forGetter(InfectionTrigger::minProgress)
     ).apply(instance, InfectionTrigger::new));
 
     @Override

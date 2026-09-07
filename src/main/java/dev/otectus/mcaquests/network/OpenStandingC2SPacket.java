@@ -39,7 +39,7 @@ public record OpenStandingC2SPacket(ResourceLocation dimension, int villageId) i
     }
 
     public static void handle(OpenStandingC2SPacket msg, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player) || !ReputationBridge.isCanonical()) {
+        if (!(context.player() instanceof ServerPlayer player) || !PacketRequests.allow(player) || !ReputationBridge.isCanonical()) {
             return;
         }
         if (!knowsVillage(player, msg.dimension, msg.villageId)) {

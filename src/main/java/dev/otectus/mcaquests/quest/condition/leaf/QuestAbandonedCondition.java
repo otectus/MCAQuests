@@ -1,5 +1,8 @@
 package dev.otectus.mcaquests.quest.condition.leaf;
 
+import dev.otectus.mcaquests.data.StrictCodecs;
+
+
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.condition.ConditionTypes;
@@ -18,7 +21,7 @@ public record QuestAbandonedCondition(ResourceLocation quest, HistoryScope scope
 
     public static final MapCodec<QuestAbandonedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("quest").forGetter(QuestAbandonedCondition::quest),
-            HistoryScope.CODEC.lenientOptionalFieldOf("scope", HistoryScope.GLOBAL).forGetter(QuestAbandonedCondition::scope)
+            StrictCodecs.strictOptional(HistoryScope.CODEC, "scope", HistoryScope.GLOBAL).forGetter(QuestAbandonedCondition::scope)
     ).apply(instance, QuestAbandonedCondition::new));
 
     @Override

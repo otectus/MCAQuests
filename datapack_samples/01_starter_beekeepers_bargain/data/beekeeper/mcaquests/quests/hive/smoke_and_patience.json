@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "beekeeper:smoke_and_patience",
+  "weight": 6,
+  "category": "errand",
+  "difficulty": "easy",
+  "offer_group": "hive_work",
+  "title": { "text": "Smoke and Patience" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:farmer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "You want to keep bees? Then learn it properly: a campfire under the hive, shears in hand, and no hurry at all." },
+    "accept": { "text": "Light the fire first. Always the fire first." },
+    "in_progress": { "text": "Slowly. Bees can hear a rushed man." },
+    "ready": { "text": "There — not a sting on you. That is the whole trick." },
+    "complete": { "text": "Now you are a beekeeper. Go and be a nuisance to somebody else's hives."}
+  },
+  "objectives": [
+    { "type": "mcaquests:craft_item", "item": "minecraft:campfire", "count": 1 },
+    { "type": "mcaquests:use_item", "item": "minecraft:shears", "count": 1, "require_success": false },
+    { "type": "mcaquests:interact_block", "tag": "minecraft:beehives", "count": 3 }
+  ],
+  "rewards": [
+    { "type": "mcaquests:xp_levels", "levels": 1 },
+    { "type": "mcaquests:effect", "effect": "minecraft:regeneration", "duration": 600, "amplifier": 0 },
+    { "type": "mcaquests:hearts", "amount": 8 }
+  ],
+  "turn_in": { "mode": "self_complete" },
+  "conditions": { "type": "mcaquests:player_level", "min": 5 }
+}

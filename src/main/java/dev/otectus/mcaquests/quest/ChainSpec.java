@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest;
 
 import com.mojang.serialization.Codec;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import net.minecraft.network.chat.Component;
@@ -32,12 +33,12 @@ public record ChainSpec(String chain,
 
     public static final Codec<ChainSpec> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("chain").forGetter(ChainSpec::chain),
-            Codec.INT.lenientOptionalFieldOf("stage", 1).forGetter(ChainSpec::stage),
-            ExtraCodecs.POSITIVE_INT.lenientOptionalFieldOf("stage_total").forGetter(ChainSpec::stageTotal),
-            QuestText.CODEC.lenientOptionalFieldOf("chapter").forGetter(ChainSpec::chapter),
-            QuestText.CODEC.lenientOptionalFieldOf("relationship_arc").forGetter(ChainSpec::relationshipArc),
-            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("prerequisites", List.of()).forGetter(ChainSpec::prerequisites),
-            ResourceLocation.CODEC.listOf().lenientOptionalFieldOf("unlocks", List.of()).forGetter(ChainSpec::unlocks)
+            StrictCodecs.strictOptional(Codec.INT, "stage", 1).forGetter(ChainSpec::stage),
+            StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "stage_total").forGetter(ChainSpec::stageTotal),
+            StrictCodecs.strictOptional(QuestText.CODEC, "chapter").forGetter(ChainSpec::chapter),
+            StrictCodecs.strictOptional(QuestText.CODEC, "relationship_arc").forGetter(ChainSpec::relationshipArc),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "prerequisites", List.of()).forGetter(ChainSpec::prerequisites),
+            StrictCodecs.strictOptional(ResourceLocation.CODEC.listOf(), "unlocks", List.of()).forGetter(ChainSpec::unlocks)
     ).apply(instance, ChainSpec::new));
 
     /**

@@ -10,6 +10,7 @@ import dev.otectus.mcaquests.compat.capitals.CapitalsBridge;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsCompat;
 import dev.otectus.mcaquests.compat.capitals.CapitalsQueries;
+import dev.otectus.mcaquests.data.StrictCodecs;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -50,7 +51,8 @@ public record CapitalTitleReward(String title, Optional<String> femaleTitle) imp
     public static final MapCodec<CapitalTitleReward> CODEC = RecordCodecBuilder.<CapitalTitleReward>mapCodec(
             instance -> instance.group(
                     Codec.STRING.fieldOf("title").forGetter(CapitalTitleReward::title),
-                    Codec.STRING.optionalFieldOf("female_title").forGetter(CapitalTitleReward::femaleTitle)
+                    StrictCodecs.strictOptional(Codec.STRING, "female_title")
+                            .forGetter(CapitalTitleReward::femaleTitle)
             ).apply(instance, CapitalTitleReward::new))
             .flatXmap(CapitalTitleReward::validate, CapitalTitleReward::validate);
 
@@ -63,6 +65,13 @@ public record CapitalTitleReward(String title, Optional<String> femaleTitle) imp
         if (!FEMININE.containsKey(value.toUpperCase(Locale.ROOT))) {
             return DataResult.error(() -> "capital_title: unknown title '" + reward.title
                     + "' (expected knight/lord/duke/archduke)");
+        }
+        if (reward.femaleTitle.isPresent()) {
+            String override = reward.femaleTitle.get().toUpperCase(Locale.ROOT);
+            if (!FEMININE.containsKey(override) && !FEMININE.containsValue(override)) {
+                return DataResult.error(() -> "capital_title: unknown female_title '"
+                        + reward.femaleTitle.get() + "' (expected a grantable noble title)");
+            }
         }
         return DataResult.success(value.equals(reward.title)
                 ? reward
