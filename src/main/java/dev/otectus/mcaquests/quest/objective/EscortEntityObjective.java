@@ -237,7 +237,7 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
                 McaCompat.releaseVillagerHold(escortee);
                 progress.extra().putBoolean(K_ENGAGED, true); // one-way latch — the escort has truly begun
             } else {
-                McaCompat.holdVillagerInPlace(escortee);
+                McaCompat.holdVillagerInPlace(escortee, player.getUUID());
                 return;
             }
         }

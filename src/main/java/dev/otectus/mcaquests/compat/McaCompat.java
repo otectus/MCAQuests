@@ -2,6 +2,7 @@ package dev.otectus.mcaquests.compat;
 
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.mca.McaHandles;
+import dev.otectus.mcaquests.quest.escort.EscortHoldRegistry;
 import dev.otectus.mcaquests.state.PendingHeartsData;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
@@ -253,9 +254,19 @@ public final class McaCompat {
      * with {@link #releaseVillagerHold}. <b>Server side only.</b> Safe on a non-MCA entity or any error.
      */
     public static void holdVillagerInPlace(Entity villager) {
+        holdVillagerInPlace(villager, null);
+    }
+
+    /**
+     * As {@link #holdVillagerInPlace(Entity)}, recording {@code owner} as the player whose escort is
+     * holding this villager, so the hold can be found again from the player rather than from the quest
+     * definition (which a datapack reload can take away). See {@code EscortHoldRegistry}.
+     */
+    public static void holdVillagerInPlace(Entity villager, @Nullable UUID owner) {
         if (!isMcaVillager(villager) || !(villager instanceof Mob mob)) {
             return;
         }
+        EscortHoldRegistry.hold(villager.getUUID(), owner);
         try {
             mob.setNoAi(true);
             mob.setInvulnerable(true);
@@ -275,6 +286,7 @@ public final class McaCompat {
         if (!isMcaVillager(villager) || !(villager instanceof Mob mob)) {
             return;
         }
+        EscortHoldRegistry.release(villager.getUUID());
         try {
             mob.setInvulnerable(false);
             mob.setNoAi(false);
