@@ -38,15 +38,43 @@ import java.util.Optional;
  * {@code ProjectDefinition}, and is silently discarded on the player's next login drain. A 1.0.0 world
  * with banked entries opened in 0.9.1 therefore never crashes or corrupts — it just drops the banked
  * reward (expected: going backward across a save-format extension is inherently lossy for the new data).
+ *
+ * <p><b>{@code attempts}</b> counts delivery passes that failed without paying anything, so a reward
+ * that can never be delivered stops being retried instead of throwing every login. It is written only
+ * when non-zero, which keeps an untouched entry byte-identical to every earlier save shape, and it is
+ * deliberately excluded from {@link #isSameReward} — two entries that differ only in how often we have
+ * tried them are the same debt.
  */
 public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int phase, int rewardIndex,
                              @Nullable BankedReward banked, @Nullable String instanceKey,
-                             @Nullable CompoundTag instanceSnapshot) {
+                             @Nullable CompoundTag instanceSnapshot, int attempts) {
 
     /** Retains the original public constructor and the legacy unscoped save shape. */
     public PendingReward(Kind kind, @Nullable ResourceLocation projectId, int phase, int rewardIndex,
                          @Nullable BankedReward banked) {
-        this(kind, projectId, phase, rewardIndex, banked, null, null);
+        this(kind, projectId, phase, rewardIndex, banked, null, null, 0);
+    }
+
+    /** Retains the instance-scoped constructor from before {@code attempts} existed. */
+    public PendingReward(Kind kind, @Nullable ResourceLocation projectId, int phase, int rewardIndex,
+                         @Nullable BankedReward banked, @Nullable String instanceKey,
+                         @Nullable CompoundTag instanceSnapshot) {
+        this(kind, projectId, phase, rewardIndex, banked, instanceKey, instanceSnapshot, 0);
+    }
+
+    /** The same owed reward, with a different count of failed delivery passes. */
+    public PendingReward withAttempts(int attempts) {
+        return new PendingReward(kind, projectId, phase, rewardIndex, banked, instanceKey,
+                instanceSnapshot, attempts);
+    }
+
+    /**
+     * Identity that ignores {@link #attempts()}. The generated record {@code equals} counts it, so
+     * anything matching one owed reward against another — de-duplication, "is this entry still in the
+     * list" — has to come through here or a retried entry looks like a different debt.
+     */
+    public boolean isSameReward(PendingReward other) {
+        return withAttempts(0).equals(other.withAttempts(0));
     }
 
     public enum Kind {
@@ -75,6 +103,9 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
 
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
+        if (attempts > 0) {
+            tag.putInt("attempts", attempts); // absent when zero: legacy entries stay byte-identical
+        }
         if (kind == Kind.BANKED) {
             tag.putString("kind", "banked");
             tag.put("banked", banked.save());
@@ -99,6 +130,7 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
      * never takes the rest down with it.
      */
     public static Optional<PendingReward> load(CompoundTag tag) {
+        int attempts = tag.getInt("attempts"); // NBT default 0: never tried, or written before 1.6.3
         if (!tag.contains("kind")) {
             if (!tag.contains("project")) {
                 return Optional.empty();
@@ -111,10 +143,11 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
                     tag.getInt("reward"), null,
                     tag.contains("instance") ? tag.getString("instance") : null,
                     tag.contains("instance_state", net.minecraft.nbt.Tag.TAG_COMPOUND)
-                            ? tag.getCompound("instance_state").copy() : null));
+                            ? tag.getCompound("instance_state").copy() : null, attempts));
         }
         if ("banked".equals(tag.getString("kind"))) {
-            return BankedReward.load(tag.getCompound("banked")).map(PendingReward::ofBanked);
+            return BankedReward.load(tag.getCompound("banked")).map(PendingReward::ofBanked)
+                    .map(reward -> reward.withAttempts(attempts));
         }
         return Optional.empty(); // unknown kind (future version) - skip, never corrupt
     }

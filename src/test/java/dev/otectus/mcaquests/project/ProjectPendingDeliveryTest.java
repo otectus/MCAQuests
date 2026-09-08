@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.project;
 
+import dev.otectus.mcaquests.project.ProjectRewardDistributor.DeliveryOutcome;
 import dev.otectus.mcaquests.project.state.BankedReward;
 import dev.otectus.mcaquests.project.state.PendingReward;
 import dev.otectus.mcaquests.project.state.ProjectInstanceKey;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -72,7 +74,7 @@ class ProjectPendingDeliveryTest {
         List<PendingReward> retained = ProjectManager.drainPass(PLAYER, List.of(banked, phase), false,
                 reward -> {
                     attempted.add(reward);
-                    return true;
+                    return DeliveryOutcome.DELIVERED;
                 });
 
         assertEquals(List.of(banked), attempted, "only the banked debt is paid while projects are off");
@@ -84,8 +86,85 @@ class ProjectPendingDeliveryTest {
         PendingReward banked = PendingReward.ofBanked(BankedReward.hearts(2, "SPOUSE"));
 
         List<PendingReward> retained = ProjectManager.drainPass(PLAYER, List.of(banked), true,
-                reward -> false);
+                reward -> DeliveryOutcome.DEFERRED);
 
         assertEquals(List.of(banked), retained);
+    }
+
+    @Test
+    void aDeferredEntryIsRetainedWithoutSpendingAnAttempt() {
+        PendingReward banked = PendingReward.ofBanked(BankedReward.reputation(1)).withAttempts(1);
+
+        List<PendingReward> retained = ProjectManager.drainPass(PLAYER, List.of(banked), true,
+                reward -> DeliveryOutcome.DEFERRED);
+
+        assertEquals(1, retained.get(0).attempts(), "no target yet is not a failed attempt");
+    }
+
+    @Test
+    void anUnappliedFailureIsRetriedUpToTheCapAndThenHeld() {
+        PendingReward owed = PendingReward.ofPhase(PROJECT, 0, 0);
+        List<PendingReward> pass = List.of(owed);
+        for (int i = 1; i <= ProjectManager.MAX_DELIVERY_ATTEMPTS; i++) {
+            pass = ProjectManager.drainPass(PLAYER, pass, true, reward -> DeliveryOutcome.FAILED_UNAPPLIED);
+            assertEquals(i, pass.get(0).attempts());
+        }
+        assertTrue(ProjectManager.isHeld(pass.get(0)));
+
+        List<PendingReward> attempted = new ArrayList<>();
+        List<PendingReward> after = ProjectManager.drainPass(PLAYER, pass, true, reward -> {
+            attempted.add(reward);
+            return DeliveryOutcome.DELIVERED;
+        });
+        assertTrue(attempted.isEmpty(), "a held entry is not retried on its own");
+        assertEquals(1, after.size(), "but it is still kept for an operator");
+    }
+
+    @Test
+    void aRewardThatThrewIsRetainedAndNeverAutoRetried() {
+        PendingReward owed = PendingReward.ofPhase(PROJECT, 0, 0);
+
+        List<PendingReward> retained = ProjectManager.drainPass(PLAYER, List.of(owed), true,
+                reward -> DeliveryOutcome.FAILED_UNKNOWN);
+
+        assertEquals(1, retained.size());
+        assertTrue(ProjectManager.isHeld(retained.get(0)),
+                "a partly-paid reward must never be retried blindly");
+    }
+
+    @Test
+    void aFailureInOneEntryDoesNotAbortItsSiblings() {
+        PendingReward first = PendingReward.ofPhase(PROJECT, 0, 0);
+        PendingReward second = PendingReward.ofPhase(PROJECT, 0, 1);
+
+        List<PendingReward> retained = ProjectManager.drainPass(PLAYER, List.of(first, second), true,
+                reward -> {
+                    if (reward.rewardIndex() == 0) {
+                        throw new IllegalStateException("broken add-on");
+                    }
+                    return DeliveryOutcome.DELIVERED;
+                });
+
+        assertEquals(1, retained.size(), "only the failing entry is kept");
+        assertEquals(0, retained.get(0).rewardIndex());
+        assertEquals(1, retained.get(0).attempts(), "an escaped exception is a pre-flight failure");
+    }
+
+    @Test
+    void attemptsRoundTripThroughNbtAndAreAbsentWhenZero() {
+        PendingReward tried = PendingReward.ofPhase(PROJECT, 1, 2).withAttempts(2);
+        assertEquals(2, PendingReward.load(tried.save()).orElseThrow().attempts());
+        assertFalse(PendingReward.ofPhase(PROJECT, 1, 2).save().contains("attempts"));
+
+        PendingReward banked = PendingReward.ofBanked(BankedReward.reputation(4)).withAttempts(3);
+        assertEquals(3, PendingReward.load(banked.save()).orElseThrow().attempts());
+        assertFalse(PendingReward.ofBanked(BankedReward.reputation(4)).save().contains("attempts"));
+    }
+
+    @Test
+    void identityIgnoresTheAttemptCount() {
+        PendingReward owed = PendingReward.ofPhase(PROJECT, 1, 2);
+        assertTrue(owed.isSameReward(owed.withAttempts(2)));
+        assertFalse(owed.isSameReward(PendingReward.ofPhase(PROJECT, 1, 3)));
     }
 }

@@ -158,6 +158,11 @@ public final class ProjectSavedData extends SavedData {
         addPending(player, PendingReward.ofBanked(reward));
     }
 
+    /** Read-only view of what a player is still owed, for operator inspection (never drains). */
+    public List<PendingReward> pendingOf(UUID player) {
+        return List.copyOf(pending.getOrDefault(player, List.of()));
+    }
+
     public List<PendingReward> drainPending(UUID player) {
         List<PendingReward> owed = pending.remove(player);
         if (owed == null || owed.isEmpty()) {

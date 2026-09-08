@@ -43,6 +43,30 @@ public final class ProjectRewardDistributor {
     private ProjectRewardDistributor() {
     }
 
+    /**
+     * What one attempt at a player-targeted reward achieved, so the caller can decide whether the owed
+     * entry may be dropped, retried, or has to be held for an operator.
+     *
+     * <p>The distinction that matters is whether the reward's own grant callback ran. Everything before
+     * it — resolving the definition, the instance, the anchor dimension, a target villager — can be
+     * retried safely; once the callback has thrown we do not know how much of the reward it already
+     * paid, and retrying could pay it twice.
+     */
+    public enum DeliveryOutcome {
+        /** Paid, or deliberately not payable (config disabled): nothing is owed any more. */
+        DELIVERED,
+        /**
+         * Nothing was attempted and nothing failed — the reward is simply not deliverable yet, like a
+         * banked claim with no village in range. Retried freely, and never counted as an attempt.
+         * {@code grantPlayerReward} never returns this.
+         */
+        DEFERRED,
+        /** Failed before any reward side effect. Safe to retry, up to the caller's cap. */
+        FAILED_UNAPPLIED,
+        /** The grant callback threw; it may have paid part of the reward. Never retried automatically. */
+        FAILED_UNKNOWN
+    }
+
     public static void distribute(MinecraftServer server, ServerLevel level, ProjectSavedData data,
                                   ProjectState state, ProjectDefinition def, int phaseIndex) {
         ProjectPhase phase = def.phase(phaseIndex);
@@ -233,25 +257,32 @@ public final class ProjectRewardDistributor {
         return true;
     }
 
-    /** Grants the {@code rewardIndex} reward of {@code phase} to a returning player (login delivery). */
-    public static void grantPending(ServerLevel level, ProjectState state, ServerPlayer player,
-                                    ProjectDefinition def, int phase, int rewardIndex) {
+    /**
+     * Grants the {@code rewardIndex} reward of {@code phase} to a returning player (login delivery).
+     * Every way this can fail short of the grant callback itself is a pre-flight failure the caller may
+     * retry later — a phase index that no longer exists after a datapack edit, or an anchor dimension
+     * that a removed mod took with it, can both come back.
+     */
+    public static DeliveryOutcome grantPending(ServerLevel level, ProjectState state, ServerPlayer player,
+                                               ProjectDefinition def, int phase, int rewardIndex) {
         if (phase < 0 || phase >= def.phaseCount()) {
-            return;
+            return DeliveryOutcome.FAILED_UNAPPLIED;
         }
         List<SharedReward> rewards = def.phase(phase).rewards();
         if (rewardIndex < 0 || rewardIndex >= rewards.size()) {
-            return;
+            return DeliveryOutcome.FAILED_UNAPPLIED;
         }
         ServerLevel anchorLevel = player.getServer().getLevel(net.minecraft.resources.ResourceKey.create(
                 net.minecraft.core.registries.Registries.DIMENSION, state.anchorDimension()));
         if (anchorLevel == null) {
-            throw new IllegalStateException("Pending project reward dimension is unavailable: " + state.anchorDimension());
+            McaQuests.LOGGER.warn("[MCA: Quests] pending project reward dimension is unavailable: {}",
+                    state.anchorDimension());
+            return DeliveryOutcome.FAILED_UNAPPLIED;
         }
         Entity sponsor = ProjectManager.resolveSponsor(player.getServer(), state);
         // Reads the amount frozen when the phase was distributed, so a player who was offline then is paid
         // exactly what everyone else was — never a fresh roll on login.
-        grantPlayerReward(anchorLevel, state, player, rewards.get(rewardIndex).reward(), sponsor,
+        return grantPlayerReward(anchorLevel, state, player, rewards.get(rewardIndex).reward(), sponsor,
                 state.frozenReward(phase, rewardIndex));
     }
 
@@ -265,15 +296,19 @@ public final class ProjectRewardDistributor {
         };
     }
 
-    private static void grantPlayerReward(ServerLevel level, ProjectState state, ServerPlayer player,
-                                          QuestReward reward, @Nullable Entity sponsor, OptionalInt frozenAmount) {
+    private static DeliveryOutcome grantPlayerReward(ServerLevel level, ProjectState state, ServerPlayer player,
+                                                     QuestReward reward, @Nullable Entity sponsor,
+                                                     OptionalInt frozenAmount) {
         try {
             grantPlayerRewardUnchecked(level, state, player, reward, sponsor, frozenAmount);
+            return DeliveryOutcome.DELIVERED;
         } catch (Exception | LinkageError failure) {
             McaQuests.LOGGER.error("[MCA: Quests] project '{}' reward {} failed for {}; continuing distribution",
                     state.projectId(), reward.getClass().getSimpleName(), player.getUUID(), failure);
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("mcaquests.reward.failed",
                     net.minecraft.network.chat.Component.literal(reward.getClass().getSimpleName())));
+            // The grant may have paid part of itself before throwing, so this is never retried blindly.
+            return DeliveryOutcome.FAILED_UNKNOWN;
         }
     }
 
