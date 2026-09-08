@@ -128,6 +128,19 @@ public final class ApiTownsteadBridge implements TownsteadBridge {
     }
 
     @Override
+    public Optional<TownsteadNeedsView> lastKnownNeeds(MinecraftServer server, java.util.UUID villager) {
+        return api.villagers().record(server, villager).map(record -> {
+            int hunger = record.levels().containsKey(NeedsSnapshot.HUNGER) ? record.levels().get(NeedsSnapshot.HUNGER).value() : 0;
+            int thirst = record.levels().containsKey(NeedsSnapshot.THIRST) ? record.levels().get(NeedsSnapshot.THIRST).value() : 0;
+            boolean thirstSimulated = record.levels().containsKey(NeedsSnapshot.THIRST)
+                    && record.levels().get(NeedsSnapshot.THIRST).enabled();
+            int energy = record.levels().containsKey(NeedsSnapshot.ENERGY) ? record.levels().get(NeedsSnapshot.ENERGY).value() : 0;
+            return new TownsteadNeedsView(hunger, 0f, 0f, thirst, 0, 0f, TownsteadNeedsView.FATIGUE_MAX - energy,
+                    record.collapsed(), !thirstSimulated);
+        });
+    }
+
+    @Override
     public Set<ResourceLocation> learnedSkills(Entity villager) {
         return api.professions().learnedSkills(villager);
     }

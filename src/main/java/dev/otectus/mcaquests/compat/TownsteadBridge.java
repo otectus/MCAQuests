@@ -98,6 +98,15 @@ public interface TownsteadBridge {
     /** Every registered skill id, for diagnostics and validation. Empty when unreadable. */
     Set<ResourceLocation> knownSkillIds();
 
+    /**
+     * The needs Townstead last recorded for a villager, loaded or not. Empty for a Townstead that
+     * keeps no register (0.7.x) or a villager it has never ticked. Readings may be days old; the
+     * caller decides whether that is evidence enough.
+     */
+    default Optional<TownsteadNeedsView> lastKnownNeeds(MinecraftServer server, java.util.UUID villager) {
+        return Optional.empty();
+    }
+
     // ------------------------------------------------------------ mutations
 
     TownsteadMutationResult changeNeeds(Entity villager, NeedMutation mutation);
