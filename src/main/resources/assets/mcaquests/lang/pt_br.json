@@ -2934,6 +2934,7 @@
   "mcaquests.hud.target_last_known_coords": "%1$s — visto pela última vez a %2$s blocos %3$s (%4$s)",
   "mcaquests.hud.other_dimension_coords": "%1$s — em %2$s (%3$s)",
   "mcaquests.guidance.your_bed": "Sua cama",
+  "mcaquests.guidance.bed.unknown": "Durma em uma cama.",
   "mcaquests.tooltip.copy_coords": "Clique para copiar estas coordenadas.",
   "mcaquests.message.coords_copied": "%s copiado para a área de transferência.",
   "mcaquests.quest.suspended.compat": "Missão pausada: o conteúdo necessário de %s está indisponível.",
