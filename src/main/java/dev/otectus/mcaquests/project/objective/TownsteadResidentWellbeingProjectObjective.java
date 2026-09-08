@@ -104,21 +104,31 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
             return false;
         }
         TownsteadEvaluation evaluation = new TownsteadEvaluation();
-        int observed = 0;
-        int well = 0;
         List<Entity> residents = McaCompat.loadedVillageResidents(level, village.getAsInt());
-        if (!enoughOfTheVillageIsLoaded(level, village.getAsInt(), residents.size())) {
-            // An unloaded population is not a well one. The hold waits rather than banking a phase on
-            // the handful of residents who happened to be in render distance.
-            return reset(progress);
-        }
+        // Loaded residents are read live; the rest of the roll through Townstead's last-known
+        // record, when this Townstead keeps one.
+        List<TownsteadNeedsView> readings = new java.util.ArrayList<>();
+        java.util.Set<java.util.UUID> seen = new java.util.HashSet<>();
         for (Entity resident : residents) {
             TownsteadVillagerView view = evaluation.villager(resident).orElse(null);
             if (view == null) {
                 continue;
             }
-            observed++;
-            if (isWell(view.needs())) {
+            seen.add(resident.getUUID());
+            readings.add(view.needs());
+        }
+        for (java.util.UUID uuid : McaCompat.villageResidentUuids(level, village.getAsInt())) {
+            if (!seen.contains(uuid)) {
+                bridge.lastKnownNeeds(server, uuid).ifPresent(readings::add);
+            }
+        }
+        if (!enoughOfTheVillageIsLoaded(level, village.getAsInt(), readings.size())) {
+            return reset(progress);
+        }
+        int observed = readings.size();
+        int well = 0;
+        for (TownsteadNeedsView needs : readings) {
+            if (isWell(needs)) {
                 well++;
             }
         }
