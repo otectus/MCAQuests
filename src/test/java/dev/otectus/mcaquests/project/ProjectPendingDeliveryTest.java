@@ -1,10 +1,14 @@
 package dev.otectus.mcaquests.project;
 
+import dev.otectus.mcaquests.project.state.BankedReward;
+import dev.otectus.mcaquests.project.state.PendingReward;
 import dev.otectus.mcaquests.project.state.ProjectInstanceKey;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProjectPendingDeliveryTest {
 
     private static final ResourceLocation PROJECT = new ResourceLocation("test", "project");
+    private static final UUID PLAYER = UUID.randomUUID();
 
     private static ProjectInstanceKey key(int village) {
         return new ProjectInstanceKey(PROJECT, ProjectScope.VILLAGE, "v:" + village);
@@ -55,5 +60,31 @@ class ProjectPendingDeliveryTest {
         assertEquals(2, ProjectManager.throttleGateCount());
         ProjectManager.clearSessionState();
         assertEquals(0, ProjectManager.throttleGateCount());
+    }
+
+    @Test
+    void bankedRewardsAreDeliveredEvenWhenVillageProjectsAreDisabled() {
+        PendingReward banked = PendingReward.ofBanked(BankedReward.reputation(5));
+        PendingReward phase = PendingReward.ofPhase(PROJECT, 0, 0);
+        List<PendingReward> attempted = new ArrayList<>();
+
+        List<PendingReward> retained = ProjectManager.drainPass(PLAYER, List.of(banked, phase), false,
+                reward -> {
+                    attempted.add(reward);
+                    return true;
+                });
+
+        assertEquals(List.of(banked), attempted, "only the banked debt is paid while projects are off");
+        assertEquals(List.of(phase), retained, "the phase reward is held, never discarded");
+    }
+
+    @Test
+    void anUndeliverableEntrySurvivesThePass() {
+        PendingReward banked = PendingReward.ofBanked(BankedReward.hearts(2, "SPOUSE"));
+
+        List<PendingReward> retained = ProjectManager.drainPass(PLAYER, List.of(banked), true,
+                reward -> false);
+
+        assertEquals(List.of(banked), retained);
     }
 }
