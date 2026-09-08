@@ -56,7 +56,8 @@ import java.util.Optional;
  *
  * <p>Note that a {@code dimension} source does <em>not</em> point at the dimension. It points at the
  * portal in the dimension the player is standing in, and stops pointing once they are through — see
- * {@link Portals}.
+ * {@link Portals}. When there is no portal to point at, it says which world the source is in and
+ * leaves it there, rather than searching the world the player is standing in for a substitute.
  */
 public record SourceHint(Optional<ResourceLocation> structure, Optional<TagKey<Structure>> structureTag,
                          Optional<ResourceLocation> biome, Optional<TagKey<Biome>> biomeTag,
@@ -106,17 +107,58 @@ public record SourceHint(Optional<ResourceLocation> structure, Optional<TagKey<S
     }
 
     /**
+     * What the {@code dimension} field means for a player standing in one particular world.
+     *
+     * <p>Three states, because the two that used to be one were not the same thing. "No dimension
+     * named, or the player is already in it" and "the source is a world away and no portal could be
+     * found" both left the route empty, and the empty route fell through to the anchor, block,
+     * structure and biome searches — <em>in the world the player is standing in</em>. A source that
+     * says {@code "dimension": "minecraft:the_nether", "block": "minecraft:ancient_debris"} would
+     * therefore hand an Overworld player a marker on the nearest Overworld thing that matched, which
+     * is a confidently wrong destination of exactly the sort this class exists to refuse.
+     */
+    enum Route {
+        /** Nothing to route: no dimension is named, or the player is already in the named one. */
+        SAME_DIMENSION,
+        /** A way into the named dimension was found in the one the player is standing in. */
+        ROUTE_FOUND,
+        /** The named dimension is elsewhere and there is no way in from here. */
+        OTHER_DIMENSION_NO_ROUTE
+    }
+
+    /** The route decision on its own, so it can be exercised without a running server. */
+    static Route classifyRoute(Optional<ResourceLocation> dimension, ResourceKey<Level> current,
+                               boolean routeFound) {
+        if (dimension.isEmpty() || current.location().equals(dimension.get())) {
+            return Route.SAME_DIMENSION;
+        }
+        return routeFound ? Route.ROUTE_FOUND : Route.OTHER_DIMENSION_NO_ROUTE;
+    }
+
+    /**
      * Where to send the player for this, or empty when nothing here resolves in this world.
      *
      * <p>Checked in the order a player would care about: the dimension first, because being in the
      * wrong world makes every other answer irrelevant; then the anchor, which is exact; then the
      * structure and the biome, which are searches and are cached for good by {@link LocateCache}.
+     *
+     * <p>"The wrong world makes every other answer irrelevant" is now enforced rather than merely
+     * stated: an other-dimension source with no route returns the instruction and stops, and none of
+     * the searches below it run at all.
      */
     public Optional<GuidanceTarget> guidance(ServerPlayer player, ActiveQuest active,
                                              ObjectiveProgress progress, ServerLevel level) {
         Optional<GuidanceTarget> route = dimensionRoute(player, level);
-        if (route.isPresent()) {
-            return route;
+        switch (classifyRoute(dimension, level.dimension(), route.isPresent())) {
+            case ROUTE_FOUND -> {
+                return route;
+            }
+            case OTHER_DIMENSION_NO_ROUTE -> {
+                return Optional.of(GuidanceTarget.otherDimension(dimension.get()));
+            }
+            case SAME_DIMENSION -> {
+                // Nothing to route; the searches below answer in the world the player is standing in.
+            }
         }
         Optional<GuidanceTarget> anchored = anchor.flatMap(a -> a.resolveTarget(player, active, level)
                 .map(resolved -> GuidanceTarget.ofPos(resolved.pos(), level,

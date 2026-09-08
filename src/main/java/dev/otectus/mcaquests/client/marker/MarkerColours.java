@@ -46,7 +46,8 @@ public final class MarkerColours {
             case STRUCTURE -> STRUCTURE;
             case BIOME -> LAND;
             case PORTAL -> PORTAL;
-            case LOCATION -> PLACE;
+            // INSTRUCTION is never drawn -- it has no position -- but the switch must be total.
+            case LOCATION, INSTRUCTION -> PLACE;
         };
     }
 
@@ -66,7 +67,7 @@ public final class MarkerColours {
             case STRUCTURE -> "RED";
             case BIOME -> "BLUE";
             case PORTAL -> "PURPLE";
-            case LOCATION -> "YELLOW";
+            case LOCATION, INSTRUCTION -> "YELLOW";
         };
     }
 
@@ -86,7 +87,7 @@ public final class MarkerColours {
             case STRUCTURE -> "ST";
             case BIOME -> "B";
             case PORTAL -> "P";
-            case LOCATION -> "Q";
+            case LOCATION, INSTRUCTION -> "Q";
         };
     }
 }

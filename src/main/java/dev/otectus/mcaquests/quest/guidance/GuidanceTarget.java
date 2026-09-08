@@ -1,9 +1,12 @@
 package dev.otectus.mcaquests.quest.guidance;
 
+import dev.otectus.mcaquests.quest.DisplayNames;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -24,7 +27,8 @@ import java.util.OptionalInt;
  * @param entityId    the target's network id when it is a loaded entity, so the client can follow it
  *                    between the server's once-a-second recomputes; empty for a fixed position
  * @param pos         where to draw: the entity's position when {@code entityId} is present, and the
- *                    whole answer when it is not
+ *                    whole answer when it is not. Meaningless, and {@link BlockPos#ZERO}, for a
+ *                    {@link GuidanceKind#INSTRUCTION} target, which is text and no geometry
  * @param dimension   the dimension {@code pos} is in. The marker draws nothing when it differs from
  *                    the one the player is standing in — a beam there would point through bedrock —
  *                    but the tracker still names the dimension and the coordinates, because a
@@ -76,6 +80,40 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
                 Math.max(1, arriveRadius), approximate, false, 0.0F);
     }
 
+    /**
+     * A destination in another dimension with no way into it from here: text, and no geometry.
+     *
+     * <p>The alternative was worse in both directions. Searching the dimension the player is standing
+     * in for a Nether block hands them a wrong-world substitute they will walk to; pointing at the
+     * destination's own coordinates would be an arrow through bedrock, which this record's contract
+     * forbids. So the answer is a sentence and nothing else: {@link GuidanceKind#INSTRUCTION}, a
+     * position of {@link BlockPos#ZERO} that no surface may read, and the dimension named in the
+     * label so the player knows which portal to go and find.
+     */
+    public static GuidanceTarget otherDimension(ResourceLocation dimension) {
+        return new GuidanceTarget(GuidanceKind.INSTRUCTION, OptionalInt.empty(), BlockPos.ZERO,
+                ResourceKey.create(Registries.DIMENSION, dimension),
+                Component.translatable(instructionKey(dimension), DisplayNames.name(dimension)),
+                1, false, false, 0.0F);
+    }
+
+    /**
+     * The wording for one dimension: the vanilla two get a sentence that names the way in.
+     *
+     * <p>"Find or build a portal there" is true of the Nether and false of the End, where the portal
+     * is found in a stronghold and cannot be built; and a modded dimension gets the general form
+     * because the mod has no idea how its author intends the player to arrive.
+     */
+    private static String instructionKey(ResourceLocation dimension) {
+        if (Level.NETHER.location().equals(dimension)) {
+            return "mcaquests.guidance.dimension.no_route.nether";
+        }
+        if (Level.END.location().equals(dimension)) {
+            return "mcaquests.guidance.dimension.no_route.the_end";
+        }
+        return "mcaquests.guidance.dimension.no_route";
+    }
+
     /** The same target relabelled — used when a caller knows a better name than the objective did. */
     public GuidanceTarget withLabel(Component newLabel) {
         return new GuidanceTarget(kind, entityId, pos, dimension, newLabel, arriveRadius, approximate,
@@ -112,8 +150,7 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
         return new GuidanceTarget(kind,
                 id < 0 ? OptionalInt.empty() : OptionalInt.of(id),
                 buf.readBlockPos(),
-                ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION,
-                        buf.readResourceLocation()),
+                ResourceKey.create(Registries.DIMENSION, buf.readResourceLocation()),
                 buf.readComponent(),
                 buf.readVarInt(),
                 buf.readBoolean(),

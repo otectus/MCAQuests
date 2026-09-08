@@ -14,9 +14,12 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 14 — GuidanceTarget carries the target entity's bounding-box height, so the marker
-    // can anchor its glyph on the body of an entity the client cannot currently see rather than at
-    // the transmitted feet position.
+    // Bumped to 15 — GuidanceKind gained INSTRUCTION, a destination that is a line of text and no
+    // geometry. The kind's ordinal is on the wire, and an older client would decode the new one as
+    // LOCATION and draw a marker on 0,0,0 in a world it is not standing in, so the two must match.
+    // (14 was GuidanceTarget carrying the target entity's bounding-box height, so the marker could
+    // anchor its glyph on the body of an entity the client cannot currently see rather than at the
+    // transmitted feet position.)
     // (13 was a destination for every quest, not just the marked one. QuestGuidanceS2CPacket
     // now carries a GuidanceSnapshot (one ActiveGuidance per quest, plus the index of the one the
     // marker stands on) rather than a single optional target, GuidanceTarget says whether a position
@@ -38,7 +41,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "14";
+    private static final String PROTOCOL_VERSION = "15";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
