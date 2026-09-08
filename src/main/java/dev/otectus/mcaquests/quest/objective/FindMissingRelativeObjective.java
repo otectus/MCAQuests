@@ -40,9 +40,11 @@ import java.util.UUID;
  * identity intact and immediately highlighted. From then on they are an ordinary villager, so later chain
  * stages can escort or deliver to them through the normal {@code "mode": "family"} path.
  *
- * <p>Completion is always "the relative exists and you are within {@code discover_radius} of them", so a
- * relative who is already in the world (found by another player, or loaded by MCA) is simply walked up to
- * rather than duplicated — {@link McaCompat#materializeRelative} refuses to spawn a second copy.
+ * <p>Completion is always "the relative exists and you are within {@code discover_radius} of them" —
+ * for a relative this objective placed exactly as for one who was already in the world (found by
+ * another player, or loaded by MCA) and is simply walked up to rather than duplicated;
+ * {@link McaCompat#materializeRelative} refuses to spawn a second copy. Placing somebody is not
+ * finding them, so a spawn credits nothing on its own.
  *
  * <pre>
  * { "type": "mcaquests:find_missing_relative",
@@ -201,11 +203,11 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
         }
         Entity existing = level.getEntity(bound);
         if (existing != null) {
-            if (existing.isAlive() && ObjectiveSupport.withinRadius(player, existing, discoverRadius)) {
+            if (isDiscovered(existing.isAlive(), player.distanceToSqr(existing))) {
                 progress.setCount(1);
                 return true;
             }
-            return false; // already in the world, but not found yet — the highlight leads the way
+            return false; // in the world, but not found yet — the highlight leads the way
         }
         // "Is this person actually missing?" is asked once, in one place. This used to be an inline
         // getEntity/roll pair that omitted the deceased and probablyGenerated checks and leaned on
@@ -223,8 +225,37 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
         if (McaCompat.materializeRelative(level, bound, spawnPos(player, level, bound)).isEmpty()) {
             return false; // spawn refused or MCA unavailable — pause and retry, never fail
         }
-        progress.setCount(1);
-        return true;
+        // Materialising is not finding. The relative is spawned carrying the very UUID this objective
+        // bound at accept, so from the next poll on they are simply "already in the world" and the
+        // branch above credits them on approach — the same rule, and the same walk, as a relative who
+        // was loaded all along. Crediting here instead completed the objective from up to
+        // spawn_distance away, on a villager the player had not yet laid eyes on.
+        return false;
+    }
+
+    /**
+     * Whether a relative who is in the world counts as found: alive, and near enough that the player
+     * can see who they have walked up to.
+     *
+     * <p>The one discovery rule, applied to a relative this objective placed and to one who was there
+     * all along alike — the difference between the two is where the body came from, not what finding
+     * somebody means.
+     *
+     * @param distanceSquared the square of the distance between player and relative, as
+     *                        {@code Entity#distanceToSqr} gives it
+     */
+    public boolean isDiscovered(boolean alive, double distanceSquared) {
+        return alive && distanceSquared <= (double) discoverRadius * discoverRadius;
+    }
+
+    /**
+     * Whether a relative placed by this objective appears inside the radius they can be discovered from,
+     * i.e. whether the spawn itself is a discovery on the very next poll. Reported by
+     * {@code ObjectiveValidator}, because the two numbers are independent and only their comparison
+     * says which of the two experiences a pack is asking for.
+     */
+    public boolean spawnsWithinDiscoveryRange() {
+        return spawnDistance <= discoverRadius;
     }
 
     /** True when the player is somewhere the missing relative could plausibly be found. */
