@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.quest.guidance;
 
+import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.network.QuestGuidanceS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.quest.QuestDefinition;
@@ -10,6 +11,7 @@ import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.PlayerQuestData;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -75,6 +77,9 @@ public final class GuidanceService {
 
     /** Last snapshot sent to each player, so an unchanged answer costs nothing. Cleared on logout. */
     private static final Map<UUID, GuidanceSnapshot> LAST_SENT = new ConcurrentHashMap<>();
+
+    /** How far to look for a villager who can take an {@code any_villager} hand-in. */
+    private static final double ANY_VILLAGER_RADIUS = 48.0D;
 
     /** Players whose guidance a mutation has invalidated, recomputed once at end of tick. */
     private static final GuidanceDirtySet DIRTY = new GuidanceDirtySet();
@@ -223,8 +228,9 @@ public final class GuidanceService {
      * The villager to hand the quest back to, once there is nothing left to do.
      *
      * <p>Only reached when every objective is satisfied, unreadable or placeless, which is close
-     * enough to the moment the player needs to be told where to walk. A quest that completes itself,
-     * or one a datapack lets any villager accept, points at nobody: there is no journey to make.
+     * enough to the moment the player needs to be told where to walk. A quest that completes itself
+     * points at nobody — there is no journey to make — while one a datapack lets any villager accept
+     * points at the nearest villager who can take it, because "anybody" is still somewhere.
      */
     private static Focus readyToHandIn(ServerPlayer player, ActiveQuest active, QuestDefinition def,
                                        ServerLevel level) {
@@ -232,8 +238,11 @@ public final class GuidanceService {
             return Focus.NONE;
         }
         TurnInMode mode = def.turnIn().mode();
-        if (mode == TurnInMode.SELF_COMPLETE || mode == TurnInMode.ANY_VILLAGER) {
-            return Focus.NONE;
+        if (mode == TurnInMode.SELF_COMPLETE) {
+            return Focus.NONE; // nobody to walk to: the quest closes itself
+        }
+        if (mode == TurnInMode.ANY_VILLAGER) {
+            return anyVillager(player, active, def);
         }
         // A specified-profession hand-in may exclude the original giver. Only highlight a
         // villager that the authoritative hand-in path will actually accept.
@@ -243,6 +252,28 @@ public final class GuidanceService {
         }
         return new Focus(Optional.of(GuidanceTarget.ofEntity(giver, GuidanceKind.VILLAGER,
                 active.villagerName())), Optional.of(giver));
+    }
+
+    /**
+     * The nearest villager who can take an {@code any_villager} hand-in.
+     *
+     * <p>"Anybody will do" used to mean "point at nobody", which reads as "this quest has nothing left
+     * for you" on a tracker row that has just turned green. Anybody still does — the hand-in itself is
+     * unchanged — but the player is shown the nearest one so the walk has a direction.
+     *
+     * <p>One bounded entity scan, on the once-a-second guidance pass, and only for a quest that is
+     * already complete.
+     */
+    private static Focus anyVillager(ServerPlayer player, ActiveQuest active, QuestDefinition def) {
+        return McaCompat.nearestVillagerWithin(player, ANY_VILLAGER_RADIUS)
+                .filter(villager -> villager instanceof LivingEntity)
+                .filter(villager -> QuestManager.canTurnInAt(active, def, villager))
+                .map(villager -> (LivingEntity) villager)
+                .map(villager -> new Focus(Optional.of(GuidanceTarget.ofEntity(villager,
+                                GuidanceKind.VILLAGER,
+                                Component.translatable("mcaquests.guidance.turnin.any_villager"))),
+                        Optional.of(villager)))
+                .orElse(Focus.NONE);
     }
 
     static boolean isComplete(ServerPlayer player, ActiveQuest active, QuestDefinition def) {

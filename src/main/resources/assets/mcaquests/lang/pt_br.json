@@ -26,6 +26,8 @@
   "mcaquests.hud.title": "Missões",
   "mcaquests.hud.deadline": "Tempo restante: %s",
   "mcaquests.hud.ready_suffix": " — pronta para entregar",
+  "mcaquests.guidance.giver.unloaded": "%s não está por perto — entregue isto quando o encontrar",
+  "mcaquests.guidance.turnin.any_villager": "Qualquer aldeão",
   "mcaquests.hud.target": "%s — %s blocos %s",
   "mcaquests.hud.target_last_known": "%s — visto pela última vez a %s blocos %s",
   "mcaquests.hud.dir.ahead": "à frente",
