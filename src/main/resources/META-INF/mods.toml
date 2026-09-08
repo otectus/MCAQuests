@@ -74,7 +74,7 @@ description='''${mod_description}'''
 [[dependencies.${mod_id}]]
     modId="townstead"
     mandatory=false
-    versionRange="[0.7.5,0.8)"
+    versionRange="[0.7.5,)"
     ordering="AFTER"
     side="BOTH"
 
