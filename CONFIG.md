@@ -27,7 +27,7 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 | Option | Default | What it does |
 |---|---|---|
 | `requireOriginalVillagerForTurnIn` | `true` | What a quest that states no `turn_in.mode` means: `true` hands it back to the villager who gave it, `false` to any MCA villager. A quest that *does* state a mode always wins; this only fills in the blank. |
-| `allowTurnInToSameProfessionIfOriginalMissing` | `false` | If the original giver is gone, allow any same-profession villager. |
+| `allowTurnInToSameProfessionIfOriginalMissing` | `false` | Let an `ORIGINAL_GIVER` quest be handed to any villager of the giver's trade, but only while the giver is **not present** in the world. A giver standing right there always takes their own quest back, flag or no flag. An unloaded giver cannot be told apart from a dead one — the quest stores no last-known position — so an unloaded giver also permits the fallback. |
 | `failQuestIfGiverDies` | `false` | If `true`, a quest fails when its giver dies; otherwise it waits / can be turned in elsewhere per its mode. |
 
 ### `[rewards]`
