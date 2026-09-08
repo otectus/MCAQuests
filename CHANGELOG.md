@@ -4,6 +4,164 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-09-08
+
+Reliability fixes for reward delivery, quest hand-in, escorts, guidance and objective crediting.
+
+### Fixed — Rewards
+
+- `deliverPending` now drains the owed-reward queue every pass instead of returning immediately when
+  `enableVillageProjects` is off. Banked FTB-claim rewards (reputation, hearts, titles) are paid even
+  while projects are disabled; phase rewards are held rather than dropped.
+- Reward delivery now reports a `DeliveryOutcome` instead of a boolean. A pre-flight failure (a
+  phase/reward index a datapack edit removed, an ambiguous or unavailable project instance, a missing
+  anchor dimension) is retried for up to three delivery passes; a grant whose own callback threw is
+  held immediately, since it may have already paid part of itself, and is never retried automatically.
+  A banked reward with no village or villager in range yet is retried indefinitely, as before, and is
+  never counted as a failed attempt.
+- Two new operator commands recover a held reward: `/mcaquests project pending <player>` lists what a
+  player is still owed, including anything held; `/mcaquests project pending <player> retry` clears
+  the attempt counts and runs an immediate delivery pass if the player is online, or queues it for
+  next login otherwise.
+- A player is now told when a reward has newly been held for an admin.
+
+### Fixed — Hand-in and guidance
+
+- `allowTurnInToSameProfessionIfOriginalMissing`'s same-profession fallback now applies only when the
+  original giver is not present. Previously the config flag alone was enough to redirect a hand-in
+  even with the giver standing right there.
+- An unloaded giver cannot be told apart from a dead one — no last-known position is recorded for a
+  giver — so an unloaded giver still counts as absent and still permits the fallback.
+- Guidance for an `any_villager` hand-in now focuses the nearest eligible loaded villager within 48
+  blocks instead of pointing at nobody once the quest is otherwise complete.
+- A ready quest whose giver is in no loaded chunk now shows a "not nearby" line in both the HUD and
+  the quest log, instead of leaving the destination row blank.
+
+### Fixed — Escort quests
+
+- A locked escortee that is not currently loaded now resolves to nobody instead of falling back to
+  the unbound villager selector, which could hand cleanup a different villager to release, un-lead
+  and take out of follow while the real escortee stayed frozen where the quest had left them.
+- Abandoning a quest now releases every escort hold the player owns, even when the quest's own
+  definition has since been removed by a datapack reload. A hold on a villager that cannot be reached
+  right now is queued and released the moment that villager next joins a level.
+- `EscortHoldRegistry` documents its own limits: holds are session-only and unpersisted, so a server
+  restart while a villager is held leaves it frozen; and a release always clears `noAi`/`invulnerable`
+  to `false` rather than restoring whatever another mod had set beforehand.
+
+### Fixed — Guidance
+
+- A source hint naming another dimension, with no portal found in the player's current world, no
+  longer falls through to search the anchor, block, structure and biome in the wrong world for a
+  substitute. It now answers with a text-only instruction naming the destination's dimension.
+- An `escort_entity` destination now records the dimension it was resolved in, and arrival requires
+  the escortee to actually be in that dimension — not merely standing on the same three coordinates
+  in whichever level happens to be evaluating the objective. A destination in another dimension than
+  the player's own shows the same cross-dimension instruction as a source hint, rather than a marker
+  pointing through the world.
+- A text-only cross-dimension instruction has no position, so the quest log hides its
+  copy-coordinates and pin buttons for it, and no automatic map waypoint is created for it.
+
+### Fixed — Objectives
+
+- `heal_entity` now rejects a target at full health outright, whatever `below_health_fraction` is set
+  to; an unreadable health fraction also stops crediting instead of defaulting to "credit it."
+- `use_item`'s `require_success` now credits both a bow and a crossbow through a new arrow-loose
+  handler, since neither weapon's use ever fires `Finish`: a drawn bow ends on `Stop` when released,
+  and a crossbow declares `useOnRelease`, so its loading ends on `Stop` and the shot itself happens
+  outside any use. A bow is credited once there is ammunition and the draw reached vanilla's own
+  firing threshold; a crossbow, already charged, is credited on ammunition alone. Before this fix
+  `require_success` on a crossbow could never credit at all.
+- `sleep_or_rest`'s `require_morning` now actually decides which event credits the objective: `true`
+  credits when the night is skipped for everyone, `false` credits when the player gets up after
+  sleeping long enough, and a bounce-out (disconnect, dimension change, a bed made unusable underneath
+  the player) never credits either way.
+- Guidance to "your bed" now only calls it a bed when a loaded, unforced bed block is actually there;
+  otherwise it gives a plain "sleep in a bed" instruction instead of pointing at a mined-out bed, a
+  respawn anchor, or a forced `/spawnpoint` location.
+- `find_missing_relative` now credits a relative it materializes only once the player is later found
+  near them, not the instant they are spawned — the same discovery rule a relative who was already in
+  the world has always been held to.
+
+### Fixed — Quest marker
+
+- The world marker's arrival fade now folds in vertical separation past a three-block tolerance, so a
+  target on another floor — straight up or down from the player — no longer fades out as "arrived."
+  The far fade, the label, and the displayed distance are unchanged and stay horizontal.
+
+### Fixed — Server stability
+
+- The per-player/per-instance project contribution throttle cache now prunes expired and future-dated
+  entries once it grows past a threshold, and is cleared entirely when the server stops, so a
+  single-player client no longer carries one world's game-time baselines into the next. The server
+  stop handler also releases every held escort, since the entities they name are about to stop
+  existing.
+
+### Changed — Datapack semantics
+
+- `heal_entity`: a villager at full health is never a valid tending target, whatever
+  `below_health_fraction` is set to. The previous default of `1.0` credited healing a villager who
+  was never hurt, since "at or below full health" is every villager.
+- `use_item` `require_success` on a bow or a crossbow now credits the shot when it is actually fired,
+  not on a `Finish` event neither weapon ever fires. A bow needs ammunition and a draw that reached
+  vanilla's own firing threshold; a crossbow, already charged, needs only ammunition. Before this
+  release `require_success` on a crossbow could never credit.
+- `sleep_or_rest`'s `require_morning: false` previously behaved exactly like `true` (any night passing
+  credited it regardless); it now credits on waking after sleeping long enough, and never on a forced
+  bounce-out.
+- `find_missing_relative`: discovering a relative this objective spawned now requires the player to
+  be within `discover_radius` of them, exactly as for a relative who was already in the world — it is
+  no longer credited automatically at the moment of spawning.
+- A new load-time validator warning fires when `spawn_distance` exceeds `discover_radius`, since only
+  comparing the two reveals that the player must walk toward the relative before the objective can
+  complete.
+- `turn_in` mode `original_giver`: the `allowTurnInToSameProfessionIfOriginalMissing` fallback is now
+  rejected while the original giver is present, even with the config flag enabled; only an absent
+  (dead, or unloaded) giver permits a same-profession stand-in.
+
+### Changed — Save data
+
+- An escort destination now saves a `destDim` dimension key alongside its coordinates. A destination
+  frozen in a world saved before this release has none; it is backfilled once, on first read, with
+  the dimension the objective happens to be evaluated in, and the key is written back so later reads
+  are stable. An older jar reading a save from this release ignores the new key and is otherwise
+  unaffected.
+- `PendingReward` gained an `attempts` count, written to NBT only when greater than zero, so an
+  untouched or never-retried entry stays byte-identical to earlier save shapes and an older jar
+  reading a save from this release is unaffected.
+
+Both are additive and read-compatible in both directions between saves from this release and from
+before it.
+
+### Compatibility
+
+- **Network protocol bumped 15 → 16.** `GuidanceKind` gained a new `INSTRUCTION` entry, and its
+  ordinal travels on the wire inside `GuidanceTarget`; an older client would decode the new entry as
+  `LOCATION` and draw a marker at a meaningless position in the wrong world. Client and server must
+  be on the same protocol.
+- `ProjectRewardDistributor.grantPending` (public) now returns a `DeliveryOutcome` enum instead of
+  `void`.
+- `McaCompat.holdVillagerInPlace` gained a second overload taking an escort owner's UUID; the
+  original single-argument overload is preserved and behaves as before.
+- `PendingReward` gained an `attempts` component; its existing five-argument and seven-argument
+  public constructors are both preserved and default `attempts` to `0`.
+- New public members backing the two `pending` commands: `ProjectSavedData.pendingOf(UUID)`,
+  `ProjectManager.isHeld(PendingReward)`, `ProjectManager.resetPendingAttempts(MinecraftServer, UUID)`,
+  and `ProjectManager.clearSessionState()`. All are additive.
+- `UseItemObjective.loosedArrow` (public) now takes the released `ItemStack` as its first argument, to
+  tell a crossbow from a bow.
+- Nothing under `api/` changed in this release.
+- New translation keys, in both `en_us.json` and `pt_br.json`: `mcaquests.guidance.giver.unloaded`,
+  `mcaquests.guidance.turnin.any_villager`, `mcaquests.reward.pending.held`,
+  `mcaquests.command.project.pending.none`, `mcaquests.command.project.pending.header`,
+  `mcaquests.command.project.pending.phase`, `mcaquests.command.project.pending.banked`,
+  `mcaquests.command.project.pending.held`, `mcaquests.command.project.pending.retried`,
+  `mcaquests.command.project.pending.retry_queued`, `mcaquests.guidance.dimension.no_route`,
+  `mcaquests.guidance.dimension.no_route.nether`, `mcaquests.guidance.dimension.no_route.the_end`,
+  `mcaquests.guidance.bed.unknown`.
+- See `CONFIG.md` for `allowTurnInToSameProfessionIfOriginalMissing`'s updated documentation, and
+  `DATAPACK.md`'s project config table for `enableVillageProjects`'s.
+
 ## [1.6.2] - 2026-09-07
 
 Stabilization and compatibility refinement for the NeoForge 1.21.1 release.

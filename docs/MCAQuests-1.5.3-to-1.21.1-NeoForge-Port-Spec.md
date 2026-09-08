@@ -292,7 +292,7 @@ Audit every `@EventBusSubscriber` for `bus` and `value=Dist.CLIENT`. An import t
 
 ### 14.1 Protocol decision
 
-Set the target `PROTOCOL_VERSION` to `"15"`.
+Set the target `PROTOCOL_VERSION` to `"15"`. (Superseded in a later release: bumped to `"16"` when `GuidanceKind` gained an `INSTRUCTION` entry whose ordinal travels on the wire.)
 
 Protocol 14 is the Forge `SimpleChannel` schema in 1.5.3. Version 15 denotes the NeoForge payload rewrite while preserving the same logical data. Use `event.registrar(MOD_ID).versioned(PROTOCOL_VERSION)` so incompatible client/server builds fail during negotiation.
 
