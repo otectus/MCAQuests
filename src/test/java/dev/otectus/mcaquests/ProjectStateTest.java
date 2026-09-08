@@ -122,6 +122,18 @@ class ProjectStateTest {
         assertEquals(legacy.rewardIndex(), loaded.get().rewardIndex());
     }
 
+    /** An entry nobody has failed to deliver keeps exactly the old key set — no "attempts" in sight. */
+    @Test
+    void aZeroAttemptPendingRewardWritesTheLegacyKeySetExactly() {
+        CompoundTag tag = PendingReward.ofPhase(new ResourceLocation("mcaquests:well_repair"), 1, 2).save();
+        assertEquals(java.util.Set.of("project", "phase", "reward"), tag.getAllKeys());
+        assertEquals(0, PendingReward.load(tag).orElseThrow().attempts());
+
+        CompoundTag banked = PendingReward.ofBanked(BankedReward.reputation(3)).save();
+        assertEquals(java.util.Set.of("kind", "banked"), banked.getAllKeys());
+        assertEquals(0, PendingReward.load(banked).orElseThrow().attempts());
+    }
+
     /** A genuinely pre-1.0.0-shaped tag (as an old jar would have written it) still loads as legacy. */
     @Test
     void preExistingLegacyShapedTagLoadsAsProjectPhase() {

@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.command;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -14,6 +15,7 @@ import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
 import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
+import dev.otectus.mcaquests.project.state.PendingReward;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.project.state.ProjectState;
 import dev.otectus.mcaquests.quest.QuestDefinition;
@@ -43,6 +45,7 @@ import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -60,6 +63,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -134,7 +138,14 @@ public final class McaQuestsCommand {
                         .then(Commands.literal("debug")
                                 .requires(src -> src.hasPermission(2))
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
-                                        .executes(McaQuestsCommand::projectDebug))))
+                                        .executes(McaQuestsCommand::projectDebug)))
+                        .then(Commands.literal("pending")
+                                .requires(src -> src.hasPermission(2))
+                                .then(Commands.argument("player", GameProfileArgument.gameProfile())
+                                        .executes(McaQuestsCommand::projectPending)
+                                        .then(Commands.literal("retry")
+                                                .requires(src -> src.hasPermission(3))
+                                                .executes(McaQuestsCommand::projectPendingRetry)))))
                 .then(Commands.literal("situation")
                         .then(Commands.literal("list")
                                 .requires(src -> src.hasPermission(2))
@@ -536,6 +547,63 @@ public final class McaQuestsCommand {
         ProjectManager.explainAvailability(player, target, id)
                 .forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
         return 1;
+    }
+
+    /**
+     * Lists what a player is still owed, including entries held after repeated delivery failures.
+     * Resolves through the profile cache so an offline player — the usual case for owed rewards — can
+     * be inspected by name.
+     */
+    private static int projectPending(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        MinecraftServer server = ctx.getSource().getServer();
+        GameProfile profile = singleProfile(ctx);
+        List<PendingReward> owed = ProjectSavedData.get(server).pendingOf(profile.getId());
+        if (owed.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "mcaquests.command.project.pending.none", profile.getName()), false);
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.translatable("mcaquests.command.project.pending.header",
+                owed.size(), profile.getName()), false);
+        for (PendingReward reward : owed) {
+            ctx.getSource().sendSuccess(() -> reward.kind() == PendingReward.Kind.BANKED
+                    ? Component.translatable("mcaquests.command.project.pending.banked",
+                            reward.banked().type().name().toLowerCase(Locale.ROOT), reward.attempts())
+                    : Component.translatable("mcaquests.command.project.pending.phase",
+                            String.valueOf(reward.projectId()), reward.phase() + 1, reward.rewardIndex(),
+                            reward.attempts()), false);
+            if (ProjectManager.isHeld(reward)) {
+                ctx.getSource().sendSuccess(() -> Component.translatable(
+                        "mcaquests.command.project.pending.held"), false);
+            }
+        }
+        return owed.size();
+    }
+
+    /** Clears the attempt counts so held entries are tried again, and runs a pass if the player is online. */
+    private static int projectPendingRetry(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        MinecraftServer server = ctx.getSource().getServer();
+        GameProfile profile = singleProfile(ctx);
+        int reset = ProjectManager.resetPendingAttempts(server, profile.getId());
+        ServerPlayer online = server.getPlayerList().getPlayer(profile.getId());
+        if (online != null) {
+            ProjectManager.deliverPending(online);
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "mcaquests.command.project.pending.retried", reset, profile.getName()), true);
+        } else {
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "mcaquests.command.project.pending.retry_queued", reset, profile.getName()), true);
+        }
+        return reset;
+    }
+
+    /** A single profile, so "pending @a" cannot silently report on one arbitrary player. */
+    private static GameProfile singleProfile(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        Collection<GameProfile> profiles = GameProfileArgument.getGameProfiles(ctx, "player");
+        if (profiles.size() != 1) {
+            throw EntityArgument.ERROR_NOT_SINGLE_PLAYER.create();
+        }
+        return profiles.iterator().next();
     }
 
     // ---------------------------------------------------------------- situations (0.8.0)

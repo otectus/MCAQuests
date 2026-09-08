@@ -967,18 +967,35 @@ public final class ProjectManager {
         boolean projectsEnabled = enabled();
         ProjectSavedData data = ProjectSavedData.get(server);
         UUID playerId = player.getUUID();
-        List<PendingReward> retained = drainPass(playerId, data.drainPending(playerId), projectsEnabled,
+        List<PendingReward> owed = data.drainPending(playerId);
+        long heldBefore = owed.stream().filter(ProjectManager::isHeld).count();
+        List<PendingReward> retained = drainPass(playerId, owed, projectsEnabled,
                 reward -> deliverOne(server, level, player, reward));
         retained.forEach(reward -> data.addPending(playerId, reward));
+        if (retained.stream().filter(ProjectManager::isHeld).count() > heldBefore) {
+            player.sendSystemMessage(Component.translatable("mcaquests.reward.pending.held"));
+        }
         if (projectsEnabled) {
             syncProjects(player);
         }
     }
 
-    /** One attempt at a single owed reward; {@code true} means it was paid and can be dropped. */
+    /**
+     * How many failed delivery passes an owed reward gets before it is held for an operator. A reward
+     * that fails identically every login is not going to start working on the fourth try, and the log
+     * line it produces each time is worse than the missing reward.
+     */
+    static final int MAX_DELIVERY_ATTEMPTS = 3;
+
+    /** Held: retained in storage, visible to {@code /mcaquests project pending}, never retried on its own. */
+    public static boolean isHeld(PendingReward reward) {
+        return reward.attempts() >= MAX_DELIVERY_ATTEMPTS;
+    }
+
+    /** One attempt at a single owed reward. */
     @FunctionalInterface
     interface PendingDelivery {
-        boolean deliver(PendingReward reward);
+        ProjectRewardDistributor.DeliveryOutcome deliver(PendingReward reward);
     }
 
     /**
@@ -989,40 +1006,59 @@ public final class ProjectManager {
     static List<PendingReward> drainPass(UUID playerId, List<PendingReward> owed, boolean projectsEnabled,
                                          PendingDelivery delivery) {
         List<PendingReward> retained = new ArrayList<>();
+        int failures = 0;
         for (PendingReward reward : owed) {
-            if (!projectsEnabled && reward.kind() != PendingReward.Kind.BANKED) {
-                retained.add(reward); // projects are off: hold it, do not pay it and do not drop it
+            if (isHeld(reward) || (!projectsEnabled && reward.kind() != PendingReward.Kind.BANKED)) {
+                retained.add(reward); // held, or projects are off: keep it, do not pay it, do not drop it
                 continue;
             }
+            ProjectRewardDistributor.DeliveryOutcome outcome;
             try {
-                if (!delivery.deliver(reward)) {
-                    retained.add(reward);
-                }
+                outcome = delivery.deliver(reward);
             } catch (RuntimeException | LinkageError failure) {
-                // A corrupt nested snapshot or one broken add-on must not discard the rest of the
-                // already-drained queue. Keep this unpaid entry for recovery and try its siblings.
-                retained.add(reward);
-                McaQuests.LOGGER.warn("[MCA: Quests] retaining unreadable pending reward for {}",
-                        playerId, failure);
+                // Anything escaping the delivery call comes from resolution — a corrupt nested snapshot,
+                // one broken add-on — because the grant itself reports FAILED_UNKNOWN rather than throw.
+                McaQuests.LOGGER.warn("[MCA: Quests] unreadable pending reward for {}", playerId, failure);
+                outcome = ProjectRewardDistributor.DeliveryOutcome.FAILED_UNAPPLIED;
             }
+            switch (outcome) {
+                case DELIVERED -> {
+                    // paid: the entry is settled and does not go back into storage
+                }
+                case DEFERRED -> retained.add(reward);
+                case FAILED_UNAPPLIED -> {
+                    failures++;
+                    retained.add(reward.withAttempts(reward.attempts() + 1));
+                }
+                case FAILED_UNKNOWN -> {
+                    failures++;
+                    retained.add(reward.withAttempts(MAX_DELIVERY_ATTEMPTS)); // may have partly paid
+                }
+            }
+        }
+        if (failures > 0) {
+            // One line per pass, not per entry: a broken add-on affects every reward it touches.
+            McaQuests.LOGGER.warn("[MCA: Quests] kept {} undeliverable pending reward(s) for {}",
+                    failures, playerId);
         }
         return retained;
     }
 
-    private static boolean deliverOne(MinecraftServer server, ServerLevel level, ServerPlayer player,
-                                      PendingReward reward) {
+    private static ProjectRewardDistributor.DeliveryOutcome deliverOne(MinecraftServer server, ServerLevel level,
+                                                                       ServerPlayer player, PendingReward reward) {
         if (reward.kind() == PendingReward.Kind.BANKED) {
             if (!ProjectRewardDistributor.attemptBankedDelivery(server, level, player, reward.banked())) {
-                return false; // still no target - stays banked
+                // Not a failure: no village or villager in range yet. Retried indefinitely, as designed.
+                return ProjectRewardDistributor.DeliveryOutcome.DEFERRED;
             }
             player.sendSystemMessage(Component.translatable("mcaquests.ftbq.reward.banked_delivered"));
-            return true;
+            return ProjectRewardDistributor.DeliveryOutcome.DELIVERED;
         }
         ProjectDefinition def = ProjectRegistry.get(reward.projectId()).orElse(null);
         if (def == null || reward.phase() < 0 || reward.phase() >= def.phaseCount()
                 || reward.rewardIndex() < 0
                 || reward.rewardIndex() >= def.phase(reward.phase()).rewards().size()) {
-            return false;
+            return ProjectRewardDistributor.DeliveryOutcome.FAILED_UNAPPLIED;
         }
         ProjectSavedData data = ProjectSavedData.get(server);
         List<ProjectState> candidates = reward.instanceSnapshot() != null
@@ -1033,11 +1069,22 @@ public final class ProjectManager {
         if (candidates.size() != 1) {
             // Old saves omitted instance identity. Ambiguous or unavailable payouts stay banked;
             // choosing the first village would pay another village's amount and sponsor reward.
-            return false;
+            return ProjectRewardDistributor.DeliveryOutcome.FAILED_UNAPPLIED;
         }
-        ProjectRewardDistributor.grantPending(level, candidates.get(0), player, def,
+        return ProjectRewardDistributor.grantPending(level, candidates.get(0), player, def,
                 reward.phase(), reward.rewardIndex());
-        return true;
+    }
+
+    /**
+     * Operator recovery for {@code /mcaquests project pending <player> retry}: clears the attempt count
+     * on everything this player is owed, so the next delivery pass tries them all again. Returns how
+     * many entries were reset.
+     */
+    public static int resetPendingAttempts(MinecraftServer server, UUID playerId) {
+        ProjectSavedData data = ProjectSavedData.get(server);
+        List<PendingReward> owed = data.drainPending(playerId);
+        owed.forEach(reward -> data.addPending(playerId, reward.withAttempts(0)));
+        return owed.size();
     }
 
     // ---------------------------------------------------------------- helpers shared with distributor/commands
