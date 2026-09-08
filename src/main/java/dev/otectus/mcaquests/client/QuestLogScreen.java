@@ -352,8 +352,14 @@ public class QuestLogScreen extends McaQuestsScreen {
         if (minecraft.player == null) {
             return Optional.empty();
         }
-        return destination(entry)
+        Optional<Component> line = destination(entry)
                 .map(g -> GuidanceText.line(g.target(), minecraft.player, minecraft.level));
+        if (line.isPresent() || !entry.ready() || entry.suspended()
+                || !McaQuestsConfig.CLIENT.showQuestLogDestination.get()) {
+            return line;
+        }
+        // Ready, and the server had nowhere to point: the giver is in no loaded chunk.
+        return Optional.of(GuidanceText.awaitingGiver(entry.giverName()));
     }
 
     private void copyCoordinates(BlockPos pos) {

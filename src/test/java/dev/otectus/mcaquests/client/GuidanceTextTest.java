@@ -110,6 +110,28 @@ class GuidanceTextTest {
                 "label, dimension and coordinates — the bearing is the one thing it cannot honestly say");
     }
 
+    @Test
+    @DisplayName("the ready-with-nowhere-to-go line and the any-villager label are translated")
+    void readyStateKeysExist() {
+        // A ready quest whose giver is in no loaded chunk gets no guidance at all, so this line is
+        // the only thing under the green row; and an any_villager hand-in now points at the nearest
+        // villager, labelled rather than named. Both are new keys and both are drawn every tick.
+        JsonObject en = load();
+        List<String> missing = new ArrayList<>();
+        check(en, missing, "mcaquests.guidance.giver.unloaded");
+        check(en, missing, "mcaquests.guidance.turnin.any_villager");
+        assertTrue(missing.isEmpty(), "these would appear verbatim on the tracker: " + missing);
+
+        assertEquals(1, placeholders(en, "mcaquests.guidance.giver.unloaded"), "the giver's name");
+        assertEquals(0, placeholders(en, "mcaquests.guidance.turnin.any_villager"),
+                "a label, not a sentence about anybody in particular");
+        assertTrue(GuidanceText.awaitingGiver(Component.literal("Anna")).getContents()
+                        instanceof net.minecraft.network.chat.contents.TranslatableContents contents
+                        && contents.getKey().equals("mcaquests.guidance.giver.unloaded")
+                        && contents.getArgs().length == 1,
+                "the line must name the giver the player is waiting on");
+    }
+
     private static void check(JsonObject en, List<String> missing, String key) {
         if (!en.has(key)) {
             missing.add(key);

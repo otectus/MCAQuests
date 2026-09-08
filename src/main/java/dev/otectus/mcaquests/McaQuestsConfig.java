@@ -191,7 +191,13 @@ public final class McaQuestsConfig {
                     "  false           - hand it to any MCA villager",
                     "A quest that DOES state a mode always wins; this only fills in the blank.")
                     .define("requireOriginalVillagerForTurnIn", true);
-            allowTurnInToSameProfessionIfOriginalMissing = b.define("allowTurnInToSameProfessionIfOriginalMissing", false);
+            allowTurnInToSameProfessionIfOriginalMissing = b.comment(
+                    "Let an ORIGINAL_GIVER quest be handed to any villager of the giver's trade,",
+                    "but only while the giver is NOT present in the world. A giver standing next to",
+                    "the player always takes their own quest back, flag or no flag.",
+                    "An unloaded giver cannot be told apart from a dead one - the quest stores no",
+                    "last-known position - so an unloaded giver also permits the fallback.")
+                    .define("allowTurnInToSameProfessionIfOriginalMissing", false);
             failQuestIfGiverDies = b.define("failQuestIfGiverDies", false);
             b.pop();
 

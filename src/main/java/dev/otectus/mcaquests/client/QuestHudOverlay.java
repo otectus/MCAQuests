@@ -214,8 +214,13 @@ public class QuestHudOverlay implements LayeredDraw.Layer {
         if (player == null) {
             return Optional.empty();
         }
-        return ClientGuidanceData.forQuest(entry.questId(), entry.villagerUuid())
+        Optional<Component> line = ClientGuidanceData.forQuest(entry.questId(), entry.villagerUuid())
                 .map(guidance -> GuidanceText.line(guidance.target(), player, minecraft.level));
+        if (line.isPresent() || !entry.ready() || entry.suspended()) {
+            return line;
+        }
+        // Ready, and the server had nowhere to point: the giver is in no loaded chunk.
+        return Optional.of(GuidanceText.awaitingGiver(entry.giverName()));
     }
 
     /**

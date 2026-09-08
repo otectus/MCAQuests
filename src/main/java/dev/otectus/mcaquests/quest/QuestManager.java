@@ -55,6 +55,7 @@ import dev.otectus.mcaquests.quest.reward.TownsteadReward;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
 import dev.otectus.mcaquests.quest.template.TemplateSpec;
+import dev.otectus.mcaquests.quest.turnin.GiverPresence;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.OfferSession;
 import dev.otectus.mcaquests.state.PlayerQuestData;
@@ -1338,8 +1339,13 @@ public final class QuestManager {
         }
         boolean isGiver = villager.getUUID().equals(active.villagerUuid());
         return switch (def.turnIn().mode()) {
+            // The fallback is "if the original giver is gone", and it now asks. Reading the flag
+            // alone let a player hand a quest to the villager beside them while the giver stood
+            // there too; an unloaded giver still permits it, because nothing here can tell an
+            // unloaded villager from a dead one (see GiverPresence).
             case ORIGINAL_GIVER -> isGiver
-                    || (McaQuestsConfig.COMMON.allowTurnInToSameProfessionIfOriginalMissing.get()
+                    || (giverPresence(active, villager).permitsSameProfessionFallback(
+                            McaQuestsConfig.COMMON.allowTurnInToSameProfessionIfOriginalMissing.get())
                         && sameProfessionAsGiver(active, villager));
             case ANY_VILLAGER -> true;
             case SAME_PROFESSION -> isGiver || sameProfessionAsGiver(active, villager);
@@ -1347,6 +1353,13 @@ public final class QuestManager {
                     McaCompat.getProfessionId(villager).orElse(null), profMode());
             case SELF_COMPLETE -> false; // completed automatically, never via the menu
         };
+    }
+
+    /** Where the giver is, read from the level the candidate villager is standing in. */
+    private static GiverPresence giverPresence(ActiveQuest active, Entity villager) {
+        return villager.level() instanceof ServerLevel level
+                ? GiverPresence.of(level, active)
+                : GiverPresence.UNLOADED_OR_UNKNOWN;
     }
 
     private static boolean sameProfessionAsGiver(ActiveQuest active, Entity villager) {

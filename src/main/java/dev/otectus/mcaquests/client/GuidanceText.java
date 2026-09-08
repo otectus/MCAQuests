@@ -105,6 +105,18 @@ public final class GuidanceText {
         return pos.getX() + " " + pos.getY() + " " + pos.getZ();
     }
 
+    /**
+     * What a quest that is ready to hand in says when there is no destination to draw.
+     *
+     * <p>A green row with nothing under it reads as "this quest wants nothing more from you". The
+     * server sends no guidance for a completed {@code original_giver} quest whose giver is in no
+     * loaded chunk — it has no position to send, because none is recorded — so the honest line is
+     * that the giver is not nearby, rather than silence.
+     */
+    public static Component awaitingGiver(Component giverName) {
+        return Component.translatable("mcaquests.guidance.giver.unloaded", giverName);
+    }
+
     /** The world marker's floating label: the name and the distance, with no bearing to read. */
     public static Component markerLabel(GuidanceTarget target, double distance) {
         return Component.translatable(
