@@ -190,6 +190,56 @@ class MarkerGeometryTest {
     }
 
     @Nested
+    @DisplayName("the arrival distance")
+    class ArrivalDistance {
+
+        @Test
+        @DisplayName("keeps the marker up for a target on another floor directly below")
+        void heightKeepsItVisible() {
+            // The bug: sixty blocks straight down measured as zero, so the fade took away the only
+            // cue that said where to dig.
+            assertEquals(0.0F, MarkerGeometry.arrivalAlpha(0.0D, ARRIVE),
+                    "horizontal distance alone still says arrived");
+            double below = MarkerGeometry.arrivalDistance(0.0D, -60.0D);
+            assertTrue(MarkerGeometry.arrivalAlpha(below, ARRIVE) > 0.0F,
+                    "a target sixty blocks down is not somewhere the player has arrived");
+        }
+
+        @Test
+        @DisplayName("changes nothing on the same floor, so walking up to a target still clears it")
+        void withinToleranceIsUnchanged() {
+            for (double v = -MarkerGeometry.ARRIVAL_VERTICAL_TOLERANCE;
+                 v <= MarkerGeometry.ARRIVAL_VERTICAL_TOLERANCE; v += 0.25D) {
+                for (double h = 0.0D; h <= 40.0D; h += 0.5D) {
+                    assertEquals(h, MarkerGeometry.arrivalDistance(h, v), 1.0E-9D,
+                            "height " + v + " at " + h + " blocks is the same floor");
+                    assertEquals(MarkerGeometry.arrivalAlpha(h, ARRIVE),
+                            MarkerGeometry.arrivalAlpha(MarkerGeometry.arrivalDistance(h, v), ARRIVE),
+                            "the fade on the same floor is exactly the old one");
+                }
+            }
+        }
+
+        @Test
+        @DisplayName("counts only the height past the tolerance, so crossing it is not a jump")
+        void onlyTheExcessCounts() {
+            double edge = MarkerGeometry.ARRIVAL_VERTICAL_TOLERANCE;
+            assertEquals(4.0D, MarkerGeometry.arrivalDistance(0.0D, edge + 4.0D), 1.0E-9D);
+            assertEquals(5.0D, MarkerGeometry.arrivalDistance(3.0D, edge + 4.0D), 1.0E-9D);
+            // Either side of the boundary the answer is continuous, not a step back into view.
+            assertEquals(MarkerGeometry.arrivalDistance(6.0D, edge),
+                    MarkerGeometry.arrivalDistance(6.0D, edge + 1.0E-6D), 1.0E-5D);
+        }
+
+        @Test
+        @DisplayName("treats above and below alike")
+        void isSymmetric() {
+            assertEquals(MarkerGeometry.arrivalDistance(7.0D, 40.0D),
+                    MarkerGeometry.arrivalDistance(7.0D, -40.0D), 1.0E-9D);
+        }
+    }
+
+    @Nested
     @DisplayName("the ground ring")
     class Ring {
 
