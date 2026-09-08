@@ -81,6 +81,22 @@ public record GuidanceTarget(GuidanceKind kind, OptionalInt entityId, BlockPos p
     }
 
     /**
+     * A plain instruction: a line of text, no position, and nothing for any surface to draw.
+     *
+     * <p>The sibling of {@link #otherDimension(ResourceLocation)} for the other reason geometry can be
+     * missing — not "the place is unreachable" but "the mod does not know where the place is". Telling
+     * a player to sleep in a bed is worth saying even when nobody can point at one; pointing at a bed
+     * that has been mined out, or at a chunk nobody has loaded, is not.
+     *
+     * @param dimension the dimension the instruction is given in, which for a text-only target is only
+     *                  ever the player's own, since there is no position to be in the wrong world
+     */
+    public static GuidanceTarget instruction(ResourceKey<Level> dimension, Component label) {
+        return new GuidanceTarget(GuidanceKind.INSTRUCTION, OptionalInt.empty(), BlockPos.ZERO,
+                dimension, label, 1, false, false, 0.0F);
+    }
+
+    /**
      * A destination in another dimension with no way into it from here: text, and no geometry.
      *
      * <p>The alternative was worse in both directions. Searching the dimension the player is standing

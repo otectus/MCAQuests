@@ -2934,6 +2934,7 @@
   "mcaquests.hud.target_last_known_coords": "%1$s — last seen %2$s blocks %3$s (%4$s)",
   "mcaquests.hud.other_dimension_coords": "%1$s — in %2$s (%3$s)",
   "mcaquests.guidance.your_bed": "Your bed",
+  "mcaquests.guidance.bed.unknown": "Sleep in a bed.",
   "mcaquests.tooltip.copy_coords": "Click to copy these coordinates.",
   "mcaquests.message.coords_copied": "Copied %s to the clipboard.",
   "mcaquests.quest.suspended.compat": "Quest paused: required content from %s is unavailable.",

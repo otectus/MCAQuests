@@ -76,6 +76,7 @@ import net.minecraftforge.event.entity.player.ArrowLooseEvent;
 import net.minecraftforge.event.entity.player.ItemFishedEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerWakeUpEvent;
 import net.minecraftforge.event.entity.player.TradeWithVillagerEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.SleepFinishedTimeEvent;
@@ -1080,6 +1081,13 @@ public final class QuestProgressEvents {
                 (objective, active, progress) -> objective.onBreed(player, active, progress, child, level));
     }
 
+    /**
+     * Credits {@code sleep_or_rest} objectives that asked for the night to pass, when it has.
+     *
+     * <p>Only those: an objective with {@code require_morning = false} asked for a rest rather than a
+     * dawn, and is answered by {@link #onPlayerWakeUp} instead. Crediting both from here would make
+     * the flag mean nothing, which is what it used to mean.
+     */
     @SubscribeEvent
     public static void onSleepFinished(SleepFinishedTimeEvent event) {
         if (!(event.getLevel() instanceof ServerLevel level)) {
@@ -1088,9 +1096,44 @@ public final class QuestProgressEvents {
         for (ServerPlayer player : level.players()) {
             if (player.isSleepingLongEnough()) {
                 forActiveObjectives(player, SleepOrRestObjective.class,
-                        (objective, progress) -> progress.setCount(1));
+                        (objective, progress) -> {
+                            if (SleepOrRestObjective.creditsOnMorning(objective.requireMorning())) {
+                                progress.setCount(1);
+                            }
+                        });
             }
         }
+    }
+
+    /**
+     * Credits {@code sleep_or_rest} objectives that only asked for a rest, when the player gets up.
+     *
+     * <p>The other half of {@link #onSleepFinished}: on a server where somebody stays awake, morning
+     * never arrives and the sleep-finished event never fires, so a {@code require_morning = false}
+     * objective has to be finished by leaving the bed.
+     *
+     * <p>Forge fires this at the top of {@code Player#stopSleepInBed}, before vanilla stops the sleep
+     * and resets the counter, so {@code isSleepingLongEnough()} still answers for the sleep that just
+     * ended — no session bookkeeping is needed to remember it. {@code wakeImmediately} is vanilla's own
+     * word for a bounce-out (a disconnect, a dimension change, a bed made unusable underneath the
+     * player) as opposed to getting up, and a bounce-out is not a rest.
+     *
+     * <p>On an ordinary night both handlers fire; {@code setCount(1)} is idempotent, and the two never
+     * credit the same objective anyway.
+     */
+    @SubscribeEvent
+    public static void onPlayerWakeUp(PlayerWakeUpEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
+            return;
+        }
+        boolean sleptLongEnough = player.isSleepingLongEnough();
+        forActiveObjectives(player, SleepOrRestObjective.class,
+                (objective, progress) -> {
+                    if (SleepOrRestObjective.creditsOnWake(objective.requireMorning(),
+                            event.wakeImmediately(), sleptLongEnough)) {
+                        progress.setCount(1);
+                    }
+                });
     }
 
     @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
