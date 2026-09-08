@@ -72,9 +72,12 @@ reward that failed to deliver could be lost outright. No new content.
 
 - `heal_entity` now rejects a target at full health outright, whatever `below_health_fraction` is set
   to; an unreadable health fraction also stops crediting instead of defaulting to "credit it."
-- `use_item`'s `require_success` now credits a bow release (there is ammunition and the draw reached
-  vanilla's own firing threshold) through a new handler, since letting go of a bow ends its use with
-  an event that a `Finish`-only check could never see.
+- `use_item`'s `require_success` now credits both a bow and a crossbow through a new arrow-loose
+  handler, since neither weapon's use ever fires `Finish`: a drawn bow ends on `Stop` when released,
+  and a crossbow declares `useOnRelease`, so its loading ends on `Stop` and the shot itself happens
+  outside any use. A bow is credited once there is ammunition and the draw reached vanilla's own
+  firing threshold; a crossbow, already charged, is credited on ammunition alone. Before this fix
+  `require_success` on a crossbow could never credit at all.
 - `sleep_or_rest`'s `require_morning` now actually decides which event credits the objective: `true`
   credits when the night is skipped for everyone, `false` credits when the player gets up after
   sleeping long enough, and a bounce-out (disconnect, dimension change, a bed made unusable underneath
@@ -96,15 +99,19 @@ reward that failed to deliver could be lost outright. No new content.
 
 - The per-player/per-instance project contribution throttle cache now prunes expired and future-dated
   entries once it grows past a threshold, and is cleared entirely when the server stops, so a
-  single-player client no longer carries one world's game-time baselines into the next.
+  single-player client no longer carries one world's game-time baselines into the next. The server
+  stop handler also releases every held escort, since the entities they name are about to stop
+  existing.
 
 ### Changed — Datapack semantics
 
 - `heal_entity`: a villager at full health is never a valid tending target, whatever
   `below_health_fraction` is set to. The previous default of `1.0` credited healing a villager who was
   never hurt, since "at or below full health" is every villager.
-- `use_item` `require_success` on a bow now credits the shot on release, not on a `Finish` event a bow
-  never fires; crossbows are unaffected and keep crediting on `Finish` when loading completes.
+- `use_item` `require_success` on a bow or a crossbow now credits the shot when it is actually fired,
+  not on a `Finish` event neither weapon ever fires. A bow needs ammunition and a draw that reached
+  vanilla's own firing threshold; a crossbow, already charged, needs only ammunition. Before this
+  release `require_success` on a crossbow could never credit.
 - `sleep_or_rest`'s `require_morning: false` previously behaved exactly like `true` (any night passing
   credited it regardless); it now credits on waking after sleeping long enough, and never on a
   forced bounce-out.
@@ -144,6 +151,11 @@ before it.
   single-argument overload is preserved and behaves as before.
 - `PendingReward` gained an `attempts` component; its existing five-argument and seven-argument public
   constructors are both preserved and default `attempts` to `0`.
+- New public members backing the two `pending` commands: `ProjectSavedData.pendingOf(UUID)`,
+  `ProjectManager.isHeld(PendingReward)`, `ProjectManager.resetPendingAttempts(MinecraftServer, UUID)`,
+  and `ProjectManager.clearSessionState()`. All are additive.
+- `UseItemObjective.loosedArrow` (public) now takes the released `ItemStack` as its first argument, to
+  tell a crossbow from a bow.
 - Nothing under `api/` changed in this release.
 - New translation keys, in both `en_us.json` and `pt_br.json`: `mcaquests.guidance.giver.unloaded`,
   `mcaquests.guidance.turnin.any_villager`, `mcaquests.reward.pending.held`,
