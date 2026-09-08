@@ -6,6 +6,8 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.support.TestBootstrap;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -87,12 +89,23 @@ class UseItemObjectiveTest {
     @Test
     @DisplayName("a released bow credits only when an arrow actually left it")
     void bowReleaseCredits() {
+        ItemStack bow = new ItemStack(Items.BOW);
         /* 20 ticks is a full draw; vanilla fires from a power of 0.1, reached at 3 ticks. */
-        assertTrue(UseItemObjective.loosedArrow(true, 20));
-        assertTrue(UseItemObjective.loosedArrow(true, 3));
-        assertFalse(UseItemObjective.loosedArrow(false, 20), "no ammunition, no shot, no credit");
-        assertFalse(UseItemObjective.loosedArrow(true, 1), "a flick of the button flings nothing");
-        assertFalse(UseItemObjective.loosedArrow(true, 0));
+        assertTrue(UseItemObjective.loosedArrow(bow, true, 20));
+        assertTrue(UseItemObjective.loosedArrow(bow, true, 3));
+        assertFalse(UseItemObjective.loosedArrow(bow, false, 20), "no ammunition, no shot, no credit");
+        assertFalse(UseItemObjective.loosedArrow(bow, true, 1), "a flick of the button flings nothing");
+        assertFalse(UseItemObjective.loosedArrow(bow, true, 0));
+    }
+
+    @Test
+    @DisplayName("a fired crossbow credits despite the charge of 1 its shot reports")
+    void crossbowShotCredits() {
+        ItemStack crossbow = new ItemStack(Items.CROSSBOW);
+        /* The loader posts a crossbow's shot with a fixed charge of 1, which no bow draw would pass. */
+        assertTrue(UseItemObjective.loosedArrow(crossbow, true, 1));
+        assertTrue(UseItemObjective.loosedArrow(crossbow, true, 0));
+        assertFalse(UseItemObjective.loosedArrow(crossbow, false, 1), "an unloaded crossbow shoots nothing");
     }
 
     @Test
