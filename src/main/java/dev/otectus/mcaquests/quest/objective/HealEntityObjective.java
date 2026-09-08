@@ -100,14 +100,30 @@ public record HealEntityObjective(VillagerTarget villager, ItemTarget item,
         if (!ObjectiveSupport.matchesLocked(villager, target, player, active, progress, level)) {
             return;
         }
-        double health = McaCompat.getHealthFraction(target).orElse(1.0D);
-        if (health > belowHealthFraction) {
+        if (!qualifiesForTending(McaCompat.getHealthFraction(target).orElse(1.0D), belowHealthFraction)) {
             return;
         }
         if (consume) {
             ObjectiveSupport.consumeMatching(player, item, 1);
         }
         progress.add(1);
+    }
+
+    /**
+     * Whether a villager at {@code fraction} of their health is hurt enough to be worth tending, given
+     * the objective's {@code threshold}.
+     *
+     * <p>A villager at full health is never tended, whatever the threshold says. The default threshold
+     * is {@code 1.0}, which read literally means "any health at or below full" — that is, every
+     * villager, so a player could credit the objective by handing a remedy to somebody who was never
+     * hurt. The default is meant to say "hurt at all", so full health is excluded outright and any
+     * lower threshold keeps its plain meaning of "at or below this much health".
+     *
+     * <p>This is also why an unknown fraction does not credit: {@code McaCompat} answers {@code 1.0}
+     * when it cannot read a villager's health, and full health is now the one value that never counts.
+     */
+    public static boolean qualifiesForTending(double fraction, double threshold) {
+        return fraction < 1.0D && fraction <= threshold;
     }
 
     @Override

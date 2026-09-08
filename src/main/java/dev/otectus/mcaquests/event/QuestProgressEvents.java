@@ -72,6 +72,7 @@ import net.minecraftforge.event.entity.living.AnimalTameEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.player.ArrowLooseEvent;
 import net.minecraftforge.event.entity.player.ItemFishedEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -273,7 +274,40 @@ public final class QuestProgressEvents {
         if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-        ItemStack used = event.getItem();
+        creditCompletedUse(player, event.getItem());
+    }
+
+    /**
+     * Credits {@code use_item} objectives naming a bow when the shot actually goes off.
+     *
+     * <p>A bow is the one common item whose use is <em>finished</em> by letting go, and letting go
+     * fires {@link LivingEntityUseItemEvent.Stop}, not {@code Finish} — so a pack asking for
+     * {@code require_success} on a bow could never advance. The two conditions vanilla puts on firing
+     * are the two conditions here (see {@link UseItemObjective#loosedArrow}), so a dry release or a
+     * flick of the button credits nothing.
+     *
+     * <p>{@link EventPriority#LOWEST} with {@code receiveCanceled = false}: the event is cancelable and
+     * a cancelled release never lets an arrow go, so whatever mod vetoed it has already had its say.
+     *
+     * <p>Crossbows are deliberately not handled: their use completes on <em>loading</em>, which does
+     * fire {@code Finish}, so they already credit through {@link #onUseItemFinish}.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
+    public static void onArrowLoose(ArrowLooseEvent event) {
+        if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (!UseItemObjective.loosedArrow(event.hasAmmo(), event.getCharge())) {
+            return;
+        }
+        creditCompletedUse(player, event.getBow());
+    }
+
+    /**
+     * The one place a completed use is credited, so a bow release and an eaten apple latch and dedupe
+     * through exactly the same path.
+     */
+    private static void creditCompletedUse(ServerPlayer player, ItemStack used) {
         forActiveObjectives(player, UseItemObjective.class,
                 (objective, progress) -> {
                     if (objective.requireSuccess() && objective.matches(used)) {
