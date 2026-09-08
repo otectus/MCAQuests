@@ -74,6 +74,41 @@ public final class ProjectManager {
     private record ContributionGate(UUID player, ProjectInstanceKey project) {
     }
 
+    /**
+     * Above this many live gates a put prunes first. Below it the map is smaller than the cost of
+     * walking it, and a single-player world never reaches it at all.
+     */
+    private static final int GATE_PRUNE_THRESHOLD = 64;
+
+    /**
+     * Records an accepted contribution and keeps the gate map bounded.
+     *
+     * <p>Entries are dropped once they are older than the throttle window (they can no longer block
+     * anything), and also when the stored tick is in the future relative to {@code now} — that means the
+     * tick came from a different world with a higher game time, and a stale gate from a previous save
+     * would otherwise lock a player out for as long as the tick difference.
+     */
+    static void recordContribution(UUID player, ProjectInstanceKey project, long now, int interval) {
+        if (lastContributeTick.size() >= GATE_PRUNE_THRESHOLD) {
+            lastContributeTick.values().removeIf(tick -> tick > now || now - tick >= interval);
+        }
+        lastContributeTick.put(new ContributionGate(player, project), now);
+    }
+
+    /** Test-visible size of the throttle cache. */
+    static int throttleGateCount() {
+        return lastContributeTick.size();
+    }
+
+    /**
+     * Drops every piece of per-session state this class holds. Called when a server stops, so a
+     * single-player client that loads another world does not inherit the previous world's game-time
+     * baselines.
+     */
+    public static void clearSessionState() {
+        lastContributeTick.clear();
+    }
+
     private ProjectManager() {
     }
 
@@ -171,7 +206,7 @@ public final class ProjectManager {
             }
         }
         if (contributed) {
-            lastContributeTick.put(gate, now);
+            recordContribution(player.getUUID(), key, now, interval);
         }
         checkPhaseAdvance(server, level, data, state, def, player, villager);
         data.setDirty();
