@@ -13,6 +13,7 @@ import dev.otectus.mcaquests.quest.objective.CureVillagerObjective;
 import dev.otectus.mcaquests.quest.objective.DefendLocationObjective;
 import dev.otectus.mcaquests.quest.objective.DefendVillagerObjective;
 import dev.otectus.mcaquests.quest.objective.DeliverToVillagerObjective;
+import dev.otectus.mcaquests.quest.objective.FindMissingRelativeObjective;
 import dev.otectus.mcaquests.quest.objective.FishItemObjective;
 import dev.otectus.mcaquests.quest.objective.FtbqCompleteQuestObjective;
 import dev.otectus.mcaquests.quest.objective.HealEntityObjective;
@@ -78,6 +79,7 @@ public final class ObjectiveValidator {
                 QuestObjective objective = objectives.get(i);
                 objective.validate(def.id(), i, errors);
                 warnEmptyTags(def, i, objective, warnings);
+                warnDistantSpawn(def, i, objective, warnings);
                 checkUnresolvedEntities(def, i, objective, errors, warnings);
                 usesFtbqCompleteQuest |= objective instanceof FtbqCompleteQuestObjective;
                 // Two objectives asking the player to hold the same item are both satisfied by one stack:
@@ -193,6 +195,24 @@ public final class ObjectiveValidator {
             return List.of(tame.animal());
         }
         return List.of();
+    }
+
+    /**
+     * Warns when a missing relative would be placed further away than the player can discover them from.
+     *
+     * <p>Legal, and sometimes meant: the relative appears out of sight and the player walks the last
+     * stretch toward the highlight. But it reads as a mistake far more often than as a choice, because
+     * the two numbers have to be compared to notice it at all — the quest simply does not complete on
+     * arrival, and the author has no way of knowing why.
+     */
+    private static void warnDistantSpawn(QuestDefinition def, int index, QuestObjective objective,
+                                         List<String> warnings) {
+        if (objective instanceof FindMissingRelativeObjective find && !find.spawnsWithinDiscoveryRange()) {
+            warnings.add("Quest '" + def.id() + "': objective[" + index + "] places the relative "
+                    + find.spawnDistance() + " blocks away but only discovers them within "
+                    + find.discoverRadius() + ", so the player must walk toward them before the "
+                    + "objective completes.");
+        }
     }
 
     /**
