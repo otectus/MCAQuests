@@ -31,7 +31,8 @@ public final class MarkerIcons {
             // located biome is precisely a long walk in one direction, so it stays.
             case BIOME -> GuiTextures.ICON_DISTANCE;
             case PORTAL -> GuiTextures.ICON_SITUATION;
-            case LOCATION -> GuiTextures.ICON_COMPASS;
+            // INSTRUCTION is never drawn -- it has no position -- but the switch must be total.
+            case LOCATION, INSTRUCTION -> GuiTextures.ICON_COMPASS;
         };
     }
 }

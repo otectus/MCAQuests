@@ -97,6 +97,22 @@ class GuidanceCodecTest {
     }
 
     @Test
+    @DisplayName("a text-only instruction round-trips, kind and all")
+    void instructionRoundTrips() {
+        // The kind is an ordinal on the wire and INSTRUCTION is the newest one, which is what forced
+        // protocol 16: an older client would decode it as LOCATION and put a marker on 0,0,0 in a
+        // world it is not standing in.
+        GuidanceTarget target = GuidanceTarget.otherDimension(Level.NETHER.location());
+
+        GuidanceTarget decoded = roundTrip(target);
+
+        assertEquals(GuidanceKind.INSTRUCTION, decoded.kind());
+        assertEquals(Level.NETHER, decoded.dimension());
+        assertEquals(BlockPos.ZERO, decoded.pos(), "an instruction has no position to carry");
+        assertTrue(decoded.entityId().isEmpty());
+    }
+
+    @Test
     @DisplayName("a nonsensical height is clamped rather than trusted")
     void corruptHeightIsClamped() {
         // This one multiplies straight into the marker's anchor, so a hostile or simply broken sender

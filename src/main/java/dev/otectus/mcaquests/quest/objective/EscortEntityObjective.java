@@ -5,6 +5,7 @@ import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
@@ -13,6 +14,7 @@ import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -159,10 +161,15 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         if (isStaged() && !progress.extra().getBoolean(K_ENGAGED)) {
             return escortee(player, active, progress, level);
         }
-        return frozenDest(progress)
-                .map(dest -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(
-                        dest.pos(), level, destination.guidanceKind(dest.villageId().isPresent()),
-                        destination.describe(player, active, level), radius, false))
+        ResourceLocation here = level.dimension().location();
+        return frozenDest(progress, here)
+                // A frozen position in another world is not a place the player can walk to, so it is
+                // named rather than drawn -- the same instruction a cross-dimension source hint gives.
+                .map(dest -> inDestinationDimension(dest, here)
+                        ? dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(
+                                dest.pos(), level, destination.guidanceKind(dest.villageId().isPresent()),
+                                destination.describe(player, active, level), radius, false)
+                        : dev.otectus.mcaquests.quest.guidance.GuidanceTarget.otherDimension(dest.dimension()))
                 .or(() -> escortee(player, active, progress, level));
     }
 
@@ -210,6 +217,7 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
     private static final String K_DEST_X = "destX";
     private static final String K_DEST_Y = "destY";
     private static final String K_DEST_Z = "destZ";
+    private static final String K_DEST_DIM = "destDim"; // dimension id; absent on a pre-1.6.3 save
     private static final String K_VILLAGE_ID = "destVillageId"; // present only for village anchors
     private static final String K_ENGAGED = "engaged";     // boolean: staged escort has begun
     private static final String K_LEADING = "leading";     // boolean: drive() is actively pushing the escortee
@@ -285,7 +293,7 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         if (isStaged() && !progress.extra().getBoolean(K_ENGAGED)) {
             return; // still held in place during Phase A
         }
-        Optional<FrozenDest> dest = frozenDest(progress);
+        Optional<FrozenDest> dest = frozenDest(progress, level.dimension().location());
         if (dest.isEmpty()) {
             return; // poll() has not frozen the destination yet
         }
@@ -344,7 +352,9 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
      * otherwise it is a horizontal (Y-ignored) distance within {@code radius} of the frozen position.
      */
     private boolean hasArrived(LivingEntity escortee, ServerLevel level, FrozenDest dest) {
-        if (escortee.level() != level) {
+        // Against the world the destination was frozen in, not the one the caller happened to pass:
+        // an escortee standing on the same three coordinates in the Nether has not arrived anywhere.
+        if (!inDestinationDimension(dest, escortee.level().dimension().location())) {
             return false;
         }
         if (dest.villageId().isPresent() && McaCompat.villageExists(level, dest.villageId().getAsInt())) {
@@ -353,12 +363,36 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         return ObjectiveSupport.withinRadiusXZ(escortee, dest.pos(), radius);
     }
 
-    /** A destination resolved once at accept and frozen in {@code extra}: a position and optional village id. */
-    private record FrozenDest(BlockPos pos, OptionalInt villageId) {
+    /** Whether something in {@code dimension} is in the world the destination was frozen in. */
+    static boolean inDestinationDimension(FrozenDest dest, ResourceLocation dimension) {
+        return dest.dimension().equals(dimension);
     }
 
-    /** Reads the frozen destination from {@code extra}, or empty if it has not been frozen yet. */
-    private Optional<FrozenDest> frozenDest(ObjectiveProgress progress) {
+    /**
+     * A destination resolved once at accept and frozen in {@code extra}: a position, the world it is
+     * in, and an optional village id.
+     *
+     * <p>The dimension is the part that was missing. A frozen destination used to be three
+     * coordinates and nothing else, so "has the escortee arrived" was answered against whichever
+     * level the caller happened to pass, and a destination in the Overworld was indistinguishable
+     * from the same three numbers in the Nether. {@code FrozenLocation} -- the sibling record for
+     * frozen anchors -- has carried its dimension since 1.4.1 for exactly this reason.
+     */
+    record FrozenDest(BlockPos pos, ResourceLocation dimension, OptionalInt villageId) {
+    }
+
+    /**
+     * Reads the frozen destination from {@code extra}, or empty if it has not been frozen yet.
+     *
+     * <p>A destination frozen before 1.6.3 has no dimension recorded, and there is no way to recover
+     * the one it was resolved in. So it is backfilled with {@code evaluating} -- the world the
+     * objective is being evaluated in right now -- which reproduces the old behaviour on this first
+     * read (arrival compared against the caller's level) and is deterministic from then on, because
+     * the key is written straight back. {@code progress.extra()} belongs to the player capability and
+     * is serialised whenever the player is saved, exactly as {@link #ensureFrozenDest}'s own writes
+     * are; there is no dirty flag on that path to set.
+     */
+    Optional<FrozenDest> frozenDest(ObjectiveProgress progress, ResourceLocation evaluating) {
         CompoundTag extra = progress.extra();
         if (!extra.getBoolean(K_FROZEN)) {
             return Optional.empty();
@@ -366,7 +400,18 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         OptionalInt villageId = extra.contains(K_VILLAGE_ID) ? OptionalInt.of(extra.getInt(K_VILLAGE_ID))
                 : OptionalInt.empty();
         BlockPos pos = new BlockPos(extra.getInt(K_DEST_X), extra.getInt(K_DEST_Y), extra.getInt(K_DEST_Z));
-        return Optional.of(new FrozenDest(pos, villageId));
+        // Typed contains first: getString answers "" for an absent key, and tryParse("") is not null
+        // -- it is the perfectly valid "minecraft:", which would freeze a nonexistent world in place.
+        ResourceLocation dimension = extra.contains(K_DEST_DIM, Tag.TAG_STRING)
+                ? ResourceLocation.tryParse(extra.getString(K_DEST_DIM))
+                : null;
+        if (dimension == null) {
+            dimension = evaluating;
+            extra.putString(K_DEST_DIM, dimension.toString()); // once: the next read finds it written
+            McaQuests.LOGGER.debug("[MCA: Quests] Escort destination frozen before 1.6.3 had no "
+                    + "dimension; backfilled with '{}'.", dimension);
+        }
+        return Optional.of(new FrozenDest(pos, dimension, villageId));
     }
 
     /**
@@ -375,7 +420,8 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
      */
     private Optional<FrozenDest> ensureFrozenDest(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        Optional<FrozenDest> existing = frozenDest(progress);
+        ResourceLocation dimension = level.dimension().location();
+        Optional<FrozenDest> existing = frozenDest(progress, dimension);
         if (existing.isPresent()) {
             return existing;
         }
@@ -388,9 +434,11 @@ public record EscortEntityObjective(VillagerTarget villager, LocationAnchor dest
         extra.putInt(K_DEST_X, pos.getX());
         extra.putInt(K_DEST_Y, pos.getY());
         extra.putInt(K_DEST_Z, pos.getZ());
+        // The world it was resolved in, which is the world it stays in however far the player roams.
+        extra.putString(K_DEST_DIM, dimension.toString());
         resolved.get().villageId().ifPresent(id -> extra.putInt(K_VILLAGE_ID, id));
         extra.putBoolean(K_FROZEN, true);
-        return Optional.of(new FrozenDest(pos, resolved.get().villageId()));
+        return Optional.of(new FrozenDest(pos, dimension, resolved.get().villageId()));
     }
 
     /**

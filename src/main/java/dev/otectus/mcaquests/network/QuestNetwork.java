@@ -10,10 +10,13 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  */
 public final class QuestNetwork {
 
-    // Bumped to 15 — the NeoForge payload rewrite, carrying the same logical data: the SimpleChannel
-    // is gone and every packet is a CustomPacketPayload on a versioned PayloadRegistrar. A
-    // registrar-version mismatch (or a client without the mod) cannot join, which is the same hard
-    // mismatch the SimpleChannel handshake gave us.
+    // Bumped to 16 — GuidanceKind gained INSTRUCTION, a destination that is a line of text and no
+    // geometry. The kind's ordinal is on the wire, and an older client would decode the new one as
+    // LOCATION and draw a marker on 0,0,0 in a world it is not standing in, so the two must match.
+    // (15 was the NeoForge payload rewrite, carrying the same logical data: the SimpleChannel is gone
+    // and every packet is a CustomPacketPayload on a versioned PayloadRegistrar. A registrar-version
+    // mismatch (or a client without the mod) cannot join, which is the same hard mismatch the
+    // SimpleChannel handshake gave us.)
     // (14 was GuidanceTarget carrying the target entity's bounding-box height, so the marker
     // can anchor its glyph on the body of an entity the client cannot currently see rather than at
     // the transmitted feet position.)
@@ -38,7 +41,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "15";
+    private static final String PROTOCOL_VERSION = "16";
 
     private QuestNetwork() {
     }

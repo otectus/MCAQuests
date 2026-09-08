@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.client;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.client.marker.MarkerGeometry;
 import dev.otectus.mcaquests.quest.DisplayNames;
+import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
 import dev.otectus.mcaquests.quest.guidance.GuidanceTarget;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -48,6 +49,11 @@ public final class GuidanceText {
     /** As {@link #line(GuidanceTarget, Player, Level)}, with the coordinate group forced on or off. */
     public static Component line(GuidanceTarget target, Player player, Level level,
                                  boolean withCoordinates) {
+        // An instruction carries no position at all, so there is nothing to measure, name or append:
+        // the label is the whole line, and the coordinates would be a zero nobody wrote down.
+        if (target.kind() == GuidanceKind.INSTRUCTION) {
+            return target.label();
+        }
         Component coordinates = coordinates(target.pos());
         if (level == null || !level.dimension().equals(target.dimension())) {
             return withCoordinates

@@ -219,15 +219,17 @@ class PayloadRegistryTest {
     // ---------------------------------------------------------------- protocol and registration
 
     @Test
-    @DisplayName("the protocol version is 15")
-    void protocolVersionIs15() {
+    @DisplayName("the protocol version is 16")
+    void protocolVersionIs16() {
         // Read reflectively rather than exposed: the constant is deliberately private, and a test is
         // not a reason to widen it. A mismatch here is a client that can silently join a server
         // speaking a different wire format.
         try {
             Field field = QuestNetwork.class.getDeclaredField("PROTOCOL_VERSION");
             field.setAccessible(true);
-            assertEquals("15", field.get(null), "spec §14.1 fixes the NeoForge protocol at 15");
+            // 16 since GuidanceKind gained INSTRUCTION, whose ordinal is on the wire; the port's
+            // number is its own and does not track the Forge build's.
+            assertEquals("16", field.get(null), "the NeoForge protocol is 16");
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("QuestNetwork must keep a PROTOCOL_VERSION constant", e);
         }

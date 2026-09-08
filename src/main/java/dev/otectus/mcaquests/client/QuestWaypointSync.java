@@ -132,6 +132,12 @@ public final class QuestWaypointSync {
         List<WaypointSpec> desired = new ArrayList<>(source.size());
         for (ActiveGuidance guidance : source) {
             GuidanceTarget target = guidance.target();
+            // An instruction is a sentence, not a place. Its position is a zero, and a waypoint on
+            // 0,0,0 in another world is precisely the confidently wrong destination it exists to
+            // avoid handing the player.
+            if (target.kind() == dev.otectus.mcaquests.quest.guidance.GuidanceKind.INSTRUCTION) {
+                continue;
+            }
             desired.add(specification(guidance, WaypointSpec.Ownership.AUTOMATIC));
         }
         return desired;

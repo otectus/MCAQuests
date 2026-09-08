@@ -19,6 +19,7 @@ import dev.otectus.mcaquests.compat.MapWaypointBackend;
 import dev.otectus.mcaquests.compat.PinSupport;
 import dev.otectus.mcaquests.compat.WaypointSpec;
 import dev.otectus.mcaquests.quest.guidance.ActiveGuidance;
+import dev.otectus.mcaquests.quest.guidance.GuidanceKind;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -137,10 +138,21 @@ public class QuestLogScreen extends McaQuestsScreen {
     public void selectMapQuest(String key) { mapSelectedQuest = key; }
 
     private static int sideButtonCount(QuestLogEntry entry) {
-        if (destination(entry).isEmpty()) {
+        if (drawableDestination(entry).isEmpty()) {
             return 0;
         }
         return hasMapActions() ? 2 : 1;
+    }
+
+    /**
+     * The destination, when it is a place rather than a sentence.
+     *
+     * <p>Copying the coordinates of an instruction would put "0 0 0" on the clipboard and pinning it
+     * would drop a waypoint on the world origin, so the two buttons that act on a position appear
+     * only for a destination that has one. The line itself still shows: it is the instruction.
+     */
+    private static Optional<ActiveGuidance> drawableDestination(QuestLogEntry entry) {
+        return destination(entry).filter(g -> g.target().kind() != GuidanceKind.INSTRUCTION);
     }
 
     @Override
@@ -187,12 +199,12 @@ public class QuestLogScreen extends McaQuestsScreen {
             // hit-tested by hand, which made it invisible to the keyboard and to the narrator, and that
             // is not a mistake worth making twice.
             int sideX = contentRight() - CARD_PAD - ABANDON_W - TRACK_GAP - TRACK_W;
-            for (ActiveGuidance guidance : destination(entry).stream().toList()) {
+            for (ActiveGuidance guidance : drawableDestination(entry).stream().toList()) {
                 sideX -= TRACK_GAP + SIDE_W;
                 IconButton copy = new IconButton(sideX, view.screenY(buttonY), SIDE_W, ABANDON_H,
                         Component.translatable("mcaquests.tooltip.copy_coords"),
                         GuiTextures.ICON_DISTANCE, IconButton.Look.BUTTON,
-                        b -> destination(entry).ifPresent(current -> copyCoordinates(current.target().pos())));
+                        b -> drawableDestination(entry).ifPresent(current -> copyCoordinates(current.target().pos())));
                 copy.setTooltip(Tooltip.create(Component.translatable("mcaquests.tooltip.copy_coords")));
                 addControl(entry, Control.COPY, copy, buttonY);
 
@@ -208,7 +220,7 @@ public class QuestLogScreen extends McaQuestsScreen {
                 Component pinTooltip = Component.translatable("mcaquests.atlas.actions");
                 IconButton waypoint = new IconButton(sideX, view.screenY(buttonY), SIDE_W, ABANDON_H,
                         pinTooltip, GuiTextures.ICON_STAR, IconButton.Look.BUTTON,
-                        b -> destination(entry).ifPresent(this::addWaypoint));
+                        b -> drawableDestination(entry).ifPresent(this::addWaypoint));
                 waypoint.setTooltip(Tooltip.create(pinTooltip));
                 addControl(entry, Control.WAYPOINT, waypoint, buttonY);
             }
@@ -266,7 +278,7 @@ public class QuestLogScreen extends McaQuestsScreen {
         signature.add("map=" + ClientMapWaypointRegistry.bestPinSupport());
         for (QuestLogEntry entry : rendered) {
             signature.add(entry.villagerUuid() + "/" + entry.questId() + "="
-                    + destination(entry).isPresent() + "/height=" + entryHeight(entry));
+                    + drawableDestination(entry).isPresent() + "/height=" + entryHeight(entry));
         }
         return signature;
     }
