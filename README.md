@@ -99,6 +99,8 @@ Requires **JDK 21** (or JDK 17 with `JAVA_HOME` set; Gradle provisions JDK 21 vi
 
 The jar lands in `build/libs/`. First build `../MCAReputation_1.21.1` with `./gradlew classes`, or pass `-PmcaReputationClasses=<compatible class directory>` for the compile-only Reputation adapter. Reputation remains optional for players. MCA Reborn is pulled automatically via the Modrinth Maven. `gradle.properties` leaves `org.gradle.java.home` unset, so Gradle uses `JAVA_HOME` or provisions JDK 21 from foojay.
 
+`./gradlew build` also produces `build/libs/mcaquests-<version>-api.jar`, a compile-only API artifact for sibling add-ons (such as MCA: Conversations) to compile against. It is not a runtime dependency and must never be bundled inside another mod.
+
 To put the result in a mods folder, use:
 
 ```bash

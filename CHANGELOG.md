@@ -4,6 +4,24 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.4] - 2026-09-08
+
+A build-only change: a versioned API artifact, so that sibling add-ons such as MCA:
+Conversations can compile against a versioned artifact instead of a class directory in a
+neighbouring checkout.
+
+### Added
+
+- **`apiJar` Gradle task** produces `build/libs/mcaquests-<version>-api.jar`, a compile-only
+  artifact containing the `api` package plus a named read-model slice of quest classes (quest
+  definition, manager, situation and template classes, the objective, reward and condition types,
+  and the player quest state types, including `QuestAttachments`) intended for sibling add-ons
+  such as MCA: Conversations. It is for sibling add-ons to compile against and must never be
+  shipped inside another mod — MCA: Quests is the only thing that supplies these classes at
+  runtime, and a bundled copy is a duplicate-class error, not a fallback. Classes outside `api/`
+  are a read model of the current shape of these types, not a stability promise. A new
+  `verifyApiJar` check is wired into `check`.
+
 ## [1.6.3] - 2026-09-08
 
 Reliability fixes for reward delivery, quest hand-in, escorts, guidance and objective crediting.

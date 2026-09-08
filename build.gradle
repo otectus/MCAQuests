@@ -662,8 +662,91 @@ tasks.register('artifactVerifierTest') {
     }
 }
 
+// Compile-only API artifact for sibling add-ons (MCA: Conversations). It carries classes and
+// nothing else -- no metadata, no assets, no data -- so a sibling can compile against these types
+// without NeoForge ever loading this archive as a mod.
+//
+// Only `api/` is a stability promise. The quest/ and state/ classes listed below are published as a
+// read model, so a consumer can name what it reads; they carry no compatibility guarantee and may
+// change in any release. Consumers must never ship these classes -- no shading, no bundling, no
+// jar-in-jar. MCA: Quests supplies them at runtime.
+def apiExports = [
+        'dev/otectus/mcaquests/quest/QuestDefinition',
+        'dev/otectus/mcaquests/quest/QuestManager',
+        'dev/otectus/mcaquests/quest/situation/QuestDefinitions',
+        'dev/otectus/mcaquests/quest/template/PlaceholderResolver',
+        'dev/otectus/mcaquests/quest/objective/ObjectiveProgress',
+        'dev/otectus/mcaquests/quest/objective/QuestObjective',
+        'dev/otectus/mcaquests/quest/objective/QuestObjectiveType',
+        'dev/otectus/mcaquests/quest/reward/QuestReward',
+        'dev/otectus/mcaquests/quest/reward/QuestRewardType',
+        'dev/otectus/mcaquests/quest/condition/QuestCondition',
+        'dev/otectus/mcaquests/quest/condition/QuestConditionType',
+        'dev/otectus/mcaquests/state/ActiveQuest',
+        'dev/otectus/mcaquests/state/PlayerQuestData',
+        'dev/otectus/mcaquests/state/QuestAttachments',
+        'dev/otectus/mcaquests/state/QuestCapabilities',
+]
+
+tasks.register('apiJar', Jar) {
+    group = 'build'
+    description = 'Builds the compile-only API artifact published to sibling add-ons.'
+    dependsOn tasks.named('compileJava')
+    archiveClassifier = 'api'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Compiled classes only; processResources output is deliberately not a source here.
+    from(sourceSets.main.output.classesDirs) {
+        include 'dev/otectus/mcaquests/api/**'
+        apiExports.each { export ->
+            include "${export}.class"
+            include "${export}\$*.class"
+        }
+    }
+    manifest {
+        attributes([
+                'Specification-Title'  : "${mod_id}-api",
+                'Specification-Version': mod_version,
+                'Implementation-Title' : "${mod_id}-api"
+        ])
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn 'apiJar'
+}
+
+tasks.register('verifyApiJar') {
+    group = 'verification'
+    description = 'Verifies the API artifact carries every published class and no mod metadata.'
+    dependsOn 'apiJar'
+    def apiArchive = tasks.named('apiJar', Jar).flatMap { it.archiveFile }
+    inputs.file(apiArchive)
+    doLast {
+        File archive = apiArchive.get().asFile
+        new java.util.zip.ZipFile(archive).withCloseable { zip ->
+            List<String> names = zip.entries().collect { it.name }
+            if (!names.any { it.startsWith('dev/otectus/mcaquests/api/') }) {
+                throw new GradleException("${archive.name}: no dev/otectus/mcaquests/api/ entries")
+            }
+            apiExports.each { export ->
+                if (!names.contains("${export}.class".toString())) {
+                    throw new GradleException("${archive.name}: missing export ${export}.class")
+                }
+            }
+            // A resource in here would mean the loader could mistake the API artifact for a mod.
+            String resource = names.find {
+                it.endsWith('.json') || it.endsWith('.toml') || it.endsWith('.mcmeta')
+            }
+            if (resource != null) {
+                throw new GradleException("${archive.name}: unexpected packaged resource ${resource}")
+            }
+        }
+        logger.lifecycle("${archive.name}: verified ${apiExports.size()} exports and no packaged resources.")
+    }
+}
+
 tasks.named('check') {
-    dependsOn 'jarSmokeCheck', 'artifactVerifierTest'
+    dependsOn 'jarSmokeCheck', 'artifactVerifierTest', 'verifyApiJar'
 }
 
 // Installs the finished jar into a mods folder, so nobody has to copy build/libs by hand. The folder
