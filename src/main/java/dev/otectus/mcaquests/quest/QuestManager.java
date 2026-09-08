@@ -55,6 +55,7 @@ import dev.otectus.mcaquests.quest.reward.TownsteadReward;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
 import dev.otectus.mcaquests.quest.template.ResolvedTemplate;
 import dev.otectus.mcaquests.quest.template.TemplateSpec;
+import dev.otectus.mcaquests.quest.escort.EscortHoldRegistry;
 import dev.otectus.mcaquests.quest.turnin.GiverPresence;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.OfferSession;
@@ -1153,6 +1154,10 @@ public final class QuestManager {
             grantQuestReputation(player, villager, active.resolve(def), active, "abandon");
             MinecraftForge.EVENT_BUS.post(new QuestAbandonedEvent(player, villager, def));
         });
+        // Outside the lookup on purpose: a held escortee is frozen and invulnerable, and hanging its
+        // release off a definition meant a quest whose definition had been removed left the villager
+        // that way for good. What is still held is a fact about this player, not about the datapack.
+        releaseRemainingHolds(player);
         return true;
     }
 
@@ -1218,6 +1223,48 @@ public final class QuestManager {
     }
 
     /**
+     * Whether an escort is still free to choose its escortee — true only while none has been bound.
+     *
+     * <p>The rule on its own, because the bug it fixes is invisible at the call site: an unbound
+     * selector asked a second time answers with whoever is convenient, which for a locked escort means
+     * a different villager entirely.
+     */
+    public static boolean escorteeSelectorAllowed(@Nullable UUID lockedTargetUuid) {
+        return lockedTargetUuid == null;
+    }
+
+    /**
+     * Releases every escort hold {@code player} still owns, whether or not the quest that placed it
+     * could be resolved.
+     *
+     * <p>A loaded escortee is released here and now, through the same three calls the normal cleanup
+     * makes. One that is not loaded is queued: {@code EscortHoldEvents} releases it the moment it
+     * joins a level again, which is the only point at which anything can.
+     */
+    private static void releaseRemainingHolds(ServerPlayer player) {
+        net.minecraft.server.MinecraftServer server = player.getServer();
+        for (UUID held : EscortHoldRegistry.heldBy(player.getUUID())) {
+            // Every level, not just the player's: an escort can end with the villager a dimension away.
+            Entity escortee = null;
+            if (server != null) {
+                for (ServerLevel candidate : server.getAllLevels()) {
+                    escortee = candidate.getEntity(held);
+                    if (escortee != null) {
+                        break;
+                    }
+                }
+            }
+            if (escortee instanceof LivingEntity target) {
+                McaCompat.releaseVillagerHold(target);
+                McaCompat.stopVillagerLeading(target);
+                McaCompat.setQuestGiverFollow(player, target, false);
+            } else {
+                EscortHoldRegistry.enqueueRelease(held, player.getUUID());
+            }
+        }
+    }
+
+    /**
      * Releases any escort movement the giver/escortee was under (lead {@code WALK_TARGET} or legacy
      * {@code FOLLOW}) when a quest reaches a terminal state, so a led villager doesn't keep walking after
      * the quest completes, is abandoned, or fails. Best-effort and fail-safe: only escort objectives, only
@@ -1238,12 +1285,22 @@ public final class QuestManager {
         }
     }
 
-    /** The escortee to clean up: the objective's locked target if one was pinned, else the villager target. */
+    /**
+     * The escortee to clean up: the objective's locked target, or the selector's answer when the
+     * objective never bound one.
+     *
+     * <p><b>A bound escort never falls back to the selector.</b> It used to, whenever the locked
+     * villager was not loaded — and the selector is unbound, so it could hand back a completely
+     * different villager, whom the cleanup then unfroze, un-led and took out of follow. The person
+     * actually being escorted stayed exactly as the quest had left them. A locked escortee that is
+     * not loaded resolves to nobody; {@code EscortHoldRegistry} is what makes sure they are still
+     * released when they come back.
+     */
     private static Optional<LivingEntity> resolveEscortee(EscortEntityObjective escort, ObjectiveProgress progress,
                                                           ServerPlayer player, ActiveQuest active, ServerLevel level) {
         UUID locked = progress.targetUuid();
-        if (locked != null && level.getEntity(locked) instanceof LivingEntity le) {
-            return Optional.of(le);
+        if (!escorteeSelectorAllowed(locked)) {
+            return level.getEntity(locked) instanceof LivingEntity le ? Optional.of(le) : Optional.empty();
         }
         return escort.villager().resolve(player, active, level);
     }

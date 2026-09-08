@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.event;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.project.ProjectManager;
+import dev.otectus.mcaquests.quest.escort.EscortHoldRegistry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -48,5 +49,7 @@ public final class ProjectLifecycleEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         ProjectManager.clearSessionState();
+        // Escort holds are session-scoped too: the entities they name are about to stop existing here.
+        EscortHoldRegistry.clear();
     }
 }
