@@ -97,6 +97,8 @@ Requires **JDK 17**.
 
 The jar lands in `build/libs/`. First build the sibling MCA: Reputation project with `./gradlew classes`, or pass `-PmcaReputationClasses=<compatible class directory>`. That compile-only API is required to build the optional Reputation adapter; players do not need Reputation installed. MCA Reborn, Architectury, and the published compile dependencies are resolved automatically (MCA via the Modrinth Maven). `gradle.properties` leaves `org.gradle.java.home` unset, so point `JAVA_HOME` at a JDK 17 install (or let the toolchain resolver fetch one) — Gradle itself must run on 17, since ForgeGradle 6 does not tolerate 21.
 
+`./gradlew build` also produces `build/libs/mcaquests-<version>-api.jar`, a compile-only API artifact for sibling add-ons (such as MCA: Conversations) to compile against. It is not a runtime dependency and must never be bundled inside another mod.
+
 To put the result in a mods folder, use:
 
 ```bash

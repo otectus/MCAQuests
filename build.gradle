@@ -566,3 +566,106 @@ if (project.findProperty('enableMapAtlasesInDev')?.toString()?.toBoolean()) {
 if (project.findProperty('atlasRuntimeFixture')?.toString()?.toBoolean()) {
     apply from: 'tools/atlas-runtime-test/forge.gradle'
 }
+
+// A compile-only contract for the sibling add-ons (MCA: Conversations) that link against this mod.
+// Classes outside `api/` are included here as a read model of the quest domain, not as a stability
+// promise: they change with the mod and downstream code that leans on them will break. Consumers
+// compile against this jar and never ship these classes -- MCA: Quests is the only thing that
+// supplies them at runtime, and a second copy is a duplicate-class error, not a fallback.
+//
+// Deliberately NOT reobfuscated: the classes come straight out of build/classes, so Minecraft
+// members in their signatures keep their official (Mojang) names, which is what a consumer building
+// with the `official` mapping channel resolves against. apiJar is therefore left out of the reobf
+// wiring that `jar` goes through, and it carries no resources at all.
+def apiExports = [
+        'dev/otectus/mcaquests/api/**',
+        'dev/otectus/mcaquests/quest/QuestDefinition.class',
+        'dev/otectus/mcaquests/quest/QuestDefinition$*.class',
+        'dev/otectus/mcaquests/quest/QuestManager.class',
+        'dev/otectus/mcaquests/quest/QuestManager$*.class',
+        'dev/otectus/mcaquests/quest/situation/QuestDefinitions.class',
+        'dev/otectus/mcaquests/quest/situation/QuestDefinitions$*.class',
+        'dev/otectus/mcaquests/quest/template/PlaceholderResolver.class',
+        'dev/otectus/mcaquests/quest/template/PlaceholderResolver$*.class',
+        'dev/otectus/mcaquests/quest/objective/ObjectiveProgress.class',
+        'dev/otectus/mcaquests/quest/objective/ObjectiveProgress$*.class',
+        'dev/otectus/mcaquests/quest/objective/QuestObjective.class',
+        'dev/otectus/mcaquests/quest/objective/QuestObjective$*.class',
+        'dev/otectus/mcaquests/quest/objective/QuestObjectiveType.class',
+        'dev/otectus/mcaquests/quest/objective/QuestObjectiveType$*.class',
+        'dev/otectus/mcaquests/quest/reward/QuestReward.class',
+        'dev/otectus/mcaquests/quest/reward/QuestReward$*.class',
+        'dev/otectus/mcaquests/quest/reward/QuestRewardType.class',
+        'dev/otectus/mcaquests/quest/reward/QuestRewardType$*.class',
+        'dev/otectus/mcaquests/quest/condition/QuestCondition.class',
+        'dev/otectus/mcaquests/quest/condition/QuestCondition$*.class',
+        'dev/otectus/mcaquests/quest/condition/QuestConditionType.class',
+        'dev/otectus/mcaquests/quest/condition/QuestConditionType$*.class',
+        'dev/otectus/mcaquests/state/ActiveQuest.class',
+        'dev/otectus/mcaquests/state/ActiveQuest$*.class',
+        'dev/otectus/mcaquests/state/PlayerQuestData.class',
+        'dev/otectus/mcaquests/state/PlayerQuestData$*.class',
+        'dev/otectus/mcaquests/state/QuestCapabilities.class',
+        'dev/otectus/mcaquests/state/QuestCapabilities$*.class',
+]
+
+// Every entry above that names a single class, without its inner-class companion: verifyApiJar
+// checks each of these is actually in the archive, so a rename upstream fails the build here rather
+// than downstream in a consumer's compile.
+def apiRequiredEntries = apiExports.findAll { it.endsWith('.class') && !it.contains('$') }
+
+tasks.register('apiJar', Jar) {
+    group = 'build'
+    description = 'Compile-only API artifact for sibling add-ons; classes only, official mappings.'
+    dependsOn 'compileJava'
+    archiveClassifier = 'api'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets.main.output.classesDirs) {
+        include apiExports
+    }
+    manifest {
+        attributes([
+                'Specification-Title'   : "${mod_id}-api".toString(),
+                'Specification-Version' : mod_version.toString(),
+                'Implementation-Title'  : "${mod_id}-api".toString()
+        ])
+    }
+}
+
+tasks.named('assemble').configure {
+    dependsOn 'apiJar'
+}
+
+tasks.register('verifyApiJar') {
+    group = 'verification'
+    description = 'Fails if the api jar is missing an exported class or has leaked resources into it.'
+    dependsOn 'apiJar'
+    def apiArchive = tasks.named('apiJar', Jar).flatMap { it.archiveFile }
+    def required = apiRequiredEntries
+    inputs.file(apiArchive)
+    doLast {
+        def jarFile = apiArchive.get().asFile
+        def names = new java.util.zip.ZipFile(jarFile).withCloseable { zip ->
+            zip.entries().collect { it.name }
+        }
+        if (!names.any { it.startsWith('dev/otectus/mcaquests/api/') }) {
+            throw new GradleException("${jarFile.name} carries no dev/otectus/mcaquests/api/ classes at all; " +
+                    'the export filter matched nothing.')
+        }
+        def missing = required.findAll { !names.contains(it) }
+        if (missing) {
+            throw new GradleException("${jarFile.name} is missing exported classes: ${missing.join(', ')}. " +
+                    'Either the class moved or was renamed -- fix apiExports, or the consumers break.')
+        }
+        def resources = names.findAll { it.endsWith('.json') || it.endsWith('.toml') || it.endsWith('.mcmeta') }
+        if (resources) {
+            throw new GradleException("${jarFile.name} contains resources: ${resources.join(', ')}. " +
+                    'The api jar must be classes only; a shipped mods.toml would make it look like a mod.')
+        }
+        logger.lifecycle("${jarFile.name}: ${names.count { it.endsWith('.class') }} classes, no resources.")
+    }
+}
+
+tasks.named('build').configure {
+    dependsOn 'verifyApiJar'
+}
