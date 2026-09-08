@@ -433,8 +433,13 @@ public final class QuestMarkerRenderer {
         double relX = anchor.x() - eye.x;
         double relZ = anchor.z() - eye.z;
         double distance = MarkerGeometry.horizontalDistance(relX, relZ);
+        // The arrival fade is the one place height counts: standing on the roof over a target in the
+        // cellar is not arriving at it. Measured from the surface the marker stands on rather than
+        // from the glyph, which is already lifted off that surface by the anchor and would otherwise
+        // count its own offset as separation. Everything else here stays horizontal.
+        double arrivalDistance = MarkerGeometry.arrivalDistance(distance, anchor.baseY() - eye.y);
         float alpha = lifetime * Math.min(
-                MarkerGeometry.arrivalAlpha(distance, target.arriveRadius()),
+                MarkerGeometry.arrivalAlpha(arrivalDistance, target.arriveRadius()),
                 MarkerGeometry.farAlpha(distance, target.arriveRadius(), settings.maxDistance()));
         if (alpha <= 0.0F) {
             return;

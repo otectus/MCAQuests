@@ -41,6 +41,14 @@ public final class MarkerGeometry {
     /** How far a label is worth reading, in blocks, under {@code NEARBY}. */
     public static final double LABEL_NEARBY = 48.0D;
 
+    /**
+     * How much height counts as the same floor, in blocks, when deciding whether the player arrived.
+     *
+     * <p>Three blocks covers standing on a slab, on a stair, or one step up onto a doorway, and does
+     * not cover the storey above. Below this the arrival fade behaves exactly as it always did.
+     */
+    public static final double ARRIVAL_VERTICAL_TOLERANCE = 3.0D;
+
     private MarkerGeometry() {
     }
 
@@ -128,6 +136,25 @@ public final class MarkerGeometry {
      */
     public static float arrivalAlpha(double distance, int arriveRadius) {
         return (float) smoothstep(arriveRadius, arriveRadius + ARRIVE_BAND, distance);
+    }
+
+    /**
+     * The distance the arrival fade should be asked about, given how far away and how far below or
+     * above the target is.
+     *
+     * <p>Only the arrival fade uses this; everything the player reads stays horizontal. Standing
+     * directly over a target sixty blocks down is not arriving at it, and measuring that as nothing
+     * takes away the one cue that says which way to dig. Inside
+     * {@link #ARRIVAL_VERTICAL_TOLERANCE} the answer is the horizontal distance unchanged, so a
+     * target on the same floor fades exactly as before; past it only the <em>excess</em> height
+     * counts, so crossing the tolerance does not jump the marker back into view.
+     *
+     * @param horizontal horizontal distance to the target, in blocks
+     * @param vertical   signed height of the target above the eye, in blocks; sign does not matter
+     */
+    public static double arrivalDistance(double horizontal, double vertical) {
+        double excess = Math.abs(vertical) - ARRIVAL_VERTICAL_TOLERANCE;
+        return excess <= 0.0D ? horizontal : Math.hypot(horizontal, excess);
     }
 
     /**
