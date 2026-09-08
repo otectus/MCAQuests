@@ -953,51 +953,87 @@ public final class ProjectManager {
      * the drain and the (re-)grant, before the next autosave.
      */
     public static void deliverPending(ServerPlayer player) {
-        if (!enabled() || player.getServer() == null || !(player.level() instanceof ServerLevel level)) {
+        if (player.getServer() == null || !(player.level() instanceof ServerLevel level)) {
             return;
         }
         MinecraftServer server = player.getServer();
+        // Banked FTB-claim rewards are debts the player already earned outside the project system, so
+        // they are paid even when village projects are switched off. Phase rewards are not delivered
+        // then, but they are never discarded either.
+        boolean projectsEnabled = enabled();
         ProjectSavedData data = ProjectSavedData.get(server);
-        List<PendingReward> owed = data.drainPending(player.getUUID());
+        UUID playerId = player.getUUID();
+        List<PendingReward> retained = drainPass(playerId, data.drainPending(playerId), projectsEnabled,
+                reward -> deliverOne(server, level, player, reward));
+        retained.forEach(reward -> data.addPending(playerId, reward));
+        if (projectsEnabled) {
+            syncProjects(player);
+        }
+    }
+
+    /** One attempt at a single owed reward; {@code true} means it was paid and can be dropped. */
+    @FunctionalInterface
+    interface PendingDelivery {
+        boolean deliver(PendingReward reward);
+    }
+
+    /**
+     * Runs one delivery pass over an already-drained owed list and returns the entries that must go
+     * back into storage. Pure apart from {@code delivery} itself, so the retention rules are testable
+     * without a server.
+     */
+    static List<PendingReward> drainPass(UUID playerId, List<PendingReward> owed, boolean projectsEnabled,
+                                         PendingDelivery delivery) {
+        List<PendingReward> retained = new ArrayList<>();
         for (PendingReward reward : owed) {
+            if (!projectsEnabled && reward.kind() != PendingReward.Kind.BANKED) {
+                retained.add(reward); // projects are off: hold it, do not pay it and do not drop it
+                continue;
+            }
             try {
-            if (reward.kind() == PendingReward.Kind.BANKED) {
-                if (ProjectRewardDistributor.attemptBankedDelivery(server, level, player, reward.banked())) {
-                    player.sendSystemMessage(Component.translatable("mcaquests.ftbq.reward.banked_delivered"));
-                } else {
-                    data.addPending(player.getUUID(), reward); // still no target - stays banked
+                if (!delivery.deliver(reward)) {
+                    retained.add(reward);
                 }
-                continue;
-            }
-            ProjectDefinition def = ProjectRegistry.get(reward.projectId()).orElse(null);
-            if (def == null || reward.phase() < 0 || reward.phase() >= def.phaseCount()
-                    || reward.rewardIndex() < 0
-                    || reward.rewardIndex() >= def.phase(reward.phase()).rewards().size()) {
-                data.addPending(player.getUUID(), reward);
-                continue;
-            }
-            List<ProjectState> candidates = reward.instanceSnapshot() != null
-                    ? java.util.stream.Stream.of(ProjectState.load(reward.instanceSnapshot()))
-                            .filter(state -> reward.matchesInstance(state, player.getUUID())).toList()
-                    : data.allInstances().stream()
-                    .filter(s -> reward.matchesInstance(s, player.getUUID()) && !isScopeStale(s)).toList();
-            if (candidates.size() == 1) {
-                ProjectRewardDistributor.grantPending(level, candidates.get(0), player, def,
-                        reward.phase(), reward.rewardIndex());
-            } else {
-                // Old saves omitted instance identity. Ambiguous or unavailable payouts stay banked;
-                // choosing the first village would pay another village's amount and sponsor reward.
-                data.addPending(player.getUUID(), reward);
-            }
             } catch (RuntimeException | LinkageError failure) {
                 // A corrupt nested snapshot or one broken add-on must not discard the rest of the
                 // already-drained queue. Keep this unpaid entry for recovery and try its siblings.
-                data.addPending(player.getUUID(), reward);
+                retained.add(reward);
                 McaQuests.LOGGER.warn("[MCA: Quests] retaining unreadable pending reward for {}",
-                        player.getUUID(), failure);
+                        playerId, failure);
             }
         }
-        syncProjects(player);
+        return retained;
+    }
+
+    private static boolean deliverOne(MinecraftServer server, ServerLevel level, ServerPlayer player,
+                                      PendingReward reward) {
+        if (reward.kind() == PendingReward.Kind.BANKED) {
+            if (!ProjectRewardDistributor.attemptBankedDelivery(server, level, player, reward.banked())) {
+                return false; // still no target - stays banked
+            }
+            player.sendSystemMessage(Component.translatable("mcaquests.ftbq.reward.banked_delivered"));
+            return true;
+        }
+        ProjectDefinition def = ProjectRegistry.get(reward.projectId()).orElse(null);
+        if (def == null || reward.phase() < 0 || reward.phase() >= def.phaseCount()
+                || reward.rewardIndex() < 0
+                || reward.rewardIndex() >= def.phase(reward.phase()).rewards().size()) {
+            return false;
+        }
+        ProjectSavedData data = ProjectSavedData.get(server);
+        List<ProjectState> candidates = reward.instanceSnapshot() != null
+                ? java.util.stream.Stream.of(ProjectState.load(reward.instanceSnapshot()))
+                        .filter(state -> reward.matchesInstance(state, player.getUUID())).toList()
+                : data.allInstances().stream()
+                .filter(s -> reward.matchesInstance(s, player.getUUID()) && !isScopeStale(s)).toList();
+        if (candidates.size() != 1) {
+            // Old saves omitted instance identity. Ambiguous or unavailable payouts stay banked;
+            // choosing the first village would pay another village's amount and sponsor reward.
+            return false;
+        }
+        ProjectRewardDistributor.grantPending(level, candidates.get(0), player, def,
+                reward.phase(), reward.rewardIndex());
+        return true;
     }
 
     // ---------------------------------------------------------------- helpers shared with distributor/commands
