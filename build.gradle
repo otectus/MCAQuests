@@ -686,6 +686,7 @@ def apiExports = [
         'dev/otectus/mcaquests/state/PlayerQuestData',
         'dev/otectus/mcaquests/state/QuestAttachments',
         'dev/otectus/mcaquests/state/QuestCapabilities',
+        'dev/otectus/mcaquests/state/QuestHistory',
 ]
 
 tasks.register('apiJar', Jar) {
