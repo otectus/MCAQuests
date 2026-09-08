@@ -607,6 +607,8 @@ def apiExports = [
         'dev/otectus/mcaquests/state/PlayerQuestData$*.class',
         'dev/otectus/mcaquests/state/QuestCapabilities.class',
         'dev/otectus/mcaquests/state/QuestCapabilities$*.class',
+        'dev/otectus/mcaquests/state/QuestHistory.class',
+        'dev/otectus/mcaquests/state/QuestHistory$*.class',
 ]
 
 // Every entry above that names a single class, without its inner-class companion: verifyApiJar
