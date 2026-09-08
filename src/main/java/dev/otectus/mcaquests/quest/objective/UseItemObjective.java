@@ -15,6 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -141,6 +142,19 @@ public record UseItemObjective(ResourceLocation item, int count, boolean require
     /** True when the used stack is the item this asks for. */
     public boolean matches(ItemStack stack) {
         return resolved().map(stack::is).orElse(false);
+    }
+
+    /**
+     * Whether releasing a bow drawn for {@code charge} ticks actually loosed an arrow.
+     *
+     * <p>A released bow ends its use with {@code LivingEntityUseItemEvent.Stop}, never {@code Finish},
+     * so {@code require_success} on a bow would otherwise never credit. The two things vanilla itself
+     * asks before firing are asked here too: there has to be ammunition, and the draw has to have
+     * reached {@link BowItem#getPowerForTime(int)} of {@code 0.1} — a tap of the button flings nothing
+     * and is not a use.
+     */
+    public static boolean loosedArrow(boolean hasAmmo, int charge) {
+        return hasAmmo && BowItem.getPowerForTime(charge) >= 0.1F;
     }
 
     private boolean isRegistered() {

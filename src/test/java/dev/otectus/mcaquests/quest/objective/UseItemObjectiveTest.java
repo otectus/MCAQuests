@@ -85,6 +85,17 @@ class UseItemObjectiveTest {
     }
 
     @Test
+    @DisplayName("a released bow credits only when an arrow actually left it")
+    void bowReleaseCredits() {
+        /* 20 ticks is a full draw; vanilla fires from a power of 0.1, reached at 3 ticks. */
+        assertTrue(UseItemObjective.loosedArrow(true, 20));
+        assertTrue(UseItemObjective.loosedArrow(true, 3));
+        assertFalse(UseItemObjective.loosedArrow(false, 20), "no ammunition, no shot, no credit");
+        assertFalse(UseItemObjective.loosedArrow(true, 1), "a flick of the button flings nothing");
+        assertFalse(UseItemObjective.loosedArrow(true, 0));
+    }
+
+    @Test
     @DisplayName("satisfaction is the counted uses reaching the required count")
     void satisfiedAtCount() {
         UseItemObjective objective = new UseItemObjective(APPLE, 3);
