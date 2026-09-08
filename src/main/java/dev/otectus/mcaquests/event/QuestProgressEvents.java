@@ -279,26 +279,26 @@ public final class QuestProgressEvents {
     }
 
     /**
-     * Credits {@code use_item} objectives naming a bow when the shot actually goes off.
+     * Credits {@code use_item} objectives naming a bow or a crossbow when the shot actually goes off.
      *
-     * <p>A bow is the one common item whose use is <em>finished</em> by letting go, and letting go
-     * fires {@link LivingEntityUseItemEvent.Stop}, not {@code Finish} — so a pack asking for
-     * {@code require_success} on a bow could never advance. The two conditions vanilla puts on firing
-     * are the two conditions here (see {@link UseItemObjective#loosedArrow}), so a dry release or a
-     * flick of the button credits nothing.
+     * <p>Neither weapon's use is ever <em>finished</em> in the sense {@code Finish} means. A drawn bow
+     * ends its use with {@link LivingEntityUseItemEvent.Stop} when it is let go, and a crossbow
+     * declares {@code useOnRelease}, so its use never completes either — loading ends on {@code Stop}
+     * and firing happens later, outside any use. A pack asking for {@code require_success} on either
+     * could never advance through {@link #onUseItemFinish}. Both do post an arrow-loose, vanilla for
+     * the bow and the loader's patch in {@code CrossbowItem#performShooting} for the crossbow, so this
+     * is the one hook that sees both shots and {@link UseItemObjective#loosedArrow} decides which
+     * releases count: a dry release or a flick of the button credits nothing.
      *
      * <p>{@link EventPriority#LOWEST} with {@code receiveCanceled = false}: the event is cancelable and
      * a cancelled release never lets an arrow go, so whatever mod vetoed it has already had its say.
-     *
-     * <p>Crossbows are deliberately not handled: their use completes on <em>loading</em>, which does
-     * fire {@code Finish}, so they already credit through {@link #onUseItemFinish}.
      */
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = false)
     public static void onArrowLoose(ArrowLooseEvent event) {
         if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-        if (!UseItemObjective.loosedArrow(event.hasAmmo(), event.getCharge())) {
+        if (!UseItemObjective.loosedArrow(event.getBow(), event.hasAmmo(), event.getCharge())) {
             return;
         }
         creditCompletedUse(player, event.getBow());

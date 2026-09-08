@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -144,15 +145,23 @@ public record UseItemObjective(ResourceLocation item, int count, boolean require
     }
 
     /**
-     * Whether releasing a bow drawn for {@code charge} ticks actually loosed an arrow.
+     * Whether releasing {@code released} after {@code charge} ticks actually loosed a projectile.
      *
-     * <p>A released bow ends its use with {@code LivingEntityUseItemEvent.Stop}, never {@code Finish},
-     * so {@code require_success} on a bow would otherwise never credit. The two things vanilla itself
-     * asks before firing are asked here too: there has to be ammunition, and the draw has to have
-     * reached {@link BowItem#getPowerForTime(int)} of {@code 0.1} — a tap of the button flings nothing
-     * and is not a use.
+     * <p>Neither weapon that shoots arrows ends its use with {@code LivingEntityUseItemEvent.Finish}. A
+     * drawn bow ends on {@code Stop} when it is let go, and a crossbow declares {@code useOnRelease},
+     * so its use never completes at all: loading ends on {@code Stop} and the shot comes later, out of
+     * any use. {@code require_success} on either would otherwise never credit.
+     *
+     * <p>For a bow the two things vanilla itself asks before firing are asked here too: there has to be
+     * ammunition, and the draw has to have reached {@link BowItem#getPowerForTime(int)} of {@code 0.1}
+     * — a tap of the button flings nothing and is not a use. A crossbow was charged long before it
+     * fired and its shot always reports a charge of {@code 1}, which would fail that draw test, so
+     * ammunition is the only thing asked of it.
      */
-    public static boolean loosedArrow(boolean hasAmmo, int charge) {
+    public static boolean loosedArrow(ItemStack released, boolean hasAmmo, int charge) {
+        if (released.getItem() instanceof CrossbowItem) {
+            return hasAmmo;
+        }
         return hasAmmo && BowItem.getPowerForTime(charge) >= 0.1F;
     }
 
