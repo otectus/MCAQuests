@@ -69,6 +69,8 @@ public final class TownsteadCompatCommands {
         TownsteadBridge bridge = TownsteadBridge.Holder.get();
         source.sendSuccess(() -> Component.translatable("mcaquests.command.townstead.status.detected",
                 bridge.detectedVersion(), bridge.variant().orElse("?")), false);
+        source.sendSuccess(() -> Component.translatable("mcaquests.command.townstead.status.binding",
+                bridge.bindingPath()), false);
         source.sendSuccess(() -> Component.translatable(statusKey(bridge.status()),
                 bridge.capabilities().size(), TownsteadCapability.values().length), false);
 

@@ -59,8 +59,15 @@ class NoTownsteadStaticLinkTest {
      */
     private static final String TYPED_ADAPTER_PREFIX = "dev/otectus/mcaquests/compat/townstead/v1/";
 
+    /**
+     * Trailing slash on purpose: the boundary is the {@code api/v1} <em>package</em>, so a lookalike
+     * such as {@code api/v10} or {@code api/v1beta} is an internal like any other.
+     */
     private static final byte[] TOWNSTEAD_API_NEEDLE =
-            "com/aetherianartificer/townstead/api/v1".getBytes(StandardCharsets.UTF_8);
+            "com/aetherianartificer/townstead/api/v1/".getBytes(StandardCharsets.UTF_8);
+
+    /** What the build declared: {@code typed} or {@code reflective-only}; see build.gradle's test task. */
+    private static final String DECLARED_BINDING = System.getProperty("mcaquests.townstead.api", "");
 
     private static final byte[] TOWNSTEAD_NEEDLE =
             "com/aetherianartificer/townstead".getBytes(StandardCharsets.UTF_8);
@@ -95,12 +102,31 @@ class NoTownsteadStaticLinkTest {
                         + "name, which is invisible to this scan by design. Offenders: " + violations);
     }
 
+    /**
+     * The adapter is a build-time optional, so its absence must be a declared choice and never an
+     * accident: a build that says it is typed has to carry it, and a build that says it is
+     * reflective-only must not. Without a declaration (an IDE run) the check is skipped.
+     */
+    @Test
+    void typedAdapterPresenceMatchesWhatTheBuildDeclared() {
+        Path adapter = Paths.get("build", "classes", "java", "main").resolve(TYPED_ADAPTER_PREFIX)
+                .resolve("ApiTownsteadBridge.class");
+        if (DECLARED_BINDING.equals("typed")) {
+            assertTrue(Files.isRegularFile(adapter),
+                    "the build declared a typed Townstead binding but compat/townstead/v1 was not compiled; "
+                            + "a release must carry the typed adapter (build.gradle: buildTownsteadApiJar)");
+        } else if (DECLARED_BINDING.equals("reflective-only")) {
+            assertTrue(!Files.exists(adapter),
+                    "a reflective-only build must not carry the typed adapter");
+        }
+    }
+
     @Test
     void typedAdapterNamesOnlyTownsteadsPublicApi() throws IOException {
         List<String> violations = new ArrayList<>();
         Path classesDir = Paths.get("build", "classes", "java", "main").resolve(TYPED_ADAPTER_PREFIX);
         if (!Files.isDirectory(classesDir)) {
-            return; // built without the API jar: the adapter is absent, and there is nothing to check
+            return; // a declared reflective-only build: the adapter is absent, and there is nothing to check
         }
         try (Stream<Path> paths = Files.walk(classesDir)) {
             paths.filter(p -> p.toString().endsWith(".class")).forEach(p -> {

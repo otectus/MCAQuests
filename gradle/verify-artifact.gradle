@@ -100,3 +100,40 @@ tasks.register('artifactVerifierTest') {
     }
 }
 tasks.named('check') { dependsOn 'artifactVerifierTest' }
+
+// The Townstead typed adapter is a build-time optional: it is compiled only when the pinned API is
+// available. A release must carry it, so a typed build whose adapter went missing is rejected here
+// rather than quietly shipping as a reflective-only jar under a release name. A deliberately
+// reflective-only build is recognisable by its classifier and by its manifest, and is accepted as such.
+ext.verifyTownsteadAdapter = { File archive, String mode ->
+    def adapterClasses = ['dev/otectus/mcaquests/compat/townstead/v1/ApiTownsteadBridge.class',
+                          'dev/otectus/mcaquests/compat/townstead/v1/ApiTownsteadEvents.class']
+    new java.util.zip.ZipFile(archive).withCloseable { zip ->
+        def manifestEntry = zip.getEntry('META-INF/MANIFEST.MF')
+        if (manifestEntry == null) throw new GradleException("${archive.name}: no manifest")
+        def manifest = new java.util.jar.Manifest(zip.getInputStream(manifestEntry))
+        String declared = manifest.mainAttributes.getValue('MCAQuests-Townstead-Api') ?: ''
+        boolean present = adapterClasses.every { zip.getEntry(it) != null }
+        boolean anyPresent = adapterClasses.any { zip.getEntry(it) != null }
+        if (mode == 'typed') {
+            if (!present) {
+                throw new GradleException("${archive.name}: the Townstead typed adapter (compat/townstead/v1) is missing " +
+                        "from a typed build. Do not install this jar; check the buildTownsteadApiJar task output.")
+            }
+            if (!declared.startsWith('typed:')) {
+                throw new GradleException("${archive.name}: manifest MCAQuests-Townstead-Api is '${declared}', expected 'typed:<commit>'")
+            }
+            if (archive.name.contains('-reflective-only')) {
+                throw new GradleException("${archive.name}: a typed build must not carry the reflective-only classifier")
+            }
+        } else {
+            if (anyPresent) {
+                throw new GradleException("${archive.name}: a reflective-only build must not contain the typed adapter")
+            }
+            if (declared != 'reflective-only' || !archive.name.contains('-reflective-only')) {
+                throw new GradleException("${archive.name}: a reflective-only build must be named and declared as such")
+            }
+        }
+    }
+    logger.lifecycle("${archive.name}: Townstead binding verified (${mode}).")
+}

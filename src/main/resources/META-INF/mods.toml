@@ -71,10 +71,14 @@ description='''${mod_description}'''
 # professions, skills, buildings and village spirit become quest state. Removing Townstead later does
 # not corrupt a save: active Townstead objectives suspend with their baselines intact and can still be
 # abandoned (Townstead spec 1.2, 10.1).
+#
+# 0.7.x is bound by name (compat.townstead) and 0.8.x through Townstead's public api.v1
+# (compat.townstead.v1). The upper bound is deliberate: a 0.9 has not been seen, and the range is a
+# statement of what was verified, not a promise about what has not shipped.
 [[dependencies.${mod_id}]]
     modId="townstead"
     mandatory=false
-    versionRange="[0.7.5,)"
+    versionRange="[0.7.5,0.9)"
     ordering="AFTER"
     side="BOTH"
 

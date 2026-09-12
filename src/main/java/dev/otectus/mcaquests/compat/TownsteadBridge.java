@@ -48,6 +48,19 @@ public interface TownsteadBridge {
     default void invalidateDataCaches() {
     }
 
+    /**
+     * Called once by {@link TownsteadCompat#init()} after this bridge has been chosen, for work that
+     * must not run in a constructor -- the typed bridge subscribes to Townstead's events here. A
+     * throw is caught by the caller, which then calls {@link #onUnbound()} and installs a disabled
+     * bridge in this one's place, so an implementation must leave nothing registered on failure.
+     */
+    default void onBound() {
+    }
+
+    /** Releases whatever {@link #onBound()} registered. Idempotent; safe to call after a partial failure. */
+    default void onUnbound() {
+    }
+
     // ---------------------------------------------------------------- reads
 
     Optional<TownsteadVillagerView> villager(Entity entity);
@@ -99,11 +112,12 @@ public interface TownsteadBridge {
     Set<ResourceLocation> knownSkillIds();
 
     /**
-     * The needs Townstead last recorded for a villager, loaded or not. Empty for a Townstead that
-     * keeps no register (0.7.x) or a villager it has never ticked. Readings may be days old; the
-     * caller decides whether that is evidence enough.
+     * The last state Townstead recorded for a villager, loaded or not, from its resident register.
+     * Empty for a Townstead that keeps no register (0.7.x), for a villager it has never ticked, and
+     * whenever the capability is unbound. The reading carries its own age and membership, and the
+     * caller decides whether it is evidence enough -- see {@code TownsteadResidentEvidence}.
      */
-    default Optional<TownsteadNeedsView> lastKnownNeeds(MinecraftServer server, java.util.UUID villager) {
+    default Optional<TownsteadResidentRecordView> lastKnownResident(MinecraftServer server, java.util.UUID villager) {
         return Optional.empty();
     }
 
@@ -134,6 +148,15 @@ public interface TownsteadBridge {
     /** True when Townstead is installed and at least its baseline facade bound. */
     default boolean isAvailable() {
         return status() == TownsteadStatus.FULL || status() == TownsteadStatus.PARTIAL;
+    }
+
+    /**
+     * How this bridge reaches Townstead: {@code "reflective"} for the by-name binding used on
+     * Townstead 0.7.x, {@code "api-v1"} for the typed adapter over Townstead's public API, or a
+     * short reason when neither could be used. Diagnostics only; never used to pick a code path.
+     */
+    default String bindingPath() {
+        return "reflective";
     }
 
     /**
