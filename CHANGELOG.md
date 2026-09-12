@@ -4,6 +4,120 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+A typed binding for Townstead's public API, alongside the existing reflective one, plus the events
+and datapack fields that binding makes possible. Contributed by AetherianArtificer (#1); reviewed and
+repaired before merge.
+
+### Added — Townstead API v1
+
+- **A typed bridge over Townstead's frozen `com.aetherianartificer.townstead.api.v1`**
+  (`compat/townstead/v1/ApiTownsteadBridge`), used automatically once Townstead ships that package
+  and this build carries the compiled-in adapter. It names no MCA type, so compiling against it can
+  never link this mod to one MCA package layout. `TownsteadCompat` now chooses the binding at
+  startup: no `api.v1` on the classpath binds reflectively as before; `api.v1` present with the
+  adapter compiled in binds the typed bridge. `api.v1` present but the adapter missing (a
+  `reflective-only` build) or a typed start-up failure instead bind a new `DisabledTownsteadBridge`
+  with a stated reason — never falling back to reflection, because the reflective binding was
+  written against 0.7.x internals and would bypass the API's write policy. A typed bridge whose
+  start-up throws has any partially-registered event subscriptions closed before the disabled bridge
+  takes over. An unsupported API generation does *not* swap in `DisabledTownsteadBridge`: the typed
+  bridge itself stays installed and reports status `DISABLED`, an empty capability set, and a
+  `"disabled: …"` binding path.
+- **The typed bridge subscribes to nine Townstead events** (`compat/townstead/v1/ApiTownsteadEvents`):
+  villager collapse and recovery, profession tier changes, life-stage crossings, village
+  spirit tier/identity changes, buildings established or upgraded, calendar day rollovers, and
+  villager death. Seven of the nine become a situation signal the moment they happen
+  (`quest/situation/TownsteadEventSignals`): collapse, tier change, life-stage crossing, spirit
+  change, building established, building upgraded, and calendar rollover. Recovery is never a
+  signal — it only lowers the collapse edge so the next collapse is news again — and death is not a
+  signal either, only forgetting the dead villager's `|collapsed`, `|senior`, `|life_stage` and
+  `|canonical_stage` baselines so they are not compared against again. Every signal-bearing event is
+  deduplicated against the same persisted baselines
+  (`quest/situation/state/TownsteadSignalStateSavedData`) the polling scan already uses, so
+  an event and a scan seeing the same moment — in either order, or the same event delivered twice —
+  produce exactly one signal; with no baseline yet, the event's own before/after decides. Events
+  honour the same gates as the scan and are filed under the villager's MCA home village, exactly as
+  the scan files residents. A day-rollover event only reaches the villages a scan would have visited
+  that pass (nearest to each online player, capped by `maxVillagesPerPass` under `[compat.townstead]`).
+  `townstead_need` has no matching event — Townstead's own `VillagerCrisisEvent` and `VillageNeedsBandChangedEvent`
+  do not carry this mod's configured-threshold, hysteresis-gated, village-fraction crisis semantics —
+  and schedule disruption has no Townstead event at all; both stay scan-driven by design on every
+  Townstead version. The scans keep running throughout, both for those and as the safety net for the
+  event-fed signals.
+- **`last_known_max_age_days`** (non-negative integer, default `0`, off), a new optional field on
+  both `mcaquests:townstead_healthy_residents` and `mcaquests:townstead_resident_wellbeing_project`.
+  When set, Townstead 0.8's resident register additionally lets a last-known record of an *unloaded*
+  village resident count towards `minimum_observed`/`minimum_fraction`, provided the record is alive,
+  filed under the village being judged, and no older than the given number of world days; live
+  readings always take precedence, `minimum_loaded_fraction` is still measured against loaded
+  residents only, and at most 256 records are consulted per poll. On Townstead 0.7.x, which keeps no
+  such register, the field changes nothing and the default (`0`) reproduces the previous
+  loaded-residents-only behaviour exactly.
+- **Village-scoped Townstead signal baselines now carry the dimension** for a non-overworld village
+  (`quest/situation/state/TownsteadSignalKeys`), so village 3 of the overworld and village 3 of
+  another dimension no longer share a baseline. Overworld keys are unchanged, so nothing already
+  written is re-announced on upgrade.
+
+### Changed — Public API
+
+- **`TownsteadBridge` gained four seam methods, all default so this is source-compatible for
+  add-ons**: `lastKnownResident(MinecraftServer, UUID)` (empty on a Townstead with no resident
+  register), `bindingPath()` (`"reflective"`, `"api-v1"`, a `"disabled: <reason>"` string, or
+  `"none"` from `NoopTownsteadBridge` when Townstead is absent or the integration is switched off in
+  config — all for diagnostics only), `onBound()` and `onUnbound()` (lifecycle hooks called once
+  around a bridge's binding, used by the typed bridge to (un)subscribe from Townstead's events).
+- **`mods.toml`'s Townstead dependency range widened to `[0.7.5,0.9)`** (was `[0.7.5,0.8)`), since the
+  integration now also targets Townstead 0.8's `api.v1`. The upper bound is unchanged in spirit: a 0.9
+  has not been seen, so the range states what was verified rather than promising support for what has
+  not shipped.
+- **`/mcaquests compat townstead status` gained a "Bound through: …" line**
+  (`mcaquests.command.townstead.status.binding`, en_us and pt_br), reporting `reflective`, `api-v1`,
+  `disabled: <reason>`, or `none` — the last printed as "Bound through: none." only when Townstead is
+  loaded but switched off in config; when Townstead is not installed, the command returns early with
+  its own "not installed" message and never reaches this line. `mcaquests.command.townstead.status.detected` was reworded from naming the
+  MCA package layout Townstead was built against to naming the bridge's variant string
+  (`api-v1-r<revision>` on the typed path), which is now the more useful diagnostic.
+- **`NoTownsteadStaticLinkTest` now exempts `compat/townstead/v1`** from the "no compiled class may
+  reference a Townstead type" tripwire, but only for `com.aetherianartificer.townstead.api.v1`
+  itself: a new test fails if any class under that package names a Townstead type outside `api/v1`,
+  and another asserts the compiled adapter is present in a build declared `typed` and absent from one
+  declared `reflective-only`.
+
+### Build
+
+- **The Townstead `api.v1` package is no longer available from any Maven, so the build fetches its
+  source at a pinned commit** (`townstead_api_commit` in `gradle.properties`, currently Townstead's
+  `0d2c36e1e961d5553c8af2250cffe33b83cabb98`) into `.gradle/townstead-api/<commit>/` and compiles it
+  itself (`buildTownsteadApiJar`, `build.gradle`), against this project's own Minecraft/Forge
+  classpath so member names line up. Three new `-P` overrides: `-PtownsteadApiJar=<jar>` (compiles
+  against a supplied jar instead, validated to be exactly `api/v1` and nothing else),
+  `-PtownsteadApiSources=<checkout>` (compiles from a local Townstead checkout instead of
+  downloading), and `-PtownsteadApi=reflective-only` (omits the typed adapter entirely; the resulting
+  jar is named `mcaquests-<version>-reflective-only.jar`).
+- **`verifyReobfJar` now also runs `verifyTownsteadAdapter`** (`gradle/verify-artifact.gradle`),
+  which fails the build unless a `typed` jar carries the compiled adapter classes, declares
+  `MCAQuests-Townstead-Api: typed:<commit>`, and is not named with `-reflective-only`, and unless a
+  `reflective-only` jar omits the adapter classes and is both named and declared `reflective-only`.
+- **The built jar's manifest carries a new `MCAQuests-Townstead-Api` attribute**, `typed:<commit>` or
+  `reflective-only`, so the binding a given jar was built with can be read back out of it.
+- **A disposable runtime fixture mod** under `tools/townstead-runtime-test/` (built with
+  `./gradlew townsteadRuntimeTestJar -PtownsteadRuntimeFixture=true`, run with
+  `-Dmcaquests.townstead.fixture=true` on a dedicated server) spawns an MCA villager and exercises
+  reads and writes through whichever bridge bound, writing `townstead-fixture-results.txt`. Never
+  built as part of the default build and never shipped.
+
+### Compatibility
+
+- **No source-breaking change.** The new `TownsteadBridge` methods are all default methods, so an
+  add-on implementing the interface directly continues to compile unchanged.
+- Townstead 0.8's `api.v1` exists only on an unreleased upstream branch at the time of writing; the
+  automated suite exercises the typed adapter's conversions against the real `api.v1` types, and the
+  reflective bridge (Townstead 0.7.6) and the typed bridge (a locally built 0.8.0 test jar) were both
+  exercised on a headless dedicated server during review. No released Townstead 0.8 build has been
+  verified.
+
 ## [1.6.4] - 2026-09-08
 
 A build-only change: a versioned API artifact, so that sibling add-ons such as MCA:
