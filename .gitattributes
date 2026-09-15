@@ -1,0 +1,11 @@
+# Normalize every text file to LF in the repository and in the working tree.
+* text=auto eol=lf
+
+# Binary assets: never touch their bytes.
+*.png binary
+*.jar binary
+*.ogg binary
+*.zip binary
+
+# The Windows launcher script must keep CRLF to run under cmd.exe.
+gradlew.bat text eol=crlf
