@@ -9,7 +9,16 @@ import dev.otectus.mcaquests.quest.condition.leaf.ReputationTierCondition;
 import dev.otectus.mcaquests.quest.reputation.ReputationTierSet;
 import dev.otectus.mcaquests.quest.reputation.ReputationTiers;
 import dev.otectus.mcaquests.quest.reward.GrantTitleReward;
+import dev.otectus.mcaquests.quest.reward.ItemPoolReward;
+import dev.otectus.mcaquests.quest.reward.ItemReward;
 import dev.otectus.mcaquests.quest.title.Titles;
+
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+
+import java.util.Map;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,10 +45,45 @@ public final class ProgressionValidator {
                     .forEach(title -> warnings.add("Quest '" + def.id() + "' grants undefined title '" + title
                             + "' (it will display its id)."));
 
+            // Item rewards whose enchantment does not belong on that item, or exceeds its own maximum.
+            for (var reward : def.rewards()) {
+                if (reward instanceof ItemReward item) {
+                    checkEnchantments(def.id().toString(), new ItemStack(item.item()), item.enchantments(), warnings);
+                } else if (reward instanceof ItemPoolReward pool) {
+                    if (pool.resolvableIndices().isEmpty()) {
+                        warnings.add("Quest '" + def.id() + "' has an item_pool reward with no resolvable entry"
+                                + " (it will pay nothing on this install).");
+                    }
+                    for (ItemPoolReward.Entry entry : pool.entries()) {
+                        BuiltInRegistries.ITEM.getOptional(entry.item()).ifPresent(item ->
+                                checkEnchantments(def.id().toString(), new ItemStack(item),
+                                        entry.enchantments(), warnings));
+                    }
+                }
+            }
+
             // reputation_tier conditions referencing an unknown tier id on their ladder.
             def.conditions().ifPresent(c -> checkConditions(def.id().toString(), c, warnings));
         }
         return warnings;
+    }
+
+    /** Warnings only: an odd enchantment still applies, it just may not be what the author meant. */
+    private static void checkEnchantments(String questId, ItemStack stack,
+                                          Map<Enchantment, Integer> enchantments, List<String> warnings) {
+        for (var entry : enchantments.entrySet()) {
+            Enchantment enchantment = entry.getKey();
+            String name = String.valueOf(BuiltInRegistries.ENCHANTMENT.getKey(enchantment));
+            // An enchanted book legitimately stores any enchantment, so it is never a mismatch.
+            if (!stack.is(Items.ENCHANTED_BOOK) && !enchantment.canEnchant(stack)) {
+                warnings.add("Quest '" + questId + "' enchants " + stack.getItem() + " with '" + name
+                        + "', which does not normally go on that item.");
+            }
+            if (entry.getValue() > enchantment.getMaxLevel()) {
+                warnings.add("Quest '" + questId + "' asks for '" + name + "' level " + entry.getValue()
+                        + ", above its maximum of " + enchantment.getMaxLevel() + ".");
+            }
+        }
     }
 
     private static void checkConditions(String questId, QuestCondition condition, List<String> warnings) {

@@ -55,6 +55,11 @@
     {
       "type": "mcaquests:hearts",
       "amount": 4
+    },
+    {
+      "type": "mcaquests:item",
+      "item": "minecraft:arrow",
+      "count": 16
     }
   ]
 }

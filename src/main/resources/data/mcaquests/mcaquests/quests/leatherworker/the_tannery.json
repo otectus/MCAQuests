@@ -56,6 +56,19 @@
     {
       "type": "mcaquests:hearts",
       "amount": 8
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:leather_chestplate"
+        },
+        {
+          "item": "minecraft:leather",
+          "count": 6,
+          "weight": 2
+        }
+      ]
     }
   ]
 }

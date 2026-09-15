@@ -7,9 +7,11 @@ import dev.otectus.mcaquests.compat.McaVillagerSnapshot;
 import dev.otectus.mcaquests.compat.TownsteadContentGate;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
+import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.situation.DynamicOfferSource;
 import dev.otectus.mcaquests.quest.situation.SituationIds;
+import dev.otectus.mcaquests.quest.village.VillageProximity;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -163,6 +165,23 @@ public final class OfferFilters {
         if (!def.effectiveConditions().map(condition -> condition.test(context)).orElse(true)) {
             return Result.fail("LOCKED (prerequisite or condition unmet)");
         }
+        // An escort is a journey out of, or back to, somewhere. A villager standing in a village asking
+        // to be walked home is the case this refuses; the answer is deliberately withheld rather than
+        // guessed while the (off-thread) village scan is still running.
+        int minFromVillage = McaQuestsConfig.COMMON.minEscortDistanceFromVillage.get();
+        if (minFromVillage > 0 && requiresVillageClearance(def)
+                && pass.villager().level() instanceof ServerLevel level) {
+            switch (VillageProximity.check(level, pass.villager().blockPosition(), minFromVillage)) {
+                case NEAR -> {
+                    return Result.fail("NEAR_VILLAGE (giver is within " + minFromVillage
+                            + " blocks of a village)");
+                }
+                case UNKNOWN -> {
+                    return Result.fail("VILLAGE_CHECK_PENDING (still checking for nearby villages)");
+                }
+                case FAR -> { }
+            }
+        }
         // Never offer a quest that is already done. An escort whose villager is standing at the
         // destination, or a reach_location the player is already inside, would otherwise be accepted and
         // handed straight back for the full reward.
@@ -175,6 +194,11 @@ public final class OfferFilters {
         Optional<String> unofferable = unofferableReason(context, def);
         return unofferable.map(reason -> Result.fail("UNRESOLVABLE_TARGET (" + reason + ")"))
                 .orElseGet(Result::pass);
+    }
+
+    /** Whether {@code def} is an escort, and so subject to the distance-from-a-village gate. */
+    static boolean requiresVillageClearance(QuestDefinition def) {
+        return def.objectives().stream().anyMatch(objective -> objective instanceof EscortEntityObjective);
     }
 
     /**

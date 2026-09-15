@@ -6,9 +6,19 @@ import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.project.ProjectDefinition;
 import dev.otectus.mcaquests.project.data.ProjectValidator;
 import dev.otectus.mcaquests.quest.QuestDefinition;
+import dev.otectus.mcaquests.quest.QuestDifficulty;
+import dev.otectus.mcaquests.quest.RepeatRule;
+import dev.otectus.mcaquests.quest.reward.ItemPoolReward;
+import dev.otectus.mcaquests.quest.reward.ItemReward;
 import dev.otectus.mcaquests.support.TestBootstrap;
 import dev.otectus.mcaquests.support.TestConfig;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ShieldItem;
+import net.minecraft.world.item.TieredItem;
+import net.minecraft.world.item.enchantment.Enchantment;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -114,6 +124,75 @@ class BuiltinPackValidatesTest {
         });
         assertEquals(List.of(), problems, "a chain with a missing stage strands the player on the one "
                 + "before it, with no way to tell that the next never existed");
+    }
+
+    /**
+     * The gear policy for the bundled pack, tiered by how demanding the quest is.
+     *
+     * <ul>
+     *   <li>an <b>easy</b> quest pays consumables and materials only — never a tool, a piece of armour
+     *       or anything enchanted, because easy work on a short cooldown is the closest thing the mod
+     *       has to an income stream;</li>
+     *   <li>an <b>enchanted</b> item needs a hard quest that is either once-only or on a cooldown of at
+     *       least 48000 ticks, and never above level one;</li>
+     *   <li>a {@code repeatable} quest, which has no cooldown at all, pays no items at all.</li>
+     * </ul>
+     */
+    @Test
+    @DisplayName("built-in item rewards follow the tiered gear policy")
+    void builtInItemRewardsFollowTheGearPolicy() {
+        Map<ResourceLocation, QuestDefinition> quests = loadAll("quests", QuestDefinition.CODEC,
+                QuestDefinition::id);
+        List<String> problems = new ArrayList<>();
+        quests.values().forEach(def -> {
+            def.rewards().forEach(reward -> {
+                if (reward instanceof ItemReward item) {
+                    checkEntry(def, item.item(), item.enchantments(), problems);
+                } else if (reward instanceof ItemPoolReward pool) {
+                    pool.entries().forEach(entry -> BuiltInRegistries.ITEM.getOptional(entry.item())
+                            .ifPresent(item -> checkEntry(def, item, entry.enchantments(), problems)));
+                }
+            });
+        });
+        assertEquals(List.of(), problems, "a bundled item reward broke the tiered gear policy");
+    }
+
+    private static void checkEntry(QuestDefinition def, Item item, Map<Enchantment, Integer> enchantments,
+                                   List<String> problems) {
+        if (def.repeat().type() == RepeatRule.RepeatType.REPEATABLE) {
+            problems.add(def.id() + " gives " + item + " on a freely repeatable quest");
+        }
+        boolean easy = def.difficulty().orElse(QuestDifficulty.EASY) == QuestDifficulty.EASY;
+        if (easy && (item instanceof TieredItem || item instanceof ArmorItem || item instanceof ShieldItem)) {
+            problems.add(def.id() + " gives gear (" + item + ") on an easy quest");
+        }
+        if (enchantments.isEmpty()) {
+            return;
+        }
+        if (easy) {
+            problems.add(def.id() + " gives an enchanted " + item + " on an easy quest");
+        }
+        if (!isEnchantmentTier(def)) {
+            problems.add(def.id() + " gives an enchanted " + item
+                    + " without being hard and once-or-long-cooldown");
+        }
+        enchantments.forEach((enchantment, level) -> {
+            if (level > 1) {
+                problems.add(def.id() + " asks for enchantment level " + level);
+            }
+        });
+    }
+
+    /** Hard, and either once-only or on a cooldown long enough that the gear is not a routine wage. */
+    private static boolean isEnchantmentTier(QuestDefinition def) {
+        if (def.difficulty().orElse(QuestDifficulty.EASY) != QuestDifficulty.HARD) {
+            return false;
+        }
+        return switch (def.repeat().type()) {
+            case ONCE -> true;
+            case COOLDOWN -> def.repeat().cooldownTicks() >= 48000;
+            case REPEATABLE, PERIOD -> false;
+        };
     }
 
     /**

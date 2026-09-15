@@ -52,6 +52,20 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:lantern",
+          "count": 2,
+          "weight": 2
+        },
+        {
+          "item": "minecraft:torch",
+          "count": 16
+        }
+      ]
     }
   ],
   "chain": {

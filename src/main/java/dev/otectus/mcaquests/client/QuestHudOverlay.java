@@ -1,11 +1,13 @@
 package dev.otectus.mcaquests.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.HudAnchor;
 import dev.otectus.mcaquests.McaQuestsConfig.HudBackground;
 import dev.otectus.mcaquests.client.gui.GuiTextures;
 import dev.otectus.mcaquests.client.gui.Palette;
 import dev.otectus.mcaquests.client.gui.Panel;
+import dev.otectus.mcaquests.client.gui.TrackerBackground;
 import dev.otectus.mcaquests.network.CardObjective;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.project.ProjectLogEntry;
@@ -17,6 +19,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
@@ -28,8 +31,9 @@ import java.util.List;
  * HUD tracker for active MCA quests — each shows its title, giver, and first objective. Position is
  * fully configurable via {@code questTrackerAnchor} (corner) + {@code questTrackerX/Y} offsets (spec section 21).
  *
- * <p>The background is the mod's nine-sliced panel rather than the flat translucent rectangle it used
- * to be; {@code questTrackerStyle} keeps the old one available, and {@code questTrackerBackground}
+ * <p>The background is either the mod's nine-sliced panel or a soft, borderless gradient wash that
+ * fades in from the top; {@code questTrackerStyle} picks between them, {@code questTrackerOpacity}
+ * scales whichever one is drawn without touching the text on top of it, and {@code questTrackerBackground}
  * still decides whether there is one at all.
  *
  * <p>Right-anchored lines keep their indent. They used to lose it — every line was flushed to the
@@ -48,6 +52,8 @@ public class QuestHudOverlay implements IGuiOverlay {
     private static final int ICON_GUTTER = 18;
     /** Below this many ticks remaining the countdown turns red ("expiring"); amber above it. */
     private static final long URGENT_TICKS = 1200L; // ~1 minute
+    /** The widest a tracker row may get before it wraps, in scaled pixels. */
+    private static final int MAX_LINE_WIDTH = 200;
 
     @Override
     public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
@@ -68,8 +74,8 @@ public class QuestHudOverlay implements IGuiOverlay {
         List<Line> lines = new ArrayList<>();
         if (!entries.isEmpty()) {
             int max = Math.min(entries.size(), McaQuestsConfig.CLIENT.questTrackerMaxEntries.get());
-            lines.add(Line.heading(Component.translatable("mcaquests.hud.title"), Palette.Hud.TITLE,
-                    GuiTextures.ICON_QUEST));
+            addHeading(lines, font, screenWidth, Component.translatable("mcaquests.hud.title"),
+                    Palette.Hud.TITLE, GuiTextures.ICON_QUEST);
             for (int i = 0; i < max; i++) {
                 QuestLogEntry entry = entries.get(i);
                 MutableComponent title = entry.title().copy()
@@ -89,20 +95,22 @@ public class QuestHudOverlay implements IGuiOverlay {
                 // Every quest after the first opens with a gap, so its title, objective, guidance and
                 // deadline rows read as one block rather than as more of the quest above.
                 int gap = i == 0 ? 0 : GROUP_GAP;
-                lines.add(entry.tracked()
-                        ? Line.icon(title, color, 2, GuiTextures.ICON_DOT, gap)
-                        : Line.of(title, color, 2, gap));
+                if (entry.tracked()) {
+                    addIcon(lines, font, screenWidth, title, color, 2, GuiTextures.ICON_DOT, gap);
+                } else {
+                    addText(lines, font, screenWidth, title, color, 2, gap);
+                }
                 if (!entry.objectives().isEmpty()) {
                     // The counts used to be inside the sentence; now they are numbers, so the tracker
                     // adds them back as text and draws the bar the numbers were always describing.
                     CardObjective first = firstIncomplete(entry.objectives());
                     if (first.unavailable() || first.required() <= 0) {
-                        lines.add(Line.of(first.text(), Palette.Hud.OBJECTIVE, 6));
+                        addText(lines, font, screenWidth, first.text(), Palette.Hud.OBJECTIVE, 6, 0);
                     } else {
-                        lines.add(Line.withBar(first.text().copy().append(Component.literal(
+                        addBar(lines, font, screenWidth, first.text().copy().append(Component.literal(
                                         "  " + first.current() + "/" + first.required())),
                                 first.satisfied() ? Palette.Hud.READY : Palette.Hud.OBJECTIVE, 6,
-                                first.current(), first.required()));
+                                first.current(), first.required());
                     }
                 }
                 // Where to go, how far, which way, and — since 1.5.0 — the coordinates. Every row
@@ -110,33 +118,34 @@ public class QuestHudOverlay implements IGuiOverlay {
                 // one per player; the world marker still stands on exactly one of them.
                 if (McaQuestsConfig.CLIENT.showQuestTargetDirection.get()) {
                     guidanceLine(entry, minecraft).ifPresent(line ->
-                            lines.add(Line.of(line, Palette.Hud.DIRECTION, 6)));
+                            addText(lines, font, screenWidth, line, Palette.Hud.DIRECTION, 6, 0));
                 }
                 // A live deadline countdown for quests with a time-based failure (none when ready to turn in).
                 if (entry.deadlineGameTime().isPresent() && !entry.ready()) {
                     long remaining = Math.max(0L, entry.deadlineGameTime().getAsLong() - gameTime);
-                    lines.add(Line.of(Component.translatable("mcaquests.hud.deadline", formatCountdown(remaining)),
-                            remaining <= URGENT_TICKS ? Palette.Hud.URGENT : Palette.Hud.WARNING, 6));
+                    addText(lines, font, screenWidth,
+                            Component.translatable("mcaquests.hud.deadline", formatCountdown(remaining)),
+                            remaining <= URGENT_TICKS ? Palette.Hud.URGENT : Palette.Hud.WARNING, 6, 0);
                 }
             }
         }
         if (!projects.isEmpty()) {
             int pmax = Math.min(projects.size(), McaQuestsConfig.CLIENT.projectTrackerMaxEntries.get());
-            lines.add(Line.heading(Component.translatable("mcaquests.hud.projects"), Palette.Hud.HEADING,
-                    GuiTextures.ICON_PROJECT));
+            addHeading(lines, font, screenWidth, Component.translatable("mcaquests.hud.projects"),
+                    Palette.Hud.HEADING, GuiTextures.ICON_PROJECT);
             for (int i = 0; i < pmax; i++) {
                 ProjectLogEntry project = projects.get(i);
                 MutableComponent header = project.title().copy()
                         .append(Component.literal(" · ").withStyle(ChatFormatting.GRAY))
                         .append(project.phaseLabel().copy().withStyle(ChatFormatting.GRAY));
-                lines.add(Line.of(header, Palette.Hud.TEXT, 2, i == 0 ? 0 : GROUP_GAP));
+                addText(lines, font, screenWidth, header, Palette.Hud.TEXT, 2, i == 0 ? 0 : GROUP_GAP);
                 ProjectObjectiveLine first = firstIncomplete(project);
                 if (first != null) {
                     // The counts were already here; the bar under them is what makes "nearly there"
                     // readable without stopping to do the division.
-                    lines.add(Line.withBar(first.label().copy()
+                    addBar(lines, font, screenWidth, first.label().copy()
                                     .append(Component.literal("  " + first.sharedCurrent() + "/" + first.required())),
-                            Palette.Hud.OBJECTIVE, 6, first.sharedCurrent(), first.required()));
+                            Palette.Hud.OBJECTIVE, 6, first.sharedCurrent(), first.required());
                 }
             }
         }
@@ -158,14 +167,29 @@ public class QuestHudOverlay implements IGuiOverlay {
         int originY = bottom ? screenHeight - offsetY - blockHeight : offsetY;
         int rightEdge = originX + blockWidth;
 
+        // Two distinct treatments, not two names for the same dark rectangle: PANEL is the nine-sliced
+        // HUD plate, SHADED a soft wash that fades in from the top and leaves the world showing through.
+        // questTrackerOpacity scales whichever one is drawn, and never the text on top of it.
         if (McaQuestsConfig.CLIENT.questTrackerBackground.get()) {
             int padded = PADDING + 2;
+            int opacity = McaQuestsConfig.CLIENT.questTrackerOpacity.get();
             if (McaQuestsConfig.CLIENT.questTrackerStyle.get() == HudBackground.PANEL) {
-                Panel.hud(graphics, originX - padded, originY - padded,
-                        blockWidth + padded * 2, blockHeight + padded * 2);
+                // The plate is a texture, so it can only be dimmed through the shader colour — and the
+                // tint has to come off again in a finally, or everything drawn after it (hotbar, chat)
+                // inherits it.
+                try {
+                    if (opacity < 100) {
+                        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, TrackerBackground.panelAlpha(opacity));
+                    }
+                    Panel.hud(graphics, originX - padded, originY - padded,
+                            blockWidth + padded * 2, blockHeight + padded * 2);
+                } finally {
+                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                }
             } else {
-                graphics.fill(originX - PADDING, originY - PADDING,
-                        rightEdge + PADDING, originY + blockHeight + PADDING, Palette.Hud.FILL_SHADED);
+                int[] wash = TrackerBackground.shadedGradient(opacity);
+                graphics.fillGradient(originX - PADDING, originY - PADDING,
+                        rightEdge + PADDING, originY + blockHeight + PADDING, wash[0], wash[1]);
             }
         }
 
@@ -195,6 +219,64 @@ public class QuestHudOverlay implements IGuiOverlay {
                         GuiTextures.BAR_GREEN);
             }
             y += line.height();
+        }
+    }
+
+    /** A plain row of text, wrapped if it is too wide or carries line breaks. */
+    private static void addText(List<Line> lines, Font font, int screenWidth, Component text, int color,
+                                int indent, int gapAbove) {
+        addWrapped(lines, font, screenWidth, text, color, indent, null, false, 0, 0, gapAbove);
+    }
+
+    /** A section heading, wrapped like any other row. */
+    private static void addHeading(List<Line> lines, Font font, int screenWidth, Component text, int color,
+                                   GuiTextures.Sprite icon) {
+        addWrapped(lines, font, screenWidth, text, color, 0, icon, true, 0, 0, 0);
+    }
+
+    /** A glyphed row that is not a section heading. */
+    private static void addIcon(List<Line> lines, Font font, int screenWidth, Component text, int color,
+                                int indent, GuiTextures.Sprite icon, int gapAbove) {
+        addWrapped(lines, font, screenWidth, text, color, indent, icon, false, 0, 0, gapAbove);
+    }
+
+    /** A row with a progress bar beneath it; the bar goes under the last wrapped line. */
+    private static void addBar(List<Line> lines, Font font, int screenWidth, Component text, int color,
+                               int indent, int current, int max) {
+        addWrapped(lines, font, screenWidth, text, color, indent, null, false, current, max, 0);
+    }
+
+    /**
+     * Splits one built component into as many rows as it needs and appends them.
+     *
+     * <p>Every row goes through here because the tracker does not own its text: an add-on can hand it
+     * an objective component with newlines in it (a bounty poster, say), and drawn as a single string
+     * that is a row of missing-glyph boxes running off the screen. The screens have always wrapped
+     * their text through {@link CardText}; the HUD does the same, and caps its own width besides.
+     *
+     * <p>The glyph and the gap above belong to the first row, the bar to the last, so a wrapped row
+     * still reads — and measures — as one block.
+     */
+    private static void addWrapped(List<Line> lines, Font font, int screenWidth, Component text, int color,
+                                   int indent, GuiTextures.Sprite icon, boolean heading,
+                                   int barCurrent, int barMax, int gapAbove) {
+        int gutter = icon != null ? ICON_GUTTER : 0;
+        int wrapWidth = Math.max(40, Math.min(MAX_LINE_WIDTH, screenWidth / 2) - gutter - indent);
+        List<FormattedCharSequence> parts = font.split(text, wrapWidth);
+        for (int i = 0; i < parts.size(); i++) {
+            FormattedCharSequence part = parts.get(i);
+            boolean first = i == 0;
+            boolean last = i == parts.size() - 1;
+            int gap = first ? gapAbove : 0;
+            if (first && heading) {
+                lines.add(Line.heading(part, color, icon));
+            } else if (first && icon != null) {
+                lines.add(Line.icon(part, color, indent, icon, gap));
+            } else if (last && barMax > 0) {
+                lines.add(Line.withBar(part, color, indent, gap, barCurrent, barMax));
+            } else {
+                lines.add(Line.of(part, color, indent, gap));
+            }
         }
     }
 
@@ -265,28 +347,24 @@ public class QuestHudOverlay implements IGuiOverlay {
      * @param barMax   a denominator to draw a progress bar under the row, or 0 for no bar
      * @param gapAbove blank space reserved above the row, used to separate one quest from the next
      */
-    private record Line(Component text, int color, int indent, GuiTextures.Sprite icon, boolean heading,
-                        int barCurrent, int barMax, int gapAbove) {
+    private record Line(FormattedCharSequence text, int color, int indent, GuiTextures.Sprite icon,
+                        boolean heading, int barCurrent, int barMax, int gapAbove) {
 
-        static Line of(Component text, int color, int indent) {
-            return of(text, color, indent, 0);
-        }
-
-        static Line of(Component text, int color, int indent, int gapAbove) {
+        static Line of(FormattedCharSequence text, int color, int indent, int gapAbove) {
             return new Line(text, color, indent, null, false, 0, 0, gapAbove);
         }
 
-        static Line heading(Component text, int color, GuiTextures.Sprite icon) {
+        static Line heading(FormattedCharSequence text, int color, GuiTextures.Sprite icon) {
             return new Line(text, color, 0, icon, true, 0, 0, 0);
         }
 
         /** A row with a glyph in the gutter that is not a section heading. */
-        static Line icon(Component text, int color, int indent, GuiTextures.Sprite icon, int gapAbove) {
+        static Line icon(FormattedCharSequence text, int color, int indent, GuiTextures.Sprite icon, int gapAbove) {
             return new Line(text, color, indent, icon, false, 0, 0, gapAbove);
         }
 
-        static Line withBar(Component text, int color, int indent, int current, int max) {
-            return new Line(text, color, indent, null, false, current, max, 0);
+        static Line withBar(FormattedCharSequence text, int color, int indent, int gapAbove, int current, int max) {
+            return new Line(text, color, indent, null, false, current, max, gapAbove);
         }
 
         /** Any row with a glyph reserves the gutter, so its text lines up with every other glyphed row. */

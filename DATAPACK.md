@@ -274,7 +274,7 @@ dimension change, villager/chunk unload, and dedicated-server restart. They neve
 
 | `type` | Fields | Meaning |
 |---|---|---|
-| `mcaquests:escort_entity` | `villager` (default self), `destination` (anchor, req.), `radius` (1–64, def 6), `follow` (bool, def true), `lead` (bool, def false), `wait_distance` (1–64, def 6), `stage_until_near` (bool, optional), `min_journey` (0–512, optional) | Get a villager to a location; arrival sticks complete. With `follow` (default) the **player** leads and the villager trails. With `lead:true` the **villager** walks to the destination itself (re-pathed every tick), pausing whenever the player is farther than `wait_distance` blocks (so the player must stay close to guard it); `follow` is ignored. The destination is **resolved and frozen when the quest is accepted** (so a `nearest_village`/relative target never drifts), and the dimension it was frozen in is recorded along with the position. **Arrival** is border-aware: for a `home_village`/`nearest_village` anchor the villager need only be **inside the village border**; for any other anchor it is a horizontal (Y-ignored) distance within `radius` — and the escortee must be in the destination's own dimension, not merely at the same coordinates in whichever world happens to be checking. If the destination is in another dimension than the player's own, guidance gives a plain instruction naming that dimension instead of a marker pointing through the world. Pair with `failure.fail_on_giver_death` so it fails if the escorted villager dies.<br>**`min_journey`** is how far the escortee must **start** from the destination for the trip to count, defaulting to the `minEscortJourney` config (24). Below it the quest is **not offered at all**, and if it is granted some other way (a chain stage, a command) arrival is **not credited** until the escortee has genuinely been that far away — otherwise a villager standing at the destination completes the quest on the first poll and the reward is free. A quest already in flight when this was introduced is treated as having travelled, so it completes exactly as it always would have.<br>**Staged escort:** when `lead` is on and the escortee is **not the giver** (a relative/other villager), the escort is *staged* — the escortee waits **invulnerable and motionless** at its spot until the player comes within `wait_distance`, then the escort begins and from that point the escortee's **death fails the quest**. Auto-detected for `lead` + non-`self` villager; `stage_until_near` forces it on (`true`) or off (`false`). |
+| `mcaquests:escort_entity` | `villager` (default self), `destination` (anchor, req.), `radius` (1–64, def 6), `follow` (bool, def true), `lead` (bool, def false), `wait_distance` (1–64, def 6), `stage_until_near` (bool, optional), `min_journey` (0–512, optional) | Get a villager to a location; arrival sticks complete. With `follow` (default) the **player** leads and the villager trails. With `lead:true` the **villager** walks to the destination itself (re-pathed every tick), pausing whenever the player is farther than `wait_distance` blocks (so the player must stay close to guard it); `follow` is ignored. The destination is **resolved and frozen when the quest is accepted** (so a `nearest_village`/relative target never drifts), and the dimension it was frozen in is recorded along with the position. **Arrival** is border-aware: for a `home_village`/`nearest_village` anchor the villager need only be **inside the village border**; for any other anchor it is a horizontal (Y-ignored) distance within `radius` — and the escortee must be in the destination's own dimension, not merely at the same coordinates in whichever world happens to be checking. If the destination is in another dimension than the player's own, guidance gives a plain instruction naming that dimension instead of a marker pointing through the world. Pair with `failure.fail_on_giver_death` so it fails if the escorted villager dies.<br>**`min_journey`** is how far the escortee must **start** from the destination for the trip to count, defaulting to the `minEscortJourney` config (24). Below it the quest is **not offered at all**, and if it is granted some other way (a chain stage, a command) arrival is **not credited** until the escortee has genuinely been that far away — otherwise a villager standing at the destination completes the quest on the first poll and the reward is free. A quest already in flight when this was introduced is treated as having travelled, so it completes exactly as it always would have.<br>**Staged escort:** when `lead` is on and the escortee is **not the giver** (a relative/other villager), the escort is *staged* — the escortee waits **invulnerable and motionless** at its spot until the player comes within `wait_distance`, then the escort begins and from that point the escortee's **death fails the quest**. Auto-detected for `lead` + non-`self` villager; `stage_until_near` forces it on (`true`) or off (`false`). Every `escort_entity` quest is additionally gated by the `minEscortDistanceFromVillage` config: on top of `min_journey` above, it is not offered unless the giver villager is that far from any village — see [Village structure tag](#village-structure-tag). |
 | `mcaquests:protect_entity` | `villager` (default self), `duration_ticks` (≥20, def 2400), `require_near_player` (bool), `near_radius` (1–64, def 16), `fail_on_death` (bool, def true) | Keep a villager alive for a duration (shown in seconds). |
 | `mcaquests:defend_villager` | `villager` (default self), `threat` (entity target, req.), `radius` (1–64, def 16), `count` (def 5) | Kill hostile threats near a villager. |
 | `mcaquests:defend_location` | `location` (anchor, req.), `threat` (entity target, req.), `radius` (1–64, def 16), `count` (def 5) | Kill hostile threats near a fixed place (a gate, well, village center) — the place-anchored sibling of `defend_villager`. |
@@ -534,7 +534,8 @@ rewards; arbitrary command or add-on side effects cannot be rolled back as an in
 
 | `type` | Fields | Notes |
 |---|---|---|
-| `mcaquests:item` | `item`, `count` (default 1) | Item stack. Never scaled by config — an explicit item reward means exactly what it says. |
+| `mcaquests:item` | `item`, `count` (default 1), `enchantments` (optional map of enchantment id → level) | Item stack. Never scaled by config — an explicit item reward means exactly what it says. `enchantments` values are enchantment **levels**, not enchanting-table power (Sharpness I is `1`), applied exactly and then clamped by `maxRewardEnchantmentLevel` (see [CONFIG.md](CONFIG.md)). An unknown item id still fails the quest's load. `minecraft:enchanted_book` stores the enchantment rather than wearing it. |
+| `mcaquests:item_pool` | `entries` (non-empty list, each `item`, `count` default 1, `weight` default 1, `enchantments` optional) | One item chosen from a weighted list. See [Item pools](#item-pools). |
 | `mcaquests:currency` | `min`, `max`, `difficulty` — all optional | Semantic money. See [Currency rewards](#currency-rewards). |
 | `mcaquests:xp` | `amount` | XP points. Scaled by `xpRewardMultiplier`. |
 | `mcaquests:xp_levels` | `levels` | XP levels. Scaled by `xpRewardMultiplier`. |
@@ -568,6 +569,28 @@ rewards; arbitrary command or add-on side effects cannot be rolled back as an in
 
 If the configured currency item can't be resolved (the mod isn't installed, or the id is a typo), the reward falls back to emeralds or is skipped per `currencyFallback`, and logs once.
 
+### Item pools
+
+`mcaquests:item_pool` chooses one entry from a weighted list, so a single quest can pay a themed item without every player getting the exact same one:
+
+```json
+{ "type": "mcaquests:item_pool", "entries": [
+    { "item": "minecraft:iron_sword", "weight": 2, "enchantments": { "minecraft:sharpness": 1 } },
+    { "item": "minecraft:iron_axe" } ] }
+```
+
+`entries` must be a non-empty list — an empty list fails the quest's load. Each entry is `item` (required), `count` (default `1`), `weight` (default `1`), and an optional `enchantments` map with the same level semantics as `mcaquests:item`'s. An entry's `enchantments` ids resolve strictly, just like `mcaquests:item`'s: an unknown enchantment id fails the quest's load. An unknown `item` id is different — it only skips that one entry (see below).
+
+**The choice is rolled once, when the quest is accepted, and frozen with it** — the same rule `mcaquests:currency` follows. The offer card before acceptance shows every entry the pool could give; the accepted card and the eventual payout afterwards show only the one chosen entry, so nothing they display can diverge from what turn-in actually pays.
+
+An entry whose `item` id is not installed is skipped rather than failing the quest's load, and logged once per id — a pool may safely name items from an optional mod. A pool left with no resolvable entry grants nothing when it is paid. This is unique to `mcaquests:item_pool`: a plain `mcaquests:item` with an unknown id still fails the quest's load, unchanged.
+
+`/mcaquests validate` additionally warns, without failing the load, when a declared enchantment does not belong on that item (an enchanted book is exempt, since it can store anything) or asks for a level above that enchantment's own maximum, and when an `item_pool` reward has no entry this install can resolve at all.
+
+A reward that cannot be reduced to an item id and a plain count — an enchanted stack, or a roll from `mcaquests:loot_table` — goes through the same pending-reward ledger as other item rewards when the inventory is full, instead of dropping at the player's feet; it is delivered on a later tick once space frees up, exactly like an overflowing plain item reward.
+
+**Built-in reward tiers.** The bundled pack follows a policy for its own item rewards, partly enforced by a unit test: an `easy` quest never carries an enchantment and never a tiered tool, a piece of armour, or a shield (consumables, materials and simple tools such as shears are fine); a `medium` quest sticks to unenchanted items — materials, food, or an unenchanted tool, armour piece or shield; `hard` is the only tier that may carry an enchanted item, and only when the quest is `once` or on a cooldown of at least 48000 ticks, though a hard quest may just as well give an unenchanted item; no enchantment level ever goes above 1; and a freely `repeatable` quest carries no item reward at all.
+
 ---
 
 ## Conditions
@@ -582,6 +605,7 @@ An extra gate on whether the quest is **offered**. A single condition object, wh
 | `mcaquests:profession` | `professions` (list) |
 | `mcaquests:biome` | biome target (`biome` or `tag`) |
 | `mcaquests:dimension` | `dimension` |
+| `mcaquests:giver_distance_from_any_village` | `min_distance` (default `0`) — true when the giver is at least that many blocks (horizontal) from **any** village: a vanilla or modded village structure in the [`#mcaquests:villages`](#village-structure-tag) tag, an MCA Reborn village, or an MCA Capitals capital. Does not require MCA Reborn — it falls back to a village-bell point-of-interest check and a structure scan when MCA answers nothing. Finding structure villages happens off the server thread, so the answer can be *not yet known* for a few ticks; a pending check counts as **not met**. |
 | `mcaquests:time` | `period` (`DAY`/`NIGHT`) **or** `min`/`max` (day-time ticks) |
 | `mcaquests:weather` | `weather` (`CLEAR`/`RAIN`/`THUNDER`) |
 | `mcaquests:item_held` | item target (`item` or `tag`) |
@@ -624,7 +648,7 @@ These gate a quest on the giver's **MCA Reborn** state (relationship to the play
 | `mcaquests:health_below` | `threshold` (required, `(0,1]`) | The giver's health fraction (current ÷ max) is below `threshold`. |
 | `mcaquests:infected` | `min_progress` (default `0`) | The giver's zombie-infection progress is `> 0` and at least `min_progress` (range `[0,1]`). |
 | `mcaquests:related_villager_status` | `relation` + `status` (both required) | The giver has at least one relative of `relation` (`any`/`spouse`/`parent`/`child`/`sibling`/`grandparent` — the same set `"mode": "family"` targets accept) whose `status` matches. The seven statuses are listed below, and are **exactly** what a target's `require` accepts, so a quest can gate on precisely the question its objective will later ask. |
-| `mcaquests:giver_distance_from_village` | `min_distance` (default `0`), `require_outside_border` (bool, default `false`) | The giver is at least `min_distance` blocks from its **home-village center** (and, when `require_outside_border`, also outside the village border). Fails safe to *not met* when the giver has no home village — so a villager standing in its own square is never offered an "escort me home" quest. The gate for lead-style escorts and "out after dark" content; pair with `time:NIGHT` via `any_of`. |
+| `mcaquests:giver_distance_from_village` | `min_distance` (default `0`), `require_outside_border` (bool, default `false`) | The giver is at least `min_distance` blocks from its **home-village center** (and, when `require_outside_border`, also outside the village border). Fails safe to *not met* when the giver has no home village — so a villager standing in its own square is never offered an "escort me home" quest. The gate for lead-style escorts and "out after dark" content; pair with `time:NIGHT` via `any_of`. See `mcaquests:giver_distance_from_any_village` (Leaf conditions, above) for the "any village" variant, which does not need MCA. |
 
 Examples:
 
@@ -678,6 +702,25 @@ gate and the target cannot disagree about who is in scope.
 **Failure behavior.** A non-MCA giver, a missing/partly-loaded relationship or family graph, or any internal MCA error all evaluate to *not met* (debug-logged), never an exception. `health_below` and `related_villager_status` read live/persistent state, so a quest can appear or disappear as that state changes — reopen the menu to refresh.
 
 **Limitations.** `age_group` does **not** support `elder`: MCA Reborn has no elder age state (its ages are baby/toddler/child/teen/adult). All MCA access is isolated behind the mod's compatibility layer; if MCA Reborn is absent these conditions simply never match. See the built-in `relations/` quests for working examples of every category.
+
+### Village structure tag
+
+`giver_distance_from_any_village` and the built-in `escort_entity` gate (`minEscortDistanceFromVillage`,
+see [CONFIG.md](CONFIG.md)) both treat a position as "in a village" if it is inside a structure in the
+`#mcaquests:villages` structure tag, an MCA Reborn village, or an MCA Capitals capital. The tag ships
+containing only `#minecraft:village`, so any village-adding or village-replacing mod whose structures
+already join that vanilla tag is covered without any extra setup.
+
+For a village mod that does not join `#minecraft:village`, a pack author has two ways to extend the
+gate:
+
+- Add the mod's structure (or its own tag) to `#mcaquests:villages` with a datapack tag file at
+  `data/mcaquests/tags/worldgen/structure/villages.json` (`{"values": ["somemod:hamlet"]}`). Extra
+  entries are merged with the shipped ones — additive is the default when `replace` is omitted —
+  unless the file sets `"replace": true`.
+- List the structure or `#tag` id directly in the `extraVillageStructures` config key, which resolves
+  the same way without needing a datapack. Entries that do not resolve to a real structure or tag are
+  ignored rather than erroring.
 
 ### Offer groups
 

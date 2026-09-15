@@ -17,6 +17,9 @@ public final class RewardTypes {
 
     public static final QuestRewardType<ItemReward> ITEM =
             register(new ResourceLocation(McaQuests.MOD_ID, "item"), ItemReward.CODEC);
+    // 1.6.4 — one item chosen from a weighted list, frozen at accept time like a currency amount.
+    public static final QuestRewardType<ItemPoolReward> ITEM_POOL =
+            register(new ResourceLocation(McaQuests.MOD_ID, "item_pool"), ItemPoolReward.CODEC);
     public static final QuestRewardType<XpReward> XP =
             register(new ResourceLocation(McaQuests.MOD_ID, "xp"), XpReward.CODEC);
     public static final QuestRewardType<HeartsReward> HEARTS =

@@ -89,7 +89,7 @@ Eight quests and two situations, all gated on `capitals.registry` and the `enabl
 
 **Quests:**
 
-1. **royal_escort** — escort the sovereign home safely; rewards hearts, village reputation, and a chronicle entry
+1. **royal_escort** — escort the sovereign home safely; rewards hearts, village reputation, and a chronicle entry (an `escort_entity` objective, so it is also subject to the `minEscortDistanceFromVillage` config gate — see [CONFIG.md](CONFIG.md))
 2. **petition_to_the_crown** — deliver petitions to the Hand; rewards XP and hearts
 3. **the_accolade** — clear hostiles from the roads and present an iron sword to the sovereign to earn a knighthood; rewards the player the knight title and a chronicle entry
 4. **guard_the_heir** — stand near the heir for three minutes; rewards hearts and XP

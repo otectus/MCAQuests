@@ -91,6 +91,24 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:iron_pickaxe",
+          "enchantments": {
+            "minecraft:efficiency": 1
+          },
+          "weight": 2
+        },
+        {
+          "item": "minecraft:iron_shovel",
+          "enchantments": {
+            "minecraft:unbreaking": 1
+          }
+        }
+      ]
     }
   ],
   "chain": {

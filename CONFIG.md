@@ -40,6 +40,9 @@ Edit with the game closed (or close the world), then relaunch / rejoin — these
 | `maxHeartsReward` | `100` | Upper clamp on a single hearts reward after scaling. |
 | `currencyRewardMultiplier` | `1.0` | Scales every `mcaquests:currency` reward. Explicit `mcaquests:item` rewards are **not** scaled — only semantic currency is. |
 | `xpRewardMultiplier` | `1.0` | Scales every `mcaquests:xp` and `mcaquests:xp_levels` reward. |
+| `maxRewardEnchantmentLevel` | `1` | Caps the enchantment **level** any `mcaquests:item` or `mcaquests:item_pool` reward may carry (`0`–`5`; `0` strips enchantments from every reward). This is a level, not enchanting-table power — Sharpness I is `1`. Applied before the card is shown and before the item is granted, so the preview and the payout always agree. |
+
+There is deliberately no item reward multiplier: `currencyRewardMultiplier` above scales only semantic currency, and an explicit `mcaquests:item` or `mcaquests:item_pool` reward is never scaled — it means exactly what it says.
 
 Scaling is applied **before** the amount is displayed, and a randomized currency amount is frozen when the quest is accepted — so the number on the card is always exactly the number you are paid.
 
@@ -102,6 +105,9 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 | `followGiverAfterAccept` | `false` | If `true`, the giver follows the player after a quest is accepted (escort-style). **Default `false`: accepting never makes a villager follow you, and an existing auto-follow is cleared.** |
 | `leadVillagerSpeed` | `0.6` | Walk-speed multiplier for a villager **leading** the player in a lead-style escort (`escort_entity` with `lead:true`). Lower keeps it near walking pace so the player can stay close and guard it. Range `0.1`–`2.0`. |
 | `minEscortJourney` | `24` | How far, in blocks, the subject of an `escort_entity` or `reach_location` objective must **start** from the destination for the quest to be worth doing. A quest whose subject is already inside this distance is **not offered**, and one granted some other way (a quest chain, a command) will not credit arrival until the subject has genuinely travelled. This is what stops *"walk me to my bed"* being offered by a villager standing at their bed and completed instantly for the reward. A datapack can override it per objective with `min_journey`; set `0` here to fall back to the objective's own arrival radius. Range `0`–`512`. |
+| `minEscortDistanceFromVillage` | `500` | How far, in blocks measured horizontally, the giver villager must be from the **nearest village** before **any** `escort_entity` quest is offered — the check that stops a villager standing in the middle of town asking to be walked home. A village here means a vanilla or modded village structure in the `#mcaquests:villages` tag, an MCA Reborn village, or an MCA Capitals capital. Finding structure villages happens off the server thread, so while the answer is still pending escort quests are withheld rather than offered. Set `0` to disable the check entirely. Range `0`–`2048`. |
+| `villagePoiDetectionRadius` | `64` | Radius, in blocks, of the cheap meeting-point (village bell) check used by `minEscortDistanceFromVillage` above; the effective radius is the smaller of this and the gate distance. The lookup can read point-of-interest data from disk for chunks that are not loaded, so it is capped well below the gate distance to bound that cost; the structure scan covers the rest. Set `0` to skip the bell check. Range `0`–`128`. |
+| `extraVillageStructures` | *(empty)* | Extra structure ids, or `#tag` ids, counted as villages by the escort gate above, for village mods that do not join `#minecraft:village`. Entries that do not resolve are ignored. Example: `["somemod:big_town", "#somemod:settlements"]`. |
 | `highlightQuestTargets` | `true` | Outline, through walls, the villager the quest you are **following** currently wants you to reach — the delivery recipient, the escortee, the villager to heal/cure/protect/defend, or (once every objective is done) the villager you hand the quest back to. Sent to the quest owner only; other players never see your outlines. Through 1.4.3 this outlined a villager for *every* objective of *every* active quest, plus the giver of any quest that named nobody, for the quest's whole lifetime — see `highlightAllActiveQuests`. |
 | `highlightAllActiveQuests` | `false` | Restore the pre-1.5.0 behaviour: outline every active quest's target at once instead of only the quest you are following. The giver fallback is **not** restored — outlining somebody because they once gave you a quest carried no information. |
 | `guidanceSearchIntervalTicks` | `200` | How long before an objective retries a completed world search that found nothing. Pending structure searches are polled without this delay; successful coordinates remain saved on the objective across restarts. The shared structure cache also retains completed misses for 200 ticks. Range `20`–`24000`. |
@@ -222,6 +228,8 @@ See [TOWNSTEAD.md](TOWNSTEAD.md) for the full condition/objective/reward referen
 ## Client (`mcaquests-client.toml`)
 
 ### `[client]`
+These keys live in `config/mcaquests-client.toml`, registered as a Forge `CLIENT` config — per-instance like the common file, not per-world. The quest tracker keys below are read fresh every frame the HUD is drawn, so an edit to any of them applies as soon as the file is saved, with no restart and no world reload.
+
 | Option | Default | What it does |
 |---|---|---|
 | `showQuestButtonInMcaMenu` | `true` | Inject the **Quests** button into MCA's villager interaction menu. |
@@ -235,7 +243,8 @@ See [TOWNSTEAD.md](TOWNSTEAD.md) for the full condition/objective/reward referen
 | `showQuestLogDestination` | `true` | Show each quest's destination in the quest log as well as on the HUD tracker. The log listed objectives and never said where any of them were. Each row gains a button to copy the coordinates, and — where a supported minimap is installed — one to drop a waypoint you keep. |
 | `questTrackerMaxEntries` | `5` | Max quests listed in the HUD tracker. Range `1`–`15`. |
 | `questTrackerBackground` | `true` | Draw a background behind the tracker at all. |
-| `questTrackerStyle` | `PANEL` | Which background the tracker draws when `questTrackerBackground` is on (1.5.0): `PANEL` for the mod's textured panel, `SHADED` for the plain translucent box used through 1.4.3. Ignored when `questTrackerBackground` is `false`. |
+| `questTrackerStyle` | `PANEL` | Which background the tracker draws when `questTrackerBackground` is on (1.5.0): `PANEL` for the mod's textured, nine-sliced HUD panel, `SHADED` for a soft, borderless translucent wash that fades in from the top. Ignored when `questTrackerBackground` is `false`. Previously, `SHADED` was a flat half-transparent black box that sat inside the same footprint as `PANEL` and read as the same dark slab in most scenes, so switching styles looked like nothing happened. Now `SHADED` is a genuinely lighter gradient. |
+| `questTrackerOpacity` | `100` | Opacity of the tracker background, `0` (invisible) to `100` (as drawn); applies to both `PANEL` and `SHADED`. Text, icons and progress bars are never faded. |
 | `questTrackerAnchor` | `TOP_LEFT` | Screen corner the tracker anchors to: `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT`. |
 | `questTrackerX` | `4` | Horizontal pixel offset from the anchored corner. |
 | `questTrackerY` | `4` | Vertical pixel offset from the anchored corner. |

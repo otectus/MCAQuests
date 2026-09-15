@@ -55,6 +55,21 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:iron_sword",
+          "enchantments": {
+            "minecraft:sharpness": 1
+          },
+          "weight": 2
+        },
+        {
+          "item": "minecraft:iron_axe"
+        }
+      ]
     }
   ]
 }

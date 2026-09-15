@@ -59,6 +59,19 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:shield"
+        },
+        {
+          "item": "minecraft:cooked_beef",
+          "count": 8,
+          "weight": 2
+        }
+      ]
     }
   ]
 }

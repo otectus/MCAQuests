@@ -130,11 +130,5 @@ public final class Palette {
         public static final int DIRECTION = 0x8AD8FF;
         /** The project section heading. */
         public static final int HEADING = 0x5CC8FF;
-
-        /**
-         * The {@code SHADED} tracker background, for players who want a plain scrim rather than the
-         * nine-sliced plate. Used with {@code GuiGraphics.fill}, so the alpha byte is significant.
-         */
-        public static final int FILL_SHADED = 0x80000000;
     }
 }

@@ -55,6 +55,19 @@
     {
       "type": "mcaquests:hearts",
       "amount": 4
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:shears"
+        },
+        {
+          "item": "minecraft:white_wool",
+          "count": 8,
+          "weight": 2
+        }
+      ]
     }
   ]
 }
