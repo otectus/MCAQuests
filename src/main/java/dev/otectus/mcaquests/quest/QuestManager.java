@@ -49,6 +49,7 @@ import dev.otectus.mcaquests.quest.situation.SituationOffer;
 import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.quest.reward.CurrencyReward;
+import dev.otectus.mcaquests.quest.reward.ItemPoolReward;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.quest.reward.TownsteadReward;
@@ -449,7 +450,7 @@ public final class QuestManager {
         Component label = situation ? Component.translatable("mcaquests.situation.card_tag") : chainLabel(def, resolver);
         return new QuestCard(def.id(), def.title(resolver), label, dialogue,
                 objectiveLines(player, def, active), rewardLines(def, active),
-                rewardIcons(def), difficultyLabel(def));
+                rewardIcons(def, active), difficultyLabel(def));
     }
 
     /** The relationship-arc context line for the UI (arc / "Part 2 of 4" / chapter), or empty for standalone quests. */
@@ -698,6 +699,11 @@ public final class QuestManager {
         for (int i = 0; i < rewards.size(); i++) {
             if (rewards.get(i) instanceof CurrencyReward currency) {
                 active.freezeReward(i, inheritDifficulty(currency, def).roll(player.getRandom()));
+            } else if (rewards.get(i) instanceof ItemPoolReward pool) {
+                int choice = pool.pick(player.getRandom());
+                if (choice >= 0) {
+                    active.freezeReward(i, choice);
+                }
             }
         }
     }
@@ -935,6 +941,15 @@ public final class QuestManager {
                     grantSafely(player, reward, def, () -> currency.grantAmount(player, frozenAmount.getAsInt()));
                     continue;
                 }
+            }
+            if (reward instanceof ItemPoolReward pool) {
+                // The entry chosen at accept time. A quest accepted before this reward existed has no
+                // frozen choice, so pick one now rather than paying nothing.
+                OptionalInt frozenChoice = active.frozenReward(i);
+                int choice = pool.clamp(frozenChoice.isPresent() ? frozenChoice.getAsInt()
+                        : pool.pick(player.getRandom()));
+                grantSafely(player, reward, def, () -> pool.grantChoice(player, choice));
+                continue;
             }
             grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
         }
@@ -1853,10 +1868,17 @@ public final class QuestManager {
      * nothing (hearts, reputation, a title) contributes nothing here and the card falls back to its
      * text line, which every reward still has.
      */
-    private static List<ItemStack> rewardIcons(QuestDefinition def) {
+    private static List<ItemStack> rewardIcons(QuestDefinition def, @Nullable ActiveQuest active) {
         List<ItemStack> icons = new ArrayList<>();
-        for (QuestReward reward : def.rewards()) {
-            for (ItemStack stack : reward.previewIcons()) {
+        List<QuestReward> rewards = def.rewards();
+        for (int i = 0; i < rewards.size(); i++) {
+            QuestReward reward = rewards.get(i);
+            OptionalInt frozen = active == null ? OptionalInt.empty() : active.frozenReward(i);
+            // An offer shows everything the pool could give; an accepted quest shows only what it will.
+            List<ItemStack> preview = reward instanceof ItemPoolReward pool && frozen.isPresent()
+                    ? pool.previewIconsFrozen(pool.clamp(frozen.getAsInt()))
+                    : reward.previewIcons();
+            for (ItemStack stack : preview) {
                 if (!stack.isEmpty()) {
                     icons.add(stack);
                 }
@@ -1888,6 +1910,10 @@ public final class QuestManager {
                 lines.add(frozen.isPresent()
                         ? currency.describeFrozen(frozen.getAsInt())
                         : inheritDifficulty(currency, def).describe());
+            } else if (reward instanceof ItemPoolReward pool) {
+                lines.add(frozen.isPresent()
+                        ? pool.describeFrozen(pool.clamp(frozen.getAsInt()))
+                        : pool.describe());
             } else {
                 lines.add(reward.describe());
             }

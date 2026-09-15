@@ -53,6 +53,24 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:torch",
+          "count": 16,
+          "weight": 2
+        },
+        {
+          "item": "minecraft:iron_ingot",
+          "count": 3
+        },
+        {
+          "item": "minecraft:golden_carrot",
+          "count": 4
+        }
+      ]
     }
   ]
 }

@@ -22,6 +22,7 @@ import dev.otectus.mcaquests.quest.condition.leaf.DimensionCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.FtbqChapterCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.FtbqQuestCompletedCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.FtbqTaskCompletedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.GiverDistanceFromAnyVillageCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.GiverDistanceFromVillageCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HasHomeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.HealthBelowCondition;
@@ -153,6 +154,11 @@ public final class ConditionTypes {
     // Distance gate for lead-style escorts and "out after dark" content (pair with time:NIGHT via any_of).
     public static final QuestConditionType<GiverDistanceFromVillageCondition> GIVER_DISTANCE_FROM_VILLAGE =
             register("giver_distance_from_village", GiverDistanceFromVillageCondition.CODEC);
+
+    // The same gate widened to every village, not only the giver's own: vanilla and modded village
+    // structures in #mcaquests:villages, MCA villages and Capitals capitals all count.
+    public static final QuestConditionType<GiverDistanceFromAnyVillageCondition> GIVER_DISTANCE_FROM_ANY_VILLAGE =
+            register("giver_distance_from_any_village", GiverDistanceFromAnyVillageCondition.CODEC);
 
     // 1.0.0 (§17) — read FTB Quests completion state. Registered always regardless of FTB Quests'
     // presence (zero FTB imports; evaluation goes through FtbqBridge.Holder), so datapacks referencing

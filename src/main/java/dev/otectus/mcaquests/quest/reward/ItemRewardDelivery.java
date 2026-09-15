@@ -42,6 +42,26 @@ public final class ItemRewardDelivery {
         }
     }
 
+    /**
+     * The same bounded delivery for a stack that carries components (an enchanted reward, a loot roll),
+     * which cannot be reduced to an id and a count and so rides the stack ledger instead.
+     */
+    public static void grant(ServerPlayer player, ItemStack stack) {
+        if (stack.isEmpty()) { return; }
+        var data = QuestCapabilities.get(player).orElseThrow(() ->
+                new IllegalStateException("Cannot retain item reward without player quest data"));
+        ItemStack remainder = stack.copy();
+        if (player.isAlive() && !player.isRemoved()
+                && data.pendingItems().takeStackBudget(player.serverLevel().getGameTime(), 1, STACKS_PER_PASS) > 0) {
+            player.getInventory().add(remainder);
+        }
+        if (!remainder.isEmpty()) {
+            data.pendingItems().addStack(remainder);
+            player.sendSystemMessage(Component.translatable("mcaquests.reward.items_pending",
+                    remainder.getCount(), remainder.getHoverName()));
+        }
+    }
+
     /** Pays only into available inventory slots; a full inventory cannot create a stream of entities. */
     public static void flush(ServerPlayer player) {
         if (!player.isAlive() || player.isRemoved()) { return; }
@@ -61,6 +81,17 @@ public final class ItemRewardDelivery {
         int budget = pending.takeStackBudget(tick, STACKS_PER_PASS, STACKS_PER_PASS);
         if (budget <= 0) { return false; }
         boolean changed = false;
+        // Component-bearing stacks first: they were retained whole and cannot be rebuilt from an id.
+        if (pending.hasStacks()) {
+            for (ItemStack stack : pending.drainStacks()) {
+                if (budget <= 0) { pending.addStack(stack); continue; }
+                ItemStack remainder = ItemHandlerHelper.insertItemStacked(inventory, stack, false);
+                if (remainder.getCount() < stack.getCount()) { changed = true; }
+                budget--;
+                if (!remainder.isEmpty()) { pending.addStack(remainder); }
+            }
+            if (budget <= 0) { return changed; }
+        }
         for (var entry : pending.nextBatch(STACKS_PER_PASS).entrySet()) {
             ResourceLocation id = entry.getKey();
             Item item = resolve.apply(id);

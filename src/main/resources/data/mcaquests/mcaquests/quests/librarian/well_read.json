@@ -57,6 +57,20 @@
     {
       "type": "mcaquests:hearts",
       "amount": 8
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:bookshelf",
+          "count": 2,
+          "weight": 2
+        },
+        {
+          "item": "minecraft:lantern",
+          "count": 2
+        }
+      ]
     }
   ]
 }

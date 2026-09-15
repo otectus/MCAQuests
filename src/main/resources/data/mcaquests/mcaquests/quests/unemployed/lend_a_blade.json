@@ -56,6 +56,20 @@
     {
       "type": "mcaquests:hearts",
       "amount": 8
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:torch",
+          "count": 16,
+          "weight": 2
+        },
+        {
+          "item": "minecraft:iron_ingot",
+          "count": 3
+        }
+      ]
     }
   ]
 }

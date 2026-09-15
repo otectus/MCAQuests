@@ -59,6 +59,20 @@
     {
       "type": "mcaquests:hearts",
       "amount": 8
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:stone_bricks",
+          "count": 16,
+          "weight": 2
+        },
+        {
+          "item": "minecraft:terracotta",
+          "count": 16
+        }
+      ]
     }
   ],
   "conditions": {

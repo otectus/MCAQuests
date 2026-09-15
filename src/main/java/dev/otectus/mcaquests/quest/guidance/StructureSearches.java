@@ -6,16 +6,19 @@ import dev.otectus.mcaquests.quest.target.StructureTarget;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.ChunkLevel;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.level.levelgen.structure.placement.ConcentricRingsStructurePlacement;
@@ -52,7 +55,16 @@ public final class StructureSearches {
     // Region tickets use 33 - distance as their chunk level. A negative distance requests only
     // STRUCTURE_STARTS; distance zero would unnecessarily generate a FULL chunk.
     private static final int TICKET_DISTANCE = 33 - ChunkLevel.byStatus(ChunkStatus.STRUCTURE_STARTS);
+    // A candidate chunk is the structure's start chunk, not its extent, so a village whose start sits
+    // just outside the radius can still reach into it. Padding the enumeration errs toward finding one.
+    private static final int FOOTPRINT_PAD = 128;
+    // A pack with an extreme number of village types truncates rather than scanning unboundedly. The
+    // list is distance-sorted, so what is dropped is the farthest and the gate errs permissive.
+    private static final int MAX_CANDIDATES = 512;
     private final SearchQueue<Key, BlockPos> queue = new SearchQueue<>(128, 200, 6000, 200);
+    // An area answer is only as good as the region it was scanned for, and its miss is a real answer:
+    // hit and miss expire on the same short timer.
+    private final SearchQueue<AreaKey, List<BoundingBox>> areaQueue = new SearchQueue<>(64, 200, 200, 200);
     private final ExecutorService worker = Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "MCA Quests structure requests");
         thread.setDaemon(true);
@@ -66,6 +78,10 @@ public final class StructureSearches {
     // Sharing within 128 blocks avoids duplicate fortress searches for nearby players/objectives.
     private record Key(ServerLevel level, StructureTarget target, int regionX, int regionZ, int radius) { }
     private record Candidate(StructurePlacement placement, List<Holder<Structure>> structures, ChunkPos pos) { }
+    // Area scans share the queue by caller-supplied token rather than by StructureTarget: they are asked
+    // for by a set of structures, not by a quest's navigation target.
+    private record AreaKey(ServerLevel level, ResourceLocation token, int regionX, int regionZ, int radius) { }
+    private record AreaCandidate(List<Holder<Structure>> structures, ChunkPos pos, double distSqr) { }
 
     private StructureSearches() { }
 
@@ -83,6 +99,30 @@ public final class StructureSearches {
                 () -> searches.new Search(level, structures, origin, cappedRadius));
     }
 
+    /**
+     * Every valid start of {@code structures} whose candidate chunk lies within {@code blockRadius} of
+     * {@code from}, as bounding boxes. Unlike {@link #request} this does not stop at the first hit.
+     *
+     * <p>An empty {@link Optional} means <b>could not answer</b> — the queue was at capacity
+     * ({@link SearchQueue#request}) or a reload/shutdown cleared it — and never "there are no
+     * structures here". Callers must not cache it as a negative result; a present but empty list is
+     * the real "none found".
+     */
+    public static CompletableFuture<Optional<List<BoundingBox>>> requestAllWithin(ServerLevel level,
+                                                                                 ResourceLocation token,
+                                                                                 HolderSet<Structure> structures,
+                                                                                 BlockPos from, int blockRadius) {
+        if (!level.getServer().isSameThread()) {
+            throw new IllegalStateException("Structure guidance must be requested on the server thread");
+        }
+        StructureSearches searches = SERVERS.computeIfAbsent(level.getServer(), ignored -> new StructureSearches());
+        int radius = Math.max(0, blockRadius);
+        AreaKey key = new AreaKey(level, token, from.getX() >> 7, from.getZ() >> 7, radius);
+        BlockPos origin = from.immutable();
+        return searches.areaQueue.request(key, searches.ticks,
+                () -> searches.new AreaScan(level, structures, origin, radius));
+    }
+
     private static int searchRadius() {
         try {
             return McaQuestsConfig.COMMON.guidanceStructureSearchRadius.get();
@@ -97,6 +137,7 @@ public final class StructureSearches {
         if (searches != null) {
             if (searches.outstandingChunk.isDone()) searches.releaseTicket();
             searches.queue.tick(++searches.ticks, 8, 2_000_000L);
+            searches.areaQueue.tick(searches.ticks, 4, 1_000_000L);
         }
     }
 
@@ -105,6 +146,7 @@ public final class StructureSearches {
         StructureSearches searches = SERVERS.remove(event.getServer());
         if (searches != null) {
             searches.queue.clear();
+            searches.areaQueue.clear();
             searches.releaseTicket();
             searches.worker.shutdownNow();
         }
@@ -124,6 +166,7 @@ public final class StructureSearches {
         StructureSearches searches = SERVERS.get(server);
         if (searches != null) {
             searches.queue.clear();
+            searches.areaQueue.clear();
             searches.releaseTicket();
         }
         // An already submitted vanilla chunk task belongs to the chunk system. Do not cancel it
@@ -258,6 +301,101 @@ public final class StructureSearches {
                 }
             }
             return new Candidate(placement, group.getValue(), pos);
+        }
+    }
+
+    /**
+     * An exhaustive sweep of every candidate village chunk within a radius, sharing the worker thread,
+     * the region ticket and the one-outstanding-chunk invariant with {@link Search}. Only
+     * {@link RandomSpreadStructurePlacement} is enumerated: concentric-ring placements (strongholds)
+     * are never villages and their positions cost a join.
+     */
+    private final class AreaScan implements SearchQueue.Task<List<BoundingBox>> {
+        private final ServerLevel level;
+        private final List<AreaCandidate> candidates = new ArrayList<>();
+        private final List<BoundingBox> found = new ArrayList<>();
+        private int index;
+        private AreaCandidate candidate;
+        private CompletableFuture<ChunkResult<ChunkAccess>> chunk;
+
+        AreaScan(ServerLevel level, HolderSet<Structure> targets, BlockPos from, int blockRadius) {
+            this.level = level;
+            ChunkGeneratorStructureState state = level.getChunkSource().getGeneratorState();
+            Map<StructurePlacement, List<Holder<Structure>>> groups = new LinkedHashMap<>();
+            for (Holder<Structure> target : targets) {
+                for (StructurePlacement placement : state.getPlacementsForStructure(target)) {
+                    if (placement instanceof RandomSpreadStructurePlacement) {
+                        groups.computeIfAbsent(placement, ignored -> new ArrayList<>()).add(target);
+                    }
+                }
+            }
+            // Candidate chunks are pure math off the world seed, so the whole enumeration happens here
+            // on the server thread and the step loop only ever reads chunks.
+            long seed = state.getLevelSeed();
+            int chunkX = from.getX() >> 4;
+            int chunkZ = from.getZ() >> 4;
+            int limit = blockRadius + FOOTPRINT_PAD;
+            Map<ChunkPos, AreaCandidate> merged = new LinkedHashMap<>();
+            for (var group : groups.entrySet()) {
+                RandomSpreadStructurePlacement placement = (RandomSpreadStructurePlacement) group.getKey();
+                int rings = Mth.ceil((double) limit / (placement.spacing() * 16.0));
+                for (int dx = -rings; dx <= rings; dx++) {
+                    for (int dz = -rings; dz <= rings; dz++) {
+                        ChunkPos pos = placement.getPotentialStructureChunk(seed,
+                                chunkX + placement.spacing() * dx, chunkZ + placement.spacing() * dz);
+                        BlockPos locate = placement.getLocatePos(pos);
+                        double offX = locate.getX() - from.getX();
+                        double offZ = locate.getZ() - from.getZ();
+                        double distSqr = offX * offX + offZ * offZ;
+                        if (distSqr > (double) limit * limit) continue;
+                        AreaCandidate existing = merged.get(pos);
+                        if (existing == null) {
+                            merged.put(pos, new AreaCandidate(new ArrayList<>(group.getValue()), pos, distSqr));
+                        } else {
+                            for (Holder<Structure> target : group.getValue()) {
+                                if (!existing.structures().contains(target)) existing.structures().add(target);
+                            }
+                        }
+                    }
+                }
+            }
+            candidates.addAll(merged.values());
+            candidates.sort(Comparator.comparingDouble(AreaCandidate::distSqr));
+            if (candidates.size() > MAX_CANDIDATES) {
+                candidates.subList(MAX_CANDIDATES, candidates.size()).clear();
+            }
+        }
+
+        @Override
+        public SearchQueue.Step<List<BoundingBox>> step() {
+            if (chunk != null) {
+                if (!chunk.isDone()) return SearchQueue.Step.pending();
+                Optional<ChunkAccess> loaded = Optional.ofNullable(chunk.getNow(null).orElse(null));
+                chunk = null;
+                if (loaded.isPresent()) {
+                    for (Holder<Structure> target : candidate.structures()) {
+                        StructureStart start = loaded.get().getStartForStructure(target.value());
+                        if (start != null && start.isValid()) found.add(start.getBoundingBox());
+                    }
+                }
+                candidate = null;
+                return SearchQueue.Step.pending();
+            }
+            if (!outstandingChunk.isDone()) return SearchQueue.Step.pending();
+            // Always an answer, even an empty one: "no villages here" is the useful half of this search.
+            if (index == candidates.size()) return SearchQueue.Step.finished(Optional.of(List.copyOf(found)));
+            candidate = candidates.get(index++);
+            ServerChunkCache source = level.getChunkSource();
+            ChunkPos pos = candidate.pos();
+            releaseTicket();
+            source.addRegionTicket(SEARCH_TICKET, pos, TICKET_DISTANCE, pos);
+            ticketSource = source;
+            ticketPos = pos;
+            chunk = CompletableFuture.supplyAsync(
+                    () -> source.getChunkFuture(pos.x, pos.z, ChunkStatus.STRUCTURE_STARTS, true), worker)
+                    .thenCompose(future -> future);
+            outstandingChunk = chunk;
+            return SearchQueue.Step.pending();
         }
     }
 }

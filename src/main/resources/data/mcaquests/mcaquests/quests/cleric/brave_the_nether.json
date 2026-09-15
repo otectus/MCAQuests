@@ -55,6 +55,23 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:glowstone",
+          "count": 8,
+          "weight": 2
+        },
+        {
+          "item": "minecraft:ender_pearl",
+          "count": 2
+        },
+        {
+          "item": "minecraft:golden_apple"
+        }
+      ]
     }
   ]
 }

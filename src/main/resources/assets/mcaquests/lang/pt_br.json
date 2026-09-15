@@ -149,6 +149,8 @@
   "mcaquests.command.project.pending.retry_queued": "Redefiniu %s recompensa(s) pendente(s) de %s; serão tentadas no próximo login.",
   "mcaquests.reward.hearts": "+%s corações",
   "mcaquests.reward.item": "%s x%s",
+  "mcaquests.reward.item_enchanted": "%s x%s (%s)",
+  "mcaquests.reward.item_pool": "Um de %s itens",
   "mcaquests.reward.xp": "%s XP",
   "mcaquests.reward.xp_levels": "%s níveis",
   "mcaquests.reward.effect": "Efeito: %s",

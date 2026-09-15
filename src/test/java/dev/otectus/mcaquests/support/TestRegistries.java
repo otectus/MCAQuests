@@ -1,7 +1,10 @@
 package dev.otectus.mcaquests.support;
 
+import dev.otectus.mcaquests.state.ServerRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 
 import io.netty.buffer.Unpooled;
@@ -21,7 +24,23 @@ import io.netty.buffer.Unpooled;
  */
 public final class TestRegistries {
 
+    private static HolderLookup.Provider datapackLookup;
+
     private TestRegistries() {
+    }
+
+    /**
+     * The vanilla <em>datapack</em> registries — enchantments above all, which 1.21 moved out of
+     * {@code BuiltInRegistries} — and binds them as the lookup {@link ServerRegistries} hands to code
+     * that normally asks the running server for one. A unit test has registries but no server.
+     */
+    public static synchronized HolderLookup.Provider datapackLookup() {
+        if (datapackLookup == null) {
+            TestBootstrap.ensureBootstrapped();
+            datapackLookup = VanillaRegistries.createLookup();
+            ServerRegistries.bind(datapackLookup);
+        }
+        return datapackLookup;
     }
 
     /** The built-in registries as a frozen {@link RegistryAccess}. */

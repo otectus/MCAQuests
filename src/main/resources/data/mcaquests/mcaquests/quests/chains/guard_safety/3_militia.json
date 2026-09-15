@@ -55,6 +55,13 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item",
+      "item": "minecraft:iron_chestplate",
+      "enchantments": {
+        "minecraft:protection": 1
+      }
     }
   ],
   "chain": {

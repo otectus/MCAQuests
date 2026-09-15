@@ -177,14 +177,11 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
     /**
      * Moves the goods from the player into the destination, exactly once.
      *
-     * <p>Ordering is the whole of the safety here, and it is deliberately <em>take, then insert, then
-     * refund the remainder</em>. Items only ever exist in one place at a time: they leave the player
-     * before they arrive, so a container that filled up underneath us cannot duplicate them, and
-     * anything that will not fit is handed straight back rather than evaporating. The marker is written
-     * before the transfer, so even an exception midway cannot let a second turn-in run it again.
+     * <p>Preflights capacity and the source snapshot, removes the selected goods, then inserts their
+     * original stack data. A failed container callback restores both inventories before allowing a
+     * retry. The marker is written after a successful commit.
      *
-     * <p>Called from {@code QuestManager.completeQuest}, which has already established through
-     * {@link #canDeliver} that the whole amount will fit.
+     * <p>Retained for add-ons. The quest manager plans every delivery together in one transaction.
      */
     public void deliver(ServerPlayer player, @Nullable Entity giver, ObjectiveProgress progress) {
         if (!destination.isTransfer() || progress.extra().getBoolean(K_DELIVERED)) {

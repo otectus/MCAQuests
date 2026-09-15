@@ -55,6 +55,13 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item",
+      "item": "minecraft:crossbow",
+      "enchantments": {
+        "minecraft:quick_charge": 1
+      }
     }
   ]
 }

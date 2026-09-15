@@ -55,6 +55,22 @@
     {
       "type": "mcaquests:hearts",
       "amount": 14
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:map",
+          "count": 2,
+          "weight": 2
+        },
+        {
+          "item": "minecraft:compass"
+        },
+        {
+          "item": "minecraft:spyglass"
+        }
+      ]
     }
   ]
 }

@@ -9,13 +9,13 @@ Machine-generated map of this mod. Read this first when picking the project up.
 | | |
 |---|---|
 | Minecraft | 1.21.1 |
-| NeoForge | 21.1.248 |
+| Forge | ? |
 | Java | 21 |
 | Gradle | 8.12 |
-| ModDevGradle | 2.0.141 |
-| Mappings | official 1.21.1 + Parchment 2024.11.17 |
-| Parchment | configured through ModDevGradle |
-| Mixins | yes (NeoForge metadata) |
+| ForgeGradle | ? |
+| Mappings | ? ? |
+| Parchment plugin | no |
+| Mixins | no |
 | Datagen wired into resources | yes |
 
 ## Source layout
@@ -25,7 +25,7 @@ dev.otectus.mcaquests                                2 files
 dev.otectus.mcaquests.api                            5 files
 dev.otectus.mcaquests.api.event                      11 files
 dev.otectus.mcaquests.client                         29 files
-dev.otectus.mcaquests.client.gui                     6 files
+dev.otectus.mcaquests.client.gui                     7 files
 dev.otectus.mcaquests.client.map                     11 files
 dev.otectus.mcaquests.client.marker                  18 files
 dev.otectus.mcaquests.command                        6 files
@@ -43,7 +43,7 @@ dev.otectus.mcaquests.compat.pack                    3 files
 dev.otectus.mcaquests.compat.reputation              5 files
 dev.otectus.mcaquests.compat.townstead               3 files
 dev.otectus.mcaquests.data                           26 files
-dev.otectus.mcaquests.event                          6 files
+dev.otectus.mcaquests.event                          7 files
 dev.otectus.mcaquests.mixin                          2 files
 dev.otectus.mcaquests.mixin.compat                   1 file
 dev.otectus.mcaquests.mixin.mapatlases               2 files
@@ -57,19 +57,22 @@ dev.otectus.mcaquests.project.state                  7 files
 dev.otectus.mcaquests.quest                          23 files
 dev.otectus.mcaquests.quest.condition                6 files
 dev.otectus.mcaquests.quest.condition.composite      3 files
-dev.otectus.mcaquests.quest.condition.leaf           47 files
+dev.otectus.mcaquests.quest.condition.leaf           48 files
 dev.otectus.mcaquests.quest.dialogue                 3 files
+dev.otectus.mcaquests.quest.escort                   1 file
 dev.otectus.mcaquests.quest.guidance                 10 files
 dev.otectus.mcaquests.quest.objective                48 files
 dev.otectus.mcaquests.quest.reputation               8 files
-dev.otectus.mcaquests.quest.reward                   30 files
+dev.otectus.mcaquests.quest.reward                   32 files
 dev.otectus.mcaquests.quest.situation                20 files
 dev.otectus.mcaquests.quest.situation.state          5 files
 dev.otectus.mcaquests.quest.situation.trigger        18 files
 dev.otectus.mcaquests.quest.target                   10 files
 dev.otectus.mcaquests.quest.template                 9 files
 dev.otectus.mcaquests.quest.title                    4 files
-dev.otectus.mcaquests.state                          16 files
+dev.otectus.mcaquests.quest.turnin                   1 file
+dev.otectus.mcaquests.quest.village                  1 file
+dev.otectus.mcaquests.state                          17 files
 ```
 
 ## Registered content (1 entries)
@@ -78,7 +81,7 @@ dev.otectus.mcaquests.state                          16 files
 
 | id | field | type | declared in |
 |---|---|---|---|
-| `player_quests` | `—` | `—` | src\main\java\dev\otectus\mcaquests\state\QuestAttachments.java |
+| `player_quests` | `—` | `—` | src/main/java/dev/otectus/mcaquests/state/QuestAttachments.java |
 
 ## Data generation
 
@@ -100,9 +103,10 @@ _No datagen providers detected — assets and data JSON are hand-written._
 | biome modifiers | 0 |
 | lang files | en_us.json, pt_br.json |
 
-Run `check_mod.py --only content` for the platform-independent content check (missing models, lang keys, textures).
+Run `check_mod.py` for a full consistency check (missing models, lang keys, textures).
 
 <!-- MODMAP:AUTO:END — everything below is hand-maintained and preserved -->
+
 
 
 

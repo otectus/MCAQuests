@@ -55,6 +55,18 @@
     {
       "type": "mcaquests:hearts",
       "amount": 8
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:shield",
+          "weight": 2
+        },
+        {
+          "item": "minecraft:iron_leggings"
+        }
+      ]
     }
   ]
 }

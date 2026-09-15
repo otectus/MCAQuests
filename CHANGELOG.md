@@ -4,13 +4,12 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.4] - 2026-09-08
+## [1.6.4] - 2026-09-10
 
-A build-only change: a versioned API artifact, so that sibling add-ons such as MCA:
-Conversations can compile against a versioned artifact instead of a class directory in a
-neighbouring checkout.
+A versioned API artifact for sibling add-ons, and an escort-from-village gate that stops a
+villager standing in the middle of town from asking to be walked home.
 
-### Added
+### Added — API jar
 
 - **`apiJar` Gradle task** produces `build/libs/mcaquests-<version>-api.jar`, a compile-only
   artifact containing the `api` package plus a named read-model slice of quest classes (quest
@@ -21,6 +20,186 @@ neighbouring checkout.
   runtime, and a bundled copy is a duplicate-class error, not a fallback. Classes outside `api/`
   are a read model of the current shape of these types, not a stability promise. A new
   `verifyApiJar` check is wired into `check`.
+
+### Added — escort-from-village gate
+
+- Every `escort_entity` quest — built-in pack included — is now refused at offer time, and again at
+  accept time, when the giver villager is within `minEscortDistanceFromVillage` blocks (measured
+  horizontally) of a village, or while that answer is still pending. This applies on top of the
+  existing `min_journey` distance check. Debug reasons are `NEAR_VILLAGE` and
+  `VILLAGE_CHECK_PENDING`, shown by `/mcaquests debug quest`.
+- Three new `[behavior]` config keys, documented in [CONFIG.md](CONFIG.md):
+  - `minEscortDistanceFromVillage` (default `500`, range `0`–`2048`, `0` disables) — how far the
+    giver must be from the nearest village before any escort quest is offered.
+  - `villagePoiDetectionRadius` (default `64`, range `0`–`128`, `0` disables) — radius of the cheap
+    village-bell check that backs the gate above.
+  - `extraVillageStructures` (default empty) — extra structure ids or `#tag` ids counted as
+    villages, for village mods that do not join `#minecraft:village`.
+- New leaf condition `mcaquests:giver_distance_from_any_village` (`min_distance`, default `0`),
+  documented in [DATAPACK.md](DATAPACK.md) — met only once the giver is proven to be that far from
+  any village; a still-pending check counts as *not met*. Distinct from the existing
+  `mcaquests:giver_distance_from_village`, which measures only the giver's own MCA home village and
+  so still passes for a villager standing in somebody else's town.
+
+### Added — village detection
+
+- New `VillageProximity` service answers whether a position is near a village, checking cheapest
+  first: the MCA Reborn village registry (which also covers MCA Capitals capitals, since a capital
+  is an MCA village), a village bell (`minecraft:meeting` point of interest) within the smaller of
+  `villagePoiDetectionRadius` and the gate distance, then a bounded off-thread scan of structure
+  starts. The structure scan is cached per 128-block region, capped at 512 entries with
+  least-recently-used eviction, until world unload, server stop, or `/reload`; while a scan is
+  pending the answer is UNKNOWN rather than guessed.
+- New structure tag `#mcaquests:villages` (containing `#minecraft:village`) is the extension point
+  for village mods: one that already joins `#minecraft:village` needs nothing further, and one that
+  does not can be added to `#mcaquests:villages` by a datapack, or listed by id in
+  `extraVillageStructures`.
+- `StructureSearches` gained an exhaustive area-scan mode (`requestAllWithin`), on its own bounded
+  queue but sharing the one-outstanding-chunk-request budget with the single-target guidance search
+  it already ran for quest markers.
+
+### Added — profession item rewards
+
+- `mcaquests:item` accepts an optional `enchantments` map (enchantment id → level). Values are
+  enchantment **levels**, not enchanting-table power (Sharpness I is `1`), applied exactly and then
+  clamped by the new `maxRewardEnchantmentLevel` config key (default `1`, range `0`–`5`; `0` strips
+  enchantments from every reward), documented in [CONFIG.md](CONFIG.md). `minecraft:enchanted_book`
+  stores the enchantment rather than wearing it. **Port note:** because enchantments are a datapack
+  registry on this platform, an `enchantments` id cannot be resolved while the quest JSON is parsed
+  (unlike the item id itself, which still fails the quest's load if unknown) — it is kept raw and
+  resolved lazily against the running server's registries (`RewardStacks.enchantment`,
+  `state/ServerRegistries.java`) the first time the reward is built. An id that names nothing is
+  skipped at grant time with one warning per id and reported by `/mcaquests validate`; it does not
+  fail the load.
+- New reward type `mcaquests:item_pool`: one item chosen from a weighted list of entries (`item`,
+  `count`, `weight`, `enchantments`), documented in [DATAPACK.md](DATAPACK.md#item-pools). The choice
+  is rolled once when the quest is accepted and frozen with it, the same rule `mcaquests:currency`
+  already followed, so the offer card before acceptance and the accepted card and payout afterwards
+  always agree, including across a reconnect or a reload. The offer card shows every entry the pool
+  could give; the accepted card shows only the one chosen. An entry naming an item this install cannot resolve is
+  skipped and logged once per id, so a pool may safely name items from an optional mod; a pool with no
+  resolvable entry grants nothing.
+- `/mcaquests validate` gained two warnings, neither of which fails the load: an `item_pool` reward
+  with no resolvable entry on this install, and an enchantment that either does not normally belong on
+  the item it is applied to (an enchanted book is exempt) or asks for a level above that enchantment's
+  own maximum. This is also where an unresolvable `enchantments` id is now reported (see the port note
+  above).
+- New translation keys `mcaquests.reward.item_enchanted` and `mcaquests.reward.item_pool`, added to
+  both shipped locales (`en_us`, `pt_br`).
+- The bundled pack's own item rewards now follow a gear policy, partly enforced by a unit test and
+  documented under [Item pools](DATAPACK.md#item-pools): an `easy` quest never carries an enchantment
+  and never a tiered tool, a piece of armour, or a shield (consumables, materials and simple tools
+  such as shears are fine); a `medium` quest sticks to unenchanted items — materials, food, or an
+  unenchanted tool, armour piece or shield; `hard` is the only tier that may carry an enchanted item,
+  and only when the quest is `once` or on a cooldown of at least 48000 ticks, though a hard quest may
+  just as well give an unenchanted item; no enchantment level ever goes above 1; a freely `repeatable`
+  quest carries no item reward at all.
+
+### Added — tracker opacity
+
+- New client-only config key `questTrackerOpacity` (default `100`, range `0`–`100`) scales the quest
+  tracker's background — `PANEL` or `SHADED` alike — without fading the text, icons or progress bars
+  drawn on top of it. Documented in [CONFIG.md](CONFIG.md).
+
+### Fixed — tracker background styles
+
+- `questTrackerStyle = SHADED` looked like it did nothing: before 1.6.4 `SHADED` was a flat
+  half-transparent black box that sat inside the same footprint as `PANEL` and read as the same dark
+  slab in most scenes, so switching styles looked like nothing happened, even though the setting was
+  being read and branched on correctly every frame. `SHADED` is now a genuinely lighter treatment — a
+  soft, borderless gradient wash that fades in from the top.
+  Both tracker keys, like every `questTrackerStyle`/`questTrackerOpacity`/`questTrackerBackground`
+  key, live in `config/mcaquests-client.toml` and are read fresh every frame, so an edit takes effect
+  as soon as the file is saved — no restart, no world reload.
+
+### Fixed — tracker text wrapping
+
+- Every quest tracker row — title, objective, guidance, deadline, and project rows — now wraps to
+  stay within a block about `200` scaled pixels wide, or half the screen width on small windows, and
+  honours line breaks embedded in the text. Before 1.6.4 an objective component containing newlines, such as
+  the multi-line bounty poster supplied by the MCA: Crime add-on, rendered as a single row of
+  missing-glyph boxes running off the screen. A wrapped row keeps its glyph on the first line and its
+  progress bar under the last. No config key changed and no network shape changed; add-on authors who
+  hand the tracker multi-line objective text now get it wrapped instead of mangled.
+
+### Fixed — reward overflow
+
+- `mcaquests:loot_table` rolls now go through the same pending-reward ledger as other item rewards
+  when the inventory is full, instead of dropping the excess on the ground at the player's feet where
+  it could be lost or picked up by someone else. Enchanted stacks from the new `enchantments`/
+  `mcaquests:item_pool` rewards use that same ledger. Either way, a retained reward is delivered on a
+  later tick once space frees up.
+- Reward preview icons still clamp their displayed count to `64`, for parity with the way the card has
+  always looked — even though this port's `QuestCard` carries an item stack over
+  `ItemStack.OPTIONAL_STREAM_CODEC`, which writes the count as a varint and would not itself wrap on a
+  larger number. The reward's text line still shows the true amount, and `grant` still pays the full
+  count, split into proper stacks.
+
+### Fixed — project event crediting
+
+- The event-driven objective credit pass in `project/ProjectManager.java` now calls
+  `checkProjectFailure` before crediting an event-driven project objective, matching the 1.20.1
+  ordering. This check had been dropped from that pass during the port; a project already past its
+  failure condition could otherwise still be credited for one more tick before failing.
+
+### Changed — bundled quests (datapack-visible)
+
+With the default `minEscortDistanceFromVillage` of 500, every bundled `escort_entity` quest and
+situation is now offered only by a villager already far from any village:
+`mcaquests:relations_escort_me_home`, `mcaquests:relations_escort_to_market`,
+`mcaquests:relations_lead_me_home`, `mcaquests:long_way_home`,
+`mcaquests:relations_reunite_with_spouse`, `mcaquests:relations_see_my_child_home`,
+`mcaquests:relations_stranded_at_dusk`, `mcaquests:relations_long_road_back`,
+`mcaquests:relations_walk_me_to_bed`, `mcaquests:cartographer_guide_the_surveyor`,
+`mcaquests:cleric_night_pilgrimage`,
+`mcaquests:townstead_the_elders_old_route`, the chain stages
+`mcaquests:aging_parent_3_last_walk`, `mcaquests:courting_2_walk_together`,
+`mcaquests:lost_child_2_deeper` and `mcaquests:road_caravan_through`, the situations
+`mcaquests:caravan_stranded_at_night` and
+`mcaquests:townstead_retirement_feast`, and (with MCA Capitals installed)
+`mcaquests:compat/capitals/royal_escort`.
+
+22 built-in quests gained a themed item reward, following the tier policy above:
+
+- **Enchanted (hard, `once` or long cooldown)**: `mcaquests:archer_marksman` (crossbow with Quick Charge I),
+  `mcaquests:mercenary_bounty` (shield with Unbreaking I), `mcaquests:weaponsmith_bone_collector`
+  (iron sword with Sharpness I, or iron axe, pool), and the chain stages
+  `mcaquests:guard_safety_3_militia` (iron chestplate with Protection I) and
+  `mcaquests:road_raise_the_waystation` (iron pickaxe with Efficiency I, or iron shovel with
+  Unbreaking I, pool).
+- **Hard, unenchanted**: `mcaquests:adventurer_relic_hunt` (torches, iron ingots or golden carrot,
+  pool), `mcaquests:cartographer_edge_of_the_world` (map, compass or spyglass, pool),
+  `mcaquests:cleric_brave_the_nether` (glowstone, ender pearls or golden apple, pool),
+  `mcaquests:guard_night_watch` (shield or cooked beef, pool), and the chain stages
+  `mcaquests:courting_4_the_proposal` (golden apple) and `mcaquests:lost_child_3_homecoming`
+  (lanterns or torches, pool).
+- **Medium**: `mcaquests:armorer_forge_ahead` (shield or iron leggings, pool),
+  `mcaquests:farmer_root_cellar` (iron hoe or bread, pool), `mcaquests:fisherman_salmon_run`
+  (fishing rod or cooked salmon, pool), `mcaquests:leatherworker_the_tannery` (leather chestplate or
+  leather, pool), `mcaquests:librarian_well_read` (bookshelves or lanterns, pool),
+  `mcaquests:mason_rebuild_the_wall` (stone bricks or terracotta, pool), `mcaquests:toolsmith_a_proper_kit`
+  (iron pickaxe or shovel, pool), `mcaquests:unemployed_lend_a_blade` (torches or iron ingots, pool).
+- **Easy**: `mcaquests:butcher_smoked_supply` (cooked porkchop), `mcaquests:fletcher_a_fine_bow`
+  (arrows), `mcaquests:shepherd_warm_blankets` (shears or wool, pool).
+
+### Compatibility
+
+- No network protocol bump: `QuestNetwork.PROTOCOL_VERSION` stays `"16"`.
+- No new mixin. `VillageProximity`'s own cache is in-memory only and clears on world unload, server
+  stop, and `/reload`; the only new persisted save data this release adds is the `PendingItemRewards`
+  `stacks` key below.
+- The API jar's export list is unchanged by the item reward and tracker work in this release.
+- `PendingItemRewards`' saved NBT gains a `stacks` key, now in active use for enchanted and loot-table
+  rewards that overflowed a full inventory (component-bearing stacks the plain id+count ledger cannot
+  represent); older builds ignore an unrecognized key, and a save
+  written before this change loads unchanged. **Port note:** because a stack's NBT is registry-bound
+  in 1.21 (`ItemStack.save(Provider)`), `PendingItemRewards.save`/`load` gained overloads that take a
+  `HolderLookup.Provider`; the id/count half of the ledger is unaffected and round-trips exactly as
+  it did before.
+- `LootTableReward` deliberately keeps rolling against the `advancement_reward` loot parameter set —
+  unchanged by moving its delivery onto the pending-reward ledger.
+- `Palette.Hud.FILL_SHADED` was removed. It was a client-internal constant, not part of the `api`
+  package, so this is not an add-on-facing break.
 
 ## [1.6.3] - 2026-09-08
 

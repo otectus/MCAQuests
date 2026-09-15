@@ -15,12 +15,11 @@ import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
 
 /**
- * Rolls a loot table and gives the results, dropping any overflow (spec section 15). Gated by
+ * Rolls a loot table and gives the results, retaining any overflow (spec section 15). Gated by
  * {@code allowLootTableRewards}.
  */
 public record LootTableReward(ResourceLocation lootTable) implements QuestReward {
@@ -53,7 +52,9 @@ public record LootTableReward(ResourceLocation lootTable) implements QuestReward
                 .withLuck(player.getLuck())
                 .create(LootContextParamSets.ADVANCEMENT_REWARD);
         for (ItemStack stack : table.getRandomItems(params)) {
-            ItemHandlerHelper.giveItemToPlayer(player, stack);
+            // Through the bounded stack ledger, so a full inventory retains the roll instead of
+            // scattering it on the ground where it can be lost or picked up by someone else.
+            ItemRewardDelivery.grant(player, stack);
         }
     }
 }

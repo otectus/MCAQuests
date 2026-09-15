@@ -679,6 +679,10 @@ public final class ProjectManager {
                 continue;
             }
             ProjectPhase phase = def.phase(state.currentPhase());
+            if (checkProjectFailure(server, level, data, state, def)) {
+                dirty = true;
+                continue;
+            }
             boolean changed = false;
             for (int i = 0; i < phase.objectives().size(); i++) {
                 ProjectObjective objective = phase.objectives().get(i);

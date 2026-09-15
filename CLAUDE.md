@@ -84,8 +84,8 @@ mixin/      two client mixins plus mixin/compat/ (one common, plugin-gated Bount
 network/    packets via NeoForge PayloadRegistrar (21 payloads, protocol 16)
 profession/ villager profession matching
 project/    village Project domain model
-quest/      quest domain model - definitions, offers, chains, turn-in, journal
-state/      persisted player and world data (data attachments + SavedData)
+quest/      quest domain model - definitions, offers, chains, turn-in, journal; quest/village/ holds VillageProximity, the escort-from-village detection service
+state/      persisted player and world data (data attachments + SavedData); state/ServerRegistries.java resolves the running server's HolderLookup.Provider for the few places 1.21 needs one
 ```
 
 ## Key Dependencies
@@ -107,6 +107,8 @@ state/      persisted player and world data (data attachments + SavedData)
 - Mixins: Three configs, each registered in `neoforge.mods.toml` via its own `[[mixins]]` block — `mcaquests.mixins.json` (client, two classes: `MinecraftGlowMixin`, `ScreenAccessor`), `mcaquests.compat.mixins.json` (common, `BountyStackCashInMixin`, `required: false`, plugin `compat/bountiful/BountifulMixinPlugin`), and `mcaquests.mapatlases.mixins.json` (client, `required: false`, `injectors.defaultRequire: 0`, two classes `AtlasDisplayMixin` and `AtlasInHandMixin`, plugin `compat/mapatlases/MapAtlasesMixinPlugin`, which verifies an exact, version-pinned Map Atlases bytecode shape before applying either one). All three use `compatibilityLevel: JAVA_21`, no refmap, no MixinExtras. Neither Map Atlases mixin cancels or mutates a return value; both only inject additional drawing.
 - Common code must not import `net.minecraft.client`; exceptions: the two `mixin/` classes, the two `mixin/mapatlases/` classes, and the seven classes under `compat/mapatlases/client/` (`AtlasRuntime`, `AtlasQuestOverlay`, `AtlasDestinationsScreen`, `AtlasHeldOverlay`, `AtlasNativeBinding`, `AtlasScreenEvents`, `AtlasWaitingScreen`), which is itself a client-only package.
 - Commands: `/mcaquests` runs on the server command dispatcher (common), while `/mcaquestsclient` runs on the client dispatcher from `client/ClientCommands.java` when the player is in-game.
+- Enchantments are a datapack registry in 1.21, not a built-in one, so an id authored on an `mcaquests:item`/`mcaquests:item_pool` reward's `enchantments` map cannot be resolved while quest JSON is parsed. It is kept raw and resolved lazily against the running server's registries through `state/ServerRegistries.java` (`RewardStacks.enchantment`), the first time the reward is built; an id that resolves to nothing is skipped with one warning and reported by `/mcaquests validate`, not a load failure.
+- New unit tests for this release's escort/village and item-reward work: `quest/village/VillageProximityLogicTest`, `quest/reward/ItemPoolRewardTest`, `state/PendingItemRewardsStackTest`, `client/TrackerBackgroundTest`, and an added case in `data/BuiltinPackValidatesTest` that enforces the bundled pack's tiered gear policy.
 
 ## Networking
 

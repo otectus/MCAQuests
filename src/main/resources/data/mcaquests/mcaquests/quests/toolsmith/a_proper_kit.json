@@ -55,6 +55,17 @@
     {
       "type": "mcaquests:hearts",
       "amount": 8
+    },
+    {
+      "type": "mcaquests:item_pool",
+      "entries": [
+        {
+          "item": "minecraft:iron_pickaxe"
+        },
+        {
+          "item": "minecraft:iron_shovel"
+        }
+      ]
     }
   ]
 }

@@ -4,6 +4,8 @@ import dev.otectus.mcaquests.project.SponsorDeathBehavior;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.List;
+
 /**
  * Forge common + client configuration (spec section 25). Only the options needed by the early
  * phases are wired today; the remainder are added as their subsystems land.
@@ -50,6 +52,7 @@ public final class McaQuestsConfig {
         // Semantic currency + reward scaling (spec 1.1.0).
         public final ModConfigSpec.DoubleValue currencyRewardMultiplier;
         public final ModConfigSpec.DoubleValue xpRewardMultiplier;
+        public final ModConfigSpec.IntValue maxRewardEnchantmentLevel;
         public final ModConfigSpec.EnumValue<CurrencyProviderMode> currencyProvider;
         public final ModConfigSpec.ConfigValue<String> customCurrencyItem;
         public final ModConfigSpec.ConfigValue<String> numismaticsCurrencyItem;
@@ -66,6 +69,9 @@ public final class McaQuestsConfig {
         public final ModConfigSpec.BooleanValue followGiverAfterAccept;
         public final ModConfigSpec.DoubleValue leadVillagerSpeed;
         public final ModConfigSpec.IntValue minEscortJourney;
+        public final ModConfigSpec.IntValue minEscortDistanceFromVillage;
+        public final ModConfigSpec.IntValue villagePoiDetectionRadius;
+        public final ModConfigSpec.ConfigValue<List<? extends String>> extraVillageStructures;
         public final ModConfigSpec.BooleanValue highlightQuestTargets;
         public final ModConfigSpec.BooleanValue highlightUsesGlowingEffect;
         public final ModConfigSpec.BooleanValue highlightAllActiveQuests;
@@ -219,6 +225,12 @@ public final class McaQuestsConfig {
             xpRewardMultiplier = b.comment(
                     "Scales every mcaquests:xp and mcaquests:xp_levels reward.")
                     .defineInRange("xpRewardMultiplier", 1.0, 0.0, 100.0);
+            maxRewardEnchantmentLevel = b.comment(
+                    "Caps the enchantment LEVEL any mcaquests:item or mcaquests:item_pool reward may carry.",
+                    "Levels above this are clamped down before the card is shown and before the item is",
+                    "granted, so the preview and the payout always agree. 0 strips enchantments from every",
+                    "reward. This is an enchantment level (Sharpness I = 1), not enchanting-table power.")
+                    .defineInRange("maxRewardEnchantmentLevel", 1, 0, 5);
             b.pop();
 
             b.push("rewards.currency");
@@ -307,6 +319,27 @@ public final class McaQuestsConfig {
                     "bed and completed instantly for the reward. A datapack can override it per objective",
                     "with \"min_journey\"; set 0 here to fall back to the objective's own arrival radius.")
                     .defineInRange("minEscortJourney", 24, 0, 512);
+            minEscortDistanceFromVillage = b.comment(
+                    "How far, in blocks measured horizontally, the giver villager must be from the nearest",
+                    "village before ANY escort_entity quest is offered. This is what stops a villager standing",
+                    "in the middle of town asking to be walked home. A village here means a vanilla or modded",
+                    "village structure in the #mcaquests:villages tag, an MCA Reborn village, or an MCA",
+                    "Capitals capital. Finding structure villages is done off the server thread, so while the",
+                    "answer is still pending escort quests are withheld rather than offered; set 0 to disable",
+                    "the check entirely.")
+                    .defineInRange("minEscortDistanceFromVillage", 500, 0, 2048);
+            villagePoiDetectionRadius = b.comment(
+                    "Radius, in blocks, of the cheap meeting-point (village bell) check used by the escort gate",
+                    "above; the effective radius is the smaller of this and the gate distance. The lookup can",
+                    "read point-of-interest data from disk for chunks that are not loaded, so it is capped well",
+                    "below the gate distance to bound that cost; the structure scan covers the rest. Set 0 to",
+                    "skip the bell check.")
+                    .defineInRange("villagePoiDetectionRadius", 64, 0, 128);
+            extraVillageStructures = b.comment(
+                    "Extra structure ids, or #tag ids, counted as villages by the escort gate above, for village",
+                    "mods that do not join #minecraft:village. Entries that do not resolve are ignored.",
+                    "Example: [\"somemod:big_town\", \"#somemod:settlements\"]")
+                    .defineListAllowEmpty("extraVillageStructures", List.of(), () -> "", o -> o instanceof String);
             highlightQuestTargets = b.comment(
                     "If true (default), a villager that is the target of one of your active quests (the",
                     "recipient of a delivery, a missing relative to find, or the villager to",
@@ -627,6 +660,7 @@ public final class McaQuestsConfig {
         public final ModConfigSpec.IntValue questTrackerMaxEntries;
         public final ModConfigSpec.BooleanValue questTrackerBackground;
         public final ModConfigSpec.EnumValue<HudBackground> questTrackerStyle;
+        public final ModConfigSpec.IntValue questTrackerOpacity;
         public final ModConfigSpec.EnumValue<HudAnchor> questTrackerAnchor;
         public final ModConfigSpec.IntValue questTrackerX;
         public final ModConfigSpec.IntValue questTrackerY;
@@ -701,9 +735,14 @@ public final class McaQuestsConfig {
                     .define("questTrackerBackground", true);
             questTrackerStyle = b.comment(
                     "Which background the quest tracker draws, when questTrackerBackground is on:",
-                    "PANEL for the mod's textured panel, SHADED for the plain translucent box used",
-                    "before 1.5.0. Ignored entirely when questTrackerBackground is false.")
+                    "PANEL for the mod's textured panel, SHADED for a soft, borderless translucent",
+                    "wash that fades in from the top. Ignored entirely when questTrackerBackground is false.",
+                    "Read every frame, so edits apply as soon as the file is saved - no restart.")
                     .defineEnum("questTrackerStyle", HudBackground.PANEL);
+            questTrackerOpacity = b.comment(
+                    "Opacity of the tracker background, 0 (invisible) to 100 (as drawn). Applies to both",
+                    "PANEL and SHADED; text is never faded. Read every frame like the other tracker keys.")
+                    .defineInRange("questTrackerOpacity", 100, 0, 100);
             questTrackerAnchor = b.comment("Screen corner the quest tracker HUD anchors to: TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT.")
                     .defineEnum("questTrackerAnchor", HudAnchor.TOP_LEFT);
             questTrackerX = b.comment("Quest tracker horizontal offset in pixels from its anchored corner.")
