@@ -4,6 +4,10 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.5] - Unreleased
+
+_Item delivery service and native MCA Gift hand-in. Entry written from the final diff._
+
 ## [1.6.4] - 2026-09-10
 
 A versioned API artifact for sibling add-ons, and an escort-from-village gate that stops a
