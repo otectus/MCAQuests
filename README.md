@@ -68,6 +68,17 @@ MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
 Right-click a villager → **Quests** → pick an offer → **Accept**.
 
+**Handing items over.** A quest that asks you to bring or deliver items has two routes, and both count
+the same. Open the recipient's **Quests** menu and press **Deliver** on the card — it takes as many as
+you are carrying, up to what is still owed, so partial hand-ins are fine and the card keeps a running
+`Delivered: x / y` (items in your pack or hotbar only — worn armour and your offhand are left alone) — or
+simply hold the item and choose **Gift** in MCA's own menu, which pays one item per gift to the
+villager the quest named. A quest that only wants to be *shown* something has **Show items** instead,
+and nothing is taken. Anything you have already handed over stays with the recipient: abandoning the
+quest does not bring it back, and the Abandon button says so before you confirm. If a hand-in is
+refused, the menu now tells you why. (`/mcaquests debug delivery` reports the same state for a server
+admin, including whether the Gift route is available on that installation.)
+
 > **Note for players upgrading from 1.0.0:** sneak-right-clicking a villager no longer opens the quest menu. That was a leftover debug shortcut, and because it cancelled the interaction it also swallowed MCA's own sneak actions (the villager editor book, inventory, trading) and broke other mods that use sneak-right-click. The injected **Quests** button is now the only entry point, and MCA: Quests never cancels an entity interaction. Track it via the HUD or the Quest Log keybind (bind "Open Quest Log" in Controls). When the objective is done you'll get a toast; return to an eligible villager and **Complete** it to claim your rewards and earn hearts. Changed your mind? **Abandon** it from the villager's menu or straight from the Quest Log.
 
 ## Configuration
@@ -113,7 +124,7 @@ MCA Reborn exposes no public API, so MCA: Quests reaches into its internal class
 
 The NeoForge artifact targets **Minecraft 1.21.1 / NeoForge 21.1.x / Java 21**. Its MCA binding probes use the NeoForge **7.7.22** and **7.7.36-beta.3** artifacts, selected by Modrinth version IDs to avoid ambiguous Fabric downloads. The **Forge 1.20.1** artifact has a separate Java 17 build and 7.6.x/7.7.x probe fleet. These jars are not interchangeable. Binding probes verify binary members; real gameplay still requires client/server testing.
 
-If an MCA build ever ships a layout this version does not recognise, MCA-backed features disable themselves with a single log line and **the server keeps running**; run `/mcaquests debug mca` to see which package root matched and whether anything is missing. All MCA access stays isolated behind the binding layer (`compat/mca`), and a build-time check fails the build if any class ever references an MCA type directly.
+If an MCA build ever ships a layout this version does not recognise, MCA-backed features disable themselves with a single log line and **the server keeps running**; run `/mcaquests debug mca` to see which package root matched, whether anything is missing, and the state of the MCA **Gift** hand-in hook. All MCA access stays isolated behind the binding layer (`compat/mca`), and a build-time check fails the build if any class ever references an MCA type directly.
 
 The **MCA: Conversations** integration is a soft dependency: MCA: Quests exposes the dialogue and objective hooks (`QuestDialogueHooks`, `ExternalSignalObjective`) and the add-on registers itself against them. When it isn't installed the hooks simply no-op — quest dialogue falls back to the static datapack text and objectives progress through their normal detectors.
 

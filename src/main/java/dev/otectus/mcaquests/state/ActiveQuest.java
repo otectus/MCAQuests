@@ -85,6 +85,20 @@ public final class ActiveQuest {
      * would let them bind to different docks the moment a second one qualified.
      */
     private final Map<String, FrozenLocation> frozenLocations = new HashMap<>();
+    /**
+     * This copy's own identity, distinct from {@code questId} and from the giver.
+     *
+     * <p>A player can hold, abandon and re-accept the same quest, and two copies of a repeatable quest
+     * from two villagers are two obligations with two separate delivery ledgers. Nothing in the older
+     * shape could tell them apart: {@code questId} plus giver UUID is the same pair for a re-accepted
+     * copy, so a replayed delivery request could be applied to a quest the player has since restarted.
+     *
+     * <p>Minted lazily rather than at accept, and never in the constructor: a pre-1.6.5 save has no id,
+     * and an id is only needed by something that is about to act on this copy. {@link #instance()} is
+     * therefore the only way to get one, and the first caller that needs it persists it.
+     */
+    @Nullable
+    private UUID instance;
     private boolean rewardClaimed;
     private boolean readyNotified;
     /**
@@ -287,6 +301,30 @@ public final class ActiveQuest {
      * is already holding would otherwise throw on the next tick. The list is never trimmed: a
      * definition that loses an objective may leave a stale trailing entry, which nothing reads.
      */
+    /**
+     * This copy's identity, minting and persisting one if this quest predates the field.
+     *
+     * <p>Lazy migration rather than a save upgrade pass: an old quest gets its id the first time
+     * something needs to name this copy — which is the first delivery, the first menu card carrying a
+     * delivery action, or nothing at all for a quest that never delivers anything.
+     */
+    public UUID instance() {
+        if (instance == null) {
+            instance = UUID.randomUUID();
+        }
+        return instance;
+    }
+
+    /** This copy's identity if it already has one, without minting. */
+    public java.util.Optional<UUID> instanceIfPresent() {
+        return java.util.Optional.ofNullable(instance);
+    }
+
+    /** True when {@code candidate} names this copy. A copy with no id yet matches nothing. */
+    public boolean isInstance(@Nullable UUID candidate) {
+        return candidate != null && candidate.equals(instance);
+    }
+
     public ObjectiveProgress progress(int index) {
         while (progress.size() <= index) {
             progress.add(new ObjectiveProgress());
@@ -456,6 +494,10 @@ public final class ActiveQuest {
         if (situationInstance != null) {
             tag.putUUID("situation", situationInstance);
         }
+        if (instance != null) {
+            // Absent on every quest that never needed an identity, so an untouched save stays untouched.
+            tag.putUUID("instance", instance);
+        }
         if (!frozenRewards.isEmpty()) {
             CompoundTag frozen = new CompoundTag();
             frozenRewards.forEach((index, amount) -> frozen.putInt(String.valueOf(index), amount));
@@ -498,6 +540,9 @@ public final class ActiveQuest {
                 progress,
                 template,
                 situationInstance);
+        if (tag.hasUUID("instance")) {
+            quest.instance = tag.getUUID("instance");
+        }
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");
         quest.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks")); // 0 when absent

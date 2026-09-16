@@ -8,6 +8,7 @@ import dev.otectus.mcaquests.network.CardObjective;
 import dev.otectus.mcaquests.network.QuestAbandonC2SPacket;
 import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestDecisionC2SPacket;
+import dev.otectus.mcaquests.network.QuestDeliverC2SPacket;
 import dev.otectus.mcaquests.network.QuestMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.QuestTurnInC2SPacket;
 import dev.otectus.mcaquests.quest.QuestMenuStatus;
@@ -26,7 +27,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Conversation / offer screen (spec sections 8, 9, 21). Renders the villager header plus the quest
@@ -71,6 +74,9 @@ public class QuestMenuScreen extends McaQuestsScreen {
     private QuestMenuDataS2CPacket data;
     /** Card tops in content space (0 = first card), turned into screen y through {@link #view}. */
     private final List<Integer> cardTops = new ArrayList<>();
+    /** The competing obligations of an ambiguous delivery, or empty when there is no question to ask. */
+    private List<Choice> chooser = List.of();
+    private int chooserTop;
 
     /** Resolved once on open; null when the villager is not a loaded living entity on this client. */
     @Nullable
@@ -95,7 +101,26 @@ public class QuestMenuScreen extends McaQuestsScreen {
 
     @Override
     protected int extraHeaderHeight() {
-        return PORTRAIT_H + 6 + (hasGreeting() ? GREETING_H : 0);
+        return PORTRAIT_H + 6 + (hasGreeting() ? GREETING_H : 0) + noticeHeight();
+    }
+
+    /**
+     * The result of whatever the player last did, in the header rather than in the scrolled content.
+     *
+     * <p>In the header because it must be readable wherever the cards happen to be scrolled to: a
+     * refusal the player cannot see is the failure this whole area of the mod exists to fix, and the
+     * chat stream is behind the screen.
+     */
+    private int noticeHeight() {
+        return hasNotice() ? noticeLines().size() * 10 + 2 : 0;
+    }
+
+    private boolean hasNotice() {
+        return !data.notice().getString().isEmpty();
+    }
+
+    private List<FormattedCharSequence> noticeLines() {
+        return this.font.split(data.notice(), Math.max(1, contentWidth()));
     }
 
     /** A villager with nothing to say costs the header nothing. */
@@ -128,10 +153,16 @@ public class QuestMenuScreen extends McaQuestsScreen {
         // number of offers (offersPerVillager allows up to 10) stays inside the panel instead of
         // running past the bottom and over the footer buttons.
         int y = 0;
+        chooser = buildChooser();
+        chooserTop = y;
+        if (!chooser.isEmpty()) {
+            addChooserButtons(y);
+            y += chooserHeight() + CARD_GAP;
+        }
         for (QuestCard card : data.cards()) {
             cardTops.add(y);
             int height = cardHeight(card);
-            addCardButtons(card, y + height - CARD_PAD - 20);
+            addCardButtons(card, y + height);
             y += height + CARD_GAP;
         }
         view.setContentHeight(Math.max(0, y - CARD_GAP));
@@ -157,6 +188,83 @@ public class QuestMenuScreen extends McaQuestsScreen {
     }
 
     /**
+     * One obligation competing for the same item as another, as the chooser offers it.
+     *
+     * <p>{@code cardIndex}/{@code objectiveIndex} are how the choice is sent: the chooser is a
+     * shortcut to a card's own Deliver action, never a second way of deciding what a click means.
+     */
+    private record Choice(int cardIndex, int objectiveIndex, QuestCard card, CardObjective objective) {
+    }
+
+    /**
+     * The competing obligations when more than one quest wants the same item from this villager.
+     *
+     * <p>This is the menu's half of the ambiguity rule. A Gift gesture carries no quest context, so
+     * when two obligations want the crossbow in the player's hand the server refuses to guess and says
+     * so; the answer has to be given somewhere, and this is it — the same items, named quest by quest,
+     * paid with one click and without the item having been taken first.
+     *
+     * <p>Empty in the ordinary case, which is one obligation per item: a chooser that appeared when
+     * there was nothing to choose would be a permanent extra row on every delivery card.
+     */
+    private List<Choice> buildChooser() {
+        Map<net.minecraft.world.item.Item, List<Choice>> byItem = new LinkedHashMap<>();
+        for (int c = 0; c < data.cards().size(); c++) {
+            QuestCard card = data.cards().get(c);
+            for (int i = 0; i < card.objectives().size(); i++) {
+                CardObjective objective = card.objectives().get(i);
+                if (!objective.delivery().actionable() || objective.icon().isEmpty()
+                        || objective.deliverableNow() <= 0) {
+                    continue;
+                }
+                byItem.computeIfAbsent(objective.icon().getItem(), key -> new ArrayList<>())
+                        .add(new Choice(c, i, card, objective));
+            }
+        }
+        for (List<Choice> competing : byItem.values()) {
+            if (competing.size() > 1) {
+                return competing;
+            }
+        }
+        return List.of();
+    }
+
+    /** Header line plus one row of buttons per pair of competing obligations. */
+    private int chooserHeight() {
+        if (chooser.isEmpty()) {
+            return 0;
+        }
+        return CARD_PAD * 2 + this.font.split(chooserTitle(), wrapWidth()).size() * 10
+                + (chooser.size() + 1) / 2 * BUTTON_STRIP;
+    }
+
+    private Component chooserTitle() {
+        return Component.translatable("mcaquests.delivery.choose",
+                chooser.get(0).objective().icon().getHoverName());
+    }
+
+    private void addChooserButtons(int top) {
+        int firstRow = top + CARD_PAD + this.font.split(chooserTitle(), wrapWidth()).size() * 10;
+        for (int i = 0; i < chooser.size(); i += 2) {
+            List<McaButton.Builder> row = new ArrayList<>();
+            row.add(choiceButton(chooser.get(i)));
+            if (i + 1 < chooser.size()) {
+                row.add(choiceButton(chooser.get(i + 1)));
+            }
+            addRow(firstRow + (i / 2) * BUTTON_STRIP, 110, row.toArray(new McaButton.Builder[0]));
+        }
+    }
+
+    /** A chooser entry: the quest's own title, paying that quest's obligation and no other. */
+    private McaButton.Builder choiceButton(Choice choice) {
+        return McaButton.create(choice.card().title(), b -> sendDeliver(choice.card(),
+                        choice.objectiveIndex(), false))
+                .tooltip(Component.translatable("mcaquests.tooltip.delivery_choose",
+                        choice.objective().deliverableNow(),
+                        choice.objective().icon().getHoverName(), choice.card().title()));
+    }
+
+    /**
      * Must agree exactly with {@link #renderCard}: the buttons are positioned from this, so a line
      * that wraps to three rows and is counted as one puts the Accept button on top of the text.
      */
@@ -170,29 +278,69 @@ public class QuestMenuScreen extends McaQuestsScreen {
         for (CardObjective objective : card.objectives()) {
             height += CardText.heightBulleted(this.font, BULLET, objectiveText(objective), wrapWidth());
             height += showsBar(objective) ? Panel.barHeight() + 2 : 0;
+            // "Delivered: 1 / 2   Available: 0", wrapped and measured like every other card line.
+            height += objective.delivery().isDelivery()
+                    ? CardText.height(this.font, deliveryLine(objective), deliveryWidth()) : 0;
         }
+        height += giftHint(card).map(hint -> CardText.height(this.font, hint, wrapWidth())).orElse(0);
         height += CardText.height(this.font, joinRewards(card.rewards()), wrapWidth()) + 2;
         if (!card.rewardIcons().isEmpty()) {
             height += SLOT_PITCH;
         }
-        if (hasButtons()) {
-            height += BUTTON_STRIP;
-        }
+        height += buttonRowCount(card) * BUTTON_STRIP;
         return height;
     }
 
     /**
-     * Whether this status puts buttons on its cards.
+     * How many 20px rows of buttons this card carries.
      *
-     * <p>{@code NO_QUESTS} can now carry one informational card — the villager saying why they have
-     * nothing, from a quest's own {@code cooldown} or {@code locked} line — and reserving the button strip
-     * under it would leave an empty band of nothing.
+     * <p><b>Per card, not per screen.</b> The menu used to choose its buttons from one global status,
+     * so a villager holding a finished quest and an unfinished one drew Complete on both — the second
+     * card offering to hand in a quest that was not done. Each card now says what it is.
+     *
+     * <p>{@code NO_QUESTS} keeps its zero: an informational card — the villager explaining why they
+     * have nothing — would otherwise reserve an empty band under a line of text.
+     *
+     * <p>Must agree exactly with {@link #addCardButtons}, which is why the two sit together: delivery
+     * actions go two to a row, and an in-progress card always has one final row for Abandon (with
+     * Deliver &amp; complete beside it when the server says that would finish the quest here).
      */
-    private boolean hasButtons() {
-        return switch (data.status()) {
-            case OFFER, READY, IN_PROGRESS -> true;
-            case NO_QUESTS, BLOCKED -> false;
+    private static int buttonRowCount(QuestCard card) {
+        return switch (card.state()) {
+            case OFFER, READY -> 1;
+            case IN_PROGRESS -> (deliveryActions(card).size() + 1) / 2 + 1;
+            case NO_QUESTS, BLOCKED -> 0;
         };
+    }
+
+    /** The objective indices on this card that carry a delivery action, enabled or explained. */
+    private static List<Integer> deliveryActions(QuestCard card) {
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < card.objectives().size(); i++) {
+            if (card.objectives().get(i).delivery().hasAction()) {
+                indices.add(i);
+            }
+        }
+        return indices;
+    }
+
+    /**
+     * The "or gift it to them" line for this card, when Gift can actually pay one of its obligations.
+     *
+     * <p>One line per card rather than per objective: it is the same sentence about the same villager,
+     * and a card with three deliveries does not need it three times. Absent entirely when the bridge is
+     * unavailable — an installation whose MCA shape the hook could not attach to must not be told to
+     * use a route that would hand the quest item over as an ordinary present.
+     */
+    private java.util.Optional<Component> giftHint(QuestCard card) {
+        for (CardObjective objective : card.objectives()) {
+            if (objective.giftCapable() && objective.delivery().actionable()) {
+                return java.util.Optional.of(Component.translatable("mcaquests.delivery.gift_hint",
+                        objective.icon().isEmpty() ? objective.text() : objective.icon().getHoverName(),
+                        data.villagerName()));
+            }
+        }
+        return java.util.Optional.empty();
     }
 
     /**
@@ -224,11 +372,25 @@ public class QuestMenuScreen extends McaQuestsScreen {
     }
 
     private static Component objectiveText(CardObjective objective) {
-        if (objective.unavailable() || objective.required() <= 0) {
+        if (objective.unavailable() || objective.required() <= 0 || objective.delivery().isDelivery()) {
+            // A delivery says it properly on its own line below: "(2/2)" beside a player who is merely
+            // carrying two crossbows read as "handed over", which is the misreport this feature exists
+            // to end.
             return objective.text();
         }
         return objective.text().copy()
                 .append(Component.literal("  (" + objective.current() + "/" + objective.required() + ")"));
+    }
+
+    /** The delivery line is indented under its objective, so it wraps to a narrower column. */
+    private int deliveryWidth() {
+        return Math.max(1, wrapWidth() - 8);
+    }
+
+    /** What has changed hands and what the player is carrying, as two separate facts. */
+    private static Component deliveryLine(CardObjective objective) {
+        return Component.translatable("mcaquests.delivery.line", objective.delivered(),
+                objective.required(), objective.available());
     }
 
     /** A bar is worth drawing only for an objective that is counted and can actually advance. */
@@ -244,25 +406,135 @@ public class QuestMenuScreen extends McaQuestsScreen {
         return !card.chainLabel().getString().isEmpty();
     }
 
-    private void addCardButtons(QuestCard card, int buttonY) {
+    /**
+     * The buttons under one card, from that card's own state.
+     *
+     * <p>{@code cardBottom} is the content-space bottom of the card; rows are laid out upwards from it
+     * so the count here and the space {@link #buttonRowCount} reserved cannot drift apart.
+     */
+    private void addCardButtons(QuestCard card, int cardBottom) {
         ResourceLocation questId = card.questId();
-        switch (data.status()) {
-            case OFFER -> addRow(buttonY,
+        int rows = buttonRowCount(card);
+        switch (card.state()) {
+            case OFFER -> addRow(rowY(cardBottom, rows, 0),
                     button("mcaquests.button.accept", "mcaquests.tooltip.accept",
                             () -> PacketDistributor.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, true))),
                     button("mcaquests.button.decline", "mcaquests.tooltip.decline",
                             () -> PacketDistributor.sendToServer(new QuestDecisionC2SPacket(data.villagerUuid(), questId, false))));
-            case READY -> addRow(buttonY,
+            case READY -> addRow(rowY(cardBottom, rows, 0),
                     button("mcaquests.button.complete", "mcaquests.tooltip.complete",
                             () -> PacketDistributor.sendToServer(new QuestTurnInC2SPacket(data.villagerUuid(), questId))),
-                    button("mcaquests.button.abandon", "mcaquests.tooltip.abandon",
-                            () -> PacketDistributor.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
-            case IN_PROGRESS -> addRow(buttonY,
-                    button("mcaquests.button.abandon", "mcaquests.tooltip.abandon",
-                            () -> PacketDistributor.sendToServer(new QuestAbandonC2SPacket(data.villagerUuid(), questId))));
+                    abandonButton(card));
+            case IN_PROGRESS -> {
+                List<Integer> deliveries = deliveryActions(card);
+                for (int i = 0; i < deliveries.size(); i += 2) {
+                    List<McaButton.Builder> row = new ArrayList<>();
+                    row.add(deliverButton(card, deliveries.get(i)));
+                    if (i + 1 < deliveries.size()) {
+                        row.add(deliverButton(card, deliveries.get(i + 1)));
+                    }
+                    addRow(rowY(cardBottom, rows, i / 2), row.toArray(new McaButton.Builder[0]));
+                }
+                List<McaButton.Builder> last = new ArrayList<>();
+                if (card.deliverCompletes() && !deliveries.isEmpty()) {
+                    last.add(deliverAndCompleteButton(card, deliveries.get(0)));
+                }
+                last.add(abandonButton(card));
+                addRow(rowY(cardBottom, rows, rows - 1),
+                        card.deliverCompletes() && !deliveries.isEmpty() ? 110 : 90,
+                        last.toArray(new McaButton.Builder[0]));
+            }
             default -> {
             }
         }
+    }
+
+    /** The content-space y of row {@code index} in a strip of {@code rows} at the foot of a card. */
+    private static int rowY(int cardBottom, int rows, int index) {
+        return cardBottom - CARD_PAD - (rows - index) * BUTTON_STRIP + (BUTTON_STRIP - 20);
+    }
+
+    /**
+     * Hand this obligation's goods over, or say why that cannot be done here.
+     *
+     * <p>A disabled control always carries its sentence: the server sends the reason with the card, so
+     * "Visit Rowan to deliver these items" is a tooltip rather than an unexplained grey button. The
+     * quantity on the label is the server's own {@code min(available, outstanding)} — the client never
+     * decides how much a click is worth, it only shows what it was told and asks for that much.
+     */
+    private McaButton.Builder deliverButton(QuestCard card, int objectiveIndex) {
+        CardObjective objective = card.objectives().get(objectiveIndex);
+        boolean proof = objective.delivery().proof();
+        int units = objective.deliverableNow();
+        Component label = proof
+                ? Component.translatable("mcaquests.button.show_items")
+                : Component.translatable("mcaquests.button.deliver", units);
+        Component tooltip;
+        if (!objective.delivery().actionable() || units <= 0) {
+            tooltip = objective.hasReason() ? objective.reason()
+                    : Component.translatable("mcaquests.tooltip.deliver.nothing");
+        } else if (proof) {
+            tooltip = Component.translatable("mcaquests.tooltip.show_items", data.villagerName());
+        } else {
+            tooltip = Component.translatable("mcaquests.tooltip.deliver", units,
+                    objective.icon().isEmpty() ? objective.text() : objective.icon().getHoverName(),
+                    data.villagerName());
+        }
+        McaButton.Builder builder = McaButton.create(label,
+                        b -> sendDeliver(card, objectiveIndex, false))
+                .tooltip(tooltip);
+        return objective.delivery().actionable() && units > 0 ? builder : disabled(builder);
+    }
+
+    /** Hand the last of it over and finish the quest, in one validated server-side step. */
+    private McaButton.Builder deliverAndCompleteButton(QuestCard card, int objectiveIndex) {
+        return McaButton.create(Component.translatable("mcaquests.button.deliver_complete"),
+                        b -> sendDeliver(card, objectiveIndex, true))
+                .tooltip(Component.translatable("mcaquests.tooltip.deliver_complete", data.villagerName()));
+    }
+
+    /**
+     * The one place a delivery is asked for.
+     *
+     * <p>Carries the card's own copy identity and the obligation's delivered count as the revision it
+     * was drawn at, so a click made against a screen that has since moved on is refused by the server
+     * rather than re-interpreted against numbers the player never saw.
+     */
+    private void sendDeliver(QuestCard card, int objectiveIndex, boolean thenComplete) {
+        CardObjective objective = card.objectives().get(objectiveIndex);
+        PacketDistributor.sendToServer(QuestDeliverC2SPacket.all(data.villagerUuid(), card.instance(),
+                card.questId(), objectiveIndex, objective.delivered(), thenComplete));
+    }
+
+    /**
+     * Abandon, with the warning that abandoning is not a refund.
+     *
+     * <p>Goods already handed over are in a villager's inventory or were consumed outright, and the
+     * quest going away does not bring them back. The count comes from the card's own ledger figures, so
+     * the tooltip says how much is at stake rather than warning vaguely on every quest; a proof
+     * objective is excluded because nothing was ever taken for it.
+     */
+    private McaButton.Builder abandonButton(QuestCard card) {
+        ResourceLocation questId = card.questId();
+        int deposited = depositedUnits(card);
+        Component tooltip = deposited > 0
+                ? Component.translatable("mcaquests.tooltip.abandon.deposited", deposited)
+                : Component.translatable("mcaquests.tooltip.abandon");
+        return McaButton.create(Component.translatable("mcaquests.button.abandon"),
+                        b -> PacketDistributor.sendToServer(
+                                new QuestAbandonC2SPacket(data.villagerUuid(), questId)))
+                .tooltip(tooltip);
+    }
+
+    /** Units this quest has actually been paid, which is the only part abandoning cannot give back. */
+    private static int depositedUnits(QuestCard card) {
+        int total = 0;
+        for (CardObjective objective : card.objectives()) {
+            if (objective.delivery().isDelivery() && !objective.delivery().proof()) {
+                total += objective.delivered();
+            }
+        }
+        return total;
     }
 
     private McaButton.Builder button(String key, String tooltipKey, Runnable action) {
@@ -270,9 +542,18 @@ public class QuestMenuScreen extends McaQuestsScreen {
                 .tooltip(Component.translatable(tooltipKey));
     }
 
+    /** Marks a builder's button inactive once built. Its tooltip still shows, which is the point. */
+    private static McaButton.Builder disabled(McaButton.Builder builder) {
+        return builder.active(false);
+    }
+
     /** {@code contentY} is a card-space y; {@link #render} maps it to the screen as the view scrolls. */
     private void addRow(int contentY, McaButton.Builder... builders) {
-        int width = 90;
+        addRow(contentY, 90, builders);
+    }
+
+    /** As above, with a wider button — "Deliver &amp; complete" does not fit the standard 90px. */
+    private void addRow(int contentY, int width, McaButton.Builder... builders) {
         int gap = 6;
         int total = builders.length * width + (builders.length - 1) * gap;
         int x = centerX() - total / 2;
@@ -297,15 +578,29 @@ public class QuestMenuScreen extends McaQuestsScreen {
         if (data.cards().isEmpty()) {
             renderEmptyState(graphics, Component.translatable("mcaquests.status.no_quests"));
         } else {
-            boolean ready = data.status() == QuestMenuStatus.READY;
             beginContentClip(graphics);
+            renderChooser(graphics);
             for (int i = 0; i < data.cards().size(); i++) {
-                renderCard(graphics, data.cards().get(i), view.screenY(cardTops.get(i)), ready,
-                        mouseX, mouseY);
+                QuestCard card = data.cards().get(i);
+                // Per card, not per screen: a villager holding one finished quest and one unfinished
+                // one used to draw both in the ready style, and both with a Complete button.
+                renderCard(graphics, card, view.screenY(cardTops.get(i)),
+                        card.state() == QuestMenuStatus.READY, mouseX, mouseY);
             }
             endContentClip(graphics);
             renderScrollbar(graphics, mouseX, mouseY);
         }
+    }
+
+    /** The chooser's own frame and question; its buttons are ordinary scrolled widgets. */
+    private void renderChooser(GuiGraphics graphics) {
+        if (chooser.isEmpty()) {
+            return;
+        }
+        int top = view.screenY(chooserTop);
+        Panel.card(graphics, contentLeft(), top, contentWidth(), chooserHeight(), Panel.CardStyle.READY);
+        CardText.draw(graphics, this.font, chooserTitle(), contentLeft() + CARD_PAD, top + CARD_PAD,
+                wrapWidth(), Palette.READY);
     }
 
     @Override
@@ -339,11 +634,21 @@ public class QuestMenuScreen extends McaQuestsScreen {
             tooltip(Component.translatable("mcaquests.tooltip.hearts"));
         }
 
+        int below = top + PORTRAIT_H + 2;
         if (hasGreeting()) {
             // Spoken, so it is styled as speech: the same colour the offers below it use, italic to
             // separate what the villager says from what the mod reports about them.
             drawFirstLine(graphics, data.greeting().copy().withStyle(ChatFormatting.ITALIC),
-                    contentLeft(), top + PORTRAIT_H + 2, contentWidth(), Palette.DIALOGUE);
+                    contentLeft(), below, contentWidth(), Palette.DIALOGUE);
+            below += GREETING_H;
+        }
+        if (hasNotice()) {
+            // What just happened, above the fold and outside the scrolled content, so it is readable
+            // wherever the cards have been scrolled to.
+            for (FormattedCharSequence line : noticeLines()) {
+                graphics.drawString(this.font, line, contentLeft(), below, Palette.HEADING, false);
+                below += 10;
+            }
         }
     }
 
@@ -434,6 +739,17 @@ public class QuestMenuScreen extends McaQuestsScreen {
                         objective.required(), GuiTextures.BAR_GREEN);
                 y += Panel.barHeight() + 2;
             }
+            if (objective.delivery().isDelivery()) {
+                // Three facts on one line, and none of them inferred from the others: what has changed
+                // hands, what the obligation asks for, and what the player is actually carrying.
+                y = CardText.draw(graphics, this.font, deliveryLine(objective), left + 8, y,
+                        deliveryWidth(),
+                        objective.state() == CardObjective.State.DONE ? Palette.REWARD : Palette.SUBTITLE);
+            }
+        }
+        java.util.Optional<Component> hint = giftHint(card);
+        if (hint.isPresent()) {
+            y = CardText.draw(graphics, this.font, hint.get(), left, y, wrapWidth(), Palette.CONTEXT);
         }
         y = CardText.draw(graphics, this.font, joinRewards(card.rewards()), left, y, wrapWidth(),
                 Palette.REWARD);

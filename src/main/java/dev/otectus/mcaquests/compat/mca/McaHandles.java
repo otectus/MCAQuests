@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
+import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.util.ArrayList;
 import java.util.List;
@@ -152,6 +153,10 @@ public final class McaHandles {
     private static final MethodHandle H_BUILDING_SIZE = R.handle(McaBinding.BUILDING_GET_SIZE);
     private static final MethodHandle H_BUILDING_CENTER = R.handle(McaBinding.BUILDING_GET_CENTER);
     private static final boolean HAS_HAS_RESIDENT = R.has(McaBinding.VILLAGE_HAS_RESIDENT);
+
+    private static final MethodHandle H_HANDLER_ENTITY = R.handle(McaBinding.COMMAND_HANDLER_ENTITY);
+    private static final MethodHandle H_HANDLER_INTERACTING =
+            R.handle(McaBinding.COMMAND_HANDLER_INTERACTING_PLAYER);
 
     private static final MethodHandle H_MANAGER_GET = R.handle(McaBinding.VILLAGE_MANAGER_GET);
     private static final MethodHandle H_MANAGER_BY_ID = R.handle(McaBinding.VILLAGE_MANAGER_GET_OR_EMPTY);
@@ -777,6 +782,37 @@ public final class McaHandles {
             return bool(H_VILLAGE_HAS_RESIDENT, village, uuid);
         }
         return villageResidentUuids(village).contains(uuid);
+    }
+
+    /**
+     * The villager an MCA command handler speaks for, or {@code null}.
+     *
+     * <p>Returned as a vanilla {@link Entity} because that is genuinely its erased type — MCA declares
+     * the field as {@code T extends Entity & VillagerLike<?>} — so the Gift bridge can learn who it is
+     * talking to without a single MCA type crossing the boundary.
+     */
+    @Nullable
+    public static Entity commandHandlerEntity(Object handler) {
+        return ref(H_HANDLER_ENTITY, handler) instanceof Entity entity ? entity : null;
+    }
+
+    /**
+     * The player MCA currently considers to be in this handler's conversation, or {@code null}.
+     *
+     * <p>MCA returns an {@code Optional<Player>}; it is unwrapped here so no caller has to reason
+     * about an {@code Optional} that arrived as a bare {@code Object}. An absent or unbound member
+     * reads as "unknown", and the bridge routes on unknown rather than refusing: the hooked call
+     * already hands it the player MCA itself is acting for, so a handler that has simply not bound a
+     * conversation is no evidence of somebody else's. What the bound member is for is the case where
+     * it names a <em>different</em> player, and that one is refused.
+     */
+    @Nullable
+    public static Player commandHandlerInteractingPlayer(Object handler) {
+        Object value = ref(H_HANDLER_INTERACTING, handler);
+        if (value instanceof Optional<?> optional) {
+            return optional.orElse(null) instanceof Player player ? player : null;
+        }
+        return value instanceof Player player ? player : null;
     }
 
     /** The village's shared storage buffer, used to measure famine. Empty when unavailable. */

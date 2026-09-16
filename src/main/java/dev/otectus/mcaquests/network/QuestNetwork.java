@@ -10,9 +10,15 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  */
 public final class QuestNetwork {
 
-    // Bumped to 16 — GuidanceKind gained INSTRUCTION, a destination that is a line of text and no
+    // Bumped to 17 — item delivery. QuestDeliverC2SPacket is new, CardObjective carries what has been
+    // handed over, what the player is carrying, whether this villager may take it and why not,
+    // QuestCard names the active copy and its own per-card state, and the menu packet carries the
+    // result line. Every one of those is a shape change in a packet a protocol-16 client would decode
+    // as the old one: it would read the delivery fields as the start of the next objective and draw
+    // nonsense, so client and server must match.
+    // (16 was GuidanceKind gaining INSTRUCTION, a destination that is a line of text and no
     // geometry. The kind's ordinal is on the wire, and an older client would decode the new one as
-    // LOCATION and draw a marker on 0,0,0 in a world it is not standing in, so the two must match.
+    // LOCATION and draw a marker on 0,0,0 in a world it is not standing in, so the two must match.)
     // (15 was the NeoForge payload rewrite, carrying the same logical data: the SimpleChannel is gone
     // and every packet is a CustomPacketPayload on a versioned PayloadRegistrar. A registrar-version
     // mismatch (or a client without the mod) cannot join, which is the same hard mismatch the
@@ -41,7 +47,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "16";
+    private static final String PROTOCOL_VERSION = "17";
 
     private QuestNetwork() {
     }
@@ -119,5 +125,9 @@ public final class QuestNetwork {
                 (payload, context) -> ClientPayloadHandlers.handleQuestGuidance(payload, context));
         registrar.playToServer(QuestTrackC2SPacket.TYPE,
                 QuestTrackC2SPacket.STREAM_CODEC, QuestTrackC2SPacket::handle);
+
+        // v1.6.5 — the Deliver action on a quest card.
+        registrar.playToServer(QuestDeliverC2SPacket.TYPE,
+                QuestDeliverC2SPacket.STREAM_CODEC, QuestDeliverC2SPacket::handle);
     }
 }

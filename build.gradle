@@ -562,6 +562,7 @@ def verifyNeoQuestArchive = { File archive ->
     int classCount = 0
     new java.util.zip.ZipFile(archive).withCloseable { zip ->
         ['META-INF/neoforge.mods.toml', 'mcaquests.mixins.json', 'mcaquests.compat.mixins.json',
+         'mcaquests.mca.mixins.json', 'mcaquests.mapatlases.mixins.json',
          'pack.mcmeta', 'compatpacks/iafce_quests/pack.mcmeta', 'compatpacks/bountiful_core/pack.mcmeta',
          'compatpacks/bountiful_iafce/pack.mcmeta', 'assets/mcaquests/lang/en_us.json',
          'assets/mcaquests/lang/pt_br.json'].each { required ->

@@ -10,6 +10,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.compat.FtbqBridge;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.mca.McaBinding;
+import dev.otectus.mcaquests.compat.mca.McaGiftHookProbe;
 import dev.otectus.mcaquests.data.FtbqReferenceWalker;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
@@ -20,10 +21,14 @@ import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.project.state.ProjectState;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.QuestManager;
+import dev.otectus.mcaquests.quest.delivery.DeliveryService;
+import dev.otectus.mcaquests.quest.delivery.DeliveryView;
+import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.reputation.ReputationService;
 import dev.otectus.mcaquests.quest.reputation.ReputationTier;
 import dev.otectus.mcaquests.quest.reputation.ReputationTierSet;
 import dev.otectus.mcaquests.quest.reputation.ReputationTiers;
+import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.quest.situation.SituationDefinition;
 import dev.otectus.mcaquests.quest.situation.SituationManager;
 import dev.otectus.mcaquests.quest.situation.SituationRegistry;
@@ -52,6 +57,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -105,6 +111,8 @@ public final class McaQuestsCommand {
                                 .executes(McaQuestsCommand::debugVillager))
                         .then(Commands.literal("mca")
                                 .executes(McaQuestsCommand::debugMca))
+                        .then(Commands.literal("delivery")
+                                .executes(McaQuestsCommand::debugDelivery))
                         .then(Commands.literal("quest")
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
                                         .executes(McaQuestsCommand::debugQuest)))
@@ -851,6 +859,123 @@ public final class McaQuestsCommand {
         String report = "MCA binding: " + McaBinding.describe();
         ctx.getSource().sendSuccess(() -> Component.literal(report), false);
         return 1;
+    }
+
+    /**
+     * Why an item hand-in is, or is not, payable right now.
+     *
+     * <p>A delivery has more ways to be stuck than a player can see: the goods may already be
+     * committed, the authorised recipient may be somebody other than whoever is standing here, the
+     * objective may be paused by an absent companion mod, or MCA's own Gift route may be missing on
+     * this installation while the menu's Deliver button still works. All of those look identical from
+     * the outside — "it will not take my items" — and this is the one place that tells them apart.
+     *
+     * <p>Read-only. It asks {@link DeliveryService} the same questions the quest menu asks when it
+     * draws a card, so a line here and a greyed-out button there can never disagree; nothing is
+     * transferred, credited or refused by running it. The one thing it writes is the lazy copy id the
+     * menu would mint anyway the first time it drew this quest's delivery.
+     *
+     * <p>Item names and counts only. No stack NBT and no player data, because a diagnostic that has to
+     * be redacted before it can be pasted into a bug report does not get pasted into bug reports.
+     */
+    private static int debugDelivery(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null) {
+            ctx.getSource().sendFailure(Component.translatable("mcaquests.command.debug.delivery.no_data"));
+            return 0;
+        }
+        if (!(player.level() instanceof ServerLevel level)) {
+            ctx.getSource().sendFailure(Component.translatable("mcaquests.command.debug.delivery.no_level"));
+            return 0;
+        }
+        // The villager the player is standing at, which is what "deliverable here" is a question about.
+        // Without one every line still reports its recipient, its counts and its ledger — the answer is
+        // simply that nothing can be handed over from where they are.
+        Entity nearby = nearestMcaVillager(player, 10.0D);
+        LivingEntity here = nearby instanceof LivingEntity living ? living : null;
+
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable("mcaquests.command.debug.delivery.header")
+                .withStyle(ChatFormatting.GOLD));
+        lines.add(here == null
+                ? Component.translatable("mcaquests.command.debug.delivery.here.none")
+                        .withStyle(ChatFormatting.GRAY)
+                : Component.translatable("mcaquests.command.debug.delivery.here",
+                        McaCompat.getVillagerDisplayName(here), here.getUUID().toString()));
+
+        int obligations = 0;
+        for (ActiveQuest active : data.active()) {
+            QuestDefinition base = QuestDefinitions.resolve(active.questId()).orElse(null);
+            if (base == null) {
+                continue; // definition gone on a reload; the quest itself is reported elsewhere
+            }
+            QuestDefinition def = active.resolve(base);
+            List<QuestObjective> objectives = def.objectives();
+            boolean named = false;
+            for (int i = 0; i < objectives.size(); i++) {
+                DeliveryService.Obligation obligation =
+                        DeliveryService.Obligation.of(objectives.get(i), i).orElse(null);
+                if (obligation == null) {
+                    continue;
+                }
+                DeliveryView view = DeliveryService.view(player, level, active, def, obligation, here);
+                if (!named) {
+                    lines.add(Component.translatable("mcaquests.command.debug.delivery.quest",
+                            active.questId().toString(),
+                            view.instance() == null ? "-" : view.instance().toString())
+                            .withStyle(ChatFormatting.AQUA));
+                    named = true;
+                }
+                obligations++;
+                lines.add(Component.translatable("mcaquests.command.debug.delivery.objective",
+                        view.objectiveIndex(), view.itemName(), view.delivered(), view.required(),
+                        view.remaining(), view.available()));
+                lines.add(Component.translatable("mcaquests.command.debug.delivery.recipient",
+                        view.recipientName(),
+                        view.recipientUuid() == null
+                                ? Component.translatable("mcaquests.command.debug.delivery.recipient.unresolved")
+                                : Component.literal(view.recipientUuid().toString())));
+                lines.add(Component.translatable("mcaquests.command.debug.delivery.routes",
+                        yesNo(view.deliverableHere()), yesNo(view.giftCapable()), yesNo(view.proofOnly())));
+                lines.add(view.reasonIfAny()
+                        .map(reason -> Component.translatable("mcaquests.command.debug.delivery.reason",
+                                reason.name().toLowerCase(Locale.ROOT), reason.message())
+                                .withStyle(ChatFormatting.YELLOW))
+                        .orElseGet(() -> Component.translatable("mcaquests.command.debug.delivery.reason.none")
+                                .withStyle(ChatFormatting.GREEN)));
+            }
+        }
+        if (obligations == 0) {
+            lines.add(Component.translatable("mcaquests.command.debug.delivery.none")
+                    .withStyle(ChatFormatting.GRAY));
+        }
+
+        // The bridge summary, which is the half of the answer that has nothing to do with this player:
+        // whether Gift can pay a delivery at all on this installation, what became of the hook, and
+        // which MCA package layout the binding matched.
+        lines.add(DeliveryService.giftBridgeRefusal()
+                .map(refusal -> Component.translatable("mcaquests.command.debug.delivery.bridge",
+                        Component.translatable("mcaquests.command.debug.delivery.bridge.refused",
+                                refusal.name().toLowerCase(Locale.ROOT)))
+                        .withStyle(ChatFormatting.YELLOW))
+                .orElseGet(() -> Component.translatable("mcaquests.command.debug.delivery.bridge",
+                        DeliveryService.giftBridgeAvailable()
+                                ? Component.translatable("mcaquests.command.debug.delivery.bridge.available")
+                                : Component.translatable("mcaquests.command.debug.delivery.bridge.off"))));
+        lines.add(Component.translatable("mcaquests.command.debug.delivery.hook",
+                McaGiftHookProbe.describe()));
+        lines.add(Component.translatable("mcaquests.command.debug.delivery.binding", McaBinding.describe()));
+
+        lines.forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+        return 1;
+    }
+
+    /** Debug lines are read, not parsed, so the two booleans get words rather than {@code true}. */
+    private static Component yesNo(boolean value) {
+        return Component.translatable(value
+                ? "mcaquests.command.debug.delivery.yes"
+                : "mcaquests.command.debug.delivery.no");
     }
 
     /**

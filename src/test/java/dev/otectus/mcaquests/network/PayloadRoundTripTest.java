@@ -251,7 +251,8 @@ class PayloadRoundTripTest {
     @DisplayName("QuestMenuDataS2CPacket round-trips the header and every card")
     void questMenuData() {
         QuestMenuDataS2CPacket packet = new QuestMenuDataS2CPacket(VILLAGER, styled("Anna"), styled("Farmer"),
-                7, styled("A word with you?"), QuestMenuStatus.READY, List.of(questCard(), questCard()));
+                7, styled("A word with you?"), QuestMenuStatus.READY, List.of(questCard(), questCard()),
+                styled("Delivered 1 of 2."));
 
         QuestMenuDataS2CPacket decoded = roundTrip(QuestMenuDataS2CPacket.STREAM_CODEC, packet);
 
@@ -260,6 +261,8 @@ class PayloadRoundTripTest {
         assertEquals(packet.profession(), decoded.profession());
         assertEquals(packet.hearts(), decoded.hearts());
         assertEquals(packet.greeting(), decoded.greeting());
+        assertEquals(packet.notice(), decoded.notice(),
+                "the result line travels with the cards it changed, not only into the chat behind them");
         assertEquals(packet.status(), decoded.status());
         assertEquals(2, decoded.cards().size());
         assertQuestCard(packet.cards().get(0), decoded.cards().get(0), "card 0");
@@ -410,7 +413,7 @@ class PayloadRoundTripTest {
         // An empty list and a list that was never written differ by a single zero byte, and the
         // difference only shows up in whatever is read after it.
         QuestMenuDataS2CPacket menu = new QuestMenuDataS2CPacket(VILLAGER, Component.empty(), Component.empty(),
-                0, Component.empty(), QuestMenuStatus.NO_QUESTS, List.of());
+                0, Component.empty(), QuestMenuStatus.NO_QUESTS, List.of(), Component.empty());
         assertTrue(roundTrip(QuestMenuDataS2CPacket.STREAM_CODEC, menu).cards().isEmpty());
 
         assertTrue(roundTrip(QuestLogSyncS2CPacket.STREAM_CODEC, new QuestLogSyncS2CPacket(List.of()))
@@ -440,7 +443,8 @@ class PayloadRoundTripTest {
         QuestCard bare = new QuestCard(QUEST, Component.empty(), Component.empty(), Component.empty(),
                 List.of(), List.of(), List.of(), "");
         QuestMenuDataS2CPacket bareMenu = new QuestMenuDataS2CPacket(VILLAGER, Component.empty(),
-                Component.empty(), 0, Component.empty(), QuestMenuStatus.OFFER, List.of(bare));
+                Component.empty(), 0, Component.empty(), QuestMenuStatus.OFFER, List.of(bare),
+                Component.empty());
         assertQuestCard(bare, roundTrip(QuestMenuDataS2CPacket.STREAM_CODEC, bareMenu).cards().get(0), "bare card");
     }
 
@@ -455,7 +459,8 @@ class PayloadRoundTripTest {
         // active quests, journal villages -- and past the point where a VarInt length prefix stops
         // being a single byte, which is the boundary a hand-written prefix is likeliest to get wrong.
         QuestMenuDataS2CPacket menu = new QuestMenuDataS2CPacket(VILLAGER, styled("Anna"), styled("Farmer"),
-                10, styled("Hello"), QuestMenuStatus.OFFER, repeat(MAX_ELEMENTS, questCard()));
+                10, styled("Hello"), QuestMenuStatus.OFFER, repeat(MAX_ELEMENTS, questCard()),
+                Component.empty());
         assertEquals(MAX_ELEMENTS, roundTrip(QuestMenuDataS2CPacket.STREAM_CODEC, menu).cards().size());
 
         assertEquals(MAX_ELEMENTS, roundTrip(QuestLogSyncS2CPacket.STREAM_CODEC,

@@ -42,6 +42,8 @@ public final class McaQuestsConfig {
         public final ModConfigSpec.BooleanValue requireOriginalVillagerForTurnIn;
         public final ModConfigSpec.BooleanValue allowTurnInToSameProfessionIfOriginalMissing;
         public final ModConfigSpec.BooleanValue failQuestIfGiverDies;
+        public final ModConfigSpec.BooleanValue enableMcaGiftDelivery;
+        public final ModConfigSpec.BooleanValue legacyInteractDelivery;
         public final ModConfigSpec.BooleanValue allowCommandRewards;
         public final ModConfigSpec.BooleanValue allowLootTableRewards;
         public final ModConfigSpec.DoubleValue heartsRewardMultiplier;
@@ -205,6 +207,21 @@ public final class McaQuestsConfig {
                     "last-known position - so an unloaded giver also permits the fallback.")
                     .define("allowTurnInToSameProfessionIfOriginalMissing", false);
             failQuestIfGiverDies = b.define("failQuestIfGiverDies", false);
+            enableMcaGiftDelivery = b.comment(
+                    "Let MCA's own Gift action pay a quest delivery: one item per gift, to the villager",
+                    "the quest actually named. A gift that no quest asked for keeps MCA's ordinary",
+                    "behaviour untouched - hearts, mood, saturation and every special case.",
+                    "Turn it off to diagnose a compatibility problem; the Deliver button in the quest",
+                    "menu is unaffected either way.")
+                    .define("enableMcaGiftDelivery", true);
+            legacyInteractDelivery = b.comment(
+                    "Restore the pre-1.6.5 behaviour where simply right-clicking the recipient handed",
+                    "over a whole delivery payload. OFF by default, and deliberately: that click is also",
+                    "the click that opens a conversation, so a player who meant to talk could lose the",
+                    "goods without ever choosing to hand them over. When on, it uses exactly the same",
+                    "transaction as the Deliver button and now explains a refusal instead of failing",
+                    "silently.")
+                    .define("legacyInteractDelivery", false);
             b.pop();
 
             b.push("rewards");

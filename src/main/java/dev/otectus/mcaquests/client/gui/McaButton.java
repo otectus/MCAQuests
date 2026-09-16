@@ -115,6 +115,7 @@ public class McaButton extends Button {
         private int y;
         private int width = Button.DEFAULT_WIDTH;
         private int height = Button.DEFAULT_HEIGHT;
+        private boolean active = true;
         @Nullable
         private Tooltip tooltip;
 
@@ -136,6 +137,15 @@ public class McaButton extends Button {
             return this;
         }
 
+        /**
+         * Whether the button is live. A disabled one keeps its tooltip, which is how a control the
+         * player cannot use here still says why.
+         */
+        public Builder active(boolean active) {
+            this.active = active;
+            return this;
+        }
+
         /** Hover and keyboard-focus help. The mod had none of this before. */
         public Builder tooltip(@Nullable Component tooltip) {
             this.tooltip = tooltip == null ? null : Tooltip.create(tooltip);
@@ -145,6 +155,7 @@ public class McaButton extends Button {
         public McaButton build() {
             McaButton button = new McaButton(x, y, width, height, message, style, onPress);
             button.setTooltip(tooltip);
+            button.active = active;
             return button;
         }
     }

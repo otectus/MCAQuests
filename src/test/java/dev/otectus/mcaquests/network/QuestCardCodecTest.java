@@ -123,6 +123,77 @@ class QuestCardCodecTest {
     }
 
     @Test
+    @DisplayName("a delivery card round-trips its copy identity, state and every delivery field")
+    void deliveryCardRoundTrips() {
+        CardObjective crossbows = new CardObjective(Component.literal("Deliver crossbows to Rowan"), 1, 2,
+                CardObjective.State.PENDING, new ItemStack(Items.CROSSBOW), 1, 0,
+                CardObjective.Delivery.DELIVER_HERE, true, Component.empty());
+        java.util.UUID copy = java.util.UUID.fromString("00000000-0000-0000-0000-0000000000a1");
+        QuestCard card = new QuestCard(ResourceLocation.fromNamespaceAndPath("mcaquests", "last_banner_home"),
+                Component.literal("Bring the Last Banner Home"), Component.empty(),
+                Component.literal("Take these to Rowan."), List.of(crossbows),
+                List.of(Component.literal("3x Emerald")), List.of(new ItemStack(Items.EMERALD, 3)), "easy",
+                java.util.Optional.of(copy), dev.otectus.mcaquests.quest.QuestMenuStatus.IN_PROGRESS, true);
+
+        QuestCard decoded = roundTrip(card);
+        assertEquals(java.util.Optional.of(copy), decoded.instance(),
+                "the copy's identity is what stops a click landing on a re-accepted quest");
+        assertEquals(dev.otectus.mcaquests.quest.QuestMenuStatus.IN_PROGRESS, decoded.state(),
+                "per-card state is what stopped an in-progress card drawing Complete");
+        assertTrue(decoded.deliverCompletes());
+
+        CardObjective line = decoded.objectives().get(0);
+        assertEquals(1, line.delivered());
+        assertEquals(0, line.available());
+        assertEquals(CardObjective.Delivery.DELIVER_HERE, line.delivery());
+        assertTrue(line.giftCapable());
+        assertEquals(1, line.remaining());
+        assertEquals(0, line.deliverableNow(), "nothing in the pack means nothing to hand over");
+    }
+
+    @Test
+    @DisplayName("a blocked delivery carries the sentence explaining it, so no button is left bare")
+    void blockedDeliveryCarriesItsReason() {
+        CardObjective blocked = new CardObjective(Component.literal("Deliver crossbows to Rowan"), 0, 2,
+                CardObjective.State.PENDING, new ItemStack(Items.CROSSBOW), 0, 2,
+                CardObjective.Delivery.DELIVER_BLOCKED, false,
+                Component.translatable("mcaquests.delivery.visit_recipient", "Rowan"));
+
+        CardObjective decoded = roundTrip(card(List.of(blocked), List.of(), "")).objectives().get(0);
+        assertTrue(decoded.hasReason());
+        assertEquals(CardObjective.Delivery.DELIVER_BLOCKED, decoded.delivery());
+        assertFalse(decoded.delivery().actionable());
+        assertTrue(decoded.delivery().hasAction(), "a blocked hand-in still draws a control to explain");
+        assertFalse(decoded.giftCapable(), "the Gift hint is hidden where Gift cannot pay");
+    }
+
+    @Test
+    @DisplayName("an ordinary objective keeps the pre-1.6.5 shape and claims no delivery")
+    void ordinaryObjectiveIsNotADelivery() {
+        CardObjective decoded = roundTrip(card(
+                List.of(new CardObjective(Component.literal("Visit the Nether"), 0, 1,
+                        CardObjective.State.PENDING, ItemStack.EMPTY)),
+                List.of(), "")).objectives().get(0);
+
+        assertEquals(CardObjective.Delivery.NONE, decoded.delivery());
+        assertFalse(decoded.delivery().isDelivery());
+        assertEquals(0, decoded.delivered());
+        assertFalse(decoded.hasReason());
+    }
+
+    @Test
+    @DisplayName("a finished delivery keeps its numbers and loses its action")
+    void settledDeliveryStillCounts() {
+        CardObjective settled = new CardObjective(Component.literal("Deliver crossbows to Rowan"), 2, 2,
+                CardObjective.State.DONE, new ItemStack(Items.CROSSBOW), 2, 0,
+                CardObjective.Delivery.SETTLED, false, Component.empty());
+
+        assertTrue(settled.delivery().isDelivery(), "\"Delivered: 2 / 2\" is still worth drawing");
+        assertFalse(settled.delivery().hasAction());
+        assertEquals(0, settled.remaining());
+    }
+
+    @Test
     @DisplayName("a finished objective reports itself satisfied")
     void satisfiedObjective() {
         CardObjective done = new CardObjective(Component.literal("Deliver Wheat"), 24, 24,

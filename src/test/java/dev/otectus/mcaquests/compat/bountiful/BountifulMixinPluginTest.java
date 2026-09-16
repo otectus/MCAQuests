@@ -29,8 +29,16 @@ class BountifulMixinPluginTest {
     private static final String DESCRIPTOR =
             "(Lnet/minecraft/world/entity/player/Player;)Z";
 
+    /**
+     * Dotted in the source, internal on the wire. Assembled rather than written out, which is the same
+     * rule the rest of this integration follows: a literal slash-form name is what the static-link scan
+     * looks for.
+     */
+    private static final String TARGET = "io.ejekta.bountiful.bounty.BountyData".replace('.', '/');
+
     private static ClassNode classWith(MethodNode... methods) {
         ClassNode node = new ClassNode();
+        node.name = TARGET;
         node.methods = new ArrayList<>();
         for (MethodNode method : methods) {
             node.methods.add(method);
@@ -55,28 +63,49 @@ class BountifulMixinPluginTest {
     }
 
     @Test
-    @DisplayName("a call to our handler reads as applied")
+    @DisplayName("an inlined static call to our handler reads as applied")
     void handlerCallIsFound() {
         MethodNode cashIn = method("tryCashIn", DESCRIPTOR);
+        ClassNode target = classWith(cashIn);
         cashIn.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,
                 BountifulMixinPlugin.handlerOwner(), "beforeCashIn", "()V", false));
 
-        assertTrue(BountifulMixinPlugin.invokesHandler(cashIn));
+        assertTrue(BountifulMixinPlugin.invokesHandler(target, cashIn));
+    }
+
+    @Test
+    @DisplayName("the merged callback Mixin actually injects reads as applied")
+    void mergedCallbackIsFound() {
+        MethodNode cashIn = method("tryCashIn", DESCRIPTOR);
+        ClassNode target = classWith(cashIn);
+        // What Mixin emits for an ordinary callback: it merges the method into the target class and
+        // calls that, so the instruction left behind names Bountiful's class and this mod's prefix
+        // — not this mod's handler. Looking only for the handler reported healthy hooks as FAILED.
+        cashIn.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, TARGET,
+                "mcaquests$onCashIn",
+                "(Lnet/minecraft/world/entity/player/Player;"
+                        + "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;)V", false));
+
+        assertTrue(BountifulMixinPlugin.invokesHandler(target, cashIn));
     }
 
     @Test
     @DisplayName("a method the injection never reached reads as not applied")
     void withoutTheHandlerCallItIsNotApplied() {
         MethodNode untouched = method("tryCashIn", DESCRIPTOR);
+        ClassNode target = classWith(untouched);
         untouched.instructions.add(new InsnNode(Opcodes.ICONST_1));
         untouched.instructions.add(new InsnNode(Opcodes.IRETURN));
 
-        assertFalse(BountifulMixinPlugin.invokesHandler(untouched));
+        assertFalse(BountifulMixinPlugin.invokesHandler(target, untouched));
 
         MethodNode somebodyElsesCall = method("tryCashIn", DESCRIPTOR);
+        ClassNode other = classWith(somebodyElsesCall);
+        somebodyElsesCall.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, TARGET,
+                "someothermod$onCashIn", "()V", false));
         somebodyElsesCall.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,
                 "some/other/mod/Handler", "onCashIn", "()V", false));
-        assertFalse(BountifulMixinPlugin.invokesHandler(somebodyElsesCall),
+        assertFalse(BountifulMixinPlugin.invokesHandler(other, somebodyElsesCall),
                 "another mod hooking the same method is not evidence that ours did");
     }
 }

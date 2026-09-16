@@ -5,7 +5,8 @@ import dev.otectus.mcaquests.data.StrictCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import dev.otectus.mcaquests.McaQuests;
+import dev.otectus.mcaquests.quest.delivery.DeliveryLedger;
+import dev.otectus.mcaquests.quest.delivery.DeliveryService;
 import dev.otectus.mcaquests.quest.target.ItemTarget;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import dev.otectus.mcaquests.state.ActiveQuest;
@@ -14,28 +15,29 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Hand a payload to a specific other villager (a family member, profession, named/UUID target).
- * Credited when the player right-clicks the resolved recipient (main hand) while carrying enough of
- * the item; the item is consumed at the hand-off (when {@code consume}) — unlike {@code item_delivery}
- * which consumes at turn-in. Once delivered it is a sticky flag (the item is already gone).
+ *
+ * <p>Credited by an explicit hand-in: the Deliver action on the quest card, MCA's own Gift gesture, or
+ * — when a server opts back into it — the legacy right-click. The goods are consumed or transferred
+ * at that hand-off, unlike {@code item_delivery}, which pays at turn-in; a committed unit is never
+ * charged again.
+ *
+ * <p>Progress is <b>units, not a flag</b>. {@link #required()} is the item count, and
+ * {@link DeliveryLedger} holds how many of them have actually been handed over, so two crossbows read
+ * 0/2, 1/2, 2/2 instead of a single boolean-ish tick that a partial hand-in had nowhere to live in.
+ * The old count is still written when the obligation is fully paid, for anything reading it, but it is
+ * no longer the ledger.
  */
 public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget item,
                                          int itemCount, boolean consume,
                                          Optional<DeliveryDestination> destination)
         implements QuestObjective, VillagerTargeted {
-
-    /** {@code progress.extra()}: the transfer committed. Written before anything downstream fires. */
-    private static final String K_TRANSFERRED = "delivered_to_inventory";
 
     public static final MapCodec<DeliverToVillagerObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             VillagerTarget.MAP_CODEC.fieldOf("recipient").forGetter(DeliverToVillagerObjective::recipient),
@@ -51,8 +53,8 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
         this(recipient, item, itemCount, consume, Optional.empty());
     }
 
-    /** True when the goods go into the recipient's inventory rather than being consumed. */
-    private boolean transfers() {
+    /** True when the goods go into the recipient's own inventory rather than being consumed. */
+    public boolean transfers() {
         return destination.map(DeliveryDestination::isTransfer).orElse(false);
     }
 
@@ -87,24 +89,49 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     @Override
     public Optional<LivingEntity> highlightTarget(ServerPlayer player, ActiveQuest active,
                                                   ObjectiveProgress progress, ServerLevel level) {
-        return progress.count() >= 1
+        // A partly-paid delivery still wants the player to go back, so the highlight follows the
+        // ledger rather than the old "any credit at all" flag.
+        return isSatisfied(player, progress)
                 ? Optional.empty()
                 : ObjectiveSupport.resolveLocked(recipient, player, active, progress, level);
     }
 
+    /**
+     * The item count, not one.
+     *
+     * <p>This was {@code 1} for as long as the objective existed, which is why "deliver two crossbows"
+     * showed as 0/1 and a single hand-over of both items read as one unit of progress. Datapack- and
+     * API-visible: anything that displayed {@code current/required} now shows items.
+     */
     @Override
     public int required() {
-        return 1;
+        return itemCount;
     }
 
     @Override
     public int current(ServerPlayer player, ObjectiveProgress progress) {
-        return Math.min(progress.count(), 1);
+        if (isProof()) {
+            // Nothing is taken, so there is nothing to count but what the player is carrying -- until
+            // they have shown it, which is sticky.
+            return DeliveryLedger.proofAcknowledged(progress) || progress.count() >= 1
+                    ? itemCount
+                    : Math.min(ObjectiveSupport.countMatching(player, item), itemCount);
+        }
+        return Math.min(DeliveryLedger.units(this, progress), itemCount);
     }
 
     @Override
     public boolean isSatisfied(ServerPlayer player, ObjectiveProgress progress) {
-        return progress.count() >= 1;
+        if (isProof()) {
+            return DeliveryLedger.migrateProof(progress, DeliveryLedger.fingerprintOf(this),
+                    DeliveryLedger.legacySatisfied(this, progress));
+        }
+        return DeliveryLedger.units(this, progress) >= itemCount;
+    }
+
+    /** True when this objective asks to be shown the goods rather than given them (spec section 5). */
+    private boolean isProof() {
+        return DeliveryLedger.isProofOnly(this);
     }
 
     @Override
@@ -113,52 +140,24 @@ public record DeliverToVillagerObjective(VillagerTarget recipient, ItemTarget it
     }
 
     /**
-     * Credit the delivery if the interacted villager is the recipient and the player has the payload.
+     * The legacy right-click hand-off, kept for the servers that want it and for add-ons that call it.
      *
-     * <p>With a {@code destination} the goods move into that villager's inventory instead of vanishing,
-     * and the move is <b>all or nothing</b>: capacity is simulated before a single item leaves the
-     * player, so a recipient whose inventory is full refuses the hand-over rather than swallowing half
-     * a stack. A completion marker is written before {@link ObjectiveProgress#setCount} so a replayed
-     * interact packet cannot pay twice, and any remainder — which can only happen if the container
-     * changed between the check and the commit — is returned to the player rather than destroyed.
+     * <p>Now a thin call into {@link DeliveryService}, which owns recipient rules, the slot policy, the
+     * transaction and the ledger — so this path can no longer take goods a different way from the
+     * Deliver button or from Gift, and can no longer refuse in silence: the player is told why.
+     *
+     * <p>Reached only when {@code legacyInteractDelivery} is on. It is off by default because the
+     * interaction it listens to is also the click that opens a conversation, so it could take a
+     * delivery payload from a player who meant to talk.
      */
     public void onInteract(ServerPlayer player, ActiveQuest active, ObjectiveProgress progress,
                            LivingEntity target, ServerLevel level) {
-        if (progress.count() >= 1 || progress.extra().getBoolean(K_TRANSFERRED)
-                || !ObjectiveSupport.matchesLocked(recipient, target, player, active, progress, level)) {
-            return;
-        }
-        if (ObjectiveSupport.countMatching(player, item) < itemCount) {
-            return;
-        }
-        if (transfers() && !handOver(player, target)) {
-            return; // refused: nothing was taken, and the player is told why by the interact handler
-        }
-        if (consume && !transfers()) {
-            ObjectiveSupport.consumeMatching(player, item, itemCount);
-        }
-        if (transfers()) {
-            // Written before the count so a replayed packet finds the marker even if the tick that set
-            // the count never finished; the two are read together at the top of this method.
-            progress.extra().putBoolean(K_TRANSFERRED, true);
-        }
-        progress.setCount(1);
+        DeliveryService.legacyInteract(player, active, this, progress, target);
     }
 
-    /**
-     * Moves the payload from the player into the recipient's own inventory in one server-side step.
-     * Returns false without touching anything when it would not fit.
-     *
-     * <p>The recipient is taken from the already-matched interaction target rather than re-resolved,
-     * so nothing a client sends can redirect the goods to another villager.
-     */
-    private boolean handOver(ServerPlayer player, LivingEntity target) {
-        if (!(target instanceof Villager villager)) {
-            return false;
-        }
-        Container inventory = villager.getInventory();
-        InventoryTransfer.Plan plan = new InventoryTransfer.Plan(player.getInventory());
-        return plan.reserve(item::matches, itemCount, inventory) && plan.commit();
+    /** How many units of this delivery the player has actually handed over. */
+    public int deliveredUnits(ObjectiveProgress progress) {
+        return DeliveryLedger.units(this, progress);
     }
 
     @Override

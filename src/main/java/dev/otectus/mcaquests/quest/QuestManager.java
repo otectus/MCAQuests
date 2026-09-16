@@ -33,6 +33,11 @@ import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.network.QuestReadyToastS2CPacket;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.ItemDeliveryObjective;
+import dev.otectus.mcaquests.quest.delivery.DeliveryLedger;
+import dev.otectus.mcaquests.quest.delivery.DeliveryRequest;
+import dev.otectus.mcaquests.quest.delivery.DeliveryResult;
+import dev.otectus.mcaquests.quest.delivery.DeliveryService;
+import dev.otectus.mcaquests.quest.delivery.DeliveryView;
 import dev.otectus.mcaquests.quest.objective.InventoryTransfer;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.objective.ObjectiveSupport;
@@ -79,9 +84,11 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -198,6 +205,17 @@ public final class QuestManager {
     // ---------------------------------------------------------------- menu construction
 
     public static void sendMenu(ServerPlayer player, Entity villager) {
+        sendMenu(player, villager, Component.empty());
+    }
+
+    /**
+     * The villager's screen, with a line reporting whatever the player just did.
+     *
+     * <p>The notice travels with the cards it changed rather than only into the chat behind the screen:
+     * a delivery that was refused in silence is the failure this whole area exists to fix, and a
+     * message the player cannot see is barely better than none.
+     */
+    public static void sendMenu(ServerPlayer player, Entity villager, Component notice) {
         // Co-send community-project cards first so the client cache is populated before the quest menu
         // opens (drives the "View Project" button). Individual quests stay visually unchanged.
         ProjectManager.sendProjectMenu(player, villager);
@@ -209,40 +227,50 @@ public final class QuestManager {
 
         Optional<PlayerQuestData> dataOpt = QuestCapabilities.get(player);
         if (dataOpt.isEmpty()) {
-            send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
+            send(player, notice, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS));
             return;
         }
         PlayerQuestData data = dataOpt.get();
 
-        // 1) Active quests relevant here: given by this villager, or turn-in-able here per their mode.
+        // 1) Active quests relevant here: given by this villager, turn-in-able here per their mode, or
+        //    waiting on a delivery this villager is the recipient of.
         List<ActiveQuest> relevant = relevantActiveQuests(player, villager, data);
         if (!relevant.isEmpty()) {
-            ActiveQuest active = relevant.get(0);
-            Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(active.questId());
-            if (defOpt.isEmpty()) {
+            List<QuestCard> activeCards = new ArrayList<>();
+            boolean anyReady = false;
+            for (ActiveQuest active : relevant) {
+                Optional<QuestDefinition> defOpt = QuestDefinitions.resolve(active.questId());
+                if (defOpt.isEmpty()) {
+                    continue; // definition disappeared on a datapack reload; handled below if none are left
+                }
+                QuestDefinition def = active.resolve(defOpt.get());
+                boolean complete = isComplete(player, def, active);
+                boolean ready = complete && canTurnInAt(active, def, villager);
+                anyReady |= ready;
+                String state = ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS;
+                PlaceholderResolver resolver = active.textResolver(player);
+                Component dialogue = QuestDialogueHooks.resolve(player, villager, def, state,
+                        def.dialogueOr(state, def.title(resolver), resolver));
+                // A finished quest brought to a villager who cannot take it showed nothing but Abandon,
+                // and said nothing about where it should go. The status stays IN_PROGRESS — it genuinely
+                // is not turn-in-able here — and the card carries the answer.
+                if (complete && !ready) {
+                    Optional<Component> hint = turnInHint(active, def);
+                    if (hint.isPresent()) {
+                        dialogue = Component.empty().append(dialogue).append("\n").append(hint.get());
+                    }
+                }
+                activeCards.add(buildCard(player, villager, def, resolver, active, state, dialogue));
+            }
+            if (activeCards.isEmpty()) {
                 // The definition disappeared on a datapack reload — fail gracefully (spec section 36).
-                send(player, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.BLOCKED));
+                send(player, notice, QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.BLOCKED));
                 return;
             }
-            QuestDefinition def = active.resolve(defOpt.get());
-            boolean complete = isComplete(player, def, active);
-            boolean ready = complete && canTurnInAt(active, def, villager);
-            QuestMenuStatus status = ready ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
-            String state = ready ? QuestDefinition.READY : QuestDefinition.IN_PROGRESS;
-            PlaceholderResolver resolver = active.textResolver(player);
-            Component dialogue = QuestDialogueHooks.resolve(player, villager, def, state,
-                    def.dialogueOr(state, def.title(resolver), resolver));
-            // A finished quest brought to a villager who cannot take it showed nothing but Abandon, and
-            // said nothing about where it should go. The status stays IN_PROGRESS — it genuinely is not
-            // turn-in-able here — and the card carries the answer.
-            if (complete && !ready) {
-                Optional<Component> hint = turnInHint(active, def);
-                if (hint.isPresent()) {
-                    dialogue = Component.empty().append(dialogue).append("\n").append(hint.get());
-                }
-            }
-            QuestCard card = buildCard(player, villager, def, resolver, active, state, dialogue);
-            send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, status, List.of(card)));
+            // The menu status is a property of the whole screen, so it follows the first card, which
+            // relevantActiveQuests has already sorted to be the one that can be turned in here.
+            QuestMenuStatus status = anyReady ? QuestMenuStatus.READY : QuestMenuStatus.IN_PROGRESS;
+            send(player, notice, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, status, activeCards));
             return;
         }
 
@@ -251,7 +279,7 @@ public final class QuestManager {
             // Being full is the player's own doing, not the villager having nothing: the bare NO_QUESTS
             // line read as "I do not need anything right now" and sent players round the village looking
             // for a quest none of them could have given.
-            send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts,
+            send(player, notice, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts,
                     QuestMenuStatus.NO_QUESTS, statusCard("mcaquests.status.at_cap")));
             return;
         }
@@ -265,7 +293,7 @@ public final class QuestManager {
             // yesterday" or "not until you have done something else first". Every quest already authors a
             // `cooldown` and a `locked` line for exactly this, and both were parsed and never shown.
             List<QuestCard> explanation = whyNothingIsOffered(player, villager, data);
-            send(player, explanation.isEmpty()
+            send(player, notice, explanation.isEmpty()
                     ? QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS)
                     : QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts,
                             QuestMenuStatus.NO_QUESTS, explanation));
@@ -280,7 +308,7 @@ public final class QuestManager {
         // villager per day, like the offers below it, so reopening the menu does not re-greet you.
         Component greeting = VoicePools.pick(VoicePool.GREETING,
                 new QuestContext(player, villager, data, NO_QUESTS_CARD)).orElse(Component.empty());
-        send(player, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, greeting,
+        send(player, notice, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts, greeting,
                 QuestMenuStatus.OFFER, cards));
     }
 
@@ -448,9 +476,76 @@ public final class QuestManager {
         // an emergent, time-limited request from a standing offer (0.8.0).
         boolean situation = def.category().map(SituationOffer.CATEGORY::equals).orElse(false);
         Component label = situation ? Component.translatable("mcaquests.situation.card_tag") : chainLabel(def, resolver);
+        List<CardObjective> objectives = objectiveLines(player, def, active, villager);
+        QuestMenuStatus state = cardState(dialogueState);
+        // The copy's id is minted here and only here, and only for a card that actually carries a
+        // delivery action: that is the whole of the lazy migration. A quest nobody ever delivers
+        // anything for never grows one, so an untouched save stays untouched.
+        Optional<UUID> instance = active == null ? Optional.empty()
+                : objectives.stream().anyMatch(line -> line.delivery().isDelivery())
+                        ? Optional.of(active.instance())
+                        : active.instanceIfPresent();
+        boolean deliverCompletes = active != null && villager != null
+                && state == QuestMenuStatus.IN_PROGRESS
+                && deliveryWouldComplete(player, def, active, villager, objectives);
         return new QuestCard(def.id(), def.title(resolver), label, dialogue,
-                objectiveLines(player, def, active), rewardLines(def, active),
-                rewardIcons(def, active), difficultyLabel(def));
+                objectives, rewardLines(def, active),
+                rewardIcons(def, active), difficultyLabel(def), instance, state, deliverCompletes);
+    }
+
+    /**
+     * The dialogue state a card was built for, as the state the card is <em>in</em>.
+     *
+     * <p>They have always been the same fact under two names, and the client needed the second one:
+     * the menu's single global status was what drew Complete on an in-progress card as soon as any
+     * other card on the screen was ready.
+     */
+    private static QuestMenuStatus cardState(String dialogueState) {
+        return switch (dialogueState) {
+            case QuestDefinition.OFFER -> QuestMenuStatus.OFFER;
+            case QuestDefinition.READY -> QuestMenuStatus.READY;
+            case QuestDefinition.IN_PROGRESS -> QuestMenuStatus.IN_PROGRESS;
+            // cooldown / locked / anything else is an explanation, not a quest you can act on.
+            default -> QuestMenuStatus.NO_QUESTS;
+        };
+    }
+
+    /**
+     * Whether paying this card's one outstanding delivery would finish the quest here.
+     *
+     * <p>The basis for <b>Deliver &amp; complete</b>, and deliberately narrow. Everything else on the
+     * quest must already be satisfied, nothing may be paused, this villager must be allowed to take the
+     * reward, and there must be <em>exactly one</em> outstanding obligation that the player can pay in
+     * full right now — a second one would need a second transaction, and the combined action names only
+     * one objective. With several outstanding, each is paid by its own Deliver button and the card then
+     * becomes ready in the ordinary way.
+     */
+    private static boolean deliveryWouldComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active,
+                                                 Entity villager, List<CardObjective> lines) {
+        if (!(player.level() instanceof ServerLevel level) || !canTurnInAt(active, def, villager)
+                || CapitalsQuestRequirements.unavailableReason(def).isPresent()
+                || lines.size() != def.objectives().size()) {
+            // A mismatched line count means a prepended capitals notice, which is a paused quest anyway.
+            return false;
+        }
+        int payable = 0;
+        for (int i = 0; i < def.objectives().size(); i++) {
+            QuestObjective objective = def.objectives().get(i);
+            ObjectiveProgress progress = active.progress(i);
+            if (objective.unavailableReason(player, active, progress, level).isPresent()) {
+                return false;
+            }
+            if (objective.isSatisfied(player, progress)) {
+                continue;
+            }
+            CardObjective line = lines.get(i);
+            if (!line.delivery().actionable() || line.remaining() <= 0
+                    || line.deliverableNow() < line.remaining()) {
+                return false;
+            }
+            payable++;
+        }
+        return payable == 1;
     }
 
     /** The relationship-arc context line for the UI (arc / "Part 2 of 4" / chapter), or empty for standalone quests. */
@@ -796,37 +891,22 @@ public final class QuestManager {
     }
 
     /**
-     * True when every item delivery on this quest has somewhere to put its goods. A villager whose
-     * inventory is full refuses the hand-over and says so, rather than the player paying for a transfer
-     * that cannot happen.
+     * Plans the one transaction that pays every outstanding item delivery on this quest, telling the
+     * player when a hand-over is refused for a reason they can do something about.
+     *
+     * <p>The planning itself belongs to {@link DeliveryService#planTurnIn}, so turn-in reserves goods
+     * under the same slot policy, the same outstanding-units clamp and the same ledger rules as the
+     * Deliver button and MCA's Gift. What stays here is the one thing that is the quest manager's:
+     * committing that transaction at the right point of the turn-in, between claiming the reward slot
+     * and paying the rewards.
      */
-    private static InventoryTransfer.Plan prepareDeliveries(ServerPlayer player, QuestDefinition def,
-                                                            ActiveQuest active, @Nullable Entity giver) {
-        InventoryTransfer.Plan plan = new InventoryTransfer.Plan(player.getInventory());
-        List<QuestObjective> objectives = def.objectives();
-        for (int i = 0; i < objectives.size(); i++) {
-            if (!(objectives.get(i) instanceof ItemDeliveryObjective delivery)
-                    || active.progress(i).extra().getBoolean("delivered")) {
-                continue;
-            }
-            net.minecraft.world.Container destination = null;
-            if (delivery.destination().isTransfer()) {
-                destination = delivery.destination().resolveContainer(player, giver).orElse(null);
-                if (destination == null) {
-                    player.sendSystemMessage(delivery.refusalReason(player, giver));
-                    return null;
-                }
-            } else if (!delivery.consume()) {
-                continue;
-            }
-            if (!plan.reserve(delivery.item(), delivery.count(), destination)) {
-                if (destination != null) {
-                    player.sendSystemMessage(delivery.refusalReason(player, giver));
-                }
-                return null;
-            }
+    private static DeliveryService.TurnInPlan prepareDeliveries(ServerPlayer player, QuestDefinition def,
+                                                                ActiveQuest active, @Nullable Entity giver) {
+        DeliveryService.TurnInPlan deliveries = DeliveryService.planTurnIn(player, def, active, giver);
+        if (!deliveries.isPlanned() && deliveries.refused() != null) {
+            player.sendSystemMessage(deliveries.refused().refusalReason(player, giver));
         }
-        return plan;
+        return deliveries;
     }
 
     /**
@@ -906,8 +986,8 @@ public final class QuestManager {
         }
         // A delivery with nowhere to go always blocks, whatever the reward policy says: consuming the
         // goods into a villager who cannot hold them would take them off the player for nothing.
-        InventoryTransfer.Plan deliveries = prepareDeliveries(player, def, active, grantVillager);
-        if (deliveries == null) {
+        DeliveryService.TurnInPlan deliveries = prepareDeliveries(player, def, active, grantVillager);
+        if (!deliveries.isPlanned()) {
             return false;
         }
         active.setRewardClaimed(true);
@@ -915,14 +995,15 @@ public final class QuestManager {
             active.setRewardClaimed(false);
             return false;
         }
+        // Record the units that just moved, in the same ledger an early hand-in writes to, so a reward
+        // policy that refuses the rest of this turn-in cannot make the player pay twice on the retry.
+        // Written after the commit and never rolled back: the goods are gone.
+        deliveries.creditLedger(active);
 
         for (int i = 0; i < def.objectives().size(); i++) {
             QuestObjective objective = def.objectives().get(i);
-            if (objective instanceof ItemDeliveryObjective delivery) {
-                if (delivery.destination().isTransfer()) {
-                    active.progress(i).extra().putBoolean("delivered", true);
-                }
-                continue; // the complete item hand-over was committed together above
+            if (objective instanceof ItemDeliveryObjective) {
+                continue; // the complete item hand-over was planned, committed and credited above
             }
             objective.consumeOnTurnIn(player, active.progress(i));
         }
@@ -1159,6 +1240,10 @@ public final class QuestManager {
         if (!data.active().contains(active)) {
             return false; // already reached a terminal state this tick — never abandon twice
         }
+        // Said before the quest disappears, because afterwards there is nothing left to explain it with.
+        // Committed goods are already in somebody else's hands or already consumed, so abandoning does
+        // not give them back; a player who is not told that reads the loss as a bug.
+        warnOfKeptDeposits(player, active);
         data.remove(active);
         TownsteadLifecycle.dispatch(player, active, villager, TownsteadLifecycle.Phase.ABANDONED);
         active.situationInstance().ifPresent(id ->
@@ -1174,6 +1259,34 @@ public final class QuestManager {
         // that way for good. What is still held is a fact about this player, not about the datapack.
         releaseRemainingHolds(player);
         return true;
+    }
+
+    /**
+     * Tells a player what abandoning has just cost them, when it has cost them anything.
+     *
+     * <p>Only real deposits count. A {@code consume: false} proof objective was shown rather than given
+     * — the goods never left the player's inventory — so warning about it would name a loss that did not
+     * happen, and a warning that is sometimes wrong stops being read.
+     *
+     * <p>On the single funnel every abandon route reaches, so the villager menu, the quest log and any
+     * add-on calling {@code abandon} all say it.
+     */
+    private static void warnOfKeptDeposits(ServerPlayer player, ActiveQuest active) {
+        QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
+            QuestDefinition def = active.resolve(base);
+            List<QuestObjective> objectives = def.objectives();
+            int kept = 0;
+            for (int i = 0; i < objectives.size(); i++) {
+                QuestObjective objective = objectives.get(i);
+                if (!DeliveryLedger.isProofOnly(objective)) {
+                    kept += DeliveryLedger.units(objective, active.progress(i));
+                }
+            }
+            if (kept > 0) {
+                player.sendSystemMessage(Component.translatable("mcaquests.message.abandon_deposits_kept",
+                        kept, def.title(active.textResolver(player))));
+            }
+        });
     }
 
     /**
@@ -1341,11 +1454,16 @@ public final class QuestManager {
             }
             if (objective instanceof ItemDeliveryObjective delivery
                     && (delivery.consume() || delivery.destination().isTransfer())
-                    && !progress.extra().getBoolean("delivered")) {
+                    && delivery.outstandingUnits(progress) > 0) {
                 if (items == null) {
                     items = new InventoryTransfer.Plan(player.getInventory());
                 }
-                if (!items.reserve(delivery.item(), delivery.count(), null)) {
+                // Only the units still owed are reserved; the deposited ones are already with the
+                // villager and cannot be spent again by another row of the same quest. Reserved under
+                // the turn-in slot policy too, so this cannot report a quest ready on the strength of
+                // worn armour the hand-over is not allowed to take.
+                if (!items.reserve(InventoryTransfer.defaultSourceSlots(player.getInventory()),
+                        stack -> stack.is(delivery.item()), delivery.outstandingUnits(progress), null)) {
                     return false; // two delivery rows cannot spend the same stack twice
                 }
             }
@@ -1445,8 +1563,17 @@ public final class QuestManager {
         return McaQuestsConfig.COMMON.professionMatchingMode.get();
     }
 
-    /** Active quests worth showing at this villager: ones it gave, or ones ready and turn-in-able here. */
+    /**
+     * Active quests worth showing at this villager: ones it gave, ones ready and turn-in-able here, and
+     * ones waiting for a delivery this villager is the authorized recipient of.
+     *
+     * <p>That third case is new, and it is the one that made a "take these to Rowan" quest impossible
+     * to finish through the interface: Rowan neither gave the quest nor takes its reward, so the menu
+     * she opened showed her own offers and no sign of the parcel the player was carrying for her.
+     */
     private static List<ActiveQuest> relevantActiveQuests(ServerPlayer player, Entity villager, PlayerQuestData data) {
+        Set<ActiveQuest> awaitingDelivery = Collections.newSetFromMap(new IdentityHashMap<>());
+        awaitingDelivery.addAll(DeliveryService.recipientActives(player, villager));
         List<ActiveQuest> relevant = new ArrayList<>();
         for (ActiveQuest active : data.active()) {
             QuestDefinition base = QuestDefinitions.resolve(active.questId()).orElse(null);
@@ -1456,7 +1583,7 @@ public final class QuestManager {
             QuestDefinition def = active.resolve(base);
             boolean isGiver = active.villagerUuid().equals(villager.getUUID());
             boolean turnInableHere = isComplete(player, def, active) && canTurnInAt(active, def, villager);
-            if (isGiver || turnInableHere) {
+            if (isGiver || turnInableHere || awaitingDelivery.contains(active)) {
                 relevant.add(active);
             }
         }
@@ -1802,6 +1929,21 @@ public final class QuestManager {
      */
     private static List<CardObjective> objectiveLines(ServerPlayer player, QuestDefinition def,
                                                       @Nullable ActiveQuest active) {
+        return objectiveLines(player, def, active, null);
+    }
+
+    /**
+     * As above, for a screen that is standing in front of a particular villager.
+     *
+     * <p>{@code villager} is what turns an item obligation from a counter into an action: the delivery
+     * fields say what has been handed over, what the player is carrying under the slot policy the
+     * transaction will actually use, whether <em>this</em> villager may take it, and why not. Passed
+     * {@code null} by the quest log, which shows the same numbers but offers no remote hand-in — a log
+     * opened three villages away must not be a place goods can change hands.
+     */
+    private static List<CardObjective> objectiveLines(ServerPlayer player, QuestDefinition def,
+                                                      @Nullable ActiveQuest active,
+                                                      @Nullable Entity villager) {
         List<CardObjective> lines = new ArrayList<>();
         Optional<Component> capitals = active == null ? Optional.empty()
                 : CapitalsQuestRequirements.unavailableReason(def);
@@ -1836,11 +1978,125 @@ public final class QuestManager {
                 continue;
             }
             boolean done = objective.isSatisfied(player, active.progress(i));
-            lines.add(new CardObjective(line, objective.current(player, active.progress(i)),
-                    objective.required(),
-                    done ? CardObjective.State.DONE : CardObjective.State.PENDING, icon));
+            CardObjective.State state = done ? CardObjective.State.DONE : CardObjective.State.PENDING;
+            CardObjective delivery = deliveryLine(player, def, active, objective, i, line, icon,
+                    state, villager).orElse(null);
+            lines.add(delivery != null ? delivery
+                    : new CardObjective(line, objective.current(player, active.progress(i)),
+                            objective.required(), state, icon));
         }
         return lines;
+    }
+
+    /**
+     * An item obligation as a delivery row, or empty for every objective that is not one.
+     *
+     * <p>Three facts, kept apart because conflating the first two is the bug this exists to fix:
+     * {@code delivered} comes from the ledger and means goods that have actually changed hands,
+     * {@code available} comes from the inventory under the delivery slot policy, and the capability
+     * says what the player may do about it here. A row that is finished carries no action at all — its
+     * numbers still read 2/2, which is the point — and a row that is blocked carries the sentence
+     * explaining it rather than a grey button with nothing to say.
+     */
+    private static Optional<CardObjective> deliveryLine(ServerPlayer player, QuestDefinition def,
+                                                        ActiveQuest active, QuestObjective objective,
+                                                        int index, Component line, ItemStack icon,
+                                                        CardObjective.State state,
+                                                        @Nullable Entity villager) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return Optional.empty();
+        }
+        DeliveryService.Obligation obligation = DeliveryService.Obligation.of(objective, index).orElse(null);
+        if (obligation == null) {
+            return Optional.empty();
+        }
+        LivingEntity here = villager instanceof LivingEntity living ? living : null;
+        if (here == null) {
+            // A log entry, not a conversation. The numbers travel — a log that said 0/2 for a delivery
+            // half handed over would be its own misreport — but nothing resolves a recipient or a
+            // destination for a screen that offers no action: this runs on every log sync.
+            int delivered = DeliveryLedger.units(objective, active.progress(index));
+            int carried = InventoryTransfer.countIn(player.getInventory(),
+                    InventoryTransfer.defaultSourceSlots(player.getInventory()), obligation.matcher());
+            CardObjective.Delivery logCapability = CardObjective.Delivery.NONE;
+            if (state == CardObjective.State.DONE) {
+                logCapability = obligation.proofOnly() ? CardObjective.Delivery.SHOWN
+                        : CardObjective.Delivery.SETTLED;
+            }
+            return Optional.of(new CardObjective(line, objective.current(player, active.progress(index)),
+                    objective.required(), state, icon, delivered, carried, logCapability,
+                    false, Component.empty()));
+        }
+        DeliveryView view = DeliveryService.view(player, level, active, def, obligation, here);
+        boolean satisfied = state == CardObjective.State.DONE || view.satisfied();
+        CardObjective.Delivery capability;
+        Component reason = Component.empty();
+        if (satisfied) {
+            // Paid, and still worth counting: "Delivered: 2 / 2" is the line a player wants after
+            // handing two crossbows over one at a time. A proof objective is answered rather than
+            // paid, and says so, because abandoning costs nothing that was only ever shown.
+            capability = view.proofOnly() ? CardObjective.Delivery.SHOWN : CardObjective.Delivery.SETTLED;
+        } else if (view.deliverableHere()) {
+            capability = view.proofOnly() ? CardObjective.Delivery.SHOW_HERE
+                    : CardObjective.Delivery.DELIVER_HERE;
+        } else {
+            capability = view.proofOnly() ? CardObjective.Delivery.SHOW_BLOCKED
+                    : CardObjective.Delivery.DELIVER_BLOCKED;
+            reason = deliveryReason(view);
+        }
+        return Optional.of(new CardObjective(line, objective.current(player, active.progress(index)),
+                objective.required(), state, icon, view.delivered(), view.available(), capability,
+                view.giftCapable() && !satisfied, reason));
+    }
+
+    /**
+     * Why a delivery cannot be paid here, in words the player can act on.
+     *
+     * <p>The two recipient answers are rewritten on purpose. "These goods are meant for somebody else"
+     * is true but useless on a card that knows exactly who: naming them turns a grey button into
+     * directions.
+     */
+    private static Component deliveryReason(DeliveryView view) {
+        DeliveryResult reason = view.reason();
+        if (reason == null) {
+            return Component.empty();
+        }
+        if (reason == DeliveryResult.WRONG_RECIPIENT || reason == DeliveryResult.RECIPIENT_UNAVAILABLE) {
+            return Component.translatable("mcaquests.delivery.visit_recipient", view.recipientName());
+        }
+        return reason.message();
+    }
+
+    /**
+     * Hands goods over from the quest menu, and finishes the quest when the player asked for both.
+     *
+     * <p>The villager is re-resolved from the player's own world and reach — a client-supplied id is a
+     * claim, not a lookup — and everything after that belongs to {@link DeliveryService}, which owns
+     * the transaction and the ledger, and to {@link #turnIn}, which owns completion. Nothing here pays
+     * a reward or writes progress of its own.
+     *
+     * <p>The screen is re-sent with the result on it. {@code DeliveryService} deliberately does not
+     * re-send it for a request that carries an id, because this is the caller that knows what to say.
+     */
+    public static void deliver(ServerPlayer player, UUID villagerUuid, DeliveryRequest request,
+                               boolean thenComplete) {
+        Entity villager = resolve(player, villagerUuid);
+        if (villager == null) {
+            player.sendSystemMessage(DeliveryResult.RECIPIENT_UNAVAILABLE.message());
+            return;
+        }
+        if (!villagerUuid.equals(request.recipientUuid())) {
+            return; // the packet builds both from one field; a mismatch is not a click
+        }
+        DeliveryService.Outcome outcome = DeliveryService.commit(player, request);
+        if (thenComplete && outcome.isSuccess()) {
+            // The ordinary validated completion flow, with its own eligibility, rewards and history.
+            // A refusal here leaves the committed deposit exactly where it is: the goods are gone, and
+            // charging for them twice on the retry is the one thing that must not happen.
+            turnIn(player, villager, request.questId());
+        }
+        sendMenu(player, villager, outcome.message());
+        syncLog(player);
     }
 
     /**
@@ -1924,6 +2180,11 @@ public final class QuestManager {
 
     private static void send(ServerPlayer player, QuestMenuDataS2CPacket packet) {
         PacketDistributor.sendToPlayer(player, packet);
+    }
+
+    /** The same send, with the result line attached to whichever screen shape was chosen. */
+    private static void send(ServerPlayer player, Component notice, QuestMenuDataS2CPacket packet) {
+        send(player, notice.getString().isEmpty() ? packet : packet.withNotice(notice));
     }
 
     /**

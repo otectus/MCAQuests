@@ -1,0 +1,16 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "dev.otectus.mcaquests.mixin.mca",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.otectus.mcaquests.compat.mca.McaGiftMixinPlugin",
+  "mixins": [
+    "VillagerCommandHandlerForgeConczinMixin",
+    "VillagerCommandHandlerForgeMcaMixin",
+    "VillagerCommandHandlerConczinMixin",
+    "VillagerCommandHandlerMcaMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
