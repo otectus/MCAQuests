@@ -3,9 +3,12 @@ package dev.otectus.mcaquests.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import dev.otectus.mcaquests.quest.QuestMenuStatus;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * One quest as shown in the menu — an offer or the active quest (spec sections 8, 21). The screen
@@ -25,13 +28,39 @@ import java.util.List;
  *       currency reward and was shown to nobody.</li>
  * </ul>
  *
+ * <p>Three more arrived with delivery. {@code instance} names <em>this copy</em> of the quest, so a
+ * click cannot be applied to a re-accepted one; {@code state} is the card's own state, because a menu
+ * showing two active quests had one global status and drew Complete on the in-progress one; and
+ * {@code deliverCompletes} is the server's answer to "would paying this finish the quest here", which
+ * is the only honest basis for a combined Deliver &amp; complete action.
+ *
  * @param difficulty {@code "easy"}, {@code "medium"}, {@code "hard"}, or empty when the quest
  *                   declares none — most do not, and an absent band means "no badge" rather than
  *                   "easy"
+ * @param instance   the active quest copy this card was built from, absent for an offer and for the
+ *                   informational cards a villager shows when they have nothing
+ * @param state      what this one card is: an offer, in progress, ready to hand in, or a line of
+ *                   explanation with no buttons at all
+ * @param deliverCompletes whether paying this card's single outstanding delivery would leave the
+ *                   quest complete <em>and</em> turn-in-able at this villager
  */
 public record QuestCard(ResourceLocation questId, Component title, Component chainLabel, Component dialogue,
                         List<CardObjective> objectives, List<Component> rewards,
-                        List<ItemStack> rewardIcons, String difficulty) {
+                        List<ItemStack> rewardIcons, String difficulty,
+                        Optional<UUID> instance, QuestMenuStatus state, boolean deliverCompletes) {
+
+    /**
+     * The pre-1.6.5 shape: a card with no copy identity, no state of its own and no delivery.
+     *
+     * <p>Kept for the informational cards — the "nothing for you today" and cooldown lines — which are
+     * rendered under a status that draws no buttons, and so genuinely have none of the three.
+     */
+    public QuestCard(ResourceLocation questId, Component title, Component chainLabel, Component dialogue,
+                     List<CardObjective> objectives, List<Component> rewards,
+                     List<ItemStack> rewardIcons, String difficulty) {
+        this(questId, title, chainLabel, dialogue, objectives, rewards, rewardIcons, difficulty,
+                Optional.empty(), QuestMenuStatus.NO_QUESTS, false);
+    }
 
     public static void encode(FriendlyByteBuf buf, QuestCard card) {
         buf.writeResourceLocation(card.questId);
@@ -42,6 +71,9 @@ public record QuestCard(ResourceLocation questId, Component title, Component cha
         buf.writeCollection(card.rewards, FriendlyByteBuf::writeComponent);
         buf.writeCollection(card.rewardIcons, FriendlyByteBuf::writeItem);
         buf.writeUtf(card.difficulty);
+        buf.writeOptional(card.instance, FriendlyByteBuf::writeUUID);
+        buf.writeEnum(card.state);
+        buf.writeBoolean(card.deliverCompletes);
     }
 
     public static QuestCard decode(FriendlyByteBuf buf) {
@@ -53,6 +85,9 @@ public record QuestCard(ResourceLocation questId, Component title, Component cha
                 PacketCollections.readList(buf, CardObjective::decode),
                 PacketCollections.readList(buf, FriendlyByteBuf::readComponent),
                 PacketCollections.readList(buf, FriendlyByteBuf::readItem),
-                buf.readUtf());
+                buf.readUtf(),
+                buf.readOptional(FriendlyByteBuf::readUUID),
+                buf.readEnum(QuestMenuStatus.class),
+                buf.readBoolean());
     }
 }

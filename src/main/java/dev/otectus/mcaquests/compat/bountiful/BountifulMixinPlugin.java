@@ -111,7 +111,7 @@ public final class BountifulMixinPlugin implements IMixinConfigPlugin {
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName,
                           IMixinInfo mixinInfo) {
         MethodNode cashIn = findCashIn(targetClass);
-        if (cashIn != null && invokesHandler(cashIn)) {
+        if (cashIn != null && invokesHandler(targetClass, cashIn)) {
             BountifulHookProbe.applied();
         } else {
             BountifulHookProbe.fail("handler not present after apply");
@@ -137,21 +137,45 @@ public final class BountifulMixinPlugin implements IMixinConfigPlugin {
         return null;
     }
 
-    /** True when {@code method} contains a static call to {@link BountifulHookEvents}. */
-    static boolean invokesHandler(MethodNode method) {
+    /**
+     * True when {@code method} carries our injection.
+     *
+     * <p>Two accepted shapes, because Mixin chooses between them: the ordinary one is a call to the
+     * callback it merged into the target class, recognisable by this mod's own method-name prefix; the
+     * other is a direct static call to the handler, which is what an inlined callback leaves behind.
+     * Anything else means the {@code @At} matched nothing.
+     *
+     * <p>The first shape used to be missing here, and it is the shape Mixin 0.8.5 actually emits for a
+     * healthy hook — so a working Bountiful integration reported itself FAILED, and the probe that
+     * exists to catch a silent no-op was instead manufacturing a false alarm about one.
+     */
+    static boolean invokesHandler(ClassNode target, MethodNode method) {
         if (method.instructions == null) {
             return false;
         }
         String owner = handlerOwner();
         for (AbstractInsnNode insn : method.instructions) {
-            if (insn.getOpcode() == Opcodes.INVOKESTATIC
-                    && insn instanceof MethodInsnNode call
-                    && owner.equals(call.owner)) {
+            if (!(insn instanceof MethodInsnNode call)) {
+                continue;
+            }
+            if (insn.getOpcode() == Opcodes.INVOKESTATIC && owner.equals(call.owner)) {
+                return true;
+            }
+            if (call.name != null && call.name.startsWith(CALLBACK_PREFIX)
+                    && (target.name == null || target.name.equals(call.owner))) {
                 return true;
             }
         }
         return false;
     }
+
+    /**
+     * The prefix every method this mod merges into somebody else's class carries.
+     *
+     * <p>Mixin's own convention, and the project's: a name nobody else can collide with is also the
+     * only reliable way to recognise our own injected call in a transformed method.
+     */
+    private static final String CALLBACK_PREFIX = "mcaquests$";
 
     /**
      * The handler's internal name, built from the class rather than written out — a literal would be a

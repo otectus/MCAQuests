@@ -6,7 +6,223 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 
 ## [1.6.5] - Unreleased
 
-_Item delivery service and native MCA Gift hand-in. Entry written from the final diff._
+Item deliveries stop being an all-or-nothing guess. A quest that asks for six blaze rods now counts
+rods as you hand them over, tells you what happened every time, and can be paid either from the
+villager's Quests menu or with MCA's own **Gift** gesture.
+
+### Added — item delivery service
+
+- A **delivery ledger** persisted with each objective's progress, under the new `mcaquests_delivery`
+  key in `extra()` (`schema`, `delivered_units`, `proof_acknowledged`, `definition_fingerprint`).
+  It stores counts only, never item stacks, and it is the one place that answers "how much of this
+  obligation is already paid". Possession is no longer read as a deposit, which is what let a player
+  carrying everything a quest asked for still be told the delivery was incomplete.
+- **Saves from 1.6.4 and earlier migrate on first read**, per objective: a `deliver_to_villager` with
+  a legacy `count >= 1` or `delivered_to_inventory = true`, and an `item_delivery` with
+  `delivered = true`, are read as **fully** delivered rather than as one unit of many; anything that
+  had not committed migrates to zero (a proof objective migrates as acknowledged, never as units).
+  Nothing is rewritten until something reads the objective, so an
+  untouched save stays untouched. Deposits recorded against a different obligation than the one now at
+  that objective index (a pack that changed the item or the objective type) are refused rather than
+  guessed at; changing only the *quantity* keeps the deposits.
+- New `quest/delivery/` package: `DeliveryService` is the single commit path shared by the Deliver
+  button, MCA Gift, the legacy right-click and final turn-in, so no route can take goods a different
+  way from another. `DeliveryRequest`, `DeliveryResult`, `DeliveryLedger`, `DeliveryView` and
+  `DeliveryRecipientResolver` round it out.
+- **Final turn-in plans through the same service.** `DeliveryService.planTurnIn(player, def, active,
+  giver)` returns a `TurnInPlan` — one shared reservation across every outstanding
+  `mcaquests:item_delivery` obligation of the quest, a single `commit()`, and `creditLedger(active)` afterwards — built from one
+  `DeliveryRequest.turnIn(...)` per obligation, so `Method.TURN_IN` is a real route rather than a name.
+  `QuestManager.prepareDeliveries` is now a thin wrapper around it, `completeQuest` keeps its single
+  commit and then credits the ledger, and `isComplete` asks whether the outstanding units are
+  affordable under the same slot policy the hand-over will use.
+- **Partial deposits are the default.** Bring one crossbow of two and it is counted and kept; the
+  quest reads 1/2 until the second arrives.
+- **Surplus is never taken.** A hand-in commits at most what is still outstanding, and the ledger is
+  clamped to the requirement, so extra stock stays with the player.
+- **Slot-exact reservation** in `InventoryTransfer`, applied on **every** route — the Deliver button,
+  MCA Gift, the legacy right-click, the add-on transfer path and final turn-in alike. A delivery spends
+  the hotbar and main inventory only — never worn armour, never the offhand — unless a slot is named
+  explicitly, which is what the Gift gesture does with the main hand; and it prefers a plain stack over
+  a named or enchanted one, falling back to the latter only when nothing plain will do. A nested commit
+  (a container listener reaching back into quest state mid-transfer) is refused rather than allowed to
+  debit the same stack twice.
+- **Non-consuming proof objectives are now "Show items"**: the villager is shown the goods, the
+  objective records `proof_acknowledged`, and **nothing is taken**.
+- `ActiveQuest` mints and persists an `instance` UUID for each copy of a quest, lazily and only when
+  something needs to name that copy. Two copies of a repeatable quest, or a re-accepted one, are now
+  distinguishable, so a replayed delivery cannot be applied to a quest the player has since restarted.
+- The villager Quests menu now shows **one card per relevant active quest**, including a quest whose
+  delivery recipient is the villager being spoken to even when somebody else gave it.
+
+### Added — delivery in the quest menu
+
+- Per-card **Deliver N ×**, **Show items** and **Deliver & complete** buttons. Only the Deliver/Show
+  items button is ever drawn disabled, and then it carries a tooltip explaining why ("Visit %s to
+  deliver these items.", "You are not carrying anything this delivery can take."); **Deliver & complete** is simply absent when it
+  does not apply rather than shown greyed out. Objective rows read
+  `Delivered: x / y    Available: z`.
+- An inline **chooser** when more than one quest wants the same item, so the player picks which
+  obligation is paid instead of the server guessing.
+- A **Gift hint** on a deliverable card, shown only when the Gift bridge is actually available on this
+  installation.
+- The refreshed screen carries a **notice line** with the result of what was just done ("Delivered 1 of
+  2", "They have no room to take these"). A silently refused delivery is the failure this work exists
+  to remove: every refusal now names itself.
+
+### Added — native MCA Gift hand-in
+
+- Holding a quest item and choosing **Gift** in MCA's own menu pays that delivery, one item per gift,
+  to the villager the quest actually named. A gift no quest asked for keeps MCA's ordinary behaviour
+  untouched.
+- New common mixin config `mcaquests.mca.mixins.json` (`required: false`, plugin-gated by
+  `compat/mca/McaGiftMixinPlugin`), carrying four variants — one per MCA package root, since MCA has
+  repackaged twice along two independent axes. Each HEAD-injects, cancellable, into
+  `VillagerCommandHandler#handle(ServerPlayer, String)`; the plugin applies the single variant whose
+  class this installation ships and skips the other three, which is the healthy outcome, not a
+  failure. `handle` was chosen over `giveGift` because its descriptor carries nothing but vanilla
+  types, so the hook exists without MCA ever entering this mod's constant pool.
+- **Only the `gift` command is examined**; every other command passes through before anything is
+  resolved. When a quest takes the gift the return value is set to `true` and MCA's gift branch is
+  cancelled, so **no hearts, mood or saturation** are awarded for that unit.
+- **Coexistence:** another mod's HEAD injector into the same method still runs; its later or RETURN
+  injectors do not run for the one invocation this cancels. A mod that **overwrites or replaces `handle` in the
+  target class** stops the hook applying, and the bridge then reports itself **unavailable**
+  (`BRIDGE_UNAVAILABLE`, visible in the new debug command and in a log line) instead of failing
+  silently — the quest menu remains the working route. The probe reports only what it can verify: it
+  knows whether its own injection went in, so a redirect at some other call site is not something it
+  can detect.
+- `McaBinding`'s manifest gains two required members, `EntityCommandHandler.entity` and
+  `getInteractingPlayer()`, reached by the reflective layer only; field binding now walks superclasses
+  so a `protected final` field can be read. Both are verified against every build listed in
+  `mca_probe_versions` by `McaBindingProbeTest`.
+
+### Added — commands
+
+- `/mcaquests debug delivery`, under the `debug` literal at permission level 2. Read-only apart from
+  minting the lazy per-copy quest instance id, which the quest menu would mint anyway; nothing is
+  transferred, credited or refused by running it. Lists every active quest with an item delivery, its
+  recipient, delivered/remaining/available counts, whether it can be paid at the villager you are
+  standing next to and why not, and the state of the Gift bridge, hook and MCA binding.
+- `/mcaquests debug mca` now appends the gift-hook probe state to its binding report, so the applied
+  variant (or the reason none applied) shows up next to the package root that was matched.
+
+### Changed — deliver_to_villager progress (datapack-visible)
+
+- `DeliverToVillagerObjective.required()` now returns the **item count** instead of `1`, and progress
+  counts items. "Deliver two crossbows" reads 0/2, 1/2, 2/2 where it previously read 0/1 and jumped.
+  Anything that displayed `current/required` for this objective — cards, HUD tracker, journal, add-ons
+  — now shows items. See [DATAPACK.md](DATAPACK.md).
+- Goods are credited by an explicit hand-in (Deliver, Gift, or the opt-in legacy right-click) rather
+  than by the interaction alone, and a committed unit is never charged again.
+- The recipient highlight now clears only once the objective is **fully** satisfied, so a partly paid
+  delivery keeps pointing at the villager the rest is owed to instead of going dark after the first
+  item.
+- `mcaquests:item_delivery` completion is now deposits **plus** carried goods, so a player who handed
+  over four of six rods and carries two has satisfied it. Turn-in takes only what is still
+  outstanding. A pure proof objective (`consume: false`, no destination) is unchanged: it still asks
+  whether all of the goods are carried right now.
+- **Deliveries draw only from the pack (datapack-visible).** A turn-in, the Deliver button, MCA Gift
+  and the add-on transfer path all take goods from the hotbar and main inventory only, never worn
+  armour or an offhand stack, and prefer plain stacks over named or enchanted ones. An
+  `mcaquests:item_delivery` likewise counts only the hotbar and main inventory towards progress, so an
+  item that is worn or held in the offhand reads as *short* until it is moved into the pack rather than
+  being taken silently. A pure proof objective (`consume: false`, no destination) takes nothing and so
+  still counts the whole inventory. See [DATAPACK.md](DATAPACK.md).
+- **Committed goods are not refunded when a quest is abandoned.** The abandon tooltip and a server
+  message both say so, naming how many items stay with the recipient.
+
+### Changed — configuration
+
+Two new `[turn_in]` keys, documented in [CONFIG.md](CONFIG.md):
+
+- `enableMcaGiftDelivery` (default `true`) — let MCA's Gift action pay a quest delivery. Turn it off
+  to diagnose a compatibility problem; the Deliver button is unaffected either way.
+- `legacyInteractDelivery` (default `false`) — restore the pre-1.6.5 behaviour where right-clicking
+  the recipient handed over a whole payload. Off by default deliberately: that click is also the click
+  that opens a conversation. When on it uses the same transaction as the Deliver button and now
+  explains a refusal instead of returning silently.
+
+### Changed — network protocol
+
+- `QuestNetwork.PROTOCOL_VERSION` **15 → 16**; client and server must match. `QuestDeliverC2SPacket`
+  is new (the Deliver action, registered last so no existing packet id moves); `CardObjective` gained
+  `delivered`, `available`, a `Delivery` capability enum (`NONE`, `DELIVER_HERE`, `DELIVER_BLOCKED`,
+  `SHOW_HERE`, `SHOW_BLOCKED`, `SETTLED`, `SHOWN`), `giftCapable` and `reason`; `QuestCard` gained
+  `instance`, its own per-card `state` and `deliverCompletes`; and the menu packet gained the notice
+  line. A 1.6.4 client would read the new fields as the start of the next objective and draw nonsense,
+  which is why the handshake has to refuse it. Save data is unaffected.
+
+### Changed — bundled quest dialogue (translators)
+
+Thirteen lines were reworded across six bundled quests so the villager names the recipient and both
+hand-in routes. **No quest ids, item counts or rewards changed.**
+
+- `adventurer/last_banner_home` — `offer`, `accept`, `in_progress`
+- `adventurer/nether_relay` — `offer`, `accept`, `in_progress`
+- `compat/capitals/a_lords_due` (the `capitals_court` compat pack) — `accept`, `in_progress`
+- `chains/bell_shields_for_neighbors` — `accept`, `in_progress`
+- `chains/remedy_the_fevered_word` — `accept`
+- `relations/monument_of_names` — `accept`, `in_progress`
+
+### Added — translation keys
+
+Forty-eight new keys in `en_us` and `pt_br` (full locale parity is enforced by `LocaleParityTest`):
+
+- **Delivery results (13)** — `mcaquests.delivery.result.` + `delivered_partial`,
+  `delivery_satisfied`, `proof_acknowledged`, `already_delivered`, `wrong_recipient`,
+  `no_matching_items`, `destination_full`, `recipient_unavailable`, `objective_paused`,
+  `ambiguous_delivery`, `stale_request`, `invalid_request`, `bridge_unavailable`.
+- **Menu buttons, tooltips and lines (12)** — `mcaquests.button.deliver`,
+  `mcaquests.button.deliver_complete`, `mcaquests.button.show_items`, `mcaquests.tooltip.deliver`,
+  `mcaquests.tooltip.deliver.nothing`, `mcaquests.tooltip.deliver_complete`,
+  `mcaquests.tooltip.show_items`, `mcaquests.tooltip.delivery_choose`, `mcaquests.delivery.line`,
+  `mcaquests.delivery.gift_hint`, `mcaquests.delivery.visit_recipient`, `mcaquests.delivery.choose`.
+- **Abandon warning (2)** — `mcaquests.tooltip.abandon.deposited`,
+  `mcaquests.message.abandon_deposits_kept`.
+- **Debug command (21)** — `mcaquests.command.debug.delivery.` + `no_data`, `no_level`, `header`,
+  `here`, `here.none`, `none`, `quest`, `objective`, `recipient`, `recipient.unresolved`, `routes`,
+  `reason`, `reason.none`, `bridge`, `bridge.available`, `bridge.off`, `bridge.refused`, `hook`,
+  `binding`, `yes`, `no`.
+
+### Fixed
+
+- `BountifulMixinPlugin`'s post-apply check reported a **working** Bountiful hook as FAILED. It looked
+  only for an inlined static call to the handler, while Mixin 0.8.5 ordinarily emits a call to the
+  callback it merged into the target class. Both shapes are now accepted, so the probe that exists to
+  catch a silent no-op stops manufacturing a false alarm about one.
+- A refused `deliver_to_villager` hand-off used to return silently for the wrong recipient, too few
+  items and a full inventory alike. Every outcome now has a named result and a sentence — with two
+  deliberate exceptions on the opt-in legacy right-click route (`DeliveryService.legacyInteract`),
+  where a click on the wrong villager and a click on an already-finished delivery stay quiet, because
+  neither is a question the player asked.
+- The quest menu drove every card from a single global status, so a villager holding one finished and
+  one unfinished quest drew **Complete** on both. Each card now carries its own state.
+
+### Compatibility
+
+- **Add-ons: three records gained appended components** — `CardObjective` (5 → 10), `QuestCard`
+  (8 → 11) and `QuestMenuDataS2CPacket` (7 → 8, the new `notice`). All three break only code that
+  calls the **full canonical** component list: `CardObjective` keeps its pre-1.6.5 five-argument
+  constructor, `QuestCard` its eight-argument one, and the `QuestMenuDataS2CPacket.cards(...)`
+  factories are unchanged, so anything using those compiles as it did. `DeliveryRequest` is entirely
+  new and cannot break an existing add-on. Nothing under `api/` changed.
+- **`DeliverToVillagerObjective.required()` changed meaning** (see above). An add-on that assumed `1`
+  now reads the item count.
+- New public methods for add-ons: `DeliverToVillagerObjective.transfers()` and `deliveredUnits()`,
+  `ItemDeliveryObjective.deliveredUnits()`, `outstandingUnits()` and a progress-aware `canDeliver()`,
+  `ActiveQuest.instance()`, `instanceIfPresent()` and `isInstance()`, `QuestManager.deliver()` and a
+  notice-carrying `sendMenu()`, `McaBinding.COMMAND_HANDLER_ENTITY`,
+  `COMMAND_HANDLER_INTERACTING_PLAYER` and `logGiftHookOnce()`, and
+  `McaHandles.commandHandlerEntity()` / `commandHandlerInteractingPlayer()`.
+- Also new for add-ons: `DeliveryService.planTurnIn(...)` with its `TurnInPlan` (`commit()`,
+  `creditLedger(...)`, `charges()`) and `DeliveryRequest.turnIn(...)`; `McaButton.Builder.active(boolean)`;
+  and a public slot-aware `InventoryTransfer` surface — `defaultSourceSlots`, `sourceSlots`,
+  `singleSlot`, `isDefaultSourceSlot`, `countIn`, `isPlain`, `isCommitting` and
+  `Plan.reserve(IntSet, Predicate, int, Container)`.
+- `ItemDeliveryObjective.deliver(ServerPlayer, Entity, ObjectiveProgress)` is retained for add-ons but
+  now delegates to `DeliveryService.transferOutstanding`, so an add-on cannot charge a player twice for
+  a delivery they have partly paid.
 
 ## [1.6.4] - 2026-09-10
 

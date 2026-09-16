@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.data.RegistryEntryCodec;
+import dev.otectus.mcaquests.quest.delivery.DeliveryLedger;
+import dev.otectus.mcaquests.quest.delivery.DeliveryService;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import dev.otectus.mcaquests.quest.target.SourceHint;
@@ -12,7 +14,6 @@ import net.minecraft.server.level.ServerLevel;
 import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
@@ -21,8 +22,10 @@ import net.minecraft.world.item.ItemStack;
 import javax.annotation.Nullable;
 
 /**
- * "Bring me N of an item." Possession-based: completion is the player currently holding {@code count}
- * of {@code item}; items are consumed (if {@code consume}) only at turn-in (spec sections 14, 19).
+ * "Bring me N of an item." Completion is the player holding {@code count} of {@code item} <em>plus</em>
+ * whatever they have already deposited: items are consumed (if {@code consume}) at turn-in
+ * (spec sections 14, 19), but a player may also hand them over early through the Deliver action or
+ * MCA's Gift, and those units are never charged again.
  *
  * <p>An optional {@code destination} sends the goods somewhere instead of destroying them — see
  * {@link DeliveryDestination}. That transfer is <b>exact-once and atomic</b>: capacity is measured
@@ -52,9 +55,6 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
     public ItemDeliveryObjective(Item item, int count, boolean consume) {
         this(item, count, consume, DeliveryDestination.CONSUMED);
     }
-
-    /** {@code progress.extra()} flag: the transfer has been committed and must never run again. */
-    private static final String K_DELIVERED = "delivered";
 
     public static final Codec<ItemDeliveryObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             RegistryEntryCodec.of(BuiltInRegistries.ITEM).fieldOf("item").forGetter(ItemDeliveryObjective::item),
@@ -130,14 +130,41 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
         return count;
     }
 
+    /**
+     * Deposits plus carried goods, capped at the requirement.
+     *
+     * <p>Deposits come first because they are already gone: a player who handed over four of six rods
+     * and is carrying two has satisfied this objective, and counting only their inventory would ask
+     * them to find four more.
+     */
     @Override
     public int current(ServerPlayer player, ObjectiveProgress progress) {
-        return Math.min(countInInventory(player), count);
+        return Math.min(deliveredUnits(progress) + countCarried(player), count);
     }
 
     @Override
     public boolean isSatisfied(ServerPlayer player, ObjectiveProgress progress) {
-        return countInInventory(player) >= count;
+        if (isProof()) {
+            // A proof objective takes nothing, so it has no deposits and keeps its original meaning:
+            // are you carrying all of them right now?
+            return countCarried(player) >= count;
+        }
+        return deliveredUnits(progress) + countCarried(player) >= count;
+    }
+
+    /** True when this delivery only asks to be shown the goods: nothing is taken and nothing moves. */
+    private boolean isProof() {
+        return !consume && !destination.isTransfer();
+    }
+
+    /** How many units of this delivery the player has already handed over and will not pay for again. */
+    public int deliveredUnits(ObjectiveProgress progress) {
+        return DeliveryLedger.units(this, progress);
+    }
+
+    /** Units still owed after the ledger: what turn-in still has to take from the player. */
+    public int outstandingUnits(ObjectiveProgress progress) {
+        return Math.max(0, count - deliveredUnits(progress));
     }
 
     /**
@@ -145,11 +172,12 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
      * with a full inventory refuses the hand-over instead of swallowing the items into nowhere.
      */
     public boolean canDeliver(ServerPlayer player, @Nullable Entity giver) {
-        if (!destination.isTransfer()) {
-            return true;
-        }
-        Container container = destination.resolveContainer(player, giver).orElse(null);
-        return container != null && new InventoryTransfer.Plan(player.getInventory()).reserve(item, count, container);
+        return DeliveryService.canTransferOutstanding(player, this, new ObjectiveProgress(), giver);
+    }
+
+    /** As {@link #canDeliver}, for a partly-paid objective: only the outstanding units need room. */
+    public boolean canDeliver(ServerPlayer player, @Nullable Entity giver, ObjectiveProgress progress) {
+        return DeliveryService.canTransferOutstanding(player, this, progress, giver);
     }
 
     /** Why the hand-over was refused, for the player. */
@@ -163,35 +191,28 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
      * Destroys the goods, for the default {@code consume} destination. A transfer destination is
      * handled by {@link #deliver} instead, because it needs to know which villager is receiving and
      * this signature does not carry one.
+     *
+     * <p>Takes only what is still outstanding, and only from the slots the delivery policy allows:
+     * the hotbar and the main inventory. A quest for a diamond chestplate does not get to take the one
+     * the player is wearing, any more than the Deliver button does.
      */
     @Override
     public void consumeOnTurnIn(ServerPlayer player, ObjectiveProgress progress) {
         if (consume && !destination.isTransfer()) {
-            take(player, count);
+            take(player, outstandingUnits(progress));
         }
     }
 
     /**
-     * Moves the goods from the player into the destination, exactly once.
+     * Moves the outstanding goods from the player into the destination, exactly once.
      *
-     * <p>Preflights capacity and the source snapshot, removes the selected goods, then inserts their
-     * original stack data. A failed container callback restores both inventories before allowing a
-     * retry. The marker is written after a successful commit.
-     *
-     * <p>Retained for add-ons. The quest manager plans every delivery together in one transaction.
+     * <p>Retained for add-ons, and now a call into {@link DeliveryService}: the preflight, the source
+     * snapshot, the single commit and the ledger write are the same ones the menu and Gift use, so an
+     * add-on cannot charge a player twice for a delivery they have partly paid. The quest manager still
+     * plans every delivery of a turn-in together in one transaction.
      */
     public void deliver(ServerPlayer player, @Nullable Entity giver, ObjectiveProgress progress) {
-        if (!destination.isTransfer() || progress.extra().getBoolean(K_DELIVERED)) {
-            return;
-        }
-        Container container = destination.resolveContainer(player, giver).orElse(null);
-        if (container == null) {
-            return;
-        }
-        InventoryTransfer.Plan plan = new InventoryTransfer.Plan(player.getInventory());
-        if (plan.reserve(item, count, container) && plan.commit()) {
-            progress.extra().putBoolean(K_DELIVERED, true);
-        }
+        DeliveryService.transferOutstanding(player, this, progress, giver);
     }
 
     /** Removes up to {@code wanted} of the item from the player, returning how many were actually taken. */
@@ -199,6 +220,9 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
         int remaining = wanted;
         Inventory inv = player.getInventory();
         for (int slot = 0; slot < inv.getContainerSize() && remaining > 0; slot++) {
+            if (!InventoryTransfer.isDefaultSourceSlot(slot)) {
+                continue; // worn armour and the offhand are held positions, not stock
+            }
             ItemStack stack = inv.getItem(slot);
             if (stack.is(item)) {
                 int take = Math.min(remaining, stack.getCount());
@@ -209,16 +233,22 @@ public record ItemDeliveryObjective(Item item, int count, boolean consume,
         return wanted - remaining;
     }
 
-    private int countInInventory(ServerPlayer player) {
-        int found = 0;
-        Inventory inv = player.getInventory();
-        for (int slot = 0; slot < inv.getContainerSize(); slot++) {
-            ItemStack stack = inv.getItem(slot);
-            if (stack.is(item)) {
-                found += stack.getCount();
-            }
-        }
-        return found;
+    /**
+     * The goods the player has that count towards this delivery.
+     *
+     * <p>Counted under the same slot policy the hand-over will debit: an item the player is wearing or
+     * holding in their offhand is not stock this quest may spend, and counting it would promise a
+     * turn-in that the transaction then refuses. The objective reads as short until the item is in the
+     * pack, which is something the player can see and fix.
+     *
+     * <p>A proof delivery is the exception, because it debits nothing at all. "Show me two crossbows"
+     * is answered by two crossbows anywhere on the player, exactly as the Deliver action's proof
+     * acknowledgement counts them.
+     */
+    private int countCarried(ServerPlayer player) {
+        return InventoryTransfer.countIn(player.getInventory(),
+                isProof() ? null : InventoryTransfer.defaultSourceSlots(player.getInventory()),
+                stack -> stack.is(item));
     }
 
     @Override

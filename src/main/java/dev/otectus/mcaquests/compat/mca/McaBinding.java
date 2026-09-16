@@ -190,6 +190,7 @@ public final class McaBinding {
     private static final String C_VILLAGE = "server.world.data.Village";
     private static final String C_BUILDING = "server.world.data.Building";
     private static final String C_VILLAGE_MANAGER = "server.world.data.VillageManager";
+    private static final String C_COMMAND_HANDLER = "entity.interaction.EntityCommandHandler";
 
     // Classes ------------------------------------------------------------------------------------
     public static final Member VILLAGER_CLASS = cls(C_VILLAGER);
@@ -290,6 +291,27 @@ public final class McaBinding {
     public static final Member BUILDING_GET_SIZE = virtual(C_BUILDING, "getSize", int.class, 0);
     public static final Member BUILDING_GET_CENTER = virtual(C_BUILDING, "getCenter", Object.class, 0);
 
+    // EntityCommandHandler — the owner of an MCA interaction, for the Gift bridge -------------------
+    // Both members are read from the handler instance the gift mixin is compiled into, which is how
+    // that mixin can carry no MCA type at all: it hands `this` over as an Object and this layer says
+    // which villager it belongs to and who is talking to it.
+    /**
+     * {@code EntityCommandHandler.entity}: the villager (or player-backed villager-like) this handler
+     * speaks for. Declared {@code protected final T} with {@code T extends Entity}, so its erased type
+     * is vanilla {@link net.minecraft.world.entity.Entity} and nothing MCA-shaped crosses the boundary.
+     */
+    public static final Member COMMAND_HANDLER_ENTITY = getter(C_COMMAND_HANDLER, "entity");
+    /**
+     * {@code EntityCommandHandler.getInteractingPlayer()}: the player MCA currently considers to be in
+     * this conversation, as an {@code Optional<Player>}.
+     *
+     * <p>Bound as the public accessor rather than the protected field behind it, because that is the
+     * member MCA publishes. The gift bridge checks it so a command cannot be routed on behalf of
+     * somebody who is not the one talking to this villager.
+     */
+    public static final Member COMMAND_HANDLER_INTERACTING_PLAYER =
+            virtual(C_COMMAND_HANDLER, "getInteractingPlayer", Object.class, 0);
+
     // VillageManager — arity 2 picks findNearestVillage(BlockPos,int) over (Entity) ----------------
     public static final Member VILLAGE_MANAGER_GET = statik(C_VILLAGE_MANAGER, "get", Object.class, 1);
     public static final Member VILLAGE_MANAGER_GET_OR_EMPTY = virtual(C_VILLAGE_MANAGER, "getOrEmpty", Object.class, 1);
@@ -314,7 +336,8 @@ public final class McaBinding {
             VILLAGE_RESIDENT_UUIDS, VILLAGE_GET_RESIDENTS, VILLAGE_HAS_RESIDENT, VILLAGE_STORAGE_BUFFER,
             VILLAGE_GET_BUILDINGS, VILLAGE_BUILDINGS_OF_TYPE,
             BUILDING_GET_ID, BUILDING_GET_TYPE, BUILDING_GET_SIZE, BUILDING_GET_CENTER,
-            VILLAGE_MANAGER_GET, VILLAGE_MANAGER_GET_OR_EMPTY, FIND_NEAREST_VILLAGE);
+            VILLAGE_MANAGER_GET, VILLAGE_MANAGER_GET_OR_EMPTY, FIND_NEAREST_VILLAGE,
+            COMMAND_HANDLER_ENTITY, COMMAND_HANDLER_INTERACTING_PLAYER);
 
     // ---------------------------------------------------------------------------------------------
     // Resolution
@@ -542,14 +565,31 @@ public final class McaBinding {
         }
     }
 
+    /**
+     * Binds a field read by name, walking the class and its superclasses.
+     *
+     * <p>{@code getField} alone was enough while every bound field was public. It is not enough for
+     * {@code EntityCommandHandler.entity}, which is {@code protected final} — and that field is the
+     * only way to learn which villager a command handler belongs to without naming an MCA type. So the
+     * declared fields of each class in the hierarchy are searched in turn and access is requested
+     * explicitly.
+     *
+     * <p>Failure is still just "absent": an inaccessible or renamed field yields {@code null} and the
+     * member becomes a stub, exactly as before. Nothing here can throw at a caller.
+     */
     private static MethodHandle bindGetter(MethodHandles.Lookup lookup, Class<?> owner, Member member) {
-        try {
-            Field field = owner.getField(member.name);
-            field.setAccessible(true);
-            return lookup.unreflectGetter(field).asType(member.erasedType());
-        } catch (Throwable t) {
-            return null;
+        for (Class<?> type = owner; type != null && type != Object.class; type = type.getSuperclass()) {
+            try {
+                Field field = type.getDeclaredField(member.name);
+                field.setAccessible(true);
+                return lookup.unreflectGetter(field).asType(member.erasedType());
+            } catch (NoSuchFieldException missing) {
+                // Declared further up, or not at all. Keep walking; the loop ending is the real answer.
+            } catch (Throwable t) {
+                return null;
+            }
         }
+        return null;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -596,6 +636,44 @@ public final class McaBinding {
         }
     }
 
+    private static boolean giftHookLogged;
+
+    /**
+     * The Gift bridge's once-per-session line.
+     *
+     * <p><b>Not called from {@link #init()}, on purpose.</b> A mixin applies when its target class is
+     * first loaded, and MCA's command handler is loaded when somebody talks to a villager — long after
+     * common setup. Reporting the hook during setup would print "did not apply" on a perfectly healthy
+     * installation. So this is called from the delivery layer instead, at the first moment the answer
+     * actually decides something, and reports once thereafter.
+     *
+     * <p>Three cases, one of them a problem. Applied: say so, because "Gift pays my delivery" is a
+     * claim the interface makes and a bug report needs it confirmed. MCA absent: nothing to say. MCA
+     * present with no variant applied: warn, because the quest menu is then the only route and a
+     * player told otherwise would hand their quest item over as an ordinary present.
+     *
+     * <p>Emitted from here rather than from the probe because the probe is written during mixin
+     * bootstrap and deliberately knows nothing about logging.
+     */
+    public static synchronized void logGiftHookOnce() {
+        if (giftHookLogged) {
+            return;
+        }
+        giftHookLogged = true;
+        if (McaGiftHookProbe.applied()) {
+            McaQuests.LOGGER.info("[MCA: Quests] MCA Gift can pay quest deliveries ({}).",
+                    McaGiftHookProbe.describe());
+            return;
+        }
+        if (!McaGiftHookProbe.mcaPresent() && McaHandles.resolution().status() == Status.ABSENT) {
+            return;
+        }
+        McaQuests.LOGGER.warn("[MCA: Quests] MCA is installed but the Gift delivery hook did not apply, so "
+                + "Gift stays an ordinary MCA gift and deliveries must go through the quest menu's "
+                + "Deliver action. Everything else is unaffected. Details: {}. Please report this with "
+                + "your MCA version.", McaGiftHookProbe.describe());
+    }
+
     /** A one-line human-readable summary, for {@code /mcaquests debug mca}. */
     public static String describe() {
         Resolution resolution = McaHandles.resolution();
@@ -603,6 +681,7 @@ public final class McaBinding {
                 + " root=" + (resolution.root() == null ? "<none>" : resolution.root())
                 + " members=" + MANIFEST.size()
                 + " missingRequired=" + resolution.unresolvedRequired()
-                + " missingOptional=" + resolution.unresolvedOptional();
+                + " missingOptional=" + resolution.unresolvedOptional()
+                + " " + McaGiftHookProbe.describe();
     }
 }

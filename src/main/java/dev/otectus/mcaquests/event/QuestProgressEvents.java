@@ -12,6 +12,7 @@ import dev.otectus.mcaquests.quest.FailureSpec;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.CapitalsQuestRequirements;
 import dev.otectus.mcaquests.quest.QuestManager;
+import dev.otectus.mcaquests.quest.delivery.DeliveryService;
 import dev.otectus.mcaquests.quest.guidance.GuidanceService;
 import dev.otectus.mcaquests.quest.TurnInMode;
 import dev.otectus.mcaquests.quest.objective.BreakBlockObjective;
@@ -1178,8 +1179,17 @@ public final class QuestProgressEvents {
                     (objective, active, progress) -> objective.onInteract(player, active, progress, villager, held, level));
             forActiveObjectives(player, CureVillagerObjective.class,
                     (objective, active, progress) -> objective.onInteract(player, active, progress, villager, held, level));
-            forActiveObjectives(player, DeliverToVillagerObjective.class,
-                    (objective, active, progress) -> objective.onInteract(player, active, progress, villager, level));
+            if (McaQuestsConfig.COMMON.legacyInteractDelivery.get()) {
+                // Off by default. A right-click is also how a player opens a conversation, so taking a
+                // delivery payload from it takes goods the player never chose to hand over; the Deliver
+                // action and MCA's Gift are the routes that ask first. When a server does opt back in,
+                // it goes through DeliveryService like every other route, so the transaction, the slot
+                // policy and the ledger are the same ones - and a refusal is now explained rather than
+                // silent, which is what made this path so hard to diagnose.
+                forActiveObjectives(player, DeliverToVillagerObjective.class,
+                        (objective, active, progress) ->
+                                DeliveryService.legacyInteract(player, active, objective, progress, villager));
+            }
         }
     }
 

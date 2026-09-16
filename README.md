@@ -66,6 +66,17 @@ MCA: Quests does nothing on its own — it is an add-on for MCA Reborn.
 
 Right-click a villager → **Quests** → pick an offer → **Accept**.
 
+**Handing items over.** A quest that asks you to bring or deliver items has two routes, and both count
+the same. Open the recipient's **Quests** menu and press **Deliver** on the card — it takes as many as
+you are carrying, up to what is still owed, so partial hand-ins are fine and the card keeps a running
+`Delivered: x / y` (items in your pack or hotbar only — worn armour and your offhand are left alone) — or
+simply hold the item and choose **Gift** in MCA's own menu, which pays one item per gift to the
+villager the quest named. A quest that only wants to be *shown* something has **Show items** instead,
+and nothing is taken. Anything you have already handed over stays with the recipient: abandoning the
+quest does not bring it back, and the Abandon button says so before you confirm. If a hand-in is
+refused, the menu now tells you why. (`/mcaquests debug delivery` reports the same state for a server
+admin, including whether the Gift route is available on that installation.)
+
 > **Note for players upgrading from 1.0.0:** sneak-right-clicking a villager no longer opens the quest menu. That was a leftover debug shortcut, and because it cancelled the interaction it also swallowed MCA's own sneak actions (the villager editor book, inventory, trading) and broke other mods that use sneak-right-click. The injected **Quests** button is now the only entry point, and MCA: Quests never cancels an entity interaction. Track it via the HUD or the Quest Log keybind (bind "Open Quest Log" in Controls). When the objective is done you'll get a toast; return to an eligible villager and **Complete** it to claim your rewards and earn hearts. Changed your mind? **Abandon** it from the villager's menu or straight from the Quest Log.
 
 ## Configuration

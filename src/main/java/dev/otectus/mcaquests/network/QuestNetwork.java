@@ -14,9 +14,15 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 15 — GuidanceKind gained INSTRUCTION, a destination that is a line of text and no
+    // Bumped to 16 — item delivery. QuestDeliverC2SPacket is new, CardObjective carries what has been
+    // handed over, what the player is carrying, whether this villager may take it and why not,
+    // QuestCard names the active copy and its own per-card state, and the menu packet carries the
+    // result line. Every one of those is a shape change in a packet a 1.6.4 client would decode as the
+    // old one: it would read the delivery fields as the start of the next objective and draw nonsense,
+    // so client and server must match.
+    // (15 was GuidanceKind gaining INSTRUCTION, a destination that is a line of text and no
     // geometry. The kind's ordinal is on the wire, and an older client would decode the new one as
-    // LOCATION and draw a marker on 0,0,0 in a world it is not standing in, so the two must match.
+    // LOCATION and draw a marker on 0,0,0 in a world it is not standing in, so the two must match.)
     // (14 was GuidanceTarget carrying the target entity's bounding-box height, so the marker could
     // anchor its glyph on the body of an entity the client cannot currently see rather than at the
     // transmitted feet position.)
@@ -41,7 +47,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "15";
+    private static final String PROTOCOL_VERSION = "16";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -144,6 +150,13 @@ public final class QuestNetwork {
         CHANNEL.registerMessage(nextId++, QuestTrackC2SPacket.class,
                 QuestTrackC2SPacket::encode, QuestTrackC2SPacket::decode,
                 QuestTrackC2SPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        // v1.6.5 — the Deliver action on a quest card. Appended, like everything above it: the ids are
+        // positional, so inserting anywhere earlier renumbers every packet after it.
+        CHANNEL.registerMessage(nextId++, QuestDeliverC2SPacket.class,
+                QuestDeliverC2SPacket::encode, QuestDeliverC2SPacket::decode,
+                QuestDeliverC2SPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 }

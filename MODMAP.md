@@ -38,7 +38,7 @@ dev.otectus.mcaquests.compat.journeymap              2 files
 dev.otectus.mcaquests.compat.map                     2 files
 dev.otectus.mcaquests.compat.mapatlases              6 files
 dev.otectus.mcaquests.compat.mapatlases.client       7 files
-dev.otectus.mcaquests.compat.mca                     2 files
+dev.otectus.mcaquests.compat.mca                     5 files
 dev.otectus.mcaquests.compat.pack                    3 files
 dev.otectus.mcaquests.compat.reputation              5 files
 dev.otectus.mcaquests.compat.townstead               3 files
@@ -47,7 +47,8 @@ dev.otectus.mcaquests.event                          7 files
 dev.otectus.mcaquests.mixin                          2 files
 dev.otectus.mcaquests.mixin.compat                   1 file
 dev.otectus.mcaquests.mixin.mapatlases               2 files
-dev.otectus.mcaquests.network                        32 files
+dev.otectus.mcaquests.mixin.mca                      4 files
+dev.otectus.mcaquests.network                        33 files
 dev.otectus.mcaquests.profession                     1 file
 dev.otectus.mcaquests.project                        14 files
 dev.otectus.mcaquests.project.data                   3 files
@@ -58,6 +59,7 @@ dev.otectus.mcaquests.quest                          23 files
 dev.otectus.mcaquests.quest.condition                6 files
 dev.otectus.mcaquests.quest.condition.composite      3 files
 dev.otectus.mcaquests.quest.condition.leaf           48 files
+dev.otectus.mcaquests.quest.delivery                 6 files
 dev.otectus.mcaquests.quest.dialogue                 3 files
 dev.otectus.mcaquests.quest.escort                   1 file
 dev.otectus.mcaquests.quest.guidance                 10 files

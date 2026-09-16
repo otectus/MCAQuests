@@ -433,6 +433,10 @@ mixin {
     // from the reobfuscated jar's mixin refmap handling entirely.
     config 'mcaquests.compat.mixins.json'
     config 'mcaquests.mapatlases.mixins.json'
+    // The MCA Gift hook, one mixin per candidate package root. Same reasoning as the Bountiful config:
+    // MCA is never on the compile classpath, so each target is a dotted string with remap = false and
+    // McaGiftMixinPlugin decides at load time which single variant has a class to attach to.
+    config 'mcaquests.mca.mixins.json'
 }
 
 // Expand metadata placeholders into mods.toml / pack.mcmeta at build time.
@@ -467,13 +471,15 @@ tasks.named('jar', Jar).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    // The Bountiful cash-in mixin names its target as a string, and that target is a class no build
-    // of this mod ever has on its compile classpath -- deliberately, since linking against Bountiful
-    // is the one thing the whole integration is built not to do. The Mixin annotation processor
-    // treats an unresolvable target as an error by default, so it is downgraded here. Everything the
-    // processor would have checked is instead checked at runtime by BountifulMixinPlugin, which reads
-    // the real class out of the installed mod file and refuses to apply the mixin unless the method
-    // is there with the exact descriptor.
+    // The optional-mod mixins name their targets as strings, and those targets are classes no build of
+    // this mod ever has on its compile classpath -- deliberately, since linking against Bountiful or
+    // MCA is the one thing those integrations are built not to do. The Mixin annotation processor
+    // treats an unresolvable target as an error by default, so it is downgraded here, and the four MCA
+    // gift variants rely on it as much as the Bountiful hook does: only one package root can ever
+    // exist at a time, so at least three of them are unresolvable by construction. Everything the
+    // processor would have checked is instead checked at runtime by BountifulMixinPlugin and
+    // McaGiftMixinPlugin, which read the real class out of the installed mod file and refuse to apply
+    // a mixin unless the method is there with the exact descriptor.
     options.compilerArgs += ['-AMSG_MIXIN_SOFT_TARGET_NOT_FOUND=note']
 }
 
