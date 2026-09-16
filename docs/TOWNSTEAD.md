@@ -18,8 +18,8 @@ MCA: Quests changes.
 
 ## Install
 
-1. Install **MCA Reborn**, **MCA: Quests**, and **Townstead** (`[0.7.5,0.8)`; verified against
-   **0.7.6**). Townstead requires **Patchouli** — if the game will not start, check that first, it is
+1. Install **MCA Reborn**, **MCA: Quests**, and **Townstead** (`[0.7.5,)`; verified against
+   **0.7.6** through the reflective bridge and **0.8.0** through the public API). Townstead requires **Patchouli** — if the game will not start, check that first, it is
    the most common cause and has nothing to do with this integration.
 2. Start the server. That is all — no configuration is needed.
 
@@ -29,10 +29,24 @@ Confirm it took with `/mcaquests compat townstead status`. You want to see all f
 
 ## How it works
 
-MCA: Quests never compiles against Townstead. Every member is looked up by name at runtime, and what
-bound is reported as **capabilities** rather than as a single yes-or-no. That matters in practice: if a
-Townstead update moves one internal method, only the feature that needed it stops working, and only the
-quests that declared it suspend.
+MCA: Quests binds Townstead one of two ways, chosen at startup.
+
+**Typed, through Townstead's public API.** Townstead 0.8 and later ship a frozen, versioned
+integration surface, `com.aetherianartificer.townstead.api.v1`. It names no MCA type anywhere, so
+compiling against it can never link this mod to one MCA package layout. When that API is present the
+typed bridge is used, every capability below reports bound, and Townstead's own events replace the
+matching scans: a collapse, a new profession tier, a building raised or upgraded, a spirit tier or
+identity change, a life-stage crossing and a calendar rollover each become a situation signal the
+moment they happen. The scans keep running for what has no event, and as the safety net. Writes are
+attributed to the source `mcaquests:quests`, which a server can refuse in Townstead's config.
+
+**Reflective, for Townstead 0.7.x.** Older Townstead builds are bound the way every release before
+this one was: every member is looked up by name at runtime, and what bound is reported as
+**capabilities** rather than as a single yes-or-no. If a Townstead update moves one internal method,
+only the feature that needed it stops working, and only the quests that declared it suspend.
+
+`/mcaquests compat townstead status` says which path is live; the typed one reports its variant as
+`api-v1-r<revision>`.
 
 | Capability | What it unlocks |
 |---|---|

@@ -197,6 +197,26 @@ dependencies {
         }
     }
 
+    // Townstead public API -- OPTIONAL typed adapter, compile-only, never bundled. Townstead builds
+    // the jar with `../Townstead: ./gradlew :1.21.1-neoforge:apiJar`; it contains only the frozen
+    // com.aetherianartificer.townstead.api.v1 package, which names no MCA type. Pass
+    // -PtownsteadApiJar=<jar> to point elsewhere. When no jar is found the typed adapter package is
+    // left out of the build entirely and the reflective bridge alone ships, so this dependency can
+    // never make the mod unbuildable.
+    def townsteadApiJar = project.findProperty('townsteadApiJar')
+            ? file(project.findProperty('townsteadApiJar'))
+            : fileTree(dir: "${projectDir}/../Townstead/.cache/townstead-build-1.21.1-neoforge/libs",
+                       include: 'townstead-api-*-v1.jar').files.sort { it.name }.reverse().find()
+    if (townsteadApiJar != null && townsteadApiJar.exists()) {
+        logger.lifecycle("Townstead API: compiling the typed adapter against ${townsteadApiJar.name}")
+        compileOnly files(townsteadApiJar)
+    } else {
+        logger.warn("Townstead API jar not found; the typed Townstead adapter is left out of this build " +
+                "and only the reflective bridge ships. Build it with ../Townstead: ./gradlew :1.21.1-neoforge:apiJar " +
+                "or pass -PtownsteadApiJar=<jar>.")
+        sourceSets.main.java.exclude 'dev/otectus/mcaquests/compat/townstead/v1/**'
+    }
+
     // Unit tests for the non-MCA quest engine (spec section 33).
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'

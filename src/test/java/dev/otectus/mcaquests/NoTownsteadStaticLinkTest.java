@@ -53,6 +53,16 @@ class NoTownsteadStaticLinkTest {
 
     private static final String EXEMPT_PACKAGE_PREFIX = "dev/otectus/mcaquests/compat/townstead/";
 
+    /**
+     * The typed adapter over Townstead's frozen {@code api.v1}. It may name that package and only
+     * that package: {@code api.v1} carries no MCA type in any descriptor, which is the whole reason
+     * it exists, so linking to it cannot reintroduce the relocated-MCA crash.
+     */
+    private static final String TYPED_ADAPTER_PREFIX = "dev/otectus/mcaquests/compat/townstead/v1/";
+
+    private static final byte[] TOWNSTEAD_API_NEEDLE =
+            "com/aetherianartificer/townstead/api/v1".getBytes(StandardCharsets.UTF_8);
+
     private static final byte[] TOWNSTEAD_NEEDLE =
             "com/aetherianartificer/townstead".getBytes(StandardCharsets.UTF_8);
 
@@ -65,7 +75,9 @@ class NoTownsteadStaticLinkTest {
 
     @Test
     void noCompiledClassReferencesATownsteadType() throws IOException {
-        List<String> violations = scan(TOWNSTEAD_NEEDLE, false);
+        List<String> violations = scan(TOWNSTEAD_NEEDLE, false).stream()
+                .filter(relative -> !relative.startsWith(TYPED_ADAPTER_PREFIX))
+                .toList();
 
         assertTrue(violations.isEmpty(),
                 "Class(es) statically reference com.aetherianartificer.townstead. Every Townstead "
@@ -82,6 +94,71 @@ class NoTownsteadStaticLinkTest {
                 "Class(es) outside " + EXEMPT_PACKAGE_PREFIX + " reference it directly. The only "
                         + "sanctioned entry point is TownsteadCompat's Class.forName on a dotted class "
                         + "name, which is invisible to this scan by design. Offenders: " + violations);
+    }
+
+    @Test
+    void typedAdapterNamesOnlyTownsteadsPublicApi() throws IOException {
+        List<String> violations = new ArrayList<>();
+        Path classesDir = TestPaths.of("build", "classes", "java", "main").resolve(TYPED_ADAPTER_PREFIX);
+        if (!Files.isDirectory(classesDir)) {
+            return; // built without the API jar: the adapter is absent, and there is nothing to check
+        }
+        try (Stream<Path> paths = Files.walk(classesDir)) {
+            paths.filter(p -> p.toString().endsWith(".class")).forEach(p -> {
+                try {
+                    byte[] bytes = Files.readAllBytes(p);
+                    if (containsTownsteadOutsideApi(bytes)) {
+                        violations.add(p.getFileName().toString());
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        }
+        assertTrue(violations.isEmpty(),
+                "Typed adapter class(es) reference a Townstead type outside api/v1. Only the frozen "
+                        + "public API may be named; anything else is an internal that can move. Offenders: "
+                        + violations);
+    }
+
+    /** True when the class names {@code com/aetherianartificer/townstead/...} anywhere except under {@code api/v1}. */
+    private static boolean containsTownsteadOutsideApi(byte[] haystack) {
+        int from = 0;
+        while (true) {
+            int at = indexOf(haystack, TOWNSTEAD_NEEDLE, from);
+            if (at < 0) {
+                return false;
+            }
+            if (!startsWith(haystack, TOWNSTEAD_API_NEEDLE, at)) {
+                return true;
+            }
+            from = at + TOWNSTEAD_NEEDLE.length;
+        }
+    }
+
+    private static int indexOf(byte[] haystack, byte[] needle, int from) {
+        outer:
+        for (int i = from; i <= haystack.length - needle.length; i++) {
+            for (int j = 0; j < needle.length; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
+    }
+
+    private static boolean startsWith(byte[] haystack, byte[] needle, int at) {
+        if (at + needle.length > haystack.length) {
+            return false;
+        }
+        for (int j = 0; j < needle.length; j++) {
+            if (haystack[at + j] != needle[j]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static List<String> scan(byte[] needle, boolean exemptGuardedPackage) throws IOException {
