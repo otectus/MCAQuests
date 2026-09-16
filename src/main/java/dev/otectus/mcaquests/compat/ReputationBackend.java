@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.compat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -45,6 +46,23 @@ public interface ReputationBackend {
     /** A short name for logs and {@code /mcaquests debug}. */
     String backendName();
 
+    /**
+     * Whether the live backend advertises one of the {@link ReputationFeatures} capability strings
+     * <em>right now</em>.
+     *
+     * <p>The replacement for reflecting over API methods (1.6.6). MCA: Reputation publishes its
+     * capability set through {@code capabilities(server)}, and the 0.6.0 profile rows appear only
+     * while profiles can actually answer — so this is a runtime readiness question rather than a "does
+     * the binary have the method" question, and it is asked again after a world change rather than
+     * cached for the life of the JVM.
+     *
+     * <p>Quests' own store advertises nothing: it has no incident ledger, no receipts and no profiles,
+     * and claiming otherwise would make content that depends on them look available.
+     */
+    default boolean supportsFeature(MinecraftServer server, String feature) {
+        return false;
+    }
+
     // ------------------------------------------------------------------
     // Reads
     // ------------------------------------------------------------------
@@ -83,6 +101,18 @@ public interface ReputationBackend {
      */
     int award(ReputationAward award);
 
+    /**
+     * Records one reputation outcome and returns the ledger's <b>typed</b> answer (1.6.6).
+     *
+     * <p>{@link #award} and {@link #recordIncident} are the two shorthands over this, kept because
+     * most call sites only want the resulting score or a boolean. A caller that has to tell an
+     * already-settled operation from a refusal, or a refusal it may retry from one it may not, asks
+     * here — see {@link ReputationDeliveryResult} for why that distinction is not cosmetic.
+     */
+    default ReputationDeliveryResult deliver(ReputationAward award) {
+        return ReputationDeliveryResult.applied(award(award));
+    }
+
     /** @return true when newly granted. */
     boolean grantTitle(MinecraftServer server, UUID player, @Nullable ResourceLocation dimension,
                        int villageId, ResourceLocation title, boolean global);
@@ -109,12 +139,65 @@ public interface ReputationBackend {
     boolean hasIncident(MinecraftServer server, UUID player, ResourceLocation dimension, int villageId,
                         IncidentSelector selector);
 
+    /**
+     * The same question asked on behalf of a named giver (1.6.6).
+     *
+     * <p>A selector may ask for deeds {@linkplain IncidentSelector#knownToGiver() the giver actually
+     * knows about}, and that cannot be answered without knowing who the giver is. Until 1.6.6 Quests
+     * set the flag and supplied nobody, which MCA: Reputation 0.4.1 onward correctly answers with
+     * nothing — so a restitution quest gated on "they know what you did" never offered itself. Passing
+     * the entity lets Reputation resolve the villager's residency and knowledge itself.
+     *
+     * <p>A {@code null} giver with {@code known_to_giver} set stays unanswerable, deliberately: the
+     * alternative is the village-wide answer, which is a different and much more permissive question.
+     */
+    default boolean hasIncident(MinecraftServer server, UUID player, ResourceLocation dimension,
+                                int villageId, IncidentSelector selector, @Nullable Entity giver) {
+        return hasIncident(server, player, dimension, villageId, selector);
+    }
+
     /** Resolves the newest incident matching the selector. No-op without Reputation. */
     boolean resolveIncident(MinecraftServer server, UUID player, ResourceLocation dimension, int villageId,
                             IncidentSelector selector, String resolution, @Nullable String dedupeKey);
 
+    /**
+     * The same resolution, with the giver whose knowledge the selector may depend on (1.6.6).
+     *
+     * <p>Also the overload that honours {@code dedupeKey}: the canonical backend binds the discovered
+     * incident id and settles it under that key, so a retry after a crash cannot resolve a
+     * <em>different</em> deed than the one the reward was granted for.
+     */
+    default boolean resolveIncident(MinecraftServer server, UUID player, ResourceLocation dimension,
+                                    int villageId, IncidentSelector selector, String resolution,
+                                    @Nullable String dedupeKey, @Nullable Entity giver) {
+        return resolveIncident(server, player, dimension, villageId, selector, resolution, dedupeKey);
+    }
+
     /** Records a standalone incident with no score of its own. No-op without Reputation. */
     boolean recordIncident(ReputationAward award);
+
+    // ------------------------------------------------------------------
+    // Public profiles — only meaningful on the canonical backend (0.6.0)
+    // ------------------------------------------------------------------
+
+    /**
+     * Whether the player's public profile satisfies an authored predicate.
+     *
+     * <p>Answers {@link ReputationProfileMatch.Availability#UNSUPPORTED} on the legacy backend, which
+     * is not the same as answering "no": a pack may author what should happen when nobody can tell
+     * (see {@code mcareputation:profile}'s {@code on_unavailable}), and that choice belongs to the
+     * author rather than to this method.
+     *
+     * @param giver the villager whose own knowledge answers a {@code giver}-scoped query; ignored for
+     *              a {@code community}-scoped one, and an unresolvable giver makes a
+     *              {@code giver}-scoped query unanswerable rather than community-wide
+     */
+    default ReputationProfileMatch matchesProfile(MinecraftServer server, UUID player,
+                                                  ResourceLocation dimension, int villageId,
+                                                  @Nullable Entity giver,
+                                                  ReputationProfileQuery query) {
+        return ReputationProfileMatch.unsupported();
+    }
 
     // ------------------------------------------------------------------
     // Per-villager opinion — only meaningful on the canonical backend

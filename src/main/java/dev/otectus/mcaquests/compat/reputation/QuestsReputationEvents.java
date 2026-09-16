@@ -10,6 +10,7 @@ import dev.otectus.mcareputation.api.event.ReputationTierChangedEvent;
 import dev.otectus.mcareputation.api.event.ReputationTitleGrantedEvent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -73,6 +74,22 @@ public final class QuestsReputationEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         releaseRegistrations();
+        // Readiness is per world: the next one may load different packs, and a cached "profiles are
+        // live" from the world just closed would answer for content no longer published (§14.4).
+        CanonicalReputationBackend.forgetCapabilities();
+    }
+
+    /**
+     * Drops the cached capability snapshot on every datapack reload.
+     *
+     * <p>Reputation advertises its five profile features only while profile content is actually
+     * published, so a reload can switch them on or off. Nothing is re-probed here — the next question
+     * probes lazily, which is also why this does not care whether it runs before or after
+     * Reputation's own reload listener.
+     */
+    @SubscribeEvent
+    public static void onAddReloadListener(AddReloadListenerEvent event) {
+        CanonicalReputationBackend.forgetCapabilities();
     }
 
     private static void releaseRegistrations() {

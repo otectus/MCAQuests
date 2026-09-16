@@ -92,6 +92,19 @@ public final class ConditionTypes {
                     "villager_opinion"),
             dev.otectus.mcaquests.quest.condition.leaf.VillagerOpinionCondition.CODEC);
 
+    /**
+     * {@code mcareputation:profile} — the player's public profile: how widely they are known in this
+     * village, and what they are known for (MCA: Reputation 0.6.0, 1.6.6).
+     *
+     * <p>Registered unconditionally for the same reason the two above are. The difference is that its
+     * degradation is <b>authored</b> rather than fixed: an installation that cannot answer the
+     * question takes the condition's own {@code on_unavailable} branch, which defaults to "not met",
+     * so a pack can keep a quest reachable where the profile layer is only flavour.
+     */
+    public static final QuestConditionType<dev.otectus.mcaquests.quest.condition.leaf.ProfileCondition>
+            PROFILE = register(new net.minecraft.resources.ResourceLocation("mcareputation", "profile"),
+            dev.otectus.mcaquests.quest.condition.leaf.ProfileCondition.CODEC);
+
     // Townstead (Townstead spec 5.1). Registered unconditionally, exactly like the FTB Quests and
     // MCA: Reputation conditions above: a datapack must parse identically whether or not the mod is
     // installed, so the types always exist and it is evaluation that is gated. Every bundled Townstead

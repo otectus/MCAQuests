@@ -113,8 +113,11 @@ public final class LegacyReputationBackend implements ReputationBackend {
         }
 
         int oldScore = standing.score(award.player(), award.dimension(), award.villageId());
+        // deltaOrZero(), not delta(): this store has no incident definitions to read a default from,
+        // so an award that named only a deed moves nothing here — the honest degradation, and what
+        // this backend has always done with an unpriced outcome.
         int newScore = standing.addScore(award.player(), award.dimension(), award.villageId(),
-                award.delta());
+                award.deltaOrZero());
         data.standingChanged();
         if (newScore == oldScore) {
             return newScore;
@@ -259,6 +262,23 @@ public final class LegacyReputationBackend implements ReputationBackend {
         // Without a ledger there is nothing to record, but a caller-supplied delta is still standing
         // and must not be silently dropped — that would make a datapack behave differently depending
         // on which mods are installed for no reason the author can see.
-        return award.delta() != 0 && award(award) != 0;
+        return award.deltaOrZero() != 0 && award(award) != 0;
+    }
+
+    /**
+     * The typed answer this store can honestly give (1.6.6).
+     *
+     * <p>A stated, non-zero delta really is applied, so that is {@code APPLIED} with the resulting
+     * score. Everything else — a deed with no number, a named social profile, a resolution — has no
+     * representation here at all, and saying {@code UNAVAILABLE} is what lets a caller tell "Quests
+     * kept this" from "the village recorded this". It is never retryable: there is nothing to retry
+     * into on an installation with no ledger.
+     */
+    @Override
+    public ReputationDeliveryResult deliver(ReputationAward award) {
+        if (award.deltaOrZero() == 0) {
+            return ReputationDeliveryResult.unavailable();
+        }
+        return ReputationDeliveryResult.applied(award(award));
     }
 }

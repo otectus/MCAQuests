@@ -31,9 +31,19 @@ import java.util.Optional;
  * <p>The delta defaults to the incident definition's own, so a pack author normally names the deed and
  * lets the datapack decide what it is worth. Supplying one overrides it, clamped by that definition's
  * {@code max_override_abs}.
+ *
+ * <p><b>That default actually works from 1.6.6.</b> The reward read its optional delta and then passed
+ * {@code delta.orElse(0)} into the award, which is an explicit zero override — so an author who named
+ * only a deed got a deed worth nothing, and the {@code default_delta} in the incident definition was
+ * unreachable through this reward. The omitted case is now carried as omitted the whole way down.
+ *
+ * <p>{@code incident_profile} names the social profile the deed's evidence should be read under, for a
+ * generic incident whose meaning a pack decides (MCA: Reputation 0.6.0, §9.5). Ignored by older
+ * Reputation builds and by a Quests-only install, where the deed records exactly as it did before.
  */
 public record RecordIncidentReward(ResourceLocation incident, Optional<Integer> delta,
-                                   Optional<String> visibility, List<String> tags) implements QuestReward {
+                                   Optional<String> visibility, List<String> tags,
+                                   Optional<ResourceLocation> incidentProfile) implements QuestReward {
 
     public static final Codec<RecordIncidentReward> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
@@ -41,13 +51,16 @@ public record RecordIncidentReward(ResourceLocation incident, Optional<Integer> 
                     StrictCodecs.strictOptional(Codec.INT, "delta").forGetter(RecordIncidentReward::delta),
                     StrictCodecs.strictOptional(Codec.STRING, "visibility").forGetter(RecordIncidentReward::visibility),
                     StrictCodecs.strictOptional(Codec.STRING.listOf(), "tags", List.of())
-                            .forGetter(RecordIncidentReward::tags)
+                            .forGetter(RecordIncidentReward::tags),
+                    StrictCodecs.strictOptional(ResourceLocation.CODEC, "incident_profile")
+                            .forGetter(RecordIncidentReward::incidentProfile)
             ).apply(instance, RecordIncidentReward::new));
 
     public RecordIncidentReward {
         delta = delta == null ? Optional.empty() : delta;
         visibility = visibility == null ? Optional.empty() : visibility;
         tags = tags == null ? List.of() : List.copyOf(tags);
+        incidentProfile = incidentProfile == null ? Optional.empty() : incidentProfile;
     }
 
     @Override
@@ -70,7 +83,10 @@ public record RecordIncidentReward(ResourceLocation incident, Optional<Integer> 
                 .builder(player.server, player.getUUID(), community.get().dimension(),
                         community.get().villageId(), QuestReputation.SOURCE)
                 .incident(incident)
-                .delta(delta.orElse(0))
+                // The Optional overload: an author who priced nothing gets the incident definition's
+                // own value, and an author who wrote 0 gets a deed that moves no standing.
+                .delta(delta)
+                .incidentProfile(incidentProfile.orElse(null))
                 .visibility(visibility.orElse(null))
                 .tags(tags);
         if (villager != null) {

@@ -7,6 +7,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.IncidentSelector;
 import dev.otectus.mcaquests.quest.reputation.QuestReputation;
+import dev.otectus.mcaquests.quest.reputation.ReputationDedupe;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +17,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * {@code mcareputation:resolve_incident} — marks a past deed apologised for, atoned for, forgiven, or
@@ -82,6 +84,26 @@ public record ResolveIncidentReward(Optional<ResourceLocation> incident, List<St
 
     @Override
     public void grant(ServerPlayer player, @Nullable Entity villager) {
+        resolve(player, villager, null, null);
+    }
+
+    /**
+     * The same resolution, keyed to the quest copy that earned it (1.6.6).
+     *
+     * <p>The key is what lets the backend <em>bind</em> the incident: the selector discovers a deed,
+     * and this operation identity settles that one deed, so a retry after a crash cannot atone for a
+     * different incident than the one the reward was granted for, and a replay answers from the
+     * receipt instead of ratcheting the same record twice. A repeatable quest accepted again is a new
+     * copy, hence a new key, hence free to atone for the next deed.
+     */
+    @Override
+    public void grant(ServerPlayer player, @Nullable Entity villager, RewardContext context) {
+        resolve(player, villager, context == null ? null : context.questId(),
+                context == null ? null : context.instance().orElse(null));
+    }
+
+    private void resolve(ServerPlayer player, @Nullable Entity villager,
+                         @Nullable ResourceLocation questId, @Nullable UUID instance) {
         Optional<QuestReputation.Community> community = QuestReputation.resolve(villager);
         if (community.isEmpty()) {
             return;
@@ -93,7 +115,10 @@ public record ResolveIncidentReward(Optional<ResourceLocation> incident, List<St
                     + "tag; refusing to resolve an arbitrary deed. Add an \"incident\" field.");
             return;
         }
+        String operationKey = questId == null
+                ? null
+                : ReputationDedupe.incidentResolution(questId, instance, resolution);
         QuestReputation.resolveIncident(player.server, player.getUUID(), community.get(), selector,
-                resolution, null);
+                resolution, operationKey, villager);
     }
 }

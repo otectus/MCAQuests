@@ -1769,7 +1769,7 @@ situations for the nearest villager's village), and `validate` (op 3) report pro
 
 *(requires the optional [MCA: Reputation](https://www.curseforge.com/minecraft/mc-mods/mca-reputation) mod)*
 
-Two conditions read the player's standing and opinion within the MCA: Reputation system. They are registered whether or not MCA: Reputation is installed — a datapack using them parses and validates identically either way, and they simply never match when the mod is absent or the data cannot be read.
+Three conditions read the player's standing, public profile and the giver's opinion within the MCA: Reputation system. They are registered whether or not MCA: Reputation is installed — a datapack using them parses and validates identically either way, and they simply never match when the mod is absent or the data cannot be read, except where a condition lets you author that case yourself (`profile`'s `on_unavailable`).
 
 ### Conditions
 
@@ -1777,6 +1777,7 @@ Two conditions read the player's standing and opinion within the MCA: Reputation
 |---|---|---|
 | `mcareputation:has_incident` | `incident` (resource location, optional), `status` (list of strings, optional), `tags` (list of strings, optional), `known_to_giver` (boolean, optional), `negate` (boolean, optional) | A deed on the player's public record with the giver's village matches the selector. |
 | `mcareputation:villager_opinion` | `min_tier` (string, optional), `max_tier` (string, optional), `basis` (string or list, optional) | The giver's personal opinion of the player sits in the tier band and rests on how they came by it. |
+| `mcareputation:profile` | `scope` (`community` / `giver`, optional), `recognition` (object with `min`/`max`, optional), `min_recognition_tier` (string, optional), `facets` (map, optional), `allow_partial_history` (boolean, optional), `on_unavailable` (`deny` / `allow`, optional) | The player's public profile — how widely they are known here, and what they are known for — satisfies every clause. Requires MCA: Reputation 0.6.0 or later. |
 
 #### `has_incident` — public deeds on the village record
 
@@ -1814,6 +1815,72 @@ Fields:
 - `basis` (optional): A single basis string or a list, case-insensitive. Values: `involved` (directly involved), `witnessed` (saw it happen), `hearsay` (heard from someone else), `none` (no knowledge yet). Matches only opinions resting on one of these bases.
 
 Without MCA: Reputation, or without a build of MCA: Reputation that includes the per-villager opinion API, the condition is never met — answering "yes" to a question nobody can answer would have villagers reacting to things they never witnessed.
+
+#### `profile` — how well known, and known for what
+
+*(1.6.6; needs MCA: Reputation **0.6.0** or later)*
+
+A village's **public profile** of a player is two separate things: **recognition**, how widely they are known here, and **facets**, what they are known *for*. Neither is liking — an infamous murderer can be as recognised as a revered hero, so `recognition` asks "have they heard of you", not "do they approve of you". For approval use `mcaquests:reputation_tier` (the village's view) or `mcareputation:villager_opinion` (this villager's view).
+
+```json
+{
+  "type": "mcareputation:profile",
+  "scope": "giver",
+  "recognition": { "min": 15 },
+  "facets": {
+    "mcareputation:reliability": { "min": 20, "min_evidence": 2 }
+  },
+  "allow_partial_history": false,
+  "on_unavailable": "deny"
+}
+```
+
+Fields:
+- `scope` (optional, default `community`): `community` asks what the village as a whole can say; `giver` asks what the villager in front of you personally knows, filtered through their own awareness — including the delay before a rumour reaches them — before anything is added up. A `giver` scope **never** widens to the village view.
+- `recognition` (optional): `{ "min": <int>, "max": <int> }`, inclusive, both optional and both `>= 0`. `{"min": 1}` with `"scope": "giver"` is the "does this villager know me at all" gate. `{"max": 0}` asks for a complete stranger.
+- `min_recognition_tier` (optional): a rung of the recognition ladder the player must have reached. MCA: Reputation ships `unknown`, `noticed`, `recognized`, `well_known`, `renowned`, `famous`.
+- `facets` (optional): facet id → `{ "min": <int>, "max": <int>, "min_evidence": <int>, "allow_unobserved": <bool> }`, at most 16 entries and at most one per facet. MCA: Reputation ships `mcareputation:reliability`, `generosity`, `bravery`, `compassion`, `mercy`, `lawfulness` and `violence`.
+  - `min_evidence` defaults to **1**: a facet clause requires live evidence, because a facet nobody has ever observed is not evidence of the opposite. A village that has simply never seen the player does not thereby satisfy "nonviolent".
+  - `allow_unobserved` (default false) is the named escape hatch for "no contrary evidence is known". Use it deliberately: with it, and with any `max`, the clause depends on a complete history (see below).
+- `allow_partial_history` (optional, default false): a clause that relies on the *absence* of evidence cannot be answered on a save whose profile history is incomplete (a world migrated from an older MCA: Reputation). By default that refuses distinguishably and `on_unavailable` decides; set this to `true` to accept the partial answer anyway. A plain lower bound is unaffected — missing history can only hide more evidence.
+- `on_unavailable` (optional, default `deny`): what to do when the question **cannot be answered** — no MCA: Reputation, profiles switched off in its config, a save still migrating, no resolvable village or giver, or the partial-history case above. `deny` leaves the quest unoffered; `allow` treats the gate as passed, which is right when the profile requirement is flavour rather than balance. Only these two spellings parse.
+
+Every clause is ANDed. An **unknown** facet or recognition-tier id is a real "not met" rather than an unanswerable question: MCA: Reputation fails unknown ids closed so a typo in a datapack cannot open a gate.
+
+Sample pack `08_ledger_of_standing` ships both halves of the intended shape: `a_first_commission`, an ordinary job any stranger can take, and `the_careful_commission`, which is offered only to someone whose finished work the giver has seen twice. Gate the *interesting* job on a profile, not every job — a village where nothing can be earned until something has been earned has no way in.
+
+### Rewards and social profiles
+
+| `type` | Fields | Effect |
+|---|---|---|
+| `mcareputation:record_incident` | `incident` (resource location, **required**), `delta` (int, optional), `visibility` (string, optional), `tags` (list, optional), `incident_profile` (resource location, optional) | Writes a second, differently-named deed alongside the quest's own completion outcome. |
+| `mcareputation:resolve_incident` | `incident` (resource location, optional), `status` (list, optional), `tags` (list, optional), `resolution` (string, default `atoned`) | Marks a past deed apologised for, atoned for, forgiven or disproven. The selector must narrow something. |
+
+`record_incident`'s `delta` is **optional and stays optional**: omit it and the deed is worth whatever its incident definition says (from 1.6.6 — earlier builds sent an explicit `0`), write `0` and the deed is recorded while standing does not move, which is how a deed contributes profile evidence without a number attached.
+
+`incident_profile` (1.6.6) names which authored **social profile** a deed's evidence is read under. It is accepted wherever an outcome object is authored: each outcome of a quest's `reputation` block (`complete` / `fail` / `abandon`), each outcome of a project's `reputation` block (`on_phase_complete` / `on_project_complete` / `on_fail`), and the `record_incident` reward. A situation's `outcomes` block takes a bare integer and has no profile field; record the evidence from a follow-up quest's `record_incident` reward instead.
+
+```json
+"reputation": {
+  "complete": {
+    "delta": 8,
+    "incident": "mcareputation:quest_completed",
+    "incident_profile": "mcaquests:quest_commission",
+    "visibility": "village",
+    "recipients": "resolving_player"
+  },
+  "abandon": { "delta": -2, "incident_profile": "mcaquests:quest_commitment_broken" }
+}
+```
+
+| Profile | Use it for | Evidence |
+|---|---|---|
+| `mcaquests:quest_commission` | `mcareputation:quest_completed` | Recognition, and reliability — in MCA: Reputation's `commission_work` repeat-credit group, so grinding one commission pays diminishing *social* credit. |
+| `mcaquests:quest_commitment_broken` | `mcareputation:quest_failed`, `mcareputation:quest_abandoned` | Recognition, and reliability against you. Adverse, so it is never discounted for repetition. |
+| `mcareputation:donation_project` | `mcareputation:project_completed`, `project_phase_completed` | Generosity. Shipped by MCA: Reputation with no attachment, for a producer to name. |
+| `mcareputation:spared_outcome` | `mcareputation:situation_resolved` | Mercy. Same arrangement. |
+
+A profile only applies to the incidents its own `allowed_incidents` list admits, so naming `spared_outcome` on a completed quest is refused and logged rather than quietly borrowing another deed's meaning. For a project, decide whether the *phase* or the *completion* is the socially significant moment and name the profile on that one — not on both, which tells the village the same story twice. (MCA: Reputation's repeat-credit policies already make the second and third telling worth progressively less, so the cost of getting this wrong is diminishing credit rather than runaway credit.) Without MCA: Reputation 0.6.0 the field is ignored and the deed records exactly as it did before. Quest completion is **one** social outcome regardless of how the goods arrived — several deposits, the Deliver button, MCA's Gift gesture, final turn-in or the legacy right-click all end in the single award that carries the profile.
 
 ---
 

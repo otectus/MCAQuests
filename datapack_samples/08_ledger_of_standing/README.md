@@ -22,6 +22,43 @@ Three separate things are called "reputation" in this ecosystem. Keeping them ap
 | `quests/guild/writ_of_trust.json` | Gating on `reputation_tier` **on a named ladder** plus a raw `village_reputation` floor. |
 | `quests/guild/making_it_right.json` | The quest-level `reputation` block, `has_incident`, `resolve_incident`, `record_incident`. |
 | `quests/guild/a_good_word.json` | `villager_opinion` — what the giver personally thinks, as opposed to what the village recorded. |
+| `quests/guild/a_first_commission.json` | An ordinary job **any stranger** can take, whose completion carries an `incident_profile` so it becomes evidence of reliability. |
+| `quests/guild/the_careful_commission.json` | `mcareputation:profile` with `"scope": "giver"` — offered only to someone whose finished work *this villager* has seen twice. |
+
+## Public profiles (MCA: Reputation 0.6.0)
+
+Recognition and facets are a third thing again: not hearts, not the village's number, but what the
+village can **say** about you. `a_first_commission` is the way in — an ordinary job with no reputation
+gate at all, whose `reputation.complete` names a social profile:
+
+```json
+"reputation": {
+  "complete": {
+    "delta": 8,
+    "incident": "mcareputation:quest_completed",
+    "incident_profile": "mcaquests:quest_commission",
+    "recipients": "resolving_player"
+  }
+}
+```
+
+`the_careful_commission` then reads that evidence back, from the giver's own knowledge rather than the
+village's:
+
+```json
+{
+  "type": "mcareputation:profile",
+  "scope": "giver",
+  "recognition": { "min": 5 },
+  "facets": { "mcareputation:reliability": { "min": 8, "min_evidence": 2 } },
+  "on_unavailable": "deny"
+}
+```
+
+Two things to copy from this pair. **The first job is ungated** — a village where nothing can be earned
+until something has been earned has no way in. And **`on_unavailable` is authored**: without MCA:
+Reputation 0.6.0 the question cannot be answered at all, and `deny` says this particular quest should
+then stay unoffered rather than becoming free. Use `allow` when the profile requirement is flavour.
 
 ## Village reputation
 

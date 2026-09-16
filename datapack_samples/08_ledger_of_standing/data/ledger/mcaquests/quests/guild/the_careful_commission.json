@@ -1,0 +1,53 @@
+{
+  "format_version": 1,
+  "id": "ledger:the_careful_commission",
+  "weight": 8,
+  "category": "guild",
+  "difficulty": "medium",
+  "offer_group": "guild_commissions",
+  "priority": 3,
+  "title": { "text": "The Careful Commission" },
+  "repeat": { "type": "once" },
+  "giver": {
+    "professions": ["minecraft:librarian", "minecraft:cartographer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "This one I only offer to someone whose finished work I have seen myself. Twice, at least. You qualify." },
+    "accept": { "text": "Then it is yours. Do not make me revise my opinion." },
+    "decline": { "text": "Understandable. It is a lot of glass." },
+    "in_progress": { "text": "Glass and obsidian. Carefully." },
+    "ready": { "text": "Every piece intact. Of course it is." },
+    "complete": { "text": "Reliable twice is a habit, and the ledger records habits." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:glass", "count": 16, "consume": true },
+    { "type": "mcaquests:item_delivery", "item": "minecraft:obsidian", "count": 4, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "medium" },
+    { "type": "mcaquests:hearts", "amount": 8 },
+    { "type": "mcaquests:village_reputation", "amount": 20 }
+  ],
+  "conditions": {
+    "type": "mcareputation:profile",
+    "scope": "giver",
+    "recognition": { "min": 5 },
+    "facets": {
+      "mcareputation:reliability": { "min": 8, "min_evidence": 2 }
+    },
+    "allow_partial_history": false,
+    "on_unavailable": "deny"
+  },
+  "reputation": {
+    "complete": {
+      "delta": 14,
+      "incident": "mcareputation:quest_completed",
+      "incident_profile": "mcaquests:quest_commission",
+      "visibility": "village",
+      "tags": ["guild"],
+      "recipients": "resolving_player"
+    },
+    "abandon": { "delta": -2, "incident_profile": "mcaquests:quest_commitment_broken", "visibility": "witnessed", "recipients": "resolving_player" }
+  }
+}
