@@ -38,9 +38,39 @@ public final class TownsteadCompat {
     private static final String IMPLEMENTATION =
             "dev.otectus.mcaquests.compat.townstead.ReflectiveTownsteadBridge";
 
+    /**
+     * The typed bridge over Townstead's frozen {@code api.v1}, preferred whenever the installed
+     * Townstead ships it. Both strings are dotted for the same reason as above; the probe class is
+     * Townstead's own API entry point, which names no MCA type and so is safe to look up.
+     */
+    private static final String API_IMPLEMENTATION =
+            "dev.otectus.mcaquests.compat.townstead.v1.ApiTownsteadBridge";
+    private static final String API_PROBE = "com.aetherianartificer.townstead.api.v1.TownsteadApiV1";
+
     private static boolean initialised;
 
     private TownsteadCompat() {
+    }
+
+    /**
+     * The typed bridge, or null when this Townstead predates {@code api.v1} or this build was
+     * compiled without the API jar (the typed package is then simply absent from the jar).
+     */
+    private static TownsteadBridge typedBridge() {
+        try {
+            Class.forName(API_PROBE, false, TownsteadCompat.class.getClassLoader());
+        } catch (Throwable absent) {
+            McaQuests.LOGGER.debug("[MCA: Quests] Townstead has no api.v1; using the reflective bridge.");
+            return null;
+        }
+        try {
+            Class<?> implementation = Class.forName(API_IMPLEMENTATION);
+            return (TownsteadBridge) implementation.getDeclaredConstructor().newInstance();
+        } catch (Throwable t) {
+            McaQuests.LOGGER.warn("[MCA: Quests] Townstead api.v1 is present but the typed bridge could not "
+                    + "start; falling back to the reflective bridge.", t);
+            return null;
+        }
     }
 
     /**
@@ -66,9 +96,11 @@ public final class TownsteadCompat {
         }
 
         try {
-            Class<?> implementation = Class.forName(IMPLEMENTATION);
-            TownsteadBridge candidate =
-                    (TownsteadBridge) implementation.getDeclaredConstructor().newInstance();
+            TownsteadBridge candidate = typedBridge();
+            if (candidate == null) {
+                Class<?> implementation = Class.forName(IMPLEMENTATION);
+                candidate = (TownsteadBridge) implementation.getDeclaredConstructor().newInstance();
+            }
             TownsteadBridge.Holder.set(candidate);
             report(candidate);
         } catch (Throwable t) {

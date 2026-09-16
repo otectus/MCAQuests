@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.McaCompat;
+import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
@@ -126,27 +127,40 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
                 McaQuestsConfig.COMMON.townsteadPollIntervalTicks.get());
         Entity giver = level.getEntity(quest.villagerUuid());
         List<Entity> residents = TownsteadTargetResolver.residents(level, giver, level.getGameTime());
-        if (residents.size() < minimumObserved || !enoughOfTheVillageIsLoaded(level, giver, residents)) {
-            // Too few visible to make a claim about the village. Not a failure -- come back with more
-            // of the village loaded -- but not evidence of health either, so the timer does not run.
-            return resetIfRunning(progress);
-        }
 
+        // Loaded residents are read live; the rest of the roll through Townstead's last-known
+        // record, when this Townstead keeps one. A village of forty is then judged on forty.
         TownsteadEvaluation evaluation = new TownsteadEvaluation();
-        int observed = 0;
-        int healthy = 0;
+        List<TownsteadNeedsView> readings = new java.util.ArrayList<>();
+        java.util.Set<java.util.UUID> seen = new java.util.HashSet<>();
         for (Entity resident : residents) {
             TownsteadVillagerView view = evaluation.villager(resident).orElse(null);
             if (view == null) {
                 continue;
             }
-            observed++;
-            if (isHealthy(view.needs())) {
-                healthy++;
+            seen.add(resident.getUUID());
+            readings.add(view.needs());
+        }
+        TownsteadBridge bridge = TownsteadBridge.Holder.get();
+        java.util.OptionalInt villageId = giver == null ? java.util.OptionalInt.empty() : McaCompat.getHomeVillageId(giver);
+        if (villageId.isPresent()) {
+            for (java.util.UUID uuid : McaCompat.villageResidentUuids(level, villageId.getAsInt())) {
+                if (seen.contains(uuid)) {
+                    continue;
+                }
+                bridge.lastKnownNeeds(level.getServer(), uuid).ifPresent(readings::add);
             }
         }
-        if (observed < minimumObserved) {
+        if (readings.size() < minimumObserved || !enoughOfTheVillageIsKnown(level, giver, readings.size())) {
             return resetIfRunning(progress);
+        }
+
+        int observed = readings.size();
+        int healthy = 0;
+        for (TownsteadNeedsView needs : readings) {
+            if (isHealthy(needs)) {
+                healthy++;
+            }
         }
         if ((double) healthy / observed < minimumFraction) {
             return resetIfRunning(progress);
@@ -167,8 +181,7 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
      * <p>An unreadable roll is treated as satisfied rather than as a permanent block: without MCA's
      * resident list there is no denominator, and refusing to ever run would strand the quest.
      */
-    private boolean enoughOfTheVillageIsLoaded(ServerLevel level, @Nullable Entity giver,
-                                               List<Entity> observed) {
+    private boolean enoughOfTheVillageIsKnown(ServerLevel level, @Nullable Entity giver, int known) {
         if (minimumLoadedFraction <= 0.0D || giver == null) {
             return true;
         }
@@ -180,11 +193,10 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
         if (roll <= 0) {
             return true;
         }
-        // The resident window is capped per pass, so compare against the true loaded count rather than
-        // against the sample this pass happened to draw.
-        int loaded = Math.max(observed.size(),
-                McaCompat.loadedVillageResidents(level, villageId.getAsInt()).size());
-        return (double) loaded / roll >= minimumLoadedFraction;
+        // Live readings plus Townstead's last-known ones, against the true loaded count rather than
+        // the capped sample this pass drew; with no register this is exactly the old loaded check.
+        int covered = Math.max(known, McaCompat.loadedVillageResidents(level, villageId.getAsInt()).size());
+        return (double) covered / roll >= minimumLoadedFraction;
     }
 
     private boolean isHealthy(TownsteadNeedsView needs) {
