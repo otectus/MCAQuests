@@ -318,6 +318,68 @@ class ReputationIntegrationTest {
                 "binary drift must disable the integration with one ERROR, never crash the game");
     }
 
+    /**
+     * §29.1 again, for the 1.6.6 additions: the plain translation types the conditions and rewards
+     * carry must be nameable without MCA: Reputation installed.
+     *
+     * <p>{@code ReputationProfileQuery}, {@code ReputationProfileMatch}, {@code ReputationFeatures}
+     * and {@code ReputationDeliveryResult} exist only because the real 0.6.0 types cannot appear out
+     * here. If one of them ever grows an import of the mod it mirrors, the seam is gone and Quests
+     * fails to start without Reputation — the exact failure the tripwire above was written for.
+     */
+    @Test
+    void theNewProfileTypesStayInPlainTypes() throws IOException {
+        List<String> offenders = new ArrayList<>();
+        for (String file : List.of("compat/ReputationProfileQuery.java",
+                "compat/ReputationProfileMatch.java", "compat/ReputationDeliveryResult.java",
+                "compat/ReputationFeatures.java", "compat/ReputationAward.java",
+                "compat/ReputationBackend.java",
+                "quest/condition/leaf/ProfileCondition.java")) {
+            String source = Files.readString(SOURCE_ROOT.resolve(file), StandardCharsets.UTF_8);
+            if (source.contains("dev.otectus.mcareputation")) {
+                offenders.add(file);
+            }
+        }
+        assertTrue(offenders.isEmpty(), () -> "these are the always-loaded mirrors of Reputation's "
+                + "types and must not name them:\n  " + String.join("\n  ", offenders));
+    }
+
+    /**
+     * The 0.6.0 capability strings are a protocol, not a preference: Reputation publishes exactly
+     * these, and a typo here would silently disable a feature rather than fail loudly.
+     */
+    @Test
+    void theCapabilityStringsAreNamedNotGuessed() throws IOException {
+        String source = Files.readString(SOURCE_ROOT.resolve("compat/ReputationFeatures.java"),
+                StandardCharsets.UTF_8);
+        for (String id : List.of("profile_snapshot_v1", "speaker_profile_v1", "repeat_credit_v1",
+                "profiled_delivery_v1", "profile_change_v1", "delivery", "speaker_query",
+                "bound_resolution", "ladder_high_water")) {
+            assertTrue(source.contains("\"" + id + "\""), () -> "missing capability string " + id);
+        }
+    }
+
+    /**
+     * 1.6.6 keeps the two event translations and deliberately adds no third one.
+     *
+     * <p>Reputation 0.6.0 publishes {@code ReputationProfileChangedEvent}, and Quests has no consumer
+     * for it: every profile-dependent condition re-queries during the eligibility pass it is evaluated
+     * in — which is what §15 asks a consumer to do — and there is no cached offer list for an event to
+     * invalidate. Subscribing anyway would add a listener that does nothing, and a listener naming a
+     * Reputation type is not free, because this class is only ever loaded with the mod present.
+     */
+    @Test
+    void theEventTranslationsAreTheTwoQuestsActuallyConsumes() throws IOException {
+        String source = Files.readString(
+                SOURCE_ROOT.resolve("compat/reputation/QuestsReputationEvents.java"),
+                StandardCharsets.UTF_8);
+        assertTrue(source.contains("ReputationTierChangedEvent"), "tier translation is still needed");
+        assertTrue(source.contains("ReputationTitleGrantedEvent"), "title translation is still needed");
+        assertFalse(source.contains("ReputationProfileChangedEvent"),
+                "no Quests consumer re-evaluates on a profile change; conditions re-query instead, so "
+                        + "a subscription here would be an empty listener");
+    }
+
     @Test
     void modsTomlDeclaresReputationAsOptional() throws IOException {
         String toml = Files.readString(TestPaths.of("src/main/resources/META-INF/neoforge.mods.toml"),

@@ -83,6 +83,7 @@ public final class ProjectReputation {
                             QuestReputation.SOURCE)
                     .delta(outcome.delta())
                     .incident(outcome.incident().orElse(null))
+                    .incidentProfile(outcome.incidentProfile().orElse(null))
                     .dedupeKey(dedupeKey)
                     .visibility(outcome.visibility().orElse(null))
                     .tags(outcome.tags())

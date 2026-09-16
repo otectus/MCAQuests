@@ -36,6 +36,20 @@ public final class ReputationDedupe {
                 + ":" + outcome;
     }
 
+    /**
+     * One quest copy's resolution of one past deed (1.6.6).
+     *
+     * <p>This is the operation identity the canonical backend binds an incident to: the selector finds
+     * the deed, and this key settles <em>that</em> deed once. The quest <em>instance</em> is in the key
+     * rather than only the quest id, because a repeatable restitution quest accepted a second time is
+     * entitled to atone for a second incident, while a replay of the same acceptance after a crash is
+     * not entitled to ratchet the first one twice.
+     */
+    public static String incidentResolution(ResourceLocation questId, @Nullable UUID instance,
+                                            String resolution) {
+        return "incident:" + questId + ":" + (instance == null ? "none" : instance) + ":" + resolution;
+    }
+
     /** A situation resolution, keyed by the situation instance so each occurrence pays once. */
     public static String situation(UUID instanceId, UUID player, String resolution) {
         return "situation:" + instanceId + ":" + player + ":" + resolution;

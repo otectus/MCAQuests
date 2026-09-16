@@ -181,6 +181,7 @@ class DocumentedTypesExistTest {
     /** Ids of the built-in pack's own quests, projects and situations, which are content, not types. */
     private static Set<String> contentIds() {
         Set<String> ids = new LinkedHashSet<>();
+        ids.addAll(fileNamedContentIds());
         Path data = TestPaths.of("src/main/resources/data/mcaquests/mcaquests");
         if (!Files.isDirectory(data)) {
             return ids;
@@ -193,6 +194,27 @@ class DocumentedTypesExistTest {
                     ids.add(matcher.group(1));
                 }
             });
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return ids;
+    }
+
+    /**
+     * Content Quests ships into <em>another</em> mod's loader, whose id is its file name rather than an
+     * {@code "id"} field — the MCA: Reputation social profiles under
+     * {@code data/mcaquests/mcareputation/}. They are named in DATAPACK.md's reference tables, exactly
+     * like a quest id is, and they are content rather than registry types.
+     */
+    private static Set<String> fileNamedContentIds() {
+        Set<String> ids = new LinkedHashSet<>();
+        Path root = TestPaths.of("src/main/resources/data/mcaquests/mcareputation");
+        if (!Files.isDirectory(root)) {
+            return ids;
+        }
+        try (var paths = Files.walk(root)) {
+            paths.filter(p -> p.toString().endsWith(".json"))
+                    .forEach(p -> ids.add(p.getFileName().toString().replace(".json", "")));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

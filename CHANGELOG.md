@@ -4,6 +4,129 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.6] - Unreleased
+
+Adoption of **MCA: Reputation 0.6.0**. Standing was already delegated to that mod when it is
+installed; what is new is that a village can now say *what you are known for*, and a quest can ask.
+Alongside that, three defects in the 1.6.5 translation layer are fixed — one of them silently made
+every unpriced deed worth nothing.
+
+### Fixed — the reputation translation layer
+
+- **An omitted delta is no longer an explicit zero.** `ReputationAward` carried a plain `int`, so
+  "the author priced nothing" and "the author wrote 0" were the same value, and Quests always sent an
+  explicit override. An incident definition's own `default_delta` was therefore unreachable through
+  Quests: a `mcareputation:record_incident` reward naming only a deed recorded it as worth nothing.
+  The award now carries an `OptionalInt`, the reward passes its optional straight through, and an
+  authored zero still means "record the deed, move no standing" — which is how a deed carries profile
+  evidence without a number attached.
+- **`tier_high_water` honours the ladder it was asked about.** The canonical backend ignored the
+  `ladder` argument and answered from the snapshot's own high-water field, which is the mark on
+  Reputation's *default* ladder. A pack asking about a custom ladder got a tier id that ladder does
+  not name, which a tier gate reads as "never ranked". It now calls Reputation's per-ladder lookup,
+  falling back to the old field only against a build that has none.
+- **A `known_to_giver` selector is now answered from the giver's knowledge.** Quests set the flag and
+  supplied no speaker, and MCA: Reputation (correctly, since 0.4.1) answers such a query with nothing —
+  so `mcareputation:has_incident` with `known_to_giver: true` could never be met, and a restitution
+  quest gated on "they know what you did" never offered itself. The giver is now passed through, and a
+  giver who cannot be resolved still answers "nothing is known" rather than falling back to the
+  village-wide record, which would be a different and far more permissive question.
+- **`mcareputation:resolve_incident` binds the deed it resolves.** The reward's dedupe key reached the
+  backend and was dropped. The selector now *discovers* an incident and Reputation's bound resolution
+  *settles that one incident* under a key naming this copy of the quest, so a retry after a crash
+  cannot atone for a different deed than the reward was granted for, and a replay answers from the
+  receipt instead of ratcheting the same record twice. A repeatable quest accepted again is a new copy,
+  so it may still atone for the next deed.
+
+### Added — typed delivery and capability negotiation
+
+- Awards go through MCA: Reputation's **`deliver(IncidentDelivery)`** rather than `record(...)`, so an
+  outcome is now typed: applied, already-settled duplicate, accepted-but-no-public-incident, refused
+  and retryable, or refused for good. Previously all but the first were one `false`. Quests' dedupe
+  keys double as the operation identity, which is what makes a replay after a crash idempotent.
+  `ReputationBackend.deliver(ReputationAward)` exposes it; `award(...)` and `recordIncident(...)` are
+  unchanged shorthands over it.
+- **Features are negotiated, not reflected upon.** The `getMethod("getVillagerOpinion", ...)` probe is
+  gone. Quests reads `capabilities(server).features()` once per world and gates each optional path on
+  the published capability string, including the five 0.6.0 profile strings. That answers a better
+  question than reflection could: a method exists in a binary whether or not the feature behind it can
+  answer, and Reputation advertises the profile rows *only while profiles are live*. The snapshot is
+  dropped on server stop and on every datapack reload, since a reload can publish or withdraw the
+  profile content those rows depend on.
+- A per-villager opinion is now gated on Reputation's own `opinionEnabled`, so an installation with
+  opinions switched off reports "no opinion" instead of a neutral zero an opinion gate would read as a
+  real, low opinion.
+
+### Added — profiles for quests
+
+- **New condition `mcareputation:profile`** — how widely the player is known in this village
+  (`recognition`, `min_recognition_tier`) and what they are known for (`facets`), with
+  `"scope": "community"` or `"giver"`. Recognition is not liking: an infamous murderer can be as
+  recognised as a revered hero, so a commission gated on `recognition.min` asks "have they heard of
+  you", not "do they like you". `"scope": "giver"` with `"recognition": {"min": 1}` is the
+  "does this villager know me" gate, answered from that villager's own knowledge — including the delay
+  before rumour reaches them — and it never widens to the village view.
+- The condition is **three-valued**, and the third value is authored. No Reputation, profiles switched
+  off, a migrating save, a clause needing a complete history on a save that lacks one, an unresolvable
+  giver: none of those is a fact about the player, so none is silently "not met". `on_unavailable`
+  says what the pack wants then — `deny` (the default) or `allow`. A *typo* in a facet or tier id, by
+  contrast, really is "not met": Reputation fails unknown ids closed so a misspelling cannot open a
+  gate.
+- **New `incident_profile` field** on the quest-level `reputation` block's outcomes and on the
+  `mcareputation:record_incident` reward, naming which authored social profile the deed is evidence
+  for. Quest completion stays **one** social outcome however the goods arrived — several deposits, the
+  Deliver button, MCA's Gift gesture, final turn-in or the legacy right-click all end in the single
+  award that carries the profile.
+- **Two shipped profiles** under `data/mcaquests/mcareputation/incident_profiles/`, because
+  Reputation's own do not cover a Quests deed: `mcaquests:quest_commission` (a completed quest is
+  evidence of reliability, in Reputation's `commission_work` repeat-credit group so a farmed commission
+  pays diminishing social credit) and `mcaquests:quest_commitment_broken` (a failed or abandoned quest
+  is evidence against it, adverse and never discounted). Reputation's `donation_project` and
+  `spared_outcome` already cover projects and situations, and are named the same way.
+- Sample pack **08 — The Ledger of Standing** gains the vertical slice: `a_first_commission`, an
+  ordinary job a total stranger can take, and `the_careful_commission`, which the giver offers only to
+  someone whose finished work *they themselves* have seen twice.
+
+### Platform — NeoForge 1.21.1
+
+- **Fixed: the MCA: Reputation integration was disabled on this loader.** `ReputationBridge`
+  required API generation **1**, the number MCA: Reputation's Forge 1.20.1 line publishes. Its
+  NeoForge 1.21.1 line publishes **2** for the same additive surface — same types, same contracts,
+  a different number — so `isCanonical()` rejected every NeoForge MCA: Reputation ever released:
+  Quests logged one startup ERROR ("present but reported an incompatible API version") and fell back
+  to its own built-in standing store. Standing, tiers, titles and incidents silently stopped
+  delegating. The gate is now 2, so the integration actually runs here; this affected every NeoForge
+  build since MCA: Reputation 0.4.1 first shipped for 1.21.1, not just 1.6.6.
+- **The per-villager opinion path is no longer reflective.** The 1.21.1 sibling had no opinion API
+  when this line was first ported, so `CanonicalReputationBackend` read an opinion by name through
+  `Method` handles. MCA: Reputation 1.21.1 carries `getVillagerOpinion` and `VillagerOpinion`, Quests
+  now compiles against them directly, and availability is decided by the `opinionEnabled` capability
+  instead of a probe — which is what the adopted 0.6.0 design asks for. `mcareputation:villager_opinion`
+  is live on this platform for the first time.
+- `apiExports` is unchanged: none of the new translation types sits under `api/`, so the compile-only
+  API jar keeps exactly the shape `verifyApiJar` asserts.
+
+### Compatibility
+
+- The `neoforge.mods.toml` dependency on MCA: Reputation is unchanged — still `type="optional"`, still
+  `versionRange="[0.2,)"`, still ordered `AFTER`. Each 0.6.0 path is behind its capability string and
+  falls back to what 1.6.5 did, so this build still runs against an older MCA: Reputation of the same
+  API generation. A Quests-only install is unaffected, and the `mcareputation:profile` condition parses
+  there exactly as it does everywhere else.
+- **Add-ons: two records gained appended components.** `ReputationAward`'s `delta` is now an
+  `OptionalInt` and it has a trailing `incidentProfile`; `ReputationOutcome` has a trailing
+  `incidentProfile` and keeps its five-argument constructor. `QuestReward.RewardContext` gained a
+  trailing `instance` and keeps its five-argument constructor, so an add-on reward that reads the
+  context compiles unchanged. `ReputationAward.Builder` is unchanged apart from two new methods, so
+  every existing construction site keeps working.
+- New for add-ons: `ReputationBackend.deliver(...)`, `supportsFeature(...)`, `matchesProfile(...)` and
+  the giver-aware `hasIncident(...)` / `resolveIncident(...)` overloads (all defaulted, so an add-on's
+  own backend implementation still compiles); `ReputationDeliveryResult`, `ReputationProfileQuery`,
+  `ReputationProfileMatch` and `ReputationFeatures`; `QuestReputation.deliver(...)`,
+  `matchesProfile(...)` and `supportsFeature(...)`; `ReputationDedupe.incidentResolution(...)`;
+  `ReputationAward.deltaOrZero()` and `isNoOp()`.
+- No packet changed, so `QuestNetwork.PROTOCOL_VERSION` does not move.
+
 ## [1.6.5] - Unreleased
 
 Item deliveries stop being an all-or-nothing guess. A quest that asks for six blaze rods now counts

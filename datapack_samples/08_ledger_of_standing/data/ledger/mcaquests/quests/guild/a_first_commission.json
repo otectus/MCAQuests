@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "id": "ledger:a_first_commission",
+  "weight": 16,
+  "category": "guild",
+  "difficulty": "easy",
+  "offer_group": "guild_commissions",
+  "priority": 1,
+  "title": { "text": "A First Commission" },
+  "repeat": { "type": "cooldown", "cooldown_ticks": 24000 },
+  "giver": {
+    "professions": ["minecraft:librarian", "minecraft:cartographer"],
+    "adult_only": true
+  },
+  "dialogue": {
+    "offer": { "text": "I do not know you, and that is not an objection. Small job, fair price, and the ledger gets its first line about you." },
+    "accept": { "text": "Paper and leather. Bring them to me, not to the guild hall." },
+    "decline": { "text": "Then the page stays blank. It often does." },
+    "in_progress": { "text": "Paper and leather, when you have them." },
+    "ready": { "text": "Counted. Good." },
+    "complete": { "text": "First line written: took the work, finished the work. That is all reliability ever is." }
+  },
+  "objectives": [
+    { "type": "mcaquests:item_delivery", "item": "minecraft:paper", "count": 8, "consume": true },
+    { "type": "mcaquests:item_delivery", "item": "minecraft:leather", "count": 2, "consume": true }
+  ],
+  "rewards": [
+    { "type": "mcaquests:currency", "difficulty": "easy" },
+    { "type": "mcaquests:hearts", "amount": 4 }
+  ],
+  "reputation": {
+    "complete": {
+      "delta": 8,
+      "incident": "mcareputation:quest_completed",
+      "incident_profile": "mcaquests:quest_commission",
+      "visibility": "village",
+      "tags": ["guild"],
+      "recipients": "resolving_player"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "allowed_incidents": [
+    "mcareputation:quest_failed",
+    "mcareputation:quest_abandoned"
+  ],
+  "recognition": {
+    "points": 3,
+    "lifetime_ticks": 1344000,
+    "resolution_mode": "recognition"
+  },
+  "facets": {
+    "mcareputation:reliability": {
+      "points": -6,
+      "lifetime_ticks": 672000,
+      "resolution_mode": "evaluative"
+    }
+  },
+  "credit_class": "adverse",
+  "major_evidence": false
+}

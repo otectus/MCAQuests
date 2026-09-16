@@ -929,7 +929,13 @@ public final class QuestManager {
     /** What the quest knew about its giver, for the rewards that can still be granted without it. */
     private static QuestReward.RewardContext rewardContext(ActiveQuest active, QuestDefinition def) {
         return new QuestReward.RewardContext(active.villagerUuid(), active.villagerName(),
-                active.dimension(), active.villageId(), def.id());
+                active.dimension(), active.villageId(), def.id(),
+                // This copy of the quest, so a reward whose effect must land once per acceptance —
+                // and again on the next acceptance of a repeatable quest — has an identity to key on
+                // (1.6.6). Minted here rather than read through instanceIfPresent(): this runs inside
+                // the turn-in, which is already writing the quest state, and a key that fell back to
+                // "no instance" would make two runs of a repeatable quest look like one operation.
+                java.util.Optional.of(active.instance()));
     }
 
     /**
@@ -1162,6 +1168,10 @@ public final class QuestManager {
                                 dev.otectus.mcaquests.quest.reputation.QuestReputation.SOURCE)
                         .delta(outcome.delta())
                         .incident(outcome.incident().orElse(null))
+                        // The authored social profile, when the pack named one: quest completion is
+                        // one social outcome however the goods arrived, so the profile rides the same
+                        // single award rather than one per deposit (§16.1).
+                        .incidentProfile(outcome.incidentProfile().orElse(null))
                         .visibility(outcome.visibility().orElse(null))
                         .tags(outcome.tags())
                         .dedupeKey(dev.otectus.mcaquests.quest.reputation.ReputationDedupe.quest(

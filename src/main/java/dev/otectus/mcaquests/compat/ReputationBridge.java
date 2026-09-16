@@ -25,8 +25,17 @@ import net.neoforged.fml.ModList;
  */
 public final class ReputationBridge {
 
-    /** The Reputation API generation this build was written against (see {@code McaReputationApi}). */
-    public static final int REQUIRED_API_VERSION = 1;
+    /**
+     * The Reputation API generation this build was written against (see {@code McaReputationApi}).
+     *
+     * <p>PORT: 2, not the 1.20.1 line's 1. MCA: Reputation's NeoForge 1.21.1 line advertises API
+     * generation 2 for the same additive surface the Forge line calls 1 — same types, same contracts,
+     * a different number. Gating on 1 here meant {@code isCanonical()} rejected every NeoForge
+     * Reputation ever published: the integration logged one ERROR at startup and silently fell back
+     * to the built-in store. Nothing about the surface this build is written against changed with
+     * 1.6.6; the constant was simply wrong for this loader from the first port.
+     */
+    public static final int REQUIRED_API_VERSION = 2;
 
     private static volatile ReputationBackend backend = new LegacyReputationBackend();
     private static boolean initialised;

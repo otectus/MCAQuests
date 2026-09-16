@@ -29,7 +29,7 @@ dev.otectus.mcaquests.client.gui                     7 files
 dev.otectus.mcaquests.client.map                     11 files
 dev.otectus.mcaquests.client.marker                  18 files
 dev.otectus.mcaquests.command                        6 files
-dev.otectus.mcaquests.compat                         62 files
+dev.otectus.mcaquests.compat                         66 files
 dev.otectus.mcaquests.compat.bountiful               15 files
 dev.otectus.mcaquests.compat.capitals                10 files
 dev.otectus.mcaquests.compat.ftbq                    23 files
@@ -58,7 +58,7 @@ dev.otectus.mcaquests.project.state                  7 files
 dev.otectus.mcaquests.quest                          23 files
 dev.otectus.mcaquests.quest.condition                6 files
 dev.otectus.mcaquests.quest.condition.composite      3 files
-dev.otectus.mcaquests.quest.condition.leaf           48 files
+dev.otectus.mcaquests.quest.condition.leaf           49 files
 dev.otectus.mcaquests.quest.delivery                 6 files
 dev.otectus.mcaquests.quest.dialogue                 3 files
 dev.otectus.mcaquests.quest.escort                   1 file

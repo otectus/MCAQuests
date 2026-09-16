@@ -7,6 +7,9 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.ReputationAward;
 import dev.otectus.mcaquests.compat.ReputationBackend;
 import dev.otectus.mcaquests.compat.ReputationBridge;
+import dev.otectus.mcaquests.compat.ReputationDeliveryResult;
+import dev.otectus.mcaquests.compat.ReputationProfileMatch;
+import dev.otectus.mcaquests.compat.ReputationProfileQuery;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -184,7 +187,7 @@ public final class QuestReputation {
      * @return the player's resulting score, or {@code 0} if nothing could be applied
      */
     public static int award(ReputationAward award) {
-        if (award.delta() == 0 && award.incidentType() == null) {
+        if (award.isNoOp()) {
             return 0; // nothing to record and nothing to say
         }
         try {
@@ -193,6 +196,26 @@ public final class QuestReputation {
             McaQuests.LOGGER.error("[MCA: Quests] a reputation award failed for {}; the quest outcome "
                     + "itself is unaffected", award.player(), t);
             return 0;
+        }
+    }
+
+    /**
+     * The same write, with the ledger's typed answer (1.6.6).
+     *
+     * <p>{@link #award} keeps its "resulting score" shape, because almost every call site wants only
+     * that. A caller that has to tell an already-settled operation from a refusal it may retry asks
+     * here instead — see {@link ReputationDeliveryResult}.
+     */
+    public static ReputationDeliveryResult deliver(ReputationAward award) {
+        if (award.isNoOp()) {
+            return ReputationDeliveryResult.unavailable();
+        }
+        try {
+            return backend().deliver(award);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.error("[MCA: Quests] a reputation delivery failed for {}; the quest outcome "
+                    + "itself is unaffected", award.player(), t);
+            return ReputationDeliveryResult.unavailable();
         }
     }
 
@@ -258,9 +281,21 @@ public final class QuestReputation {
 
     public static boolean hasIncident(MinecraftServer server, UUID player, Community community,
                                       IncidentSelector selector) {
+        return hasIncident(server, player, community, selector, null);
+    }
+
+    /**
+     * The same question with the giver whose knowledge a {@code known_to_giver} selector depends on.
+     *
+     * <p>Pass the giver whenever one is in hand. Without it a {@code known_to_giver} selector cannot
+     * be answered at all and reads as "nothing is known", which is the safe answer but not the
+     * interesting one.
+     */
+    public static boolean hasIncident(MinecraftServer server, UUID player, Community community,
+                                      IncidentSelector selector, @Nullable Entity giver) {
         try {
             return backend().hasIncident(server, player, community.dimension(), community.villageId(),
-                    selector);
+                    selector, giver);
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("[MCA: Quests] hasIncident failed; answering false", t);
             return false;
@@ -270,12 +305,55 @@ public final class QuestReputation {
     public static boolean resolveIncident(MinecraftServer server, UUID player, Community community,
                                           IncidentSelector selector, String resolution,
                                           @Nullable String dedupeKey) {
+        return resolveIncident(server, player, community, selector, resolution, dedupeKey, null);
+    }
+
+    /** The same resolution, bound to one incident under {@code dedupeKey} and aware of the giver. */
+    public static boolean resolveIncident(MinecraftServer server, UUID player, Community community,
+                                          IncidentSelector selector, String resolution,
+                                          @Nullable String dedupeKey, @Nullable Entity giver) {
         try {
             return backend().resolveIncident(server, player, community.dimension(), community.villageId(),
-                    selector, resolution, dedupeKey);
+                    selector, resolution, dedupeKey, giver);
         } catch (Throwable t) {
             McaQuests.LOGGER.error("[MCA: Quests] resolving an incident failed; the quest reward itself "
                     + "is unaffected", t);
+            return false;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Public profiles (0.6.0)
+    // ------------------------------------------------------------------
+
+    /**
+     * Whether the player's public profile satisfies an authored predicate.
+     *
+     * <p>Three-valued, and every caller must respect that: {@link ReputationProfileMatch} reports
+     * "cannot say" separately from "no", because a disabled or migrating profile layer is not evidence
+     * about the player. A thrown exception is {@code ERROR} rather than {@code false} for the same
+     * reason.
+     */
+    public static ReputationProfileMatch matchesProfile(MinecraftServer server, UUID player,
+                                                        Community community, @Nullable Entity giver,
+                                                        ReputationProfileQuery query) {
+        try {
+            return backend().matchesProfile(server, player, community.dimension(),
+                    community.villageId(), giver, query);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("[MCA: Quests] a profile predicate failed; answering 'cannot say'", t);
+            return ReputationProfileMatch.unavailable(ReputationProfileMatch.Availability.ERROR,
+                    "internal_error");
+        }
+    }
+
+    /** Whether the live backend advertises a {@link dev.otectus.mcaquests.compat.ReputationFeatures} id. */
+    public static boolean supportsFeature(MinecraftServer server, String feature) {
+        try {
+            return backend().supportsFeature(server, feature);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("[MCA: Quests] a capability probe failed; treating {} as absent",
+                    feature, t);
             return false;
         }
     }

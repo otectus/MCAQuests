@@ -29,13 +29,24 @@ import java.util.Optional;
  * <p>There is no default penalty for failing or walking away from a quest (§29.3, §33 rule 6). A pack
  * author who wants one writes it; otherwise nothing happens. Punishing a player for abandoning a
  * quest they never had to accept would be a behaviour change imposed on every existing pack.
+ *
+ * <h2>The social profile (1.6.6)</h2>
+ *
+ * <p>{@code incident_profile} names which authored <em>social profile</em> the deed's evidence is read
+ * under, for MCA: Reputation 0.6.0 and later. The incident id says what happened; the profile says
+ * what it demonstrates about the player — a finished commission is evidence of reliability, a donated
+ * project is evidence of generosity, and Reputation deliberately ships both of those profiles
+ * unattached so the producer that knows which one applies picks it (§9.5). Unstated, or on an older
+ * Reputation, the deed carries whatever its own incident definition attaches, which is what every
+ * existing pack already gets.
  */
 public record ReputationOutcome(
         int delta,
         Optional<ResourceLocation> incident,
         Optional<String> visibility,
         List<String> tags,
-        Recipients recipients) {
+        Recipients recipients,
+        Optional<ResourceLocation> incidentProfile) {
 
     /** Who receives an outcome (§29.4, §29.5). */
     public enum Recipients {
@@ -81,7 +92,9 @@ public record ReputationOutcome(
                     StrictCodecs.strictOptional(Codec.STRING.listOf(), "tags", List.of())
                             .forGetter(ReputationOutcome::tags),
                     StrictCodecs.strictOptional(Recipients.CODEC, "recipients", Recipients.NOBODY)
-                            .forGetter(ReputationOutcome::recipients)
+                            .forGetter(ReputationOutcome::recipients),
+                    StrictCodecs.strictOptional(ResourceLocation.CODEC, "incident_profile")
+                            .forGetter(ReputationOutcome::incidentProfile)
             ).apply(instance, ReputationOutcome::new));
 
     /**
@@ -101,11 +114,18 @@ public record ReputationOutcome(
         incident = incident == null ? Optional.empty() : incident;
         visibility = visibility == null ? Optional.empty() : visibility;
         recipients = recipients == null ? Recipients.NOBODY : recipients;
+        incidentProfile = incidentProfile == null ? Optional.empty() : incidentProfile;
+    }
+
+    /** The pre-1.6.6 shape, for callers that state no social profile. */
+    public ReputationOutcome(int delta, Optional<ResourceLocation> incident,
+                             Optional<String> visibility, List<String> tags, Recipients recipients) {
+        this(delta, incident, visibility, tags, recipients, Optional.empty());
     }
 
     public static ReputationOutcome ofShorthand(int delta) {
         return new ReputationOutcome(delta, Optional.empty(), Optional.empty(), List.of(),
-                Recipients.NOBODY);
+                Recipients.NOBODY, Optional.empty());
     }
 
     public static final ReputationOutcome NONE = ofShorthand(0);
@@ -118,14 +138,15 @@ public record ReputationOutcome(
     /** This outcome with {@code fallback} substituted when no explicit recipient set was authored. */
     public ReputationOutcome withDefaultRecipients(Recipients fallback) {
         return recipients == Recipients.NOBODY && !isNoOp()
-                ? new ReputationOutcome(delta, incident, visibility, tags, fallback)
+                ? new ReputationOutcome(delta, incident, visibility, tags, fallback, incidentProfile)
                 : this;
     }
 
     /** This outcome with {@code fallback} substituted when no explicit incident type was authored. */
     public ReputationOutcome withDefaultIncident(ResourceLocation fallback) {
         return incident.isEmpty()
-                ? new ReputationOutcome(delta, Optional.ofNullable(fallback), visibility, tags, recipients)
+                ? new ReputationOutcome(delta, Optional.ofNullable(fallback), visibility, tags,
+                        recipients, incidentProfile)
                 : this;
     }
 
