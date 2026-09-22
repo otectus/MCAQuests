@@ -164,6 +164,8 @@
   "mcaquests.project.status.blocked": "Blocked",
   "mcaquests.project.status.unavailable": "Paused",
   "mcaquests.project.status.unobserved": "Not observed yet",
+  "mcaquests.project.paused.village_gone": "Paused: the village this project belongs to no longer exists. An admin can move it.",
+  "mcaquests.project.help.village_gone": "The village this project belonged to has been deleted or merged into another, so nothing can count here until an admin moves the project to its old site or to the village that replaced it.",
   "mcaquests.button.project.details": "Details",
   "mcaquests.button.project.hide_details": "Hide details",
   "mcaquests.button.project.build_area": "Show build area",

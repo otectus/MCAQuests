@@ -358,6 +358,7 @@ public final class ProjectManager {
         ServerLevel level = state != null && server != null
                 ? server.getLevel(dimensionKey(state.anchorDimension()))
                 : player.level() instanceof ServerLevel own ? own : null;
+        boolean villageGone = state != null && server != null && villageGone(server, state);
         for (int i = 0; i < phase.objectives().size(); i++) {
             ProjectObjective objective = phase.objectives().get(i);
             boolean live = state != null && i < state.progressCount() && state.currentPhase() == phaseIdx;
@@ -375,6 +376,15 @@ public final class ProjectManager {
                 status = objective.isSatisfied(progress) ? ProjectObjectiveStatus.SATISFIED
                         : ProjectObjectiveStatus.IN_PROGRESS;
                 details = List.of();
+            }
+            if (villageGone && status != ProjectObjectiveStatus.SATISFIED) {
+                // The village this instance belongs to is gone, so nothing can count until an operator
+                // rebinds it (1.7.0). Say so rather than describe an area that no longer exists.
+                status = ProjectObjectiveStatus.BLOCKED;
+                List<Component> withReason = new ArrayList<>();
+                withReason.add(Component.translatable("mcaquests.project.help.village_gone"));
+                withReason.addAll(details);
+                details = withReason;
             }
             lines.add(new ProjectObjectiveLine(objective.describe(), objective.current(progress),
                     objective.requiredFor(progress), progress.contributionOf(player.getUUID()), status, details));
@@ -917,6 +927,21 @@ public final class ProjectManager {
      * in the save. Reverting the pack's {@code scope} brings it back exactly as it was. Admins can still
      * see it via {@code /mcaquests project} and clear it with {@code adminReset}.
      */
+    /**
+     * True when this instance belongs to a village MCA no longer has — deleted, or merged into another
+     * (1.7.0). Its area is gone, so nothing can count; the instance is paused, clock included, until an
+     * operator rebinds it ({@code /mcaquests project instance ... rebind}). A village MCA could not be
+     * asked about is never taken to be gone.
+     */
+    public static boolean villageGone(MinecraftServer server, ProjectState state) {
+        if (server == null || state.villageId().isEmpty()) {
+            return false;
+        }
+        ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
+        return level != null && McaCompat.villageKnown(level, state.villageId().getAsInt())
+                .map(exists -> !exists).orElse(false);
+    }
+
     public static boolean isScopeStale(ProjectState state) {
         return ProjectRegistry.get(state.projectId())
                 .map(def -> def.scopeType() != state.scope())
@@ -1173,7 +1198,9 @@ public final class ProjectManager {
                     state.projectId(), def.displayTitle(), sponsorLogLabel(player, state),
                     scopeLabel(def), phaseLabel(def, state.currentPhase()),
                     objectiveLines(player, def, state, state.currentPhase(), false), state.key().asString(),
-                    Optional.empty())));
+                    villageGone(player.getServer(), state)
+                            ? Optional.of(Component.translatable("mcaquests.project.paused.village_gone"))
+                            : Optional.empty())));
         }
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProjectLogSyncS2CPacket(entries));
     }
@@ -1458,7 +1485,7 @@ public final class ProjectManager {
         ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
         boolean unavailable = !projectsEnabled || state.status() != ProjectStatus.ACTIVE || isScopeStale(state)
                 || def == null || !def.enabled() || level == null || state.currentPhase() < 0
-                || state.currentPhase() >= def.phaseCount();
+                || state.currentPhase() >= def.phaseCount() || villageGone(server, state);
         if (!unavailable) {
             // Readings a phase could not take at its boundary are retried before anything else, so a
             // pending baseline resolves the moment its source can be read.

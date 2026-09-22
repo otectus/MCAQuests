@@ -164,6 +164,8 @@
   "mcaquests.project.status.blocked": "Bloqueado",
   "mcaquests.project.status.unavailable": "Pausado",
   "mcaquests.project.status.unobserved": "Ainda não observado",
+  "mcaquests.project.paused.village_gone": "Pausado: a vila a que este projeto pertence não existe mais. Um administrador pode movê-lo.",
+  "mcaquests.project.help.village_gone": "A vila a que este projeto pertencia foi apagada ou fundida com outra, então nada pode contar aqui até que um administrador mova o projeto para o antigo local ou para a vila que a substituiu.",
   "mcaquests.button.project.details": "Detalhes",
   "mcaquests.button.project.hide_details": "Ocultar detalhes",
   "mcaquests.button.project.build_area": "Mostrar área de obra",

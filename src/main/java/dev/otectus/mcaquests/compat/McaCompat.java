@@ -778,6 +778,19 @@ public final class McaCompat {
         }
     }
 
+    /**
+     * Whether MCA still has a village with this id (1.7.0). Empty when MCA could not be asked, which is
+     * never evidence that the village is gone.
+     */
+    public static Optional<Boolean> villageKnown(ServerLevel level, int villageId) {
+        try {
+            return Optional.ofNullable(McaHandles.villageKnown(level, villageId));
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA villageKnown failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
     /** The display name of a village resolved by id. Safe default: {@code empty}. */
     public static Optional<String> villageName(ServerLevel level, int villageId) {
         try {

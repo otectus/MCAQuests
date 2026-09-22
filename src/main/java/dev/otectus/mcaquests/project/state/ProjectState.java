@@ -259,6 +259,22 @@ public final class ProjectState {
         return load(copy);
     }
 
+    /**
+     * A copy of this instance bound to another place (1.7.0): the operator's repair for an instance whose
+     * MCA village was deleted or merged. {@code village} empty makes it anchor-bound at {@code anchor};
+     * present, it belongs to that village. Progress, sponsors, ledgers and owed rewards are carried over.
+     */
+    public ProjectState rebound(String newIdentity, OptionalInt village, BlockPos anchor) {
+        CompoundTag copy = save();
+        copy.putString("identity", newIdentity);
+        copy.remove("village_id");
+        village.ifPresent(id -> copy.putInt("village_id", id));
+        copy.putLong("anchor", anchor.asLong());
+        ProjectState moved = load(copy);
+        moved.bumpRevision();
+        return moved;
+    }
+
     public Set<UUID> sponsors() {
         return sponsors;
     }

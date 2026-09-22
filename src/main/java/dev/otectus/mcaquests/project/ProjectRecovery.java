@@ -50,6 +50,10 @@ public final class ProjectRecovery {
     /** What a preview proposes. */
     public enum Operation {
         SKIP_NO_REWARDS, SKIP_NORMAL_REWARDS, RESET, REBASELINE,
+        /** Detach an instance whose village is gone and bind it to its anchor (1.7.0). */
+        REBIND_ANCHOR,
+        /** Move an instance whose village is gone to the MCA village now at its anchor (1.7.0). */
+        REBIND_VILLAGE,
         /** Every non-terminal instance of one project id, no rewards: the old bare {@code advance}. */
         BULK_SKIP,
         /** Every instance of one project id: the old bare {@code reset}. */
@@ -107,6 +111,11 @@ public final class ProjectRecovery {
                 + "  village " + (state.villageId().isPresent() ? state.villageId().getAsInt() : "none")
                 + "  anchor radius " + ProjectManager.anchorRadius(state)
                 + (state.anchorRadius().isEmpty() ? " (not yet frozen)" : "")));
+        if (ProjectManager.villageGone(server, state)) {
+            out.add(Component.literal("  VILLAGE GONE: MCA no longer has village " + state.villageId().getAsInt()
+                    + " (deleted or merged). The instance is paused, clock included; rebind it with "
+                    + "'... rebind anchor' or '... rebind village'."));
+        }
         out.add(Component.literal("  sponsors " + state.sponsors().size() + "  participants "
                 + state.participants().size() + "  suspended ticks " + state.suspendedTicks()
                 + (state.deferredFollowUps().isEmpty() ? "" : "  deferred follow-ups " + state.deferredFollowUps())));
@@ -205,6 +214,24 @@ public final class ProjectRecovery {
             }
             case RESET -> out.add(Component.literal("  remove this one instance; every other village's copy is untouched. "
                     + "Its progress, deposits and sponsors are discarded; a fresh copy can be started later."));
+            case REBIND_ANCHOR, REBIND_VILLAGE -> {
+                Optional<Rebind> target = rebindTarget(server, state, operation);
+                if (target.isEmpty()) {
+                    out.clear();
+                    out.add(Component.literal(operation == Operation.REBIND_VILLAGE
+                            ? "Refused: no MCA village lies within 64 blocks of the anchor "
+                                    + state.anchorPos().toShortString() + ". Rebind to the anchor instead."
+                            : "Refused: the instance is not bound to a village."));
+                    return out;
+                }
+                out.add(Component.literal("  identity " + state.identity() + " -> " + target.get().identity()
+                        + "  village " + (state.villageId().isPresent() ? state.villageId().getAsInt() : "none")
+                        + " -> " + (target.get().village().isPresent() ? target.get().village().getAsInt()
+                        : "none (anchor radius " + ProjectManager.anchorRadius(state) + " around "
+                        + target.get().anchor().toShortString() + ")")));
+                out.add(Component.literal("  progress, deposits, sponsors, clock and owed rewards move with it; "
+                        + "nothing is paid, reset or re-counted"));
+            }
             case REBASELINE -> {
                 ProjectPhase phase = def.phase(state.currentPhase());
                 if (objectiveIndex < 0 || objectiveIndex >= phase.objectives().size()
@@ -341,6 +368,24 @@ public final class ProjectRecovery {
             case BULK_SKIP, BULK_RESET -> {
                 return Component.literal("Unexpected bulk token.");
             }
+            case REBIND_ANCHOR, REBIND_VILLAGE -> {
+                Optional<Rebind> target = rebindTarget(server, state, pending.operation());
+                if (target.isEmpty()) {
+                    return Component.literal("The rebind target no longer exists. Nothing was changed.");
+                }
+                Optional<ProjectState> moved = data.rebind(state, target.get().identity(), target.get().village(),
+                        target.get().anchor());
+                if (moved.isEmpty()) {
+                    return Component.literal("Another instance already holds " + target.get().identity()
+                            + ". Nothing was changed; instances are never merged.");
+                }
+                server.getPlayerList().getPlayers().forEach(ProjectManager::syncProjects);
+                ProjectMenuSessions.refreshAll(server);
+                McaQuests.LOGGER.info("[MCA: Quests] project repair by {}: {} on {} -> {}", actor,
+                        pending.operation(), pending.instanceKey(), moved.get().key().asString());
+                return Component.literal("Rebound " + pending.instanceKey() + " as "
+                        + moved.get().key().asString() + ".");
+            }
             case REBASELINE -> {
                 if (def == null || state.currentPhase() < 0 || state.currentPhase() >= def.phaseCount()
                         || pending.objectiveIndex() >= def.phase(state.currentPhase()).objectives().size()) {
@@ -361,6 +406,51 @@ public final class ProjectRecovery {
                 actor, pending.operation(), pending.instanceKey(), before, after, pending.objectiveIndex(), pending.value());
         return Component.literal("Applied " + pending.operation().name().toLowerCase(Locale.ROOT) + " to "
                 + pending.instanceKey() + ": " + before + " -> " + after + ".");
+    }
+
+    /** Where a rebind would put an instance. */
+    record Rebind(String identity, java.util.OptionalInt village, net.minecraft.core.BlockPos anchor) {
+    }
+
+    /**
+     * The identity, village and anchor a rebind would give this instance. To its anchor: the instance
+     * becomes anchor-bound where it stands, under an identity that names its old village so it cannot
+     * collide with a sponsor's own anchor project. To a village: the MCA village nearest its anchor, within
+     * 64 blocks, under that village's identity. Empty when there is nothing to rebind to.
+     */
+    static Optional<Rebind> rebindTarget(MinecraftServer server, ProjectState state, Operation operation) {
+        if (state.villageId().isEmpty()) {
+            return Optional.empty();
+        }
+        if (operation == Operation.REBIND_ANCHOR) {
+            return Optional.of(new Rebind("anchor:rebound:" + state.identity(), java.util.OptionalInt.empty(),
+                    state.anchorPos()));
+        }
+        ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, state.anchorDimension()));
+        if (level == null) {
+            return Optional.empty();
+        }
+        java.util.OptionalInt village = McaCompat.findNearestVillageId(level, state.anchorPos(), 64);
+        if (village.isEmpty() || village.getAsInt() == state.villageId().getAsInt()) {
+            return Optional.empty();
+        }
+        net.minecraft.core.BlockPos center = McaCompat.villageCenter(level, village.getAsInt()).orElse(state.anchorPos());
+        Optional<String> profession = professionOf(state.identity());
+        String identity = profession.isPresent()
+                ? dev.otectus.mcaquests.project.scope.ScopeResolver.professionIdentity(village.getAsInt(),
+                state.anchorDimension(), profession.get())
+                : dev.otectus.mcaquests.project.scope.ScopeResolver.villageIdentity(village.getAsInt(), state.anchorDimension());
+        return Optional.of(new Rebind(identity, village, center));
+    }
+
+    /** {@code p:<village>[@<dimension>]:<profession>}; the dimension and the profession both contain colons. */
+    private static final java.util.regex.Pattern PROFESSION_IDENTITY =
+            java.util.regex.Pattern.compile("^p:\\d+(?:@[a-z0-9_.-]+:[a-z0-9_./-]+)?:(.+)$");
+
+    /** The profession of a profession-scope identity, or empty for any other scope. */
+    static Optional<String> professionOf(String identity) {
+        java.util.regex.Matcher matcher = PROFESSION_IDENTITY.matcher(identity);
+        return matcher.matches() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
 
     /** Why a confirmation must be refused before anything is looked up, or empty. Pure. */
