@@ -652,7 +652,9 @@ public final class QuestProgressEvents {
         if (event.getPlayer() instanceof ServerPlayer player) {
             forActiveObjectives(player, BreakBlockObjective.class,
                     (objective, progress) -> {
-                        if (objective.matches(event.getState())) {
+                        // A block the player placed during the objective is not progress (1.7.0).
+                        if (objective.matches(event.getState())
+                                && !BreakBlockObjective.consumePlaced(progress, event.getPos())) {
                             progress.add(1);
                         }
                     });
@@ -1068,10 +1070,20 @@ public final class QuestProgressEvents {
             BlockState placed = event.getPlacedBlock();
             BlockPos pos = event.getPos();
             ServerLevel level = (ServerLevel) player.level();
+            // One credit per position (1.7.0): re-placing a block where one already counted does not count
+            // again. Positions are only recorded while the objective still needs them, so the set is
+            // bounded by the objective's own count.
             forActiveObjectives(player, PlaceBlockObjective.class,
                     (objective, progress) -> {
-                        if (objective.matches(placed)) {
+                        if (objective.matches(placed) && progress.count() < objective.count()
+                                && progress.addVisited(pos)) {
                             progress.add(1);
+                        }
+                    });
+            forActiveObjectives(player, BreakBlockObjective.class,
+                    (objective, progress) -> {
+                        if (objective.matches(placed) && progress.count() < objective.count()) {
+                            BreakBlockObjective.rememberPlaced(progress, pos);
                         }
                     });
             forActiveObjectives(player, BuildNearLocationObjective.class,

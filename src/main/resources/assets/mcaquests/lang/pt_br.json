@@ -235,7 +235,7 @@
   "mcaquests.chain.part_open": "Parte %s",
   "mcaquests.label.profession": "Profissão: %s",
   "mcaquests.label.hearts": "Corações: %s",
-  "mcaquests.reward.failed": "%s não pôde ser concedido; avise um administrador.",
+  "mcaquests.reward.failed": "%s não pôde ser concedido. Ele está reservado para você: avise um administrador, que poderá pagá-lo quando o problema for resolvido.",
   "mcaquests.reward.pending.held": "Uma recompensa não pôde ser entregue e foi guardada para um administrador.",
   "mcaquests.command.project.pending.none": "%s não tem recompensas pendentes.",
   "mcaquests.command.project.pending.header": "%s recompensa(s) pendente(s) de %s:",

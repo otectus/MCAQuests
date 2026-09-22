@@ -235,7 +235,7 @@
   "mcaquests.chain.part_open": "Part %s",
   "mcaquests.label.profession": "Profession: %s",
   "mcaquests.label.hearts": "Hearts: %s",
-  "mcaquests.reward.failed": "%s could not be granted; tell an admin.",
+  "mcaquests.reward.failed": "%s could not be granted. It is being held for you: tell an admin, who can pay it once the problem is fixed.",
   "mcaquests.reward.pending.held": "A reward could not be delivered and has been kept for an admin.",
   "mcaquests.command.project.pending.none": "%s has no pending rewards.",
   "mcaquests.command.project.pending.header": "%s pending reward(s) for %s:",

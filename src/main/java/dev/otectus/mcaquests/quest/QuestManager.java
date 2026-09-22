@@ -72,6 +72,7 @@ import dev.otectus.mcaquests.quest.turnin.GiverPresence;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.CompletionReceiptDurability;
 import dev.otectus.mcaquests.state.OfferSession;
+import dev.otectus.mcaquests.state.HeldQuestReward;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcaquests.state.QuestHistory;
@@ -1057,19 +1058,69 @@ public final class QuestManager {
      * Runs one reward's grant with its failures contained. The objective items are already consumed and
      * {@code rewardClaimed} is already set by the time rewards run, so a reward that throws — an add-on's,
      * most plausibly — used to strand the quest claimed but un-completable. The rest are still paid.
+     *
+     * <p>Since 1.7.0 the failed reward is also <b>held</b> on the player ({@link HeldQuestReward}) rather
+     * than lost, so an operator can pay it once the cause is fixed ({@code /mcaquests rewards retry}). It
+     * is never retried automatically: a reward that threw may already have paid part of itself.
      */
-    private static void grantSafely(ServerPlayer player, QuestReward reward, QuestDefinition def, Runnable grant) {
+    private static void grantSafely(ServerPlayer player, QuestReward reward, QuestDefinition def,
+                                    ActiveQuest active, int rewardIndex, OptionalInt frozen, Runnable grant) {
         try {
             grant.run();
         } catch (Throwable t) {
             McaQuests.LOGGER.error("[MCA: Quests] reward {} of '{}' threw; continuing with the rest",
                     rewardName(reward), def.id(), t);
+            QuestCapabilities.get(player).ifPresent(data -> data.holdReward(new HeldQuestReward(def.id(),
+                    Optional.ofNullable(active.instance()), rewardIndex, rewardName(reward),
+                    DefinitionFingerprint.of(dev.otectus.mcaquests.quest.reward.RewardTypes.CODEC, reward).orElse(""),
+                    frozen, player.level().getGameTime(), String.valueOf(t))));
             // The quest has already been claimed and its delivery items consumed, so the player would
             // otherwise see a turn-in that quietly paid less than it promised. Name the reward: only an
             // admin can fix an add-on's broken grant, and only if someone tells them.
             player.sendSystemMessage(Component.translatable("mcaquests.reward.failed",
                     Component.literal(rewardName(reward))));
         }
+    }
+
+    /**
+     * Pays one held reward again from the current definition (1.7.0), if that reward is still the one
+     * that failed. Returns an operator-facing line saying what happened; the entry is removed only when the
+     * grant ran without throwing.
+     */
+    public static Component retryHeldReward(ServerPlayer player, int heldIndex) {
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null || heldIndex < 0 || heldIndex >= data.heldRewards().size()) {
+            return Component.literal("No held reward #" + (heldIndex + 1) + " for " + player.getScoreboardName() + ".");
+        }
+        HeldQuestReward held = data.heldRewards().get(heldIndex);
+        QuestDefinition def = QuestDefinitions.resolve(held.questId()).orElse(null);
+        if (def == null || held.rewardIndex() >= def.rewards().size()) {
+            return Component.literal("Refused: quest '" + held.questId() + "' or its reward #"
+                    + (held.rewardIndex() + 1) + " is not loaded. Nothing was paid.");
+        }
+        QuestReward reward = def.rewards().get(held.rewardIndex());
+        String now = DefinitionFingerprint.of(dev.otectus.mcaquests.quest.reward.RewardTypes.CODEC, reward).orElse("");
+        if (held.fingerprint().isEmpty() || !held.fingerprint().equals(now)) {
+            return Component.literal("Refused: reward #" + (held.rewardIndex() + 1) + " of '" + held.questId()
+                    + "' has changed since it failed, or cannot be compared. Nothing was paid; dismiss it instead.");
+        }
+        try {
+            if (reward instanceof CurrencyReward currency && held.frozen().isPresent()) {
+                currency.grantAmount(player, held.frozen().getAsInt());
+            } else if (reward instanceof ItemPoolReward pool && held.frozen().isPresent()) {
+                pool.grantChoice(player, pool.clamp(held.frozen().getAsInt()));
+            } else {
+                reward.grant(player, null);
+            }
+        } catch (Throwable t) {
+            McaQuests.LOGGER.error("[MCA: Quests] retried reward {} of '{}' threw again", held.rewardType(),
+                    held.questId(), t);
+            return Component.literal("Reward #" + (held.rewardIndex() + 1) + " of '" + held.questId()
+                    + "' threw again (" + t + "). It stays held.");
+        }
+        data.removeHeldReward(heldIndex);
+        return Component.literal("Paid reward #" + (held.rewardIndex() + 1) + " (" + held.rewardType() + ") of '"
+                + held.questId() + "' to " + player.getScoreboardName() + ".");
     }
 
     /** A reward's registered type id, or its class name when even asking for the id throws. */
@@ -1195,7 +1246,8 @@ public final class QuestManager {
                 // guarded by the rewardClaimed flag above, so a retried turn-in packet pays nothing twice.
                 OptionalInt frozenAmount = active.frozenReward(i);
                 if (frozenAmount.isPresent()) {
-                    grantSafely(player, reward, def, () -> currency.grantAmount(player, frozenAmount.getAsInt()));
+                    grantSafely(player, reward, def, active, i, frozenAmount,
+                            () -> currency.grantAmount(player, frozenAmount.getAsInt()));
                     continue;
                 }
             }
@@ -1205,7 +1257,7 @@ public final class QuestManager {
                 OptionalInt frozenChoice = active.frozenReward(i);
                 int choice = pool.clamp(frozenChoice.isPresent() ? frozenChoice.getAsInt()
                         : pool.pick(player.getRandom()));
-                grantSafely(player, reward, def, () -> pool.grantChoice(player, choice));
+                grantSafely(player, reward, def, active, i, OptionalInt.of(choice), () -> pool.grantChoice(player, choice));
                 continue;
             }
             if (active.isInstitutional() && reward instanceof ItemReward item) {
@@ -1220,11 +1272,14 @@ public final class QuestManager {
             if (reward instanceof FactionStandingReward faction) {
                 continue; // granted durably before delivery consumption; see grantFactionRewards
             }
-            grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
+            grantSafely(player, reward, def, active, i, OptionalInt.empty(),
+                    () -> reward.grant(player, grantVillager, context));
         }
-        for (QuestReward reward : def.rewards()) {
+        for (int i = 0; i < rewards.size(); i++) {
+            QuestReward reward = rewards.get(i);
             if (reward instanceof HeartsReward) {
-                grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
+                grantSafely(player, reward, def, active, i, OptionalInt.empty(),
+                        () -> reward.grant(player, grantVillager, context));
             }
         }
         grantQuestReputation(player, grantVillager, def, active, "complete");
