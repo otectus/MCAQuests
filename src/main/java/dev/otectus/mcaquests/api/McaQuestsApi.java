@@ -11,9 +11,14 @@ import dev.otectus.mcaquests.quest.objective.QuestObjectiveType;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.quest.reward.QuestRewardType;
 import dev.otectus.mcaquests.quest.reward.RewardTypes;
+import dev.otectus.mcaquests.state.CompletionReceiptDurability;
+import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Public registration API for MCA: Quests add-ons (spec section 28).
@@ -51,5 +56,67 @@ public final class McaQuestsApi {
      */
     public static void notifyVillagerConversation(ServerPlayer player, Entity villager) {
         QuestEventHandlers.creditConversation(player, villager);
+    }
+
+    /**
+     * Returns up to {@code limit} oldest durable completion receipts this loaded player has not yet
+     * delivered to {@code consumerId}. Reads never scan offline player files. A consumer must durably
+     * accept a receipt under {@link QuestCompletionReceipt#receiptId()} before acknowledging it here.
+     *
+     * <p>The call opportunistically retries the provider's player-file durability fence for a completion
+     * whose first save failed. This call also subscribes the consumer for future completions; receipts
+     * freeze the consumers active at completion, so a later installation cannot claim older quest work.
+     * Polling renews a short lease. If every consumer stops polling, normal quest completion stops
+     * producing receipts and cannot be blocked by an unused outbox. Limits are 1..64. Call on the
+     * logical server thread.
+     */
+    public static List<QuestCompletionReceipt> readCompletionReceipts(ServerPlayer player,
+                                                                      ResourceLocation consumerId,
+                                                                      int limit) {
+        if (player == null || consumerId == null) throw new NullPointerException("player and consumerId");
+        if (limit < 1 || limit > 64) throw new IllegalArgumentException("limit must be between 1 and 64");
+        return QuestCapabilities.get(player).map(data -> {
+            CompletionReceiptDurability.flushPending(player, data);
+            return data.readCompletionReceipts(consumerId, limit, player.serverLevel().getGameTime());
+        }).orElseGet(List::of);
+    }
+
+    /**
+     * Durably acknowledges one receipt after {@code consumerId} has durably accepted it. The exact
+     * provider epoch and receipt id prevent an acknowledgement from crossing a restored/replaced source.
+     * Returns false for an unknown receipt, an epoch mismatch, an unavailable capability, or when the
+     * acknowledgement could not be confirmed in the on-disk player NBT. Retrying is safe.
+     * Fully acknowledged receipts may be retired early under capacity pressure; a bounded 512-entry
+     * tombstone window keeps those acknowledgement retries idempotent until their original retention
+     * deadline (oldest tombstones are reclaimed first if that separate bound is reached).
+     */
+    public static boolean acknowledgeCompletionReceipt(ServerPlayer player, ResourceLocation consumerId,
+                                                        UUID providerEpoch, UUID receiptId) {
+        if (player == null || consumerId == null || providerEpoch == null || receiptId == null) {
+            throw new NullPointerException("completion receipt acknowledgement argument");
+        }
+        return QuestCapabilities.get(player).map(data -> {
+            boolean alreadyAcknowledged = data.completionReceiptWasAcknowledged(consumerId, receiptId);
+            if (!data.acknowledgeCompletionReceipt(consumerId, providerEpoch, receiptId)) return false;
+            if (alreadyAcknowledged) return true;
+            CompletionReceiptDurability.ResourceLocationAck key =
+                    new CompletionReceiptDurability.ResourceLocationAck(consumerId, providerEpoch, receiptId);
+            if (CompletionReceiptDurability.flushAcknowledgement(player, key)) return true;
+            data.rollbackCompletionReceiptAcknowledgement(consumerId, receiptId, false);
+            return false;
+        }).orElse(false);
+    }
+
+    /**
+     * Human-readable provider health for diagnostics: {@code ready}, {@code pending_save}, {@code full},
+     * {@code corrupt}, {@code future_schema:N}, or {@code unavailable}. This call also retries a pending
+     * save fence and never scans offline data.
+     */
+    public static String completionReceiptStatus(ServerPlayer player) {
+        if (player == null) throw new NullPointerException("player");
+        return QuestCapabilities.get(player).map(data -> {
+            CompletionReceiptDurability.flushPending(player, data);
+            return data.completionReceiptStatus();
+        }).orElse("unavailable");
     }
 }

@@ -4,11 +4,13 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
 import dev.otectus.mcaquests.api.ExternalSignalObjective;
+import dev.otectus.mcaquests.api.QuestCompletionReceipt;
 import dev.otectus.mcaquests.api.QuestDialogueHooks;
 import dev.otectus.mcaquests.api.event.QuestAbandonedEvent;
 import dev.otectus.mcaquests.api.event.QuestAcceptedEvent;
 import dev.otectus.mcaquests.api.event.QuestDeclinedEvent;
 import dev.otectus.mcaquests.api.event.QuestCompletedEvent;
+import dev.otectus.mcaquests.api.event.QuestCompletionReceiptReadyEvent;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.api.event.QuestReadyEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -64,6 +66,7 @@ import dev.otectus.mcaquests.quest.template.TemplateSpec;
 import dev.otectus.mcaquests.quest.escort.EscortHoldRegistry;
 import dev.otectus.mcaquests.quest.turnin.GiverPresence;
 import dev.otectus.mcaquests.state.ActiveQuest;
+import dev.otectus.mcaquests.state.CompletionReceiptDurability;
 import dev.otectus.mcaquests.state.OfferSession;
 import dev.otectus.mcaquests.state.HeldQuestReward;
 import dev.otectus.mcaquests.state.PlayerQuestData;
@@ -1110,6 +1113,17 @@ public final class QuestManager {
                 && !townsteadRewardsCanApply(player, def, grantVillager)) {
             return false;
         }
+        long now = ((ServerLevel) player.level()).getGameTime();
+        // A polling add-on opts this player into receipts. Standalone MCA: Quests never accumulates an
+        // outbox merely because a possible future consumer could be installed. Once subscribed, refuse
+        // before delivery or rewards rather than evict evidence its frozen consumer cohort has not acked.
+        boolean captureCompletionReceipt = data.shouldCaptureCompletionReceipt(now);
+        if (captureCompletionReceipt && !data.canCaptureCompletionReceipt(now)) {
+            McaQuests.LOGGER.error("[MCA: Quests] Refusing completion of '{}' for {}: completion receipt "
+                    + "outbox status is {}", def.id(), player.getUUID(), data.completionReceiptStatus());
+            player.sendSystemMessage(Component.translatable("mcaquests.message.completion_receipts_unavailable"));
+            return false;
+        }
         // A delivery with nowhere to go always blocks, whatever the reward policy says: consuming the
         // goods into a villager who cannot hold them would take them off the player for nothing.
         DeliveryService.TurnInPlan deliveries = prepareDeliveries(player, def, active, grantVillager);
@@ -1172,7 +1186,6 @@ public final class QuestManager {
         grantQuestReputation(player, grantVillager, def, active, "complete");
         TownsteadLifecycle.dispatch(player, active, grantVillager, TownsteadLifecycle.Phase.COMPLETED);
 
-        long now = ((ServerLevel) player.level()).getGameTime();
         data.history().recordCompletion(def.id(), active.villagerUuid());
         switch (def.repeat().type()) {
             case COOLDOWN -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), now + def.cooldownTicks());
@@ -1191,6 +1204,15 @@ public final class QuestManager {
         }
         releaseEscortMovement(player, def, active);
         data.remove(active);
+        // Capture only after the authoritative history/cooldown transition and active removal. The API
+        // hides this object until the complete player snapshot is reread from the on-disk .dat file.
+        if (captureCompletionReceipt) {
+            QuestCompletionReceipt completionReceipt =
+                    data.captureCompletionReceipt(player.getUUID(), active, now);
+            if (CompletionReceiptDurability.flushPending(player, data)) {
+                NeoForge.EVENT_BUS.post(new QuestCompletionReceiptReadyEvent(player, completionReceipt));
+            }
+        }
         NeoForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             PlaceholderResolver resolver = active.textResolver(player);

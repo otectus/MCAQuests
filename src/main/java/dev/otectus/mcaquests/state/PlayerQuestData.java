@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.state;
 
+import dev.otectus.mcaquests.api.QuestCompletionReceipt;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -27,8 +28,70 @@ public final class PlayerQuestData implements INBTSerializable<CompoundTag> {
     private final ProgressionStats stats = new ProgressionStats();
     private final OfferSessions offers = new OfferSessions();
     private final PendingItemRewards pendingItems = new PendingItemRewards();
+    private final CompletionReceiptOutbox completionReceipts = new CompletionReceiptOutbox();
 
     public PendingItemRewards pendingItems() { return pendingItems; }
+
+    /** Internal completion pipeline hook. Add-ons read the immutable API through {@code McaQuestsApi}. */
+    public boolean canCaptureCompletionReceipt(long now) {
+        return completionReceipts.canAppend(now);
+    }
+
+    /** True only while at least one add-on is actively polling for future completion evidence. */
+    public boolean shouldCaptureCompletionReceipt(long now) {
+        return completionReceipts.shouldCapture(now);
+    }
+
+    /** True only while this exact consumer will be frozen into a newly appended receipt's cohort. */
+    public boolean hasActiveCompletionReceiptConsumer(ResourceLocation consumer, long now) {
+        return completionReceipts.hasActiveConsumer(consumer, now);
+    }
+
+    /** Internal completion pipeline hook; the returned receipt is hidden until marked durable. */
+    public QuestCompletionReceipt captureCompletionReceipt(UUID playerId, ActiveQuest active, long now) {
+        return completionReceipts.append(playerId, active, now);
+    }
+
+    public List<QuestCompletionReceipt> readCompletionReceipts(ResourceLocation consumer, int limit, long now) {
+        return completionReceipts.read(consumer, limit, now);
+    }
+
+    public boolean acknowledgeCompletionReceipt(ResourceLocation consumer, UUID epoch, UUID receiptId) {
+        return completionReceipts.acknowledge(consumer, epoch, receiptId);
+    }
+
+    public boolean completionReceiptWasAcknowledged(ResourceLocation consumer, UUID receiptId) {
+        return completionReceipts.wasAcknowledged(consumer, receiptId);
+    }
+
+    public void rollbackCompletionReceiptAcknowledgement(ResourceLocation consumer, UUID receiptId,
+                                                          boolean previouslyAcknowledged) {
+        completionReceipts.rollbackAcknowledgement(consumer, receiptId, previouslyAcknowledged);
+    }
+
+    public boolean completionReceiptAcknowledged(ResourceLocation consumer, UUID epoch, UUID receiptId) {
+        return completionReceipts.isAcknowledged(consumer, epoch, receiptId);
+    }
+
+    public void markCompletionReceiptDurable(UUID receiptId) {
+        completionReceipts.markDurable(receiptId);
+    }
+
+    public Optional<QuestCompletionReceipt> completionReceipt(UUID receiptId) {
+        return completionReceipts.receipt(receiptId);
+    }
+
+    public boolean completionReceiptDurable(UUID receiptId) {
+        return completionReceipts.isDurable(receiptId);
+    }
+
+    public List<QuestCompletionReceipt> pendingCompletionReceiptDurability() {
+        return completionReceipts.pendingDurability();
+    }
+
+    public String completionReceiptStatus() {
+        return completionReceipts.status();
+    }
 
     /** The quest the marker, the guidance line and the villager outline are all about. */
     private TrackedQuest tracked;
@@ -204,6 +267,7 @@ public final class PlayerQuestData implements INBTSerializable<CompoundTag> {
         tag.put("stats", stats.save());
         tag.put("offers", offers.save());
         if (!pendingItems.isEmpty()) { tag.put("pending_items", pendingItems.save()); }
+        if (completionReceipts.shouldSave()) { tag.put("completion_receipts", completionReceipts.save()); }
         if (!heldRewards.isEmpty()) {
             ListTag held = new ListTag();
             heldRewards.forEach(entry -> held.add(entry.save()));
@@ -236,6 +300,7 @@ public final class PlayerQuestData implements INBTSerializable<CompoundTag> {
         stats.load(tag.getCompound("stats")); // absent on pre-1.0.0 saves -> empty
         offers.load(tag.getCompound("offers")); // absent on pre-1.4.3 saves -> empty, so offers redraw
         pendingItems.load(tag.getCompound("pending_items"));
+        completionReceipts.load(tag.getCompound("completion_receipts"));
         heldRewards.clear();
         ListTag held = tag.getList("held_rewards", Tag.TAG_COMPOUND); // absent before 1.7.0 -> none held
         for (int i = 0; i < held.size(); i++) {

@@ -3,6 +3,9 @@
   "minVersion": "0.8.5",
   "package": "dev.otectus.mcaquests.mixin",
   "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "PlayerListAccessor"
+  ],
   "client": [
     "MinecraftGlowMixin",
     "ScreenAccessor"

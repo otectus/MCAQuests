@@ -234,6 +234,7 @@
   "mcaquests.message.giver_died": "A villager who gave you a quest has died.",
   "mcaquests.message.quest_accepted": "Quest accepted: %s",
   "mcaquests.message.quest_completed": "Quest complete: %s",
+  "mcaquests.message.completion_receipts_unavailable": "Quest completion is temporarily unavailable. Ask a server operator to check MCA: Quests receipt storage.",
   "mcaquests.message.quest_failed": "Quest failed: %s",
   "mcaquests.chain.part": "Part %s of %s",
   "mcaquests.chain.part_open": "Part %s",
