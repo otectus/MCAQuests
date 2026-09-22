@@ -4,12 +4,19 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.6] - Unreleased
+## [1.6.6] - 2026-09-22
 
 Adoption of **MCA: Reputation 0.6.0**. Standing was already delegated to that mod when it is
 installed; what is new is that a village can now say *what you are known for*, and a quest can ask.
 Alongside that, three defects in the 1.6.5 translation layer are fixed — one of them silently made
 every unpriced deed worth nothing.
+
+It is also the **community-feedback reliability update**. Talking to villagers did not count on a plain
+MCA install; Townstead projects were offered on installations without Townstead; a wall built around a
+village counted for nothing; an inn built for *Known Far and Wide* was asked for twice; and nothing in
+the game said what "train three villagers to level 2" meant — which, on some server starts, could not be
+done at all — or how to recover one stuck project without touching every other village's. Each cause is fixed where it starts, every project objective now explains
+itself from the same rules that grant its credit, and one instance can be repaired on its own.
 
 ### Fixed — the reputation translation layer
 
@@ -37,6 +44,121 @@ every unpriced deed worth nothing.
   cannot atone for a different deed than the reward was granted for, and a replay answers from the
   receipt instead of ratcheting the same record twice. A repeatable quest accepted again is a new copy,
   so it may still atone for the next deed.
+
+### Fixed — conversations with MCA villagers (talk objectives)
+
+- **A conversation with an MCA villager now counts on a plain MCA install.** Talk objectives were
+  credited from NeoForge's `PlayerInteractEvent.EntityInteract`. MCA 7.7.36 opens its dialogue from
+  `interactAt` and answers `SUCCESS`, and a client that gets a consuming answer there never sends the
+  second packet `EntityInteract` is fired for — so an ordinary conversation never reached the hook, and
+  only MCA: Conversations' API report ever credited one. This is why *The Missing Mile* did not count the
+  cartographer and *Library Restoration* did not count its librarians.
+- The hook fired on **sneak**-clicks instead — which open MCA's trading screen — so a trade counted as a
+  conversation. It no longer does.
+- Credit now comes from MCA itself: a new observe-only mixin reports when MCA's
+  `EntityCommandHandler.interactAt` opens its dialogue for a player on the server, whichever of MCA's entry
+  points called it. A held item no longer disqualifies a real conversation — MCA decides which items open
+  one — while trading, the editor book and inventory access are not conversations. When no variant of the
+  hook can apply to an MCA build, NeoForge's interaction events are the fallback, now listening to both
+  `EntityInteractSpecific` and `EntityInteract` and counting only an empty-handed, non-sneaking, main-hand,
+  non-cancelled click.
+- Every route — the dialogue hook, `McaQuestsApi.notifyVillagerConversation` and the fallback — goes
+  through one service (`ConversationCredit`) that re-checks the villager is a live MCA villager in the
+  player's level and reach, and drops the same player and villager reported again within a tick.
+  Distinct-villager counting is unchanged, so a villager counts once per objective however many routes
+  report them.
+- **Project talk counts residents of the project's village wherever you meet them**, and anyone else
+  within MCA's villager margin (48 blocks) of it. Before, the villager had to be standing inside the box of
+  the village's registered buildings at that moment, so a librarian out in the fields did not count.
+
+### Fixed — optional-mod content on installations without the mod
+
+- **A Townstead project was offered on an installation without Townstead.** Personal Townstead quests
+  were gated by their `townstead_available` conditions, but projects only by the config toggles, so a
+  project whose first phase is an ordinary donation — *A Working Village*, *Known Far and Wide* and nine
+  others — appeared on a base install and then stalled on its Townstead phase. Every definition that needs
+  Townstead or MCA Capitals is now **left out of the registries** when the mod is absent, or installed
+  without the capability the definition reads; see *Added — the optional-dependency contract*. On a base
+  install that is 73 quests, 11 projects and 14 situations, none of which is offered, assigned, seeded or
+  opened.
+- A **pending project reward** whose project was not loaded failed its delivery on each login and was
+  **held for an operator after three**, even when the project was missing only because its mod had been
+  removed. It now waits instead, without spending its retries, and pays once when the mod returns.
+- A finished project's **follow-up** whose own mod was missing was silently dropped. It is now kept on
+  the finished instance and seeded on a later sweep once it loads.
+- A situation whose definition was left out for a missing mod ran out its deadline and failed. It is
+  paused, as a Capitals situation already was.
+- A quest the loader left out shows in the log under its own title, paused and naming the mod it needs,
+  instead of as an unknown quest, and its clock is stopped.
+
+### Fixed — Townstead project objectives
+
+- **Spirit baselines were taken on the first sweep after a phase opened, not when it opened.** Spirit
+  earned in between became part of the starting value and was asked for a second time. The reading is now
+  taken as the phase opens — for a new instance, a phase advance, a seeded follow-up and an operator repair
+  alike (`ProjectPhases`). A reading that cannot be taken is recorded as pending and the phase pauses,
+  deadline included, until it can; missing data is never read as zero. Baseline, current reading,
+  required growth and credited progress are kept apart, and credited progress still never goes backwards.
+- **`townstead_building_project` counted incomplete buildings, read a failed lookup as zero, and re-synced
+  every player on every sweep** once a village had more of a building than asked for (it compared the raw
+  count with the stored, clamped one). It now counts only buildings MCA considers complete — the rule
+  Townstead's spirit uses, so the building and spirit objectives of one phase agree about one inn — leaves
+  progress alone when the village cannot be read, and reports a change only when the clamped count
+  changes.
+- **`townstead_workforce_project`'s documentation promised that any trade with a real progression track
+  would count; the code counted only the listed trades.** The two are now separate, explicit choices
+  (`profession_policy`, below). No existing list was broadened.
+- Spirit points are named by **Townstead's own terms** — *Tourism*, *Commercial* — in objective text.
+  "Earn the village 2 welcoming points" named nothing a player could find in Townstead's screens; the
+  descriptive words ("welcoming", "mercantile") remain in flavour text and appear in the help as a gloss.
+
+### Fixed — Townstead profession tracks and skills (binding)
+
+- **On some server starts every Townstead profession track read as "no progression"**, so *A Working
+  Village*, *The Apprentices' Guild* and *Pastures and Wool* could never count a resident toward their
+  workforce phases, and the profession-advance quests *The Long Harvest*, *The Winter Cure* and *The Whole
+  Flock* were withheld as unfinishable. Townstead declares `ProfessionProgressions.spec` twice with one
+  argument — a profession id, or its own enum — and the reflective binding matched Townstead methods by
+  name and arity alone, taking whichever overload `getMethods()` listed first. That order is not fixed:
+  the Forge 1.20.1 test server bound the enum overload on every start the runtime fixture recorded, and
+  the NeoForge 1.21.1 one bound the enum overload on one start and the id overload on the next. Bound to
+  the enum, every lookup failed its cast and read as an empty track. With the fix
+  the farmer, butcher, shepherd and cook read Townstead's real five-tier tracks on every start, and the
+  fisherman, which Townstead gives no progression, still reads none.
+- The same coin flip decided Townstead's skill methods — `has`, `learn`, `forceLearn`, `forget` and
+  `learned`, each overloaded on a villager entity or a UUID — so skill objectives, conditions and rewards
+  could fail on the same starts, and profession XP awarded to a data-driven Townstead trade read its cap
+  and ceiling from the empty track.
+- Each overloaded member now names its first parameter's JDK or Minecraft type, compared by name so no
+  Townstead or MCA type is linked, and a member that still matches more than one method is left unbound
+  rather than guessed, so the probe test and `/mcaquests compat townstead status` name it. The MCA and
+  Bountiful bindings refuse an ambiguous match the same way (Capitals already did); neither has one
+  today.
+
+### Fixed — building and fighting at the edge of a village
+
+- **A wall around a village counted for nothing.** Project placement and kill credit asked MCA whether a
+  position was inside the village with a margin of **zero** — the box spanned by the village's registered
+  buildings — and a defensive wall lies outside that box by construction, while nothing told a player
+  where the box was. The new `border_margin` field widens it for one objective, the bundled wall, road and
+  defence projects use `32` (MCA's own player-in-village margin), and **Show build area** draws it.
+- A village-less (anchor) project was created with its definition's `fallback_radius`, but every credit
+  check used the global `defaultScopeFallbackRadius`. The radius is now frozen on the instance when it
+  starts; an instance from before 1.6.6 keeps the global value it was actually tested against.
+- **Village ids are numbered per dimension, but project keys were not**, so a Nether village 3 and an
+  Overworld village 3 shared one key, and a Nether sponsor's donations landed in the Overworld village's
+  project. Non-Overworld village and profession identities are now dimension-qualified
+  (`v:3@minecraft:the_nether`); Overworld keys are unchanged. Existing instances are re-keyed on load with
+  the rewards they owe; nothing is merged.
+
+### Fixed — other
+
+- The MCA mixin plugin's after-apply check recognised only an undecorated `mcaquests$` callback, but Mixin
+  merges injector handlers as `handler$<id>$mcaquests$…`, so a hook that had applied, and was firing,
+  could be reported as broken. It now accepts both shapes, for the Gift hook and the new dialogue hook
+  alike.
+- `mcaquests:record_incident` rewards (MCA: Reputation) showed their raw translation key on reward lines:
+  `mcaquests.reward.record_incident` was missing from both locales.
 
 ### Added — typed delivery and capability negotiation
 
@@ -87,6 +209,151 @@ every unpriced deed worth nothing.
   ordinary job a total stranger can take, and `the_careful_commission`, which the giver offers only to
   someone whose finished work *they themselves* have seen twice.
 
+### Added — the optional-dependency contract
+
+- **`IntegrationRequirements`** works out what a quest, project or situation cannot be played without,
+  from its typed content: objectives that read Townstead (in **any** project phase), locations anchored on
+  a Townstead building, `capital_role` targets, Capitals rewards, and conditions — top-level, phase
+  `unlock`, `all_of` — that ask either mod something. An `any_of` needs only what every branch needs, `not`
+  of a Townstead gate is an absent-mod gate rather than a requirement, and Townstead rewards are optional
+  side effects that never make a core quest unavailable. Integrations combine with AND. The Capitals rules
+  are the ones `CapitalsQuestRequirements` shipped in 1.6.0, moved rather than rewritten; that class now
+  delegates to them.
+- The quest, project and situation loaders apply it after parsing and before validation. Exclusion is a
+  supported outcome, not an error, under `strictJsonValidation` too; malformed content still fails. Chain
+  `unlocks`/`prerequisites` and project `follow_up`/`unlock` links into excluded content are not reported
+  as dangling. Datapack precedence is unchanged: the file that wins the merge is the one judged, so a
+  core-only override of a Townstead file loads and one that still uses Townstead is still gated.
+- **`UnavailableContent`** keeps an inert descriptor — id, kind, missing mod and capabilities, source pack,
+  title — for each excluded definition, used only by paused records and diagnostics. One INFO line per
+  kind summarises the exclusions per mod at load, `/mcaquests validate` repeats it, and
+  `/mcaquests project debug` says why an excluded project is not loaded.
+- The project sponsor gate asks the same question, so a project cannot be offered after a `/reload`
+  withdraws what it needs (Capitals' `enabled` switch, for instance).
+
+### Added — every project objective explains itself
+
+- Each project objective row carries a **state** — done, in progress, blocked, paused, not observed yet —
+  shown as a glyph and a word, never by colour alone, in the project screen and the quest log.
+- A **Details** button on each project card expands help built from the same rules that grant credit:
+  what counts, where, the next useful action, and why it is stuck. For a workforce objective: the village,
+  the Townstead profession tier and its name, the eligible trades, how many residents were loaded,
+  qualified and below the tier, and how Townstead awards profession XP. For a spirit objective: the
+  metric, the rule, the starting value, the current value and the growth so far, and which buildings raise
+  it, read from Townstead's own building data. For a building objective: complete and incomplete counts,
+  what MCA requires in a building of that type, from MCA's own building data, and how to register one. For
+  place, kill and talk objectives: what counts and where.
+- **Show build area** on a card whose phase has positional work outlines in the world the exact area the
+  server credits — the village's building box plus the objective's margin, or an anchor radius — for
+  `client.showBuildAreaSeconds`, and prints the village, dimension, allowance and what counts there. While
+  it is shown a HUD line says whether the block you are looking at is inside, and how far outside. On an
+  MCA build that does not expose the box the outline is labelled approximate; credit is still exact. No
+  map mod is needed.
+- A placement that **could** have counted but did not says why on the action bar, at most once every two
+  seconds: outside the build area (and by how much), already counted, your share reached, it belongs to
+  another phase, or the project is in another dimension. Unrelated placements say nothing.
+- **Open project menus refresh** when progress is made elsewhere — another player's blocks, a building
+  registered, a phase advanced by the sweep, an operator repair — instead of showing the old numbers until
+  reopened. Refreshes are coalesced to one per ten ticks, and the client keeps a newer card over an older
+  one for the same instance.
+- Projects a player is part of whose definition is not loaded stay in the quest log and HUD tracker,
+  paused, with the reason.
+
+### Added — instance-targeted diagnostics and recovery
+
+- `/mcaquests project instances <id>` (level 2) lists every instance of a project, numbered, with its
+  village, dimension, phase and revision.
+- `/mcaquests project instance <id> <n> info` (level 2) diagnoses one instance: key, dimension, anchor,
+  frozen radius, build area, dependencies, project-start spirit reading, and per objective its type,
+  progress, target, evidence, baseline and where it came from, and state. Read-only; it names no player.
+- `/mcaquests project instance <id> <n> recheck` (level 2) runs exactly the periodic sweep for that one
+  instance and refreshes open menus. It settles a phase only if it is genuinely satisfied, and resets,
+  moves or pays nothing else.
+- `/mcaquests project instance <id> <n> skip [normal_rewards]`, `... reset` and
+  `... rebaseline <objective> <value>` (level 3) **preview** a repair — the exact instance, phase, revision
+  and effects — and issue a token; `/mcaquests project confirm <token>` (level 3) applies it. A token is
+  single-use, belongs to the operator who previewed it, expires after a minute and is refused if the
+  instance has changed since, and every applied repair is logged with the actor, the instance and its
+  before and after state. A skip without `normal_rewards` settles the phase without payout — a skip is not
+  proof the work happened — and with it pays the phase's rewards once through the normal, idempotent
+  settlement; earned and queued rewards are never touched. The next phase takes its baselines as usual,
+  and a finished project's follow-up is seeded.
+- `/mcaquests debug mca` reports which conversation route is live — MCA's dialogue hook or the fallback —
+  and what became of each hook variant.
+
+### Added — datapack fields
+
+- `talk_to_profession`: optional **`at_location_of`** (objective index). Only villagers at that sibling
+  objective's frozen destination count, and the guidance marker uses the same test. An index that does
+  not name a `reach_location`, `escort_entity`, `build_near_location` or `defend_location` objective is a
+  load error under `strictJsonValidation`, and otherwise skips the quest at load with a warning. See
+  DATAPACK.md.
+- `project_place_block` and `project_kill_entity`: optional **`border_margin`** (0–64, default `0`).
+- `townstead_spirit_project`: optional **`baseline`**, `"phase"` (default, the pre-1.6.6 rule with its
+  timing fixed) or `"project"` — growth since the project began, from a reading every new instance takes
+  when it starts.
+- `townstead_workforce_project`: optional **`profession_policy`**, `"listed"` (default, the pre-1.6.6 rule)
+  or `"any_progressive"`.
+
+### Added — config
+
+- `client.showBuildAreaSeconds` (default `60`, 0–600): how long Show build area outlines a project's build
+  area; `0` describes it in chat without the outline. See CONFIG.md.
+
+### Added — translation keys (en_us and pt_br)
+
+- Objectives: `mcaquests.objective.talk_to_profession_there`,
+  `mcaquests.project.objective.townstead_spirit_points_since_phase` / `_since_start` and
+  `mcaquests.project.objective.townstead_workforce_tier` (the last takes Townstead's own tier name,
+  `townstead.profession.level.<n>`). The older `townstead_spirit_points` and `townstead_workforce` project
+  keys are no longer used by the bundled objectives.
+- Objective states: `mcaquests.project.status.{satisfied,in_progress,blocked,unavailable,unobserved}`.
+- Help: `mcaquests.project.help.*` — `this_village`, `area.{village,anchor}`, `place.{counts,rule}`,
+  `kill.counts`, `talk.{counts,where,how}`, `building.{rule,seen,incomplete,unreadable,requires,requirement,register}`,
+  `spirit.{metric,metric_total,tier,rule_phase,rule_project,values,pending,unreadable,legacy,sources,source,sources_unknown}`
+  and `workforce.{rule,not_vanilla,listed,any,observed,trades_seen,no_track,not_observed,how,assign}`.
+- Build area: `mcaquests.project.buildarea.{summary,summary_approximate,summary_anchor,counts,place,kill,inside,inside_approximate,outside,look}`
+  and placement feedback `mcaquests.project.place.{outside,already_counted,limit,dimension,not_this_phase,phase_later,phase_done}`.
+- Buttons and tooltips: `mcaquests.button.project.{details,hide_details,build_area}`,
+  `mcaquests.tooltip.project.{details,build_area}`.
+- `mcaquests.reward.record_incident`, which 1.6.6's MCA: Reputation work referenced without defining.
+
+### Changed — bundled content
+
+- **The Missing Mile** talks to the cartographer **of the village you travel to** (`at_location_of: 0`),
+  as its dialogue always said; the giver's own cartographer no longer satisfies it.
+- **Known Far and Wide** measures spirit from the project's start: phase 2 wants an inn and Tourism +2
+  since the project began, phase 3 a music store and Commercial **+10** since it began (the inn's 5 and the
+  music store's 5; it was +5 within the phase). An inn built during the welcome fund now counts for both
+  phases. An instance already under way keeps its phase rule and its old numbers.
+- **A Working Village** and **The Apprentices' Guild** count any trade whose Townstead progression reaches
+  the tier (`profession_policy: "any_progressive"`); the listed trades become examples.
+- **Walls before Winter**, **Rebuild the Walls**, **Roads and Lanterns**, **Muster the Militia** and
+  **After-Raid Recovery** give their placement and kill objectives a 32-block `border_margin`.
+- Objective wording: the workforce objective reads "Have 3 residents reach Townstead profession tier 2
+  (Apprentice)", spirit objectives name Townstead's metric and whether growth is measured from the phase or
+  the project, and a destination-bound talk objective says "there".
+
+### Changed — commands
+
+- `/mcaquests project advance <id>` and `reset <id>` act only when **exactly one** instance matches; with
+  more, they refuse and list the instances. `advance <id> all` and `reset <id> all` preview the bulk
+  operation and need a confirmation token. `advance` now goes through the same path as a repair: no
+  rewards, the next phase's baselines taken, and a finished project marked complete without payout.
+
+### Migration
+
+- **Saved project instances:** a pre-1.6.6 instance outside the Overworld is re-keyed with its dimension
+  on load, and every owed reward naming its old key follows it, instance snapshot included. Nothing is
+  merged; a key already taken leaves the instance as it was, with a warning. An instance without a frozen
+  anchor radius gets the global radius it was being tested against on its first sweep.
+- **Spirit objectives in instances from before 1.6.6** have no project-start reading, so a `"project"`
+  objective in one measures from its phase, as it did when the instance was started, and keeps its old
+  number where 1.6.6 changed it (Known Far and Wide phase 3: +5), recorded in `BundledProjectMigrations`.
+  No starting value is invented; `instance ... rebaseline` sets one explicitly. A phase entered by an
+  older version that had not yet taken its reading takes it on its first sweep, labelled as such.
+- **Records whose definition is now excluded** keep every field; nothing is deleted to empty a registry.
+
 ### Platform — NeoForge 1.21.1
 
 - **Fixed: the MCA: Reputation integration was disabled on this loader.** `ReputationBridge`
@@ -125,9 +392,88 @@ every unpriced deed worth nothing.
   `ReputationProfileMatch` and `ReputationFeatures`; `QuestReputation.deliver(...)`,
   `matchesProfile(...)` and `supportsFeature(...)`; `ReputationDedupe.incidentResolution(...)`;
   `ReputationAward.deltaOrZero()` and `isNoOp()`.
-- No packet changed, so `QuestNetwork.PROTOCOL_VERSION` does not move.
+- **Network protocol 17 → 18.** `ProjectObjectiveLine` carries a state and expanded help,
+  `ProjectCard` names its live instance, revision and whether it has a build area, `ProjectLogEntry` names
+  its instance and why it is paused, and `ProjectScopeRequestC2SPacket` / `ProjectScopeS2CPacket` are new.
+  A 1.6.5 client would decode each of these as the old shape, so client and server must match.
+- **New mixins: four variants of an observe-only hook on MCA's `EntityCommandHandler.interactAt`**, one per
+  MCA package root, in `mcaquests.mca.mixins.json` (`required: false`, plugin-gated like the Gift hook,
+  which picks the variant whose root is present and verifies the exact descriptor). It injects at `RETURN`,
+  never cancels and never changes the return value, so MCA and any other mod hooking the same method behave
+  exactly as without it; it passes `this` as `Object` and links no MCA type. It was needed because MCA's
+  dialogue does not reliably produce the NeoForge event talk objectives used to rely on (see *Fixed —
+  conversations*).
+- **Behaviour visible to datapack authors:** a definition that needs Townstead or MCA Capitals — however
+  it is named and wherever it lives, including one that needs it only in a later project phase or for a
+  Capitals reward — is not loaded without the mod; `talk_to_profession` now counts conversations held with
+  an item in hand and no longer counts sneak-clicks; `townstead_building_project` counts only complete
+  buildings; spirit readings are taken when a phase opens rather than on its first sweep, which can make a
+  `points_delta` objective easier than before, never harder; `project_talk_to_profession` counts a
+  resident of the project's village wherever they are, which matches more often; the default
+  `border_margin` of `0` keeps every existing placement and kill objective exactly as strict as it was.
+- **Add-ons: source-compatible additions.** `ProjectObjective` gained defaulted `requiredFor`, `explain`
+  and `status`; `PollingProjectObjective` gained defaulted `onPhaseEntered`, `isPending` and
+  `resolvePending`; `TownsteadBridge` gained a defaulted `spiritContributions`. New: the
+  `TownsteadProjectObjective` interface, `ProjectObjectiveContext`, `ProjectObjectiveStatus`,
+  `IntegrationRequirements`, `UnavailableContent`, `ScopeGeometry`, `ProjectPhases`, `ProjectRecovery` and
+  `ConversationCredit`. Records that gained trailing components keep their previous constructors:
+  `TalkToProfessionObjective`, `ProjectPlaceBlockObjective`, `ProjectKillObjective`,
+  `TownsteadSpiritProjectObjective`, `TownsteadWorkforceProjectObjective`, `ProjectObjectiveLine`,
+  `ProjectCard` and `ProjectLogEntry`. `QuestChainValidator.validate` and `ProjectValidator.validate` /
+  `validateLink` gained overloads taking the excluded definitions; the old signatures remain.
+  `McaQuestsApi.notifyVillagerConversation` is unchanged and now shares the dialogue hook's validation and
+  de-duplication.
+- **Saves:** `ProjectState` gained `anchor_radius`, `revision`, `extra` and `deferred_follow_ups`, all
+  written only when set, so an untouched pre-1.6.6 instance keeps its shape until something changes it;
+  see *Migration*.
+- **MCA binding:** new optional members `Village.getBox`, `Building.isComplete`,
+  `BuildingTypes.getInstance` / `getBuildingType` / `getBuildingTypes` and `BuildingType.getGroups`,
+  present in every build `mca_probe_versions` lists; an MCA without them degrades to approximate outlines,
+  counting every registered building, and generic help. **Townstead binding:** a new optional member,
+  `BuildingSpiritIndex.contributionsFor`, under `READ_SPIRIT`, used only to name which buildings raise a
+  spirit. The overloaded Townstead members bind by their first parameter's type, and a member of any
+  reflective binding that matches two methods is now unbound rather than guessed (see *Fixed — Townstead
+  profession tracks and skills*).
+- Neither Townstead nor MCA Capitals became a dependency; both stay optional in `neoforge.mods.toml`.
 
-## [1.6.5] - Unreleased
+### Documentation
+
+- DATAPACK.md: a section on content that needs an optional mod and is not loaded without it, what counts
+  as talking to a villager, `at_location_of`, `border_margin`, the spirit `baseline`, `profession_policy`,
+  and the new project commands; the old claim that Townstead projects "sit at zero" without Townstead is
+  gone.
+- TOWNSTEAD.md: Townstead profession tiers and how residents earn them, spirit baselines and Tourism, the
+  inn's registration and completeness, Known Far and Wide's rules, removal behaviour for projects, and FAQ
+  entries for *A Working Village* and the "welcoming points".
+- README.md, CONFIG.md (`client.showBuildAreaSeconds`), CAPITALS.md and CLAUDE.md (four mixin configs, the
+  runtime fixture).
+
+### Tests
+
+- New: `IntegrationRequirementsTest` (the installation matrix, a later-phase and a reward-only dependency,
+  capability-level exclusion, `not`/`any_of`, Townstead rewards as optional),
+  `BuiltinIntegrationRequirementsTest` (every shipped definition's derived dependencies match its location;
+  the reported projects are excluded on a base install; no duplicate ids), `TownsteadSpiritBaselineTest`
+  (phase-entry timing, project baseline, pre-existing spirit, pending readings, save/load, high-water,
+  legacy migration, operator baseline), `TownsteadBuildingAndWorkforceTest` (clamped comparison, unknown
+  is not zero, incomplete buildings, trade policy, bundled opt-in), `ProjectRecoveryAndScopeTest`
+  (margin geometry, geometry round trip, dimension-qualified identities, legacy re-key with owed rewards,
+  new state fields, deferred rewards, repair-token rules), `ConversationCreditTest` (one click through two
+  routes, Missing Mile's destination link, `at_location_of` validation, excluded chain targets),
+  `LibraryRestorationUpgradeTest` (a partly counted 1.6.5 `catalogue` completes on the third librarian;
+  residents count anywhere), `TownsteadOverloadSelectionTest` (an overload named by its first parameter
+  binds in either listing order; an unhinted overload binds nothing); `NoMcaMixinLinkTest` asserts the
+  dialogue hook ships for all four package roots and `McaGiftMixinPluginTest` the decorated handler name.
+- `TownsteadBindingProbeTest` now also invokes the bound `spec` against the real jar and requires the
+  farmer's track to have a ceiling and at least two tiers.
+- `PayloadRegistryTest` expects the two build-area payloads (`project_scope_request`,
+  `project_scope`), 24 payloads in all, and protocol 18.
+- A disposable production-server fixture (`tools/reliability-runtime-test/`, never shipped) drives real
+  MCA villagers with a fake player through the same calls the network handler makes, and checks content
+  exclusion, placement area, instance-targeted repair and the profession tracks Townstead reports; see the
+  release notes for the runs. It is what found the binding defect above.
+
+## [1.6.5] - 2026-09-15
 
 Item deliveries stop being an all-or-nothing guess. A quest that asks for six blaze rods now counts
 rods as you hand them over, tells you what happened every time, and can be paid either from the

@@ -10,12 +10,17 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  */
 public final class QuestNetwork {
 
-    // Bumped to 17 — item delivery. QuestDeliverC2SPacket is new, CardObjective carries what has been
+    // Bumped to 18 — the 1.6.6 reliability update. ProjectObjectiveLine carries a status and expanded
+    // help, ProjectCard names its live instance, revision and whether it has a build area,
+    // ProjectLogEntry names its instance and why it is paused, and ProjectScopeRequestC2SPacket /
+    // ProjectScopeS2CPacket are new. A protocol-17 client would decode each of those as the old shape,
+    // so client and server must match.
+    // (17 was item delivery. QuestDeliverC2SPacket is new, CardObjective carries what has been
     // handed over, what the player is carrying, whether this villager may take it and why not,
     // QuestCard names the active copy and its own per-card state, and the menu packet carries the
     // result line. Every one of those is a shape change in a packet a protocol-16 client would decode
     // as the old one: it would read the delivery fields as the start of the next objective and draw
-    // nonsense, so client and server must match.
+    // nonsense, so client and server must match.)
     // (16 was GuidanceKind gaining INSTRUCTION, a destination that is a line of text and no
     // geometry. The kind's ordinal is on the wire, and an older client would decode the new one as
     // LOCATION and draw a marker on 0,0,0 in a world it is not standing in, so the two must match.)
@@ -47,7 +52,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "17";
+    private static final String PROTOCOL_VERSION = "18";
 
     private QuestNetwork() {
     }
@@ -129,5 +134,11 @@ public final class QuestNetwork {
         // v1.6.5 — the Deliver action on a quest card.
         registrar.playToServer(QuestDeliverC2SPacket.TYPE,
                 QuestDeliverC2SPacket.STREAM_CODEC, QuestDeliverC2SPacket::handle);
+
+        // v1.6.6 — a project's build area.
+        registrar.playToServer(ProjectScopeRequestC2SPacket.TYPE,
+                ProjectScopeRequestC2SPacket.STREAM_CODEC, ProjectScopeRequestC2SPacket::handle);
+        registrar.playToClient(ProjectScopeS2CPacket.TYPE, ProjectScopeS2CPacket.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandlers.handleProjectScope(payload, context));
     }
 }

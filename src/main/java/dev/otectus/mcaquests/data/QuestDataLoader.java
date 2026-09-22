@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
+import dev.otectus.mcaquests.quest.IntegrationRequirements;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import net.minecraft.resources.ResourceLocation;
@@ -56,6 +57,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         Map<ResourceLocation, String> quarantined = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
+        Map<ResourceLocation, ResourceLocation> fileOf = new LinkedHashMap<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
@@ -84,13 +86,27 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
             }
             warnOnHeartsRange(def);
             loaded.put(def.id(), def);
+            fileOf.put(def.id(), fileId);
         }
+
+        // Content for an optional mod this installation cannot play is kept out of the registry
+        // entirely, not loaded and then hidden: nothing offers, assigns or chains into it. A copy a
+        // player already accepted finds its descriptor and shows as paused (IntegrationRequirements).
+        // This is a supported outcome, never a validation error, strict mode included.
+        UnavailableContent.Collector unavailable = new UnavailableContent.Collector(UnavailableContent.Kind.QUEST);
+        Map<ResourceLocation, QuestDefinition> excluded = new LinkedHashMap<>();
+        loaded.values().removeIf(def -> IntegrationRequirements.unavailable(def).map(why -> {
+            unavailable.add(def.id(), why, UnavailableContent.sourceOf(manager, DIRECTORY, fileOf.get(def.id())),
+                    def.titleOverride().map(text -> text.resolve()).orElseGet(() -> net.minecraft.network.chat.Component.translatable(def.titleKey())));
+            excluded.put(def.id(), def);
+            return true;
+        }).orElse(false));
 
         // Everything above this point reported through recordError, which logs as it goes. The
         // validators below append straight to the list, so their findings were counted in the summary
         // line and never printed — a real error reading as an unexplained "with 1 error(s)".
         int alreadyLogged = errors.size();
-        QuestChainValidator.validate(loaded, errors, warnings);
+        QuestChainValidator.validate(loaded, excluded, errors, warnings);
         TemplateValidator.validate(loaded, errors);
         FailureValidator.validate(loaded, errors);
         ObjectiveValidator.validate(loaded, errors, warnings);
@@ -109,6 +125,8 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         }
 
         loaded.keySet().forEach(quarantined::remove);
+        excluded.keySet().forEach(quarantined::remove);
+        unavailable.publish();
         QuestRegistry.replaceAll(loaded, errors, warnings, quarantined);
         warnings.forEach(w -> McaQuests.LOGGER.warn("[MCA: Quests] {}", w));
         McaQuests.LOGGER.info("Loaded {} MCA quest(s) with {} error(s), {} warning(s).",

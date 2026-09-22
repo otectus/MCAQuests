@@ -19,7 +19,23 @@ public record ProjectCard(ResourceLocation projectId,
                           Component dialogue,
                           List<ProjectObjectiveLine> objectives,
                           List<Component> rewards,
-                          ProjectMenuStatus status) {
+                          ProjectMenuStatus status,
+                          String instanceKey,
+                          long revision,
+                          boolean buildArea) {
+
+    /**
+     * The pre-1.6.6 shape. {@code instanceKey} names the live instance behind a card (empty for an
+     * offer nobody has started), {@code revision} lets the client drop a card older than one it has
+     * already drawn, and {@code buildArea} says whether the current phase has work that counts by
+     * position, so the card offers to show where.
+     */
+    public ProjectCard(ResourceLocation projectId, Component title, Component scopeLabel, Component sponsorLabel,
+                       Component phaseLabel, Component dialogue, List<ProjectObjectiveLine> objectives,
+                       List<Component> rewards, ProjectMenuStatus status) {
+        this(projectId, title, scopeLabel, sponsorLabel, phaseLabel, dialogue, objectives, rewards, status, "", 0L,
+                false);
+    }
 
     public static void encode(RegistryFriendlyByteBuf buf, ProjectCard card) {
         buf.writeResourceLocation(card.projectId);
@@ -31,6 +47,9 @@ public record ProjectCard(ResourceLocation projectId,
         buf.writeCollection(card.objectives, (b, v) -> ProjectObjectiveLine.encode((RegistryFriendlyByteBuf) b, v));
         buf.writeCollection(card.rewards, NetComponents::write);
         buf.writeEnum(card.status);
+        buf.writeUtf(card.instanceKey);
+        buf.writeVarLong(card.revision);
+        buf.writeBoolean(card.buildArea);
     }
 
     public static ProjectCard decode(RegistryFriendlyByteBuf buf) {
@@ -43,6 +62,9 @@ public record ProjectCard(ResourceLocation projectId,
                 NetComponents.read(buf),
                 PacketCollections.readList(buf, b -> ProjectObjectiveLine.decode((RegistryFriendlyByteBuf) b)),
                 PacketCollections.readList(buf, NetComponents::read),
-                buf.readEnum(ProjectMenuStatus.class));
+                buf.readEnum(ProjectMenuStatus.class),
+                buf.readUtf(),
+                buf.readVarLong(),
+                buf.readBoolean());
     }
 }

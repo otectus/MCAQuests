@@ -62,6 +62,8 @@ public final class QuestClientSetup {
     public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAboveAll(
                 ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "quest_tracker"), new QuestHudOverlay());
+        event.registerAboveAll(
+                ResourceLocation.fromNamespaceAndPath(McaQuests.MOD_ID, "build_area"), new BuildAreaClient.Overlay());
     }
 
     /**

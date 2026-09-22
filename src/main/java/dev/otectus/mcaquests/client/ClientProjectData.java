@@ -37,6 +37,30 @@ public final class ClientProjectData {
         }
     }
 
+    /**
+     * {@code incoming}, except that a card older than one already cached for the same live instance is
+     * replaced by the cached one (1.6.6): a menu computed before a change must not undo the change on
+     * screen. Cards for offers carry no instance and always pass.
+     */
+    public static List<ProjectCard> newestOf(UUID villager, List<ProjectCard> incoming) {
+        List<ProjectCard> cached = menuFor(villager);
+        if (cached.isEmpty()) {
+            return incoming;
+        }
+        java.util.Map<String, ProjectCard> byKey = new java.util.HashMap<>();
+        for (ProjectCard card : cached) {
+            if (!card.instanceKey().isEmpty()) {
+                byKey.put(card.instanceKey(), card);
+            }
+        }
+        List<ProjectCard> out = new java.util.ArrayList<>(incoming.size());
+        for (ProjectCard card : incoming) {
+            ProjectCard previous = card.instanceKey().isEmpty() ? null : byKey.get(card.instanceKey());
+            out.add(previous != null && previous.revision() > card.revision() ? previous : card);
+        }
+        return out;
+    }
+
     public static List<ProjectCard> menuFor(UUID villager) {
         return menus.getOrDefault(villager, List.of());
     }

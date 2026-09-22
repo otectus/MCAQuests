@@ -8,6 +8,8 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.data.BuiltinPack;
 import dev.otectus.mcaquests.data.QuestValidationException;
+import dev.otectus.mcaquests.data.UnavailableContent;
+import dev.otectus.mcaquests.quest.IntegrationRequirements;
 import dev.otectus.mcaquests.project.ProjectDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -50,11 +52,13 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
         files = BuiltinPack.filter(files, manager, DIRECTORY);
         if (!McaQuestsConfig.COMMON.enableVillageProjects.get()) {
             ProjectRegistry.replaceAll(Map.of(), List.of());
+            UnavailableContent.replace(UnavailableContent.Kind.PROJECT, Map.of());
             return;
         }
 
         boolean strict = McaQuestsConfig.COMMON.strictJsonValidation.get();
         Map<ResourceLocation, ProjectDefinition> loaded = new LinkedHashMap<>();
+        Map<ResourceLocation, ResourceLocation> fileOf = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
@@ -66,10 +70,22 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
                             return;
                         }
                         loaded.put(def.id(), def);
+                        fileOf.put(def.id(), fileId);
                     });
         }
 
-        ProjectValidator.validate(loaded, errors);
+        // Every phase counts: a Townstead phase two makes the whole project Townstead content, however
+        // ordinary its first donation looks, so a base installation never offers phase one of something
+        // it can never finish (IntegrationRequirements). Instances already running keep their state and
+        // pause; see UnavailableContent.
+        UnavailableContent.Collector unavailable = new UnavailableContent.Collector(UnavailableContent.Kind.PROJECT);
+        loaded.values().removeIf(def -> IntegrationRequirements.unavailable(def).map(why -> {
+            unavailable.add(def.id(), why, UnavailableContent.sourceOf(manager, DIRECTORY, fileOf.get(def.id())),
+                    def.displayTitle());
+            return true;
+        }).orElse(false));
+
+        ProjectValidator.validate(loaded, unavailable.entries().keySet(), errors);
         if (strict) {
             errors.stream()
                     .filter(e -> !ProjectValidator.isWarning(e))
@@ -87,6 +103,7 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
             }
         }
 
+        unavailable.publish();
         ProjectRegistry.replaceAll(loaded, errors);
         McaQuests.LOGGER.info("Loaded {} MCA project(s) with {} validation note(s).", loaded.size(), errors.size());
     }

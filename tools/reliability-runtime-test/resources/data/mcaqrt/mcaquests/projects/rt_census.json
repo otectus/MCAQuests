@@ -1,0 +1,9 @@
+{
+  "id": "mcaqrt:rt_census",
+  "scope": "village",
+  "sponsor": {},
+  "phases": [
+    { "key": "ask", "objectives": [
+      { "type": "mcaquests:project_talk_to_profession", "profession": "minecraft:cartographer", "count": 2 } ] }
+  ]
+}

@@ -17,7 +17,19 @@ public record ProjectLogEntry(ResourceLocation projectId,
                               Component sponsorLabel,
                               Component scopeLabel,
                               Component phaseLabel,
-                              List<ProjectObjectiveLine> objectives) {
+                              List<ProjectObjectiveLine> objectives,
+                              String instanceKey,
+                              java.util.Optional<Component> pausedReason) {
+
+    /**
+     * The pre-1.6.6 shape. {@code pausedReason} is present for a project the player is part of whose
+     * definition is not loaded because an optional mod it needs is missing: it stays in the log, paused
+     * and named, instead of vanishing until the mod returns.
+     */
+    public ProjectLogEntry(ResourceLocation projectId, Component title, Component sponsorLabel,
+                           Component scopeLabel, Component phaseLabel, List<ProjectObjectiveLine> objectives) {
+        this(projectId, title, sponsorLabel, scopeLabel, phaseLabel, objectives, "", java.util.Optional.empty());
+    }
 
     public static void encode(RegistryFriendlyByteBuf buf, ProjectLogEntry entry) {
         buf.writeResourceLocation(entry.projectId);
@@ -26,6 +38,8 @@ public record ProjectLogEntry(ResourceLocation projectId,
         NetComponents.write(buf, entry.scopeLabel);
         NetComponents.write(buf, entry.phaseLabel);
         buf.writeCollection(entry.objectives, (b, v) -> ProjectObjectiveLine.encode((RegistryFriendlyByteBuf) b, v));
+        buf.writeUtf(entry.instanceKey);
+        buf.writeOptional(entry.pausedReason, NetComponents::write);
     }
 
     public static ProjectLogEntry decode(RegistryFriendlyByteBuf buf) {
@@ -35,6 +49,8 @@ public record ProjectLogEntry(ResourceLocation projectId,
                 NetComponents.read(buf),
                 NetComponents.read(buf),
                 NetComponents.read(buf),
-                dev.otectus.mcaquests.network.PacketCollections.readList(buf, b -> ProjectObjectiveLine.decode((RegistryFriendlyByteBuf) b)));
+                dev.otectus.mcaquests.network.PacketCollections.readList(buf, b -> ProjectObjectiveLine.decode((RegistryFriendlyByteBuf) b)),
+                buf.readUtf(),
+                buf.readOptional(NetComponents::read));
     }
 }

@@ -444,6 +444,9 @@ public class QuestLogScreen extends McaQuestsScreen {
         for (ProjectLogEntry project : projects) {
             // title + scope/phase + gap
             height += CardText.height(this.font, projectTitleLine(project), wrapWidth()) + 1 + 10 + 6;
+            if (project.pausedReason().isPresent()) {
+                height += CardText.height(this.font, pausedLine(project), wrapWidth());
+            }
             for (ProjectObjectiveLine line : project.objectives()) {
                 height += CardText.heightBulleted(this.font, BULLET, projectObjectiveLabel(line),
                         wrapWidth());
@@ -463,9 +466,23 @@ public class QuestLogScreen extends McaQuestsScreen {
 
     /** Built once so the height calculation and the draw wrap identical text. */
     private static Component projectObjectiveLabel(ProjectObjectiveLine line) {
-        return Component.empty().append(line.label()).append(Component.literal("  "))
+        net.minecraft.network.chat.MutableComponent label = Component.empty().append(line.label())
+                .append(Component.literal("  "))
                 .append(Component.translatable("mcaquests.label.project.shared",
                         line.sharedCurrent(), line.required()));
+        // Paused, blocked and not-yet-observed rows say so in words and a glyph, not colour alone.
+        var status = line.status();
+        if (status == dev.otectus.mcaquests.project.objective.ProjectObjectiveStatus.BLOCKED
+                || status == dev.otectus.mcaquests.project.objective.ProjectObjectiveStatus.UNAVAILABLE
+                || status == dev.otectus.mcaquests.project.objective.ProjectObjectiveStatus.UNOBSERVED) {
+            label.append(Component.literal("  " + status.glyph() + " ")).append(status.label());
+        }
+        return label;
+    }
+
+    /** A project kept in the log while an optional mod it needs is missing. */
+    private static Component pausedLine(ProjectLogEntry project) {
+        return Component.literal("\u23F8 ").append(project.pausedReason().orElse(Component.empty()));
     }
 
     @Override
@@ -581,6 +598,9 @@ public class QuestLogScreen extends McaQuestsScreen {
                     .append(Component.literal("  ")).append(project.phaseLabel()), left + 2, y,
                     Palette.SUBTITLE, false);
             y += 10;
+            if (project.pausedReason().isPresent()) {
+                y = CardText.draw(graphics, this.font, pausedLine(project), left + 2, y, wrapWidth(), Palette.SUBTITLE);
+            }
             for (ProjectObjectiveLine line : project.objectives()) {
                 boolean done = line.sharedCurrent() >= line.required();
                 Panel.iconScaled(graphics,

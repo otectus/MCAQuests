@@ -55,6 +55,28 @@ public final class ProjectState {
      * online at the time. Absent on pre-1.1.0 saves and on projects with no randomized reward.
      */
     private final Map<String, Integer> frozenRewards = new HashMap<>();
+    /**
+     * The anchor radius this instance was created with, frozen so a later change to
+     * {@code defaultScopeFallbackRadius} cannot silently resize a village's build area (1.6.6). Empty on
+     * saves from before 1.6.6 until {@code ProjectManager} freezes the radius they were actually using.
+     */
+    private OptionalInt anchorRadius = OptionalInt.empty();
+    /**
+     * Bumped on every phase entry, status change and operator repair. A repair preview names the revision
+     * it saw, so a confirmation against a project that has moved on since is refused rather than applied
+     * to state its operator never looked at.
+     */
+    private long revision;
+    /**
+     * Project-level scratch, the per-instance analogue of {@code SharedObjectiveProgress.extra()}: the
+     * spirit reading taken when the project began, its pending flag, and migration markers.
+     */
+    private CompoundTag extra = new CompoundTag();
+    /**
+     * Follow-up projects that could not be seeded when this one finished because their optional mod was
+     * missing. Seeded on a later sweep once they load; never dropped (1.6.6).
+     */
+    private final Set<ResourceLocation> deferredFollowUps = new LinkedHashSet<>();
 
     public ProjectState(ResourceLocation projectId, ProjectScope scope, String identity,
                         ResourceLocation anchorDimension, BlockPos anchorPos, OptionalInt villageId,
@@ -178,6 +200,46 @@ public final class ProjectState {
     public void enterPhase(int phase, int objectiveCount) {
         this.currentPhase = phase;
         this.progress = freshProgress(objectiveCount);
+        this.revision++;
+    }
+
+    public OptionalInt anchorRadius() {
+        return anchorRadius;
+    }
+
+    /** Freezes the anchor radius once; later calls leave the first value in place. */
+    public boolean freezeAnchorRadius(int radius) {
+        if (anchorRadius.isPresent()) {
+            return false;
+        }
+        anchorRadius = OptionalInt.of(radius);
+        return true;
+    }
+
+    public long revision() {
+        return revision;
+    }
+
+    public void bumpRevision() {
+        revision++;
+    }
+
+    public CompoundTag extra() {
+        return extra;
+    }
+
+    public Set<ResourceLocation> deferredFollowUps() {
+        return deferredFollowUps;
+    }
+
+    /**
+     * A copy of this instance under another identity string, for the one-time dimension re-key of
+     * pre-1.6.6 saves. Everything else — progress, sponsors, ledgers — is carried over exactly.
+     */
+    public ProjectState rekeyed(String newIdentity) {
+        CompoundTag copy = save();
+        copy.putString("identity", newIdentity);
+        return load(copy);
     }
 
     public Set<UUID> sponsors() {
@@ -209,6 +271,9 @@ public final class ProjectState {
     }
 
     public void setStatus(ProjectStatus status) {
+        if (this.status != status) {
+            revision++;
+        }
         this.status = status;
     }
 
@@ -282,6 +347,14 @@ public final class ProjectState {
             frozenRewards.forEach(frozen::putInt);
             tag.put("frozen_rewards", frozen);
         }
+        anchorRadius.ifPresent(radius -> tag.putInt("anchor_radius", radius));
+        if (revision != 0L) { tag.putLong("revision", revision); }
+        if (!extra.isEmpty()) { tag.put("extra", extra.copy()); }
+        if (!deferredFollowUps.isEmpty()) {
+            ListTag deferred = new ListTag();
+            deferredFollowUps.forEach(id -> deferred.add(StringTag.valueOf(id.toString())));
+            tag.put("deferred_follow_ups", deferred);
+        }
         return tag;
     }
 
@@ -333,6 +406,16 @@ public final class ProjectState {
         if (tag.contains("frozen_rewards", Tag.TAG_COMPOUND)) {
             CompoundTag frozen = tag.getCompound("frozen_rewards");
             frozen.getAllKeys().forEach(key -> state.frozenRewards.put(key, frozen.getInt(key)));
+        }
+        if (tag.contains("anchor_radius", Tag.TAG_INT)) { state.anchorRadius = OptionalInt.of(tag.getInt("anchor_radius")); }
+        state.revision = tag.getLong("revision");
+        if (tag.contains("extra", Tag.TAG_COMPOUND)) { state.extra = tag.getCompound("extra").copy(); }
+        ListTag deferred = tag.getList("deferred_follow_ups", Tag.TAG_STRING);
+        for (int i = 0; i < deferred.size(); i++) {
+            ResourceLocation id = ResourceLocation.tryParse(deferred.getString(i));
+            if (id != null) {
+                state.deferredFollowUps.add(id);
+            }
         }
         return state;
     }

@@ -4,7 +4,7 @@
 
 MCA: Quests does not compile against Capitals and reaches it through reflection only. Everything it learns about a capital is reported as **capabilities** rather than as a single yes-or-no, so one method rename in a Capitals point release disables exactly the feature that read it — the title rewards stop being granted, and the villager offices simply go unmatched rather than breaking any quest.
 
-Everything here is **optional in both directions**. Without Capitals the types still register, so your datapacks parse identically, the bundled content simply never becomes eligible, and nothing else about MCA: Quests changes.
+Everything here is **optional in both directions**. Without Capitals the types still register, so your datapacks parse identically, and nothing else about MCA: Quests changes. The bundled content is not mounted at all (the `capitals_court` pack), and since 1.6.6 any definition that needs Capitals — from a datapack as much as from this jar, including one that needs it only for a reward or a later project phase — is left out of the registries rather than loaded and withheld; see the [optional-mod section of DATAPACK.md](DATAPACK.md#content-that-needs-an-optional-mod-is-not-loaded-without-it-166).
 
 ---
 
@@ -147,7 +147,7 @@ To verify the binding against a real Capitals jar:
 
 **Will my existing quests break?** No. Every new field is optional and every new type is additive. An existing quest pack loads unchanged.
 
-**Can I write Capitals quests without Capitals installed?** Yes — the types register regardless, so your pack parses and validates. It just will not be offered until Capitals is there.
+**Can I write Capitals quests without Capitals installed?** Yes — the types register regardless, so your pack parses and validates. Definitions that need Capitals are left out of the registries until Capitals is there; `/mcaquests validate` says how many.
 
 **What offices can I gate on?** The roles that apply to villagers: sovereign, consort, dowager, heir, royal_child, hand, commander, herald, grand maester, master of laws, ambassador, duke, lord, knight, royal guard, and member (anyone in the court). Archduke is player-only and never a quest requirement.
 

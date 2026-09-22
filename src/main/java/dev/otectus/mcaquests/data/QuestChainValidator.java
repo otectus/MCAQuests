@@ -28,6 +28,20 @@ public final class QuestChainValidator {
     }
 
     public static void validate(Map<ResourceLocation, QuestDefinition> loaded, List<String> errors, List<String> warnings) {
+        validate(loaded, Map.of(), errors, warnings);
+    }
+
+    /**
+     * As {@link #validate(Map, List, List)}, knowing which definitions were deliberately left out because
+     * the optional mod they need is not installed ({@code UnavailableContent}).
+     *
+     * <p>A reference to one of those is not a dangling reference, and a stage unlocked only by one is
+     * not unreachable: both are the supported "content for a mod this server does not run" setup, and
+     * reporting them as errors would fail {@code strictJsonValidation} on a pack that is correct.
+     */
+    public static void validate(Map<ResourceLocation, QuestDefinition> loaded,
+                                Map<ResourceLocation, QuestDefinition> excluded,
+                                List<String> errors, List<String> warnings) {
         Map<String, Set<Integer>> stageTotalsByChain = new LinkedHashMap<>();
 
         for (QuestDefinition def : loaded.values()) {
@@ -62,15 +76,17 @@ public final class QuestChainValidator {
                 errors.add(where + "chain.unlocks lists itself.");
             }
 
-            checkReferences(where, "chain.prerequisites", chain.prerequisites(), loaded, errors);
-            checkReferences(where, "chain.unlocks", chain.unlocks(), loaded, errors);
+            checkReferences(where, "chain.prerequisites", chain.prerequisites(), loaded, excluded, errors);
+            checkReferences(where, "chain.unlocks", chain.unlocks(), loaded, excluded, errors);
             // Branch-condition references on a chain quest (e.g. quest_failed: ...) must also resolve.
-            checkReferences(where, "conditions", ConditionRefs.allReferencedQuests(def.conditions()), loaded, errors);
+            checkReferences(where, "conditions", ConditionRefs.allReferencedQuests(def.conditions()), loaded,
+                    excluded, errors);
 
             // A later stage with no prerequisites, no inbound unlock, and no outcome-branch condition can
             // never be reached by any path.
             if (chain.stage() > 1 && chain.prerequisites().isEmpty()
-                    && !hasInboundUnlock(id, loaded) && !ConditionRefs.hasOutcomeBranch(def.conditions())) {
+                    && !hasInboundUnlock(id, loaded) && !hasInboundUnlock(id, excluded)
+                    && !ConditionRefs.hasOutcomeBranch(def.conditions())) {
                 errors.add(where + "chain.stage " + chain.stage() + " is unreachable — no chain.prerequisites, "
                         + "no other quest lists it in chain.unlocks, and no branch condition.");
             }
@@ -172,9 +188,13 @@ public final class QuestChainValidator {
     }
 
     private static void checkReferences(String where, String field, List<ResourceLocation> refs,
-                                        Map<ResourceLocation, QuestDefinition> loaded, List<String> errors) {
+                                        Map<ResourceLocation, QuestDefinition> loaded,
+                                        Map<ResourceLocation, QuestDefinition> excluded, List<String> errors) {
         for (ResourceLocation ref : refs) {
             QuestDefinition target = loaded.get(ref);
+            if (target == null && excluded.containsKey(ref)) {
+                continue; // optional content for a mod this installation does not have; intentional
+            }
             if (target == null) {
                 errors.add(where + field + " references unknown quest '" + ref + "'.");
             } else if (!target.enabled()) {

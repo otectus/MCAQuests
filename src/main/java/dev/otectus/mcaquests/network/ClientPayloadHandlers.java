@@ -41,6 +41,10 @@ public final class ClientPayloadHandlers {
         QuestClientHandlers.onProjectMenuData(msg.villagerUuid(), msg.cards());
     }
 
+    public static void handleProjectScope(ProjectScopeS2CPacket msg, IPayloadContext context) {
+        QuestClientHandlers.onBuildArea(msg.title(), msg.summary(), msg.geometry(), msg.materials());
+    }
+
     public static void handleProjectLogSync(ProjectLogSyncS2CPacket msg, IPayloadContext context) {
         ClientProjectData.updateProjects(msg.entries());
     }

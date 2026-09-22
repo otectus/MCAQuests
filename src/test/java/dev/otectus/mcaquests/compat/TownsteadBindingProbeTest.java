@@ -58,7 +58,7 @@ class TownsteadBindingProbeTest {
     private static final String THIRST_DATA_CLASS = "com.aetherianartificer.townstead.thirst.ThirstData";
 
     @Test
-    void manifestResolvesAgainstTheRealTownsteadJar() throws Exception {
+    void manifestResolvesAgainstTheRealTownsteadJar() throws Throwable {
         List<Path> townstead = jars(TOWNSTEAD_JARS_PROPERTY);
         Assumptions.assumeFalse(townstead.isEmpty(),
                 "No Townstead jar supplied (" + TOWNSTEAD_JARS_PROPERTY + "); run "
@@ -84,6 +84,16 @@ class TownsteadBindingProbeTest {
                             + "method to read.");
             System.out.println("[probe] Townstead bound; MCA root = " + resolution.variant()
                     + ", capabilities = " + resolution.capabilities().size());
+
+            // ProfessionProgressions.spec is overloaded (String, ProfessionXpType). Bound to the enum
+            // overload, a String lookup failed its cast and every track read as "no progression" --
+            // which is what production servers did before 1.6.6. The farmer is a built-in track.
+            Object spec = resolution.handle(TownsteadBinding.TRACK_SPEC).invoke((Object) "farmer");
+            assertNotNull(spec, "ProfessionProgressions.spec(String) did not answer for the farmer");
+            int maxXp = (int) resolution.handle(TownsteadBinding.TRACK_MAX_XP).invoke(spec);
+            int maxTier = (int) resolution.handle(TownsteadBinding.TRACK_MAX_TIER).invoke(spec);
+            assertTrue(maxXp > 0 && maxTier >= 2, "the farmer's track reads as maxXp=" + maxXp
+                    + ", maxTier=" + maxTier + "; the spec member bound the wrong overload");
         }
     }
 

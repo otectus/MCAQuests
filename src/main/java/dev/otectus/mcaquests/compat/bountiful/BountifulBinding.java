@@ -378,24 +378,36 @@ public final class BountifulBinding {
 
     // --- binding ---------------------------------------------------------------------------------
 
-    /** Finds a method by name, arity and staticness — never by parameter type. */
+    /**
+     * Finds a method by name, arity and staticness — never by parameter type. {@code getMethods()} has
+     * no defined order, so a key that matches two methods is left unbound rather than bound to
+     * whichever the JVM happened to list first; the probe test then names it.
+     */
     @Nullable
     private static MethodHandle bindByName(MethodHandles.Lookup lookup, Method[] candidates,
                                            Member member) {
+        Method match = null;
         for (Method candidate : candidates) {
-            if (!candidate.getName().equals(member.name)
+            if (candidate.isBridge()
+                    || !candidate.getName().equals(member.name)
                     || candidate.getParameterCount() != member.arity
                     || Modifier.isStatic(candidate.getModifiers())) {
                 continue;
             }
-            try {
-                candidate.setAccessible(true);
-                return lookup.unreflect(candidate).asType(member.erasedType());
-            } catch (Throwable t) {
+            if (match != null) {
                 return null;
             }
+            match = candidate;
         }
-        return null;
+        if (match == null) {
+            return null;
+        }
+        try {
+            match.setAccessible(true);
+            return lookup.unreflect(match).asType(member.erasedType());
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /**

@@ -8,7 +8,11 @@
     "VillagerCommandHandlerForgeConczinMixin",
     "VillagerCommandHandlerForgeMcaMixin",
     "VillagerCommandHandlerConczinMixin",
-    "VillagerCommandHandlerMcaMixin"
+    "VillagerCommandHandlerMcaMixin",
+    "EntityCommandHandlerForgeConczinMixin",
+    "EntityCommandHandlerForgeMcaMixin",
+    "EntityCommandHandlerConczinMixin",
+    "EntityCommandHandlerMcaMixin"
   ],
   "injectors": {
     "defaultRequire": 0

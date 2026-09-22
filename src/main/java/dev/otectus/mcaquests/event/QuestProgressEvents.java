@@ -1225,14 +1225,20 @@ public final class QuestProgressEvents {
         ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
         UUID villagerUuid = villager.getUUID();
         boolean[] advanced = {false};
+        ServerLevel level = (ServerLevel) player.level();
         forActiveObjectives(player, TalkToProfessionObjective.class,
-                (objective, progress) -> {
+                (objective, active, progress) -> {
                     if (progress.count() >= objective.required()) {
                         return; // already satisfied
                     }
                     if (!objective.matches(profession)) {
                         QuestEventHandlers.debugReject("profession mismatch (wanted " + objective.profession()
                                 + ", villager is " + profession + ")", villager);
+                        return;
+                    }
+                    if (!objective.acceptsPlace(player, active, level, villager)) {
+                        // The same test the guidance marker uses, so nobody is pointed at who would not count.
+                        QuestEventHandlers.debugReject("not at the quest's destination", villager);
                         return;
                     }
                     if (!progress.markTalkedTo(villagerUuid)) {

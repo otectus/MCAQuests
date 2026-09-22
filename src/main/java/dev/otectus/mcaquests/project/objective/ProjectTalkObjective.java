@@ -53,4 +53,15 @@ public record ProjectTalkObjective(ResourceLocation profession, int count) imple
     public boolean matches(@Nullable ResourceLocation talkedToProfession) {
         return ProfessionMatcher.matches(profession, talkedToProfession);
     }
+
+    @Override
+    public java.util.List<Component> explain(ProjectObjectiveContext context) {
+        return java.util.List.of(
+                Component.translatable("mcaquests.project.help.talk.counts", count,
+                        dev.otectus.mcaquests.quest.DisplayNames.name(profession)),
+                context.villageBound()
+                        ? Component.translatable("mcaquests.project.help.talk.where", context.villageName())
+                        : Component.translatable("mcaquests.project.help.area.anchor"),
+                Component.translatable("mcaquests.project.help.talk.how"));
+    }
 }

@@ -2236,6 +2236,10 @@ public final class QuestManager {
      * compatibility problem, and calling it one would be a lie the player could not act on.
      */
     public static Optional<Component> compatSuspensionSubject(ResourceLocation questId) {
+        Optional<dev.otectus.mcaquests.data.UnavailableContent.Entry> excluded = unavailableDescriptor(questId);
+        if (excluded.isPresent()) {
+            return Optional.of(Component.literal(excluded.get().why().integration().displayName()));
+        }
         CompatRegistry registry = CompatRegistry.get();
         Optional<CompatProvider> byPath = providerFromQuestPath(registry, questId);
         if (byPath.isPresent()) {
@@ -2248,6 +2252,22 @@ public final class QuestManager {
         return Optional.of(registry.forNamespace(namespace)
                 .<Component>map(CompatProvider::displayName)
                 .orElse(Component.literal(namespace)));
+    }
+
+    /**
+     * The descriptor the loader kept for a quest — or for the situation whose offer it is — that was
+     * left out of the registry because its optional mod is not installed ({@code UnavailableContent}).
+     */
+    public static Optional<dev.otectus.mcaquests.data.UnavailableContent.Entry> unavailableDescriptor(
+            ResourceLocation questId) {
+        Optional<dev.otectus.mcaquests.data.UnavailableContent.Entry> quest = dev.otectus.mcaquests.data
+                .UnavailableContent.get(dev.otectus.mcaquests.data.UnavailableContent.Kind.QUEST, questId);
+        if (quest.isPresent()) {
+            return quest;
+        }
+        return dev.otectus.mcaquests.quest.situation.SituationIds.sourceIdOf(questId).flatMap(source ->
+                dev.otectus.mcaquests.data.UnavailableContent.get(
+                        dev.otectus.mcaquests.data.UnavailableContent.Kind.SITUATION, source));
     }
 
     /** The provider owning a {@code compat/<provider>/…} quest path, when one is registered. */
@@ -2315,8 +2335,12 @@ public final class QuestManager {
                                     Component.translatable("mcaquests.quest.suspended.compat", subject),
                                     0, 0, CardObjective.State.UNAVAILABLE, ItemStack.EMPTY)))
                             .orElse(List.of());
-                    entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
-                            Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
+                    // A descriptor still knows the quest's own title, so a paused quest keeps its name.
+                    Component title = unavailableDescriptor(active.questId())
+                            .map(dev.otectus.mcaquests.data.UnavailableContent.Entry::title)
+                            .orElseGet(() -> Component.translatable("mcaquests.status.unknown_quest",
+                                    active.questId().toString()));
+                    entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), title,
                             active.villagerName(), Component.empty(), lines, false, compat.isPresent(),
                             data.isTracked(active), java.util.OptionalLong.empty(),
                             List.of()));

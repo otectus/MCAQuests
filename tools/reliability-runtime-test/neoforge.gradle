@@ -1,0 +1,17 @@
+// Explicit disposable runtime test mod for the 1.6.6 reliability update, separate from every
+// published MCA: Quests artifact. Built only with -PreliabilityRuntimeFixture=true. NeoForge runs on
+// Mojang names in production, so unlike the Forge fixture this jar needs no reobfuscation.
+sourceSets {
+    reliabilityRuntimeTest {
+        java.srcDir 'tools/reliability-runtime-test'
+        resources.srcDir 'tools/reliability-runtime-test/resources'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += compileClasspath
+    }
+}
+tasks.named('compileReliabilityRuntimeTestJava', JavaCompile).configure { options.compilerArgs += ['-proc:none'] }
+tasks.register('reliabilityRuntimeTestJar', Jar) {
+    from sourceSets.reliabilityRuntimeTest.output
+    archiveBaseName = 'mcaquests-reliability-runtime-test'
+    archiveVersion = '1'
+}

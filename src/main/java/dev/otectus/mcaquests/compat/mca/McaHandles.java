@@ -152,6 +152,12 @@ public final class McaHandles {
     private static final MethodHandle H_BUILDING_TYPE = R.handle(McaBinding.BUILDING_GET_TYPE);
     private static final MethodHandle H_BUILDING_SIZE = R.handle(McaBinding.BUILDING_GET_SIZE);
     private static final MethodHandle H_BUILDING_CENTER = R.handle(McaBinding.BUILDING_GET_CENTER);
+    private static final MethodHandle H_VILLAGE_BOX = R.handle(McaBinding.VILLAGE_GET_BOX);
+    private static final MethodHandle H_BUILDING_COMPLETE = R.handle(McaBinding.BUILDING_IS_COMPLETE);
+    private static final MethodHandle H_BUILDING_TYPES = R.handle(McaBinding.BUILDING_TYPES_GET);
+    private static final MethodHandle H_BUILDING_TYPES_GET = R.handle(McaBinding.BUILDING_TYPES_GET_TYPE);
+    private static final MethodHandle H_BUILDING_TYPE_GROUPS = R.handle(McaBinding.BUILDING_TYPE_GROUPS);
+    private static final MethodHandle H_BUILDING_TYPES_ALL = R.handle(McaBinding.BUILDING_TYPES_ALL);
     private static final boolean HAS_HAS_RESIDENT = R.has(McaBinding.VILLAGE_HAS_RESIDENT);
 
     private static final MethodHandle H_HANDLER_ENTITY = R.handle(McaBinding.COMMAND_HANDLER_ENTITY);
@@ -750,13 +756,103 @@ public final class McaHandles {
     }
 
     public static boolean isWithinBorder(Object village, BlockPos pos) {
+        return isWithinBorder(village, pos, 0);
+    }
+
+    /**
+     * MCA's own containment test with an explicit margin: the village's building box inflated by
+     * {@code margin} blocks. MCA itself uses 32 for players and 48 for villagers; 0 is the building box
+     * alone, which a perimeter wall by definition lies outside.
+     */
+    public static boolean isWithinBorder(Object village, BlockPos pos, int margin) {
         if (village == null) {
             return false;
         }
         try {
-            return (boolean) H_VILLAGE_BORDER.invoke(village, pos, 0);
+            return (boolean) H_VILLAGE_BORDER.invoke(village, pos, Math.max(0, margin));
         } catch (Throwable t) {
             return false;
+        }
+    }
+
+    /**
+     * A copy of the box spanned by a village's registered buildings, or empty when this MCA does not
+     * expose it (or the village has no buildings yet, when MCA reports an inverted box).
+     */
+    public static Optional<net.minecraft.world.level.levelgen.structure.BoundingBox> villageBox(Object village) {
+        if (village == null || !R.has(McaBinding.VILLAGE_GET_BOX)) {
+            return Optional.empty();
+        }
+        Object box = ref(H_VILLAGE_BOX, village);
+        if (!(box instanceof net.minecraft.world.level.levelgen.structure.BoundingBox b)
+                || b.minX() > b.maxX() || b.minZ() > b.maxZ()) {
+            return Optional.empty();
+        }
+        return Optional.of(new net.minecraft.world.level.levelgen.structure.BoundingBox(
+                b.minX(), b.minY(), b.minZ(), b.maxX(), b.maxY(), b.maxZ()));
+    }
+
+    /** Whether MCA considers a registered building complete; empty when this MCA cannot say. */
+    public static Optional<Boolean> buildingComplete(Object building) {
+        if (building == null || !R.has(McaBinding.BUILDING_IS_COMPLETE)) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of((boolean) H_BUILDING_COMPLETE.invoke(building));
+        } catch (Throwable t) {
+            return Optional.empty();
+        }
+    }
+
+    /** Every building type id MCA has loaded, including those other mods add. Empty when unbound. */
+    public static List<String> buildingTypeIds() {
+        if (!R.has(McaBinding.BUILDING_TYPES_GET) || !R.has(McaBinding.BUILDING_TYPES_ALL)) {
+            return List.of();
+        }
+        try {
+            Object registry = H_BUILDING_TYPES.invoke();
+            Object all = registry == null ? null : H_BUILDING_TYPES_ALL.invoke(registry);
+            if (!(all instanceof Map<?, ?> map)) {
+                return List.of();
+            }
+            List<String> out = new ArrayList<>();
+            for (Object key : map.keySet()) {
+                if (key instanceof String id) {
+                    out.add(id);
+                }
+            }
+            out.sort(null);
+            return out;
+        } catch (Throwable t) {
+            return List.of();
+        }
+    }
+
+    /**
+     * What a building of {@code type} must contain according to MCA's loaded building data: block or
+     * block-tag id to count. Empty when the type is unknown or this MCA does not expose its registry.
+     */
+    public static Map<ResourceLocation, Integer> buildingTypeRequirements(String type) {
+        if (type == null || type.isEmpty() || !R.has(McaBinding.BUILDING_TYPES_GET)
+                || !R.has(McaBinding.BUILDING_TYPES_GET_TYPE) || !R.has(McaBinding.BUILDING_TYPE_GROUPS)) {
+            return Map.of();
+        }
+        try {
+            Object registry = H_BUILDING_TYPES.invoke();
+            Object buildingType = registry == null ? null : H_BUILDING_TYPES_GET.invoke(registry, type);
+            Object groups = buildingType == null ? null : H_BUILDING_TYPE_GROUPS.invoke(buildingType);
+            if (!(groups instanceof Map<?, ?> map)) {
+                return Map.of();
+            }
+            Map<ResourceLocation, Integer> out = new java.util.LinkedHashMap<>();
+            map.forEach((key, value) -> {
+                if (key instanceof ResourceLocation id && value instanceof Integer count) {
+                    out.put(id, count);
+                }
+            });
+            return out;
+        } catch (Throwable t) {
+            return Map.of();
         }
     }
 

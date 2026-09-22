@@ -78,6 +78,17 @@ public final class ObjectiveValidator {
             for (int i = 0; i < objectives.size(); i++) {
                 QuestObjective objective = objectives.get(i);
                 objective.validate(def.id(), i, errors);
+                if (objective instanceof dev.otectus.mcaquests.quest.objective.TalkToProfessionObjective talk
+                        && talk.atLocationOf().isPresent()) {
+                    int target = talk.atLocationOf().get();
+                    if (target >= objectives.size() || dev.otectus.mcaquests.quest.objective
+                            .TalkToProfessionObjective.anchorOf(objectives.get(target)).isEmpty()) {
+                        // The objective could never count anybody, so the quest could never finish.
+                        unsatisfiable.add("Quest '" + def.id() + "': objective[" + i + "] at_location_of " + target
+                                + " must name a reach_location, escort_entity, build_near_location or "
+                                + "defend_location objective of the same quest");
+                    }
+                }
                 warnEmptyTags(def, i, objective, warnings);
                 warnDistantSpawn(def, i, objective, warnings);
                 checkUnresolvedEntities(def, i, objective, errors, warnings);

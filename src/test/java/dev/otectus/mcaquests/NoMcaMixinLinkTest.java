@@ -93,6 +93,26 @@ class NoMcaMixinLinkTest {
         }
     }
 
+    /** The class MCA opens its dialogue from, relative to whichever root is live (1.6.6 hook). */
+    private static final String DIALOGUE_RELATIVE = "entity.interaction.EntityCommandHandler";
+
+    @Test
+    @DisplayName("the dialogue hook ships one variant for every MCA package root")
+    void dialogueHookCoversEveryRoot() throws IOException {
+        List<String> found = new ArrayList<>();
+        forEachClass((relative, bytes) -> {
+            for (String root : DOTTED_ROOTS) {
+                if (contains(bytes, root + DIALOGUE_RELATIVE)) {
+                    found.add(root);
+                }
+            }
+        });
+        for (String root : DOTTED_ROOTS) {
+            assertTrue(found.contains(root), "No compiled mixin targets '" + root + DIALOGUE_RELATIVE
+                    + "'. Found: " + found);
+        }
+    }
+
     private interface ClassVisitor {
         void accept(String relative, byte[] bytes);
     }

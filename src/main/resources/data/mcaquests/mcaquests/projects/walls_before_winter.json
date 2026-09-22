@@ -79,12 +79,14 @@
         {
           "type": "mcaquests:project_place_block",
           "block": "minecraft:cobblestone_wall",
-          "count": 128
+          "count": 128,
+          "border_margin": 32
         },
         {
           "type": "mcaquests:project_place_block",
           "block": "minecraft:lantern",
-          "count": 16
+          "count": 16,
+          "border_margin": 32
         }
       ],
       "rewards": [
@@ -118,17 +120,20 @@
         {
           "type": "mcaquests:project_kill_entity",
           "entity": "minecraft:pillager",
-          "count": 24
+          "count": 24,
+          "border_margin": 32
         },
         {
           "type": "mcaquests:project_kill_entity",
           "entity": "minecraft:zombie",
-          "count": 24
+          "count": 24,
+          "border_margin": 32
         },
         {
           "type": "mcaquests:project_kill_entity",
           "entity": "minecraft:skeleton",
-          "count": 16
+          "count": 16,
+          "border_margin": 32
         }
       ],
       "rewards": [

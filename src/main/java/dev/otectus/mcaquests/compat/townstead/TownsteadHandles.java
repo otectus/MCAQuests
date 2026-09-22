@@ -188,6 +188,7 @@ final class TownsteadHandles {
     private static final MethodHandle H_SR_PRIMARY = R.handle(TownsteadBinding.SR_PRIMARY);
     private static final MethodHandle H_SR_SECONDARY = R.handle(TownsteadBinding.SR_SECONDARY);
     private static final MethodHandle H_SPIRIT_CONTAINS = R.handle(TownsteadBinding.SPIRIT_CONTAINS);
+    private static final MethodHandle H_SPIRIT_SOURCES = R.handle(TownsteadBinding.SPIRIT_SOURCES_FOR);
 
     private static final MethodHandle H_VILLAGERS_GET = R.handle(TownsteadBinding.VILLAGERS_GET);
     private static final MethodHandle H_STATE_NEEDS = R.handle(TownsteadBinding.STATE_NEEDS);
@@ -625,6 +626,32 @@ final class TownsteadHandles {
             return (boolean) H_SPIRIT_CONTAINS.invoke(spiritId);
         } catch (Throwable t) {
             return false;
+        }
+    }
+
+    /**
+     * The spirit points one completed building of {@code buildingType} adds, by spirit id. Empty when
+     * the type adds none or the index is not bound on this Townstead.
+     */
+    static Map<String, Integer> spiritContributions(String buildingType) {
+        if (buildingType == null || buildingType.isEmpty() || !R.has(TownsteadCapability.READ_SPIRIT)
+                || !R.has(TownsteadBinding.SPIRIT_SOURCES_FOR)) {
+            return Map.of();
+        }
+        try {
+            Object result = H_SPIRIT_SOURCES.invoke(buildingType);
+            if (!(result instanceof Map<?, ?> map)) {
+                return Map.of();
+            }
+            Map<String, Integer> out = new java.util.TreeMap<>();
+            map.forEach((key, value) -> {
+                if (key instanceof String spirit && value instanceof Integer points && points != 0) {
+                    out.put(spirit, points);
+                }
+            });
+            return out;
+        } catch (Throwable t) {
+            return Map.of();
         }
     }
 

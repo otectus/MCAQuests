@@ -1,0 +1,11 @@
+{
+  "id": "mcaqrt:rt_build",
+  "scope": "village",
+  "sponsor": {},
+  "phases": [
+    { "key": "build", "objectives": [
+      { "type": "mcaquests:project_place_block", "block": "minecraft:cobblestone", "count": 3 } ] },
+    { "key": "second", "objectives": [
+      { "type": "mcaquests:project_place_block", "block": "minecraft:stone_bricks", "count": 1 } ] }
+  ]
+}

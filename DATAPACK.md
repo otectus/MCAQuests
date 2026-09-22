@@ -268,7 +268,7 @@ middle, or their progress shifts onto the wrong objective. "Targets" accept **ei
 | `mcaquests:interact_block` | exactly one of `block` or `tag`, `count`, `source` (optional) | Right-click a block. The interaction is never cancelled and its result is never changed — credited only on server-side success. A block id that is not registered makes the quest unofferable/paused rather than failing to load; a tag is strict (a tag that resolves to nothing is always unmatched). |
 | `mcaquests:visit_biome` | biome target | Enter a matching biome. |
 | `mcaquests:visit_dimension` | `dimension` (resource location) | Enter that dimension, e.g. `minecraft:the_nether`. |
-| `mcaquests:talk_to_profession` | `profession` (resource location), `count` | Interact with that many villagers of a profession. |
+| `mcaquests:talk_to_profession` | `profession` (resource location), `count`, `at_location_of` (optional objective index) | Hold a conversation with that many **different** villagers of a profession — opening MCA's dialogue with them. With `at_location_of`, only villagers at the destination of that sibling objective count (see below). |
 
 The objectives below center on living villagers, homes, families, and places. They all track
 progress **server-side** and persist through the existing quest state, so they survive logout, death,
@@ -292,6 +292,33 @@ dimension change, villager/chunk unload, and dedicated-server restart. They neve
 | `mcaquests:deliver_to_villager` | `recipient` (villager, req.), item target (req.), `count` (def 1), `consume` (bool, def true), `destination` (object, optional) | Hand an item to a specific villager. **Progress counts items, not the hand-off:** since 1.6.5 `required` is `count` rather than `1`, so "deliver two crossbows" reads 0/2, 1/2, 2/2 — anything that displayed `current/required` for this objective now shows items. Credited by an **explicit** hand-in: the **Deliver** button on the quest card, MCA's **Gift** gesture (one item per gift), or the old right-click, which is now opt-in behind `legacyInteractDelivery`. Partial deposits are kept and counted, surplus is never taken, and a committed unit is never charged again. Every route, turn-in included, draws only from the hotbar and main inventory — never worn armour or the offhand — and prefers plain stacks over named or enchanted ones. With `consume:false` and no `destination` the objective asks only to be **shown** the goods: **Show items** answers it and nothing is taken. Consumed at hand-off by default; with a `destination` of `townstead_villager_inventory` the goods go **into the recipient's own inventory** instead. That transfer is all-or-nothing — capacity is simulated before a single item leaves the player, a recipient with no room refuses rather than swallowing half a stack, and a replayed request cannot pay twice. Set `"target": "recipient"` on the destination; it is the only value that makes sense here and the validator rejects the others. **Goods already handed over are not returned if the quest is abandoned** — the player is warned before they confirm. |
 | `mcaquests:find_missing_relative` | `relative` (villager, req. — `family` mode), `biome` (biome target, optional), `structure` (structure target, optional), `min_distance` (0–4096, def 96), `discover_radius` (1–64, def 24), `spawn_distance` (1–64, def 12) | Search the wilds for a relative of the giver who has gone **missing**, and find them. MCA's `missing` means *in the family tree, not deceased, and no entity anywhere in the world* — so there is nobody to walk up to. This objective **materialises** them: once the player is inside the named `biome`/`structure` and at least `min_distance` from the giver, the relative appears `spawn_distance` blocks away with their real identity (same UUID, name, gender, profession — MCA's family tree keeps every link) and is highlighted. **Materialising is not finding them** — the objective completes the same way it does for a relative who was already in the world: only once the player is within `discover_radius` of them. If `spawn_distance` is greater than `discover_radius`, a load-time validator warning fires, since the player must walk toward the relative before the objective can complete. Never spawns twice, and never spawns a relative who is merely unloaded: an alive villager on any village's resident roll is skipped. Gate the quest on `related_villager_status <relation> missing`. Once found they are an ordinary villager, so later chain stages can `escort_entity` or `deliver_to_villager` them through the usual `"mode": "family"` path — and `missing` flips to false, so a `once` search quest stops being re-offered. **Finding someone is permanent:** abandoning or failing the quest drops the quest, never the villager. |
 | `mcaquests:reach_location` | `location` (anchor, req.), `radius` (1–64, def 6), `min_journey` (0–512, optional) | The **player** travels to a location anchor; arrival sticks complete. Border-aware like `escort_entity`: a `home_village`/`nearest_village` anchor completes anywhere **inside the village border**; other anchors use a horizontal (Y-ignored) distance within `radius`. (Distinct from `enter_structure`, which keys off a named structure.) `min_journey` works exactly as it does for `escort_entity`, measured on the **player**: a quest whose destination the player is already standing in is not offered, and arrival is not credited until they have genuinely left and come back. |
+
+#### `talk_to_profession` at a destination (`at_location_of`, 1.6.6)
+
+"Find the next village and speak to whoever keeps *their* maps" is two objectives, and without a link the
+second was satisfied by the giver's own cartographer. `at_location_of` names the index of a sibling
+objective with a location — `reach_location`, `escort_entity`, `build_near_location` or
+`defend_location` — and the conversation then counts only with a villager who **lives in** that
+objective's destination village, or stands within MCA's villager margin (48 blocks) of its buildings; for
+a destination that is not a village, within the sibling's radius. The destination is the sibling's
+**frozen** one, so it never re-binds as the player travels, and the guidance marker uses the same test,
+so it never points at a villager who would not count. Until the destination is known nothing is marked
+and nothing counts. An index that does not name a location objective is a load error under
+`strictJsonValidation`; otherwise the quest is skipped at load with a warning, since it could never finish.
+
+```json
+"objectives": [
+  { "type": "mcaquests:reach_location", "location": { "anchor": "nearest_other_village", "radius": 2048 }, "radius": 8 },
+  { "type": "mcaquests:talk_to_profession", "profession": "minecraft:cartographer", "count": 1, "at_location_of": 0 }
+]
+```
+
+**What counts as talking (1.6.6).** A conversation is MCA opening its dialogue for the player, observed on
+the server. MCA decides which clicks open it — an ordinary right-click does, with or without most items
+in hand; a sneak-click opens trading and is not a conversation; the editor book, needle, comb and
+potions are not conversations either. An add-on such as MCA: Conversations can also report one through
+`McaQuestsApi.notifyVillagerConversation`. One click reported by several routes counts once, and each
+villager counts once per objective.
 
 ### Villager targets
 
@@ -818,6 +845,38 @@ MCA: Quests ships built-in quest and bounty content for these mods, mounted as d
 | `mcaquests/capitals_court` | MCA Capitals installed with registry capability, and `compat.capitals.enableBuiltinContent` on | Quest ids: `mcaquests:compat/capitals/*` — court duties and succession (eight quests, two situations) |
 
 A pack author can override or disable a quest by creating a datapack with an identical resource path. For example, to shadow `mcaquests:compat/iceandfire/dragon_seeker_trial` (which conventionally matches its quest id), create a datapack at `data/mcaquests/mcaquests/quests/compat/iceandfire/dragon_seeker_trial.json` — the merge resolves the override by resource path (which conventionally matches the quest id), so you can shadow a built-in quest completely or copy it and vary one field. An owner's datapack wins over the mounted compat pack at the same path.
+
+### Content that needs an optional mod is not loaded without it (1.6.6)
+
+A quest, project or situation that **needs** Townstead or MCA Capitals is not loaded on an installation
+that does not have that mod — or has it without the capability the definition reads. It is not hidden
+or paused at offer time; it is absent from the registries, so nothing offers it, assigns it, seeds it as
+a follow-up or opens it as a situation. `/mcaquests validate` lists how many definitions were left out
+and why.
+
+What a definition needs is **derived from its typed content**, never from its id, namespace or path:
+
+- an objective that reads the mod (every `townstead_*` objective, a location anchored on a Townstead
+  building, a `capital_role` target) — in **any** phase of a project;
+- a Capitals reward (`capital_title`, `capital_chronicle`, `capital_villager_title`);
+- a condition that asks the mod something, in a position the definition cannot be offered without: a
+  top-level condition or phase `unlock`, or an `all_of`. An `any_of` needs only what **every** branch
+  needs, and `not` of a Townstead gate is an absent-mod gate, not a requirement.
+
+**Townstead rewards are optional side effects** — one that cannot apply is skipped and the quest still
+completes — so they never make a core quest unavailable. Needs combine with AND: a definition that needs
+both mods needs both, and one that needs one never waits on the other.
+
+This is a supported outcome, never a validation error, including under `strictJsonValidation`; a
+malformed file still fails as before. A chain `unlocks` or `prerequisites` entry, or a project
+`follow_up`, that names excluded content is not reported as dangling. Datapack precedence is unchanged:
+the file that wins the merge is the one judged, so a core-only override of a Townstead file loads, and an
+override that still uses Townstead is still gated wherever it lives.
+
+**Records already accepted are kept.** A player's quest or a village's project whose definition was left
+out stays in the log, paused and named with the mod it needs; its clock stops, rewards it owes wait
+instead of failing, and a follow-up it earned is seeded once the mod returns. Adding or removing a mod
+needs a restart; `/reload` re-applies config and datapack changes against the mods already running.
 
 ### How missing content behaves
 
@@ -1426,15 +1485,25 @@ the project's pool, not a single player's inventory or kill count. **Quest objec
 | `type` | Fields | Meaning |
 |---|---|---|
 | `mcaquests:donate_item` | `item` or `tag`, `count`, `per_player_cap` (default `0`) | A player donates items to the sponsor; the stack is **consumed immediately** and banked into the shared pool. `per_player_cap` (`0` = unlimited / config default) caps one player's total contribution. |
-| `mcaquests:project_kill_entity` | `entity` or `tag`, `count` | Kills inside the project's village/scope, banked into the pool. |
-| `mcaquests:project_place_block` | `block` or `tag`, `count` | Blocks placed inside the scope. |
-| `mcaquests:project_talk_to_profession` | `profession` (resource location), `count` | Talk to that many **distinct** villagers of a profession inside the scope. |
+| `mcaquests:project_kill_entity` | `entity` or `tag`, `count`, `border_margin` (def `0`, max `64`) | Kills inside the project's village/scope, banked into the pool. |
+| `mcaquests:project_place_block` | `block` or `tag`, `count`, `border_margin` (def `0`, max `64`) | Blocks placed inside the scope during this phase, one credit per block position. |
+| `mcaquests:project_talk_to_profession` | `profession` (resource location), `count` | Talk to that many **distinct** villagers of a profession: a resident of the project's village counts wherever you meet them, anyone else inside the village. |
 | `mcaquests:townstead_building_project` | `building_type` (required), `minimum_level` (def `1`), `count` (def `1`) | *(optional [Townstead](TOWNSTEAD.md))* The village has that many buildings of the family at the tier. **Polled**, not banked: it reads the village's real building registry, so it is satisfied by whoever raises the dock, and it un-satisfies if the dock is lost. |
-| `mcaquests:townstead_spirit_project` | `spirit` (optional), `points_delta` **or** `target_tier` | *(optional Townstead)* The village's character has grown — either by so many points from where the project started, or up to a tier outright. `points_delta` freezes its baseline when the project opens, so pre-existing progress does not count. |
-| `mcaquests:townstead_workforce_project` | `professions` (list, required), `minimum_tier` (def `1`), `count` (def `1`) | *(optional Townstead)* That many residents practise one of those trades at the tier — "three journeyman farmers before the granary is worth building". |
+| `mcaquests:townstead_spirit_project` | `spirit` (optional), `points_delta` **or** `target_tier`, `baseline` (`phase` default, or `project`) | *(optional Townstead)* The village's Townstead spirit has grown — by so many points, or up to a tier outright. `points_delta` is measured from a reading taken **when the phase opens** (`baseline: "phase"`) or **when the project began** (`baseline: "project"`, 1.6.6), so spirit the village already had does not count. |
+| `mcaquests:townstead_workforce_project` | `professions` (list, required), `minimum_tier` (def `1`), `count` (def `1`), `profession_policy` (`listed` default, or `any_progressive`) | *(optional Townstead)* That many residents of the village reach **Townstead profession tier** `minimum_tier` — Townstead's work tier, not the vanilla trading level. `listed` counts only the trades named; `any_progressive` (1.6.6) counts any trade whose Townstead track reaches the tier, and the list becomes an example. |
 | `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed` (def `1`), `minimum_fraction` (0–1), `hunger_min`, `energy_min`, `hold_ticks` | *(optional Townstead)* Enough of the village has been fed and rested for long enough. `minimum_observed` stops a one-resident village trivially satisfying a fraction. |
 
-The four `townstead_*` project objectives are **polled** rather than contributed to: they read village state on the project sweep instead of banking a player's donation, so they progress and regress with the village itself. Without Townstead installed they simply sit at zero and the project stalls rather than breaking. See **[TOWNSTEAD.md](TOWNSTEAD.md)**.
+The four `townstead_*` project objectives are **polled** rather than contributed to: they read village state on the project sweep instead of banking a player's donation. A project that uses one in **any** phase is Townstead content, and since 1.6.6 it is **not loaded at all** without Townstead — see [Content that needs an optional mod](#content-that-needs-an-optional-mod-is-not-loaded-without-it-166). See **[TOWNSTEAD.md](TOWNSTEAD.md)**.
+
+**Where positional work counts (`border_margin`, 1.6.6).** A village-bound project tests a placement or a
+kill against MCA's own village border: the box spanned by the village's **registered buildings**. With
+the default margin of `0` that box is all there is, and a defensive wall or a road around the village
+lies outside it by construction. `border_margin` widens it by that many blocks for that one objective —
+the bundled wall, road and defence projects use `32`, the margin MCA itself uses to decide a player is
+in the village. Credit, the **Show build area** outline on the project card and the operator diagnostics
+all use the same test. For a project with no village behind it the area is a radius around its
+anchor, frozen when the instance starts. Blocks placed before the phase began do not count, and
+breaking and re-placing a counted block does not count it twice.
 
 ### Shared rewards
 
@@ -1532,8 +1601,15 @@ Projects add a `projects` block to the common config plus two client keys (full 
 | `/mcaquests project info <id>` | 2 | Show a project's phases, scope, and progress. |
 | `/mcaquests project debug <id>` | 2 | Explain why a project is/isn't available from the nearest villager. |
 | `/mcaquests project validate` | 3 | Re-run project validation and report problems. |
-| `/mcaquests project reset <id>` | 3 | Clear a project's shared progress. |
-| `/mcaquests project advance <id>` | 3 | **Test only** — force-advance a phase. |
+| `/mcaquests project instances <id>` | 2 | List every instance of a project, numbered, with its village, dimension, phase and revision. |
+| `/mcaquests project instance <id> <n> info` | 2 | Diagnose one instance: key, geometry, dependencies, and per objective its target, evidence, baselines and state (in progress / blocked / paused / not observed). Read-only. |
+| `/mcaquests project instance <id> <n> recheck` | 2 | Run exactly the periodic sweep for that one instance and refresh open menus. Pays nothing it has not earned and resets nothing. |
+| `/mcaquests project instance <id> <n> skip [normal_rewards]` | 3 | **Preview** moving that one instance past its current phase. Without `normal_rewards` the phase is settled without payout; with it, the phase's normal rewards are paid once. Prints a token. |
+| `/mcaquests project instance <id> <n> reset` | 3 | **Preview** removing that one instance. Prints a token. |
+| `/mcaquests project instance <id> <n> rebaseline <objective> <value>` | 3 | **Preview** setting a `townstead_spirit_project` objective's starting value. Prints a token. |
+| `/mcaquests project confirm <token>` | 3 | Apply a previewed repair. A token is single-use, belongs to whoever previewed it, expires after a minute, and is refused if the instance changed since. Logged. |
+| `/mcaquests project reset <id>` | 3 | Remove the instance of a project — only when exactly one exists; otherwise it refuses and lists them. `reset <id> all` previews removing every one. |
+| `/mcaquests project advance <id>` | 3 | Move a project past its phase without rewards — only when exactly one instance exists; `advance <id> all` previews advancing every one. |
 | `/mcaquests project pending <player>` | 2 | List a player's owed rewards, including any held after repeated delivery failures. |
 | `/mcaquests project pending <player> retry` | 3 | Clear that player's attempt counts and run an immediate delivery pass if they're online, otherwise queue it for next login. |
 

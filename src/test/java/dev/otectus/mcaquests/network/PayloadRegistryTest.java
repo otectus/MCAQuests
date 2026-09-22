@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Spec §14.5: all 22 payload ids are the ones §14.2 names, all 22 are unique, all 22 are registered
- * in the right direction, and the protocol is 17.
+ * Spec §14.5: all 24 payload ids are the ones §14.2 names (plus the two build-area payloads added in
+ * 1.6.6), all 24 are unique, all 24 are registered in the right direction, and the protocol is 18.
  *
  * <p>None of that can be asserted by calling {@code QuestNetwork.onRegisterPayloads} with a recording
  * double, because {@code RegisterPayloadHandlersEvent} and {@code PayloadRegistrar} are final and
@@ -68,6 +68,7 @@ class PayloadRegistryTest {
         C2S.put("OpenStandingC2SPacket", "open_standing");
         C2S.put("QuestTrackC2SPacket", "quest_track");
         C2S.put("QuestDeliverC2SPacket", "quest_deliver");
+        C2S.put("ProjectScopeRequestC2SPacket", "project_scope_request");
 
         S2C.put("QuestMenuDataS2CPacket", "quest_menu_data");
         S2C.put("QuestLogSyncS2CPacket", "quest_log_sync");
@@ -81,6 +82,7 @@ class PayloadRegistryTest {
         S2C.put("FtbqEditorIdsS2CPacket", "ftbq_editor_ids");
         S2C.put("HighlightTargetsS2CPacket", "highlight_targets");
         S2C.put("QuestGuidanceS2CPacket", "quest_guidance");
+        S2C.put("ProjectScopeS2CPacket", "project_scope");
     }
 
     private static List<String> allPayloads() {
@@ -133,9 +135,9 @@ class PayloadRegistryTest {
     // ---------------------------------------------------------------- ids
 
     @Test
-    @DisplayName("all 22 payloads carry the id spec §14.2 gives them")
+    @DisplayName("all 24 payloads carry the ids spec §14.2 and 1.6.6 give them")
     void everyPayloadHasItsSpecifiedId() {
-        assertEquals(22, allPayloads().size(), "spec §14.2 lists exactly 22 payloads");
+        assertEquals(24, allPayloads().size(), "spec §14.2 lists 22 payloads and 1.6.6 adds two");
         for (String simpleName : allPayloads()) {
             String expected = C2S.containsKey(simpleName) ? C2S.get(simpleName) : S2C.get(simpleName);
             assertEquals(ResourceLocation.fromNamespaceAndPath("mcaquests", expected),
@@ -153,7 +155,7 @@ class PayloadRegistryTest {
             String id = type(simpleName).id().toString();
             assertTrue(seen.add(id), "duplicate payload id " + id + " (at " + simpleName + ")");
         }
-        assertEquals(22, seen.size());
+        assertEquals(24, seen.size());
     }
 
     // ---------------------------------------------------------------- direction
@@ -214,30 +216,30 @@ class PayloadRegistryTest {
                     CLIENT_HANDLERS + " has no static handler taking " + simpleName);
         }
         assertEquals(S2C.size(), handled.size(),
-                "the client bridge must handle the 12 S2C payloads and nothing else");
+                "the client bridge must handle the 13 S2C payloads and nothing else");
     }
 
     // ---------------------------------------------------------------- protocol and registration
 
     @Test
-    @DisplayName("the protocol version is 17")
-    void protocolVersionIs17() {
+    @DisplayName("the protocol version is 18")
+    void protocolVersionIs18() {
         // Read reflectively rather than exposed: the constant is deliberately private, and a test is
         // not a reason to widen it. A mismatch here is a client that can silently join a server
         // speaking a different wire format.
         try {
             Field field = QuestNetwork.class.getDeclaredField("PROTOCOL_VERSION");
             field.setAccessible(true);
-            // 17 since item delivery: a new C2S payload, and three existing payloads that grew
-            // fields a protocol-16 client would decode as the start of the next value.
-            assertEquals("17", field.get(null), "the NeoForge protocol is 17");
+            // 18 since 1.6.6: two new build-area payloads, and project cards, objective lines and
+            // log entries that grew fields a protocol-17 client would decode as the next value.
+            assertEquals("18", field.get(null), "the NeoForge protocol is 18");
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("QuestNetwork must keep a PROTOCOL_VERSION constant", e);
         }
     }
 
     @Test
-    @DisplayName("QuestNetwork registers 10 payloads to the server and 12 to the client")
+    @DisplayName("QuestNetwork registers 11 payloads to the server and 13 to the client")
     void registrationCountsMatchTheDirections() {
         String source = questNetworkSource();
         assertEquals(C2S.size(), countOf(source, "playToServer("),

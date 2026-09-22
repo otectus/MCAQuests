@@ -1,0 +1,8 @@
+{
+  "id": "mcaqrt:rt_talk",
+  "giver": {},
+  "dialogue": {},
+  "objectives": [
+    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:cartographer", "count": 2 }
+  ]
+}

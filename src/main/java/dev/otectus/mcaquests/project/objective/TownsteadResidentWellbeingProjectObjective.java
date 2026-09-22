@@ -41,7 +41,7 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
                                                          boolean requireNotCollapsed,
                                                          double minimumLoadedFraction,
                                                          int holdTicks)
-        implements PollingProjectObjective {
+        implements TownsteadProjectObjective {
 
     private static final String K_HELD = "townstead_held_ticks";
 
@@ -90,9 +90,8 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
     }
 
     @Override
-    public boolean isAvailable(ServerLevel level, ProjectState state) {
-        return state.villageId().isPresent()
-                && TownsteadBridge.Holder.get().has(TownsteadCapability.READ_NEEDS);
+    public java.util.Set<TownsteadCapability> requiredCapabilities() {
+        return java.util.Set.of(TownsteadCapability.READ_NEEDS);
     }
 
     @Override

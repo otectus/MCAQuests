@@ -1,0 +1,13 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="GPL-3.0-only"
+[[mods]]
+modId="mcaquests_rt"
+version="1"
+displayName="MCA Quests disposable reliability runtime fixture"
+[[dependencies.mcaquests_rt]]
+modId="mcaquests"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="BOTH"

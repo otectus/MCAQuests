@@ -77,12 +77,14 @@
         {
           "type": "mcaquests:project_place_block",
           "block": "minecraft:gravel",
-          "count": 192
+          "count": 192,
+          "border_margin": 32
         },
         {
           "type": "mcaquests:project_place_block",
           "block": "minecraft:lantern",
-          "count": 24
+          "count": 24,
+          "border_margin": 32
         }
       ],
       "rewards": [

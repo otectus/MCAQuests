@@ -56,8 +56,34 @@ public final class CapitalsQuestRequirements {
 
     // Pure seam: allows regression tests to model partial installations without a Minecraft server.
     static boolean available(QuestDefinition def, Predicate<CapitalsCapability> has) {
-        return requiredCapabilities(def).stream().allMatch(has)
-                && def.conditions().map(c -> conditionAvailable(c, has, false)).orElse(true);
+        return IntegrationRequirements.questAvailable(def, capitalsOnly(has));
+    }
+
+    /**
+     * The Capitals half of {@link IntegrationRequirements}, with every other integration treated as
+     * present. The rules themselves now live there, so the loader and the running game cannot drift
+     * apart; this class keeps its 1.6.0 entry points for the per-tick callers.
+     */
+    private static IntegrationRequirements.Availability capitalsOnly(Predicate<CapitalsCapability> has) {
+        return new IntegrationRequirements.Availability() {
+            @Override
+            public boolean usable(IntegrationRequirements.Integration integration) {
+                return true;
+            }
+
+            @Override
+            public boolean has(IntegrationRequirements.Integration integration, String capability) {
+                if (integration != IntegrationRequirements.Integration.CAPITALS) {
+                    return true;
+                }
+                for (CapitalsCapability candidate : CapitalsCapability.values()) {
+                    if (candidate.id().equalsIgnoreCase(capability)) {
+                        return has.test(candidate);
+                    }
+                }
+                return false;
+            }
+        };
     }
 
     /** Persist these after resolving a situation template so its shared clock also works offline. */
@@ -91,46 +117,6 @@ public final class CapitalsQuestRequirements {
 
     private static void target(VillagerTarget target, Set<CapitalsCapability> required) {
         if (target.mode() == VillagerTarget.Mode.CAPITAL_ROLE) required.add(CapitalsCapability.ROLES);
-    }
-
-    /** Preserve alternatives and explicit absent-mod gates; never re-test player roles at turn-in. */
-    private static boolean conditionAvailable(QuestCondition condition, Predicate<CapitalsCapability> has,
-                                               boolean negated) {
-        if (condition instanceof NotCondition not) return conditionAvailable(not.condition(), has, !negated);
-        if (condition instanceof AllOfCondition all) {
-            return negated
-                    ? all.conditions().stream().anyMatch(c -> conditionAvailable(c, has, true))
-                    : all.conditions().stream().allMatch(c -> conditionAvailable(c, has, false));
-        }
-        if (condition instanceof AnyOfCondition any) {
-            return negated
-                    ? any.conditions().stream().allMatch(c -> conditionAvailable(c, has, true))
-                    : any.conditions().stream().anyMatch(c -> conditionAvailable(c, has, false));
-        }
-        if (condition instanceof CompatCapabilityCondition compat) {
-            if (!compat.provider().equals("mcacapitals") || compat.present() == negated) return true;
-            for (CapitalsCapability capability : CapitalsCapability.values()) {
-                if (capability.id().equalsIgnoreCase(compat.capability())) return has.test(capability);
-            }
-            return false;
-        }
-        if (condition instanceof CapitalPresentCondition) return has.test(CapitalsCapability.REGISTRY);
-        if (condition instanceof CapitalRoleCondition role) {
-            return has.test(CapitalsCapability.REGISTRY) && has.test(role.subject() == CapitalRoleCondition.Subject.PLAYER
-                    ? CapitalsCapability.PLAYER_TITLES : CapitalsCapability.ROLES);
-        }
-        if (condition instanceof CapitalAllegianceCondition allegiance) {
-            return has.test(CapitalsCapability.ALLEGIANCE) && (allegiance.match() == CapitalAllegianceCondition.Match.ANY
-                    || has.test(CapitalsCapability.REGISTRY));
-        }
-        if (condition instanceof CapitalRelationCondition relation) {
-            return has.test(CapitalsCapability.REGISTRY) && has.test(CapitalsCapability.DIPLOMACY)
-                    && (relation.other() != CapitalRelationCondition.Other.ALLEGIANCE || has.test(CapitalsCapability.ALLEGIANCE));
-        }
-        if (condition instanceof CapitalInterregnumCondition) {
-            return has.test(CapitalsCapability.REGISTRY) && has.test(CapitalsCapability.INTERREGNUM);
-        }
-        return true;
     }
 
     public static boolean isBundled(ResourceLocation id) {

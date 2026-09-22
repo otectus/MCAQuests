@@ -124,6 +124,11 @@ public final class ReflectiveTownsteadBridge implements TownsteadBridge {
     }
 
     @Override
+    public java.util.Map<String, Integer> spiritContributions(String buildingType) {
+        return TownsteadHandles.spiritContributions(buildingType);
+    }
+
+    @Override
     public boolean isKnownSpirit(String spiritId) {
         return TownsteadHandles.isKnownSpirit(spiritId);
     }

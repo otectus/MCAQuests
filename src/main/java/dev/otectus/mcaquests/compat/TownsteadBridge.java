@@ -80,6 +80,15 @@ public interface TownsteadBridge {
     boolean isKnownSpirit(String spiritId);
 
     /**
+     * The spirit points one completed building of {@code buildingType} adds to its village, by spirit id,
+     * as the running Townstead's data defines them (1.6.6). Best-effort and empty when unknown; only used
+     * to tell a player which buildings raise a spirit, never to decide progress.
+     */
+    default java.util.Map<String, Integer> spiritContributions(String buildingType) {
+        return java.util.Map.of();
+    }
+
+    /**
      * What this profession's progression can actually reach (spec §5.1). Never null: a profession
      * Townstead has no track for answers with a
      * {@link TownsteadProfessionTrackView#progressive() non-progressive} view, which is the whole
