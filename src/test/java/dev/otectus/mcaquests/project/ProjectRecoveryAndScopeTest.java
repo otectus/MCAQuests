@@ -91,7 +91,7 @@ class ProjectRecoveryAndScopeTest {
     }
 
     @Test
-    @DisplayName("BUILD-05: loading a pre-1.6.6 Nether instance re-keys it and the rewards it owes, without merging")
+    @DisplayName("BUILD-05: loading a pre-1.7.0 Nether instance re-keys it and the rewards it owes, without merging")
     void legacyNetherInstanceIsRekeyedWithItsRewards() {
         ProjectState nether = new ProjectState(WALLS, ProjectScope.VILLAGE, "v:3", NETHER, BlockPos.ZERO,
                 OptionalInt.of(3), 0L, 1);

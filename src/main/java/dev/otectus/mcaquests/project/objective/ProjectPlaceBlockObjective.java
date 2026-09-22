@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * Place matching blocks inside the project's area (spec 0.4.0). Event-driven and credited by
  * {@code ProjectProgressEvents} only when the placement happens inside the project's scope.
  *
- * <p>{@code border_margin} (1.6.6, default 0) widens a village-bound scope beyond the box spanned by the
+ * <p>{@code border_margin} (1.7.0, default 0) widens a village-bound scope beyond the box spanned by the
  * village's registered buildings, which is all MCA's containment test covers with no margin. A wall or a
  * road naturally runs around the outside of that box, so the bundled building projects ask for 32 —
  * the margin MCA itself uses to decide a player is in the village. The allowance applies to this
@@ -27,7 +27,7 @@ public record ProjectPlaceBlockObjective(BlockTarget target, int count, int bord
     /** The widest allowance a definition may ask for: MCA's own villager margin is 48. */
     public static final int MAX_BORDER_MARGIN = 64;
 
-    /** The pre-1.6.6 shape: no allowance beyond the village's building box. */
+    /** The pre-1.7.0 shape: no allowance beyond the village's building box. */
     public ProjectPlaceBlockObjective(BlockTarget target, int count) {
         this(target, count, 0);
     }
@@ -35,7 +35,7 @@ public record ProjectPlaceBlockObjective(BlockTarget target, int count, int bord
     public static final Codec<ProjectPlaceBlockObjective> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             BlockTarget.MAP_CODEC.forGetter(ProjectPlaceBlockObjective::target),
             StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ProjectPlaceBlockObjective::count),
-            // How far outside the village's registered buildings this work still counts (1.6.6).
+            // How far outside the village's registered buildings this work still counts (1.7.0).
             StrictCodecs.strictOptional(Codec.intRange(0, MAX_BORDER_MARGIN), "border_margin", 0)
                     .forGetter(ProjectPlaceBlockObjective::borderMargin)
     ).apply(instance, ProjectPlaceBlockObjective::new));

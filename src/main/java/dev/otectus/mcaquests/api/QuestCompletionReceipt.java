@@ -20,7 +20,21 @@ public record QuestCompletionReceipt(UUID providerEpoch, UUID receiptId, UUID pl
                                      UUID giverId, ResourceLocation acceptedDimension,
                                      Optional<Integer> acceptedVillageId,
                                      Optional<KingdomBinding> kingdomBinding,
-                                     Optional<CivicBuildingBinding> civicBuildingBinding) {
+                                     Optional<CivicBuildingBinding> civicBuildingBinding,
+                                     String institutionalBinding) {
+
+    /** Source-compatible constructor for receipts created before institutional ownership metadata. */
+    public QuestCompletionReceipt(UUID providerEpoch, UUID receiptId, UUID playerId,
+                                  ResourceLocation questId, long completionRevision,
+                                  Outcome outcome, long completedGameTime, long acceptedGameTime,
+                                  UUID giverId, ResourceLocation acceptedDimension,
+                                  Optional<Integer> acceptedVillageId,
+                                  Optional<KingdomBinding> kingdomBinding,
+                                  Optional<CivicBuildingBinding> civicBuildingBinding) {
+        this(providerEpoch, receiptId, playerId, questId, completionRevision, outcome, completedGameTime,
+                acceptedGameTime, giverId, acceptedDimension, acceptedVillageId, kingdomBinding,
+                civicBuildingBinding, "");
+    }
 
     public QuestCompletionReceipt {
         Objects.requireNonNull(providerEpoch, "providerEpoch");
@@ -33,8 +47,10 @@ public record QuestCompletionReceipt(UUID providerEpoch, UUID receiptId, UUID pl
         acceptedVillageId = Objects.requireNonNull(acceptedVillageId, "acceptedVillageId");
         kingdomBinding = Objects.requireNonNull(kingdomBinding, "kingdomBinding");
         civicBuildingBinding = Objects.requireNonNull(civicBuildingBinding, "civicBuildingBinding");
+        institutionalBinding = Objects.requireNonNull(institutionalBinding, "institutionalBinding");
         if (completionRevision <= 0L || completedGameTime < 0L || acceptedGameTime < 0L
-                || acceptedVillageId.filter(value -> value < 0).isPresent()) {
+                || acceptedVillageId.filter(value -> value < 0).isPresent()
+                || institutionalBinding.length() > 128) {
             throw new IllegalArgumentException("invalid quest completion receipt number");
         }
     }

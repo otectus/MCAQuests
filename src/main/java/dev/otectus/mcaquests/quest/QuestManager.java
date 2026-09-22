@@ -58,6 +58,8 @@ import dev.otectus.mcaquests.quest.situation.state.SituationInstance;
 import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.quest.reward.CurrencyReward;
 import dev.otectus.mcaquests.quest.reward.ItemPoolReward;
+import dev.otectus.mcaquests.quest.reward.ItemReward;
+import dev.otectus.mcaquests.quest.reward.ItemRewardDelivery;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
 import dev.otectus.mcaquests.quest.reward.FactionStandingReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
@@ -111,6 +113,9 @@ import java.util.function.IntPredicate;
  * {@link McaCompat} only.
  */
 public final class QuestManager {
+
+    private static final ResourceLocation INSTITUTIONAL_RECEIPT_CONSUMER =
+            new ResourceLocation("ultima_kingdoms", "regional_civic_network");
 
     private QuestManager() {
     }
@@ -225,7 +230,28 @@ public final class QuestManager {
                 || player.level() != villager.level() || !McaCompat.canPlayerInteract(player, villager)) {
             return false;
         }
-        sendMenu(player, villager, Component.empty(), Set.copyOf(allowedQuestIds));
+        sendMenu(player, villager, Component.empty(), Set.copyOf(allowedQuestIds), null);
+        return true;
+    }
+
+    /** Institutional counterpart with a persisted, privately validated Ultima owner binding. */
+    public static boolean openInstitutionalCommissionMenu(ServerPlayer player, Entity villager,
+                                                          Set<ResourceLocation> allowedQuestIds,
+                                                          String binding) {
+        if (player.getServer() == null || !player.getServer().isSameThread()
+                || player.level() != villager.level() || !McaCompat.canPlayerInteract(player, villager)) {
+            return false;
+        }
+        for (ResourceLocation questId : allowedQuestIds) {
+            QuestDefinition definition = QuestDefinitions.resolve(questId).orElse(null);
+            if (!InstitutionalCommissionBridge.supportedDefinition(definition)) return false;
+            String refusal = InstitutionalCommissionBridge.validate(player, villager, questId, binding, false);
+            if (!refusal.isEmpty()) {
+                player.sendSystemMessage(Component.literal(refusal));
+                return false;
+            }
+        }
+        sendMenu(player, villager, Component.empty(), Set.copyOf(allowedQuestIds), binding);
         return true;
     }
 
@@ -234,7 +260,10 @@ public final class QuestManager {
         Optional<Set<ResourceLocation>> restriction = QuestCapabilities.get(player)
                 .flatMap(data -> data.offers().find(villager.getUUID()))
                 .flatMap(OfferSession::restrictedQuestIds);
-        sendMenu(player, villager, Component.empty(), restriction.orElse(null));
+        String binding = QuestCapabilities.get(player)
+                .flatMap(data -> data.offers().find(villager.getUUID()))
+                .flatMap(OfferSession::institutionalBinding).orElse(null);
+        sendMenu(player, villager, Component.empty(), restriction.orElse(null), binding);
     }
 
     /**
@@ -245,11 +274,12 @@ public final class QuestManager {
      * message the player cannot see is barely better than none.
      */
     public static void sendMenu(ServerPlayer player, Entity villager, Component notice) {
-        sendMenu(player, villager, notice, null);
+        sendMenu(player, villager, notice, null, null);
     }
 
     private static void sendMenu(ServerPlayer player, Entity villager, Component notice,
-                                 @Nullable Set<ResourceLocation> allowedQuestIds) {
+                                 @Nullable Set<ResourceLocation> allowedQuestIds,
+                                 @Nullable String institutionalBinding) {
         // Co-send community-project cards first so the client cache is populated before the quest menu
         // opens (drives the "View Project" button). Individual quests stay visually unchanged.
         ProjectManager.sendProjectMenu(player, villager);
@@ -323,7 +353,10 @@ public final class QuestManager {
         // declining an offer brought the very same three straight back).
         List<OfferSessionService.Offer> offers = allowedQuestIds == null
                 ? OfferSessionService.currentOffers(player, villager, data)
-                : OfferSessionService.currentOffers(player, villager, data, allowedQuestIds);
+                : institutionalBinding == null
+                ? OfferSessionService.currentOffers(player, villager, data, allowedQuestIds)
+                : OfferSessionService.currentOffers(player, villager, data, allowedQuestIds,
+                        institutionalBinding);
         if (offers.isEmpty()) {
             // "I do not need anything right now" is true but unhelpful when the reason is "you did that
             // yesterday" or "not until you have done something else first". Every quest already authors a
@@ -605,11 +638,23 @@ public final class QuestManager {
         QuestDefinition def = defOpt.get();
         PlayerQuestData data = dataOpt.get();
         UUID villagerUuid = villager.getUUID();
+        OfferSession offerSession = data.offers().find(villagerUuid).orElse(null);
 
         // Re-validate server-side; never trust the client's offered id. Against this villager's actual
         // offer set, not the eligible pool: a crafted packet could otherwise accept a quest that was
         // declined, or that this villager never drew, simply because it would have been offerable.
-        if (OfferSessionService.slotFor(data, villagerUuid, questId).isEmpty()) {
+        if (offerSession == null || offerSession.slots().stream()
+                .noneMatch(slot -> slot.questId().equals(questId))) {
+            return false;
+        }
+        String institutionalBinding = offerSession.institutionalBinding().orElse(null);
+        if (def.institutionalCommission()) {
+            if (institutionalBinding == null || !InstitutionalCommissionBridge.supportedDefinition(def)
+                    || offerSession.packGeneration() != QuestRegistry.generation()
+                    || offerSession.restrictedQuestIds().filter(ids -> ids.contains(questId)).isEmpty()) {
+                return false;
+            }
+        } else if (institutionalBinding != null) {
             return false;
         }
         // ...and re-run the offer gate at this exact moment. A session remembers its cards for up to
@@ -703,12 +748,31 @@ public final class QuestManager {
                 .map(community -> OptionalInt.of(community.villageId()))
                 .orElseGet(OptionalInt::empty);
 
+        // This is the last authorization read before acceptance. The offer may have been open while a
+        // service suspension, restitution requirement, or contract cancellation changed in Ultima.
+        if (institutionalBinding != null) {
+            String refusal = InstitutionalCommissionBridge.validate(
+                    player, villager, questId, institutionalBinding, false);
+            if (!refusal.isEmpty()) {
+                player.sendSystemMessage(Component.literal(refusal));
+                return false;
+            }
+        }
+
         ActiveQuest active = ActiveQuest.create(questId, villagerUuid,
                 McaCompat.getVillagerDisplayName(villager),
                 McaCompat.getProfessionId(villager).orElse(null),
                 player.level().dimension().location(),
                 startTime, OptionalLong.of(startDayTime), villageId,
                 accepted.objectives().size(), frozen, situationLink);
+        if (institutionalBinding != null) {
+            Optional<UUID> instance = active.bindInstitutional(institutionalBinding, accepted);
+            if (instance.isEmpty() || !InstitutionalCommissionBridge.accepted(
+                    player, villager, questId, institutionalBinding, instance.get())) {
+                player.sendSystemMessage(Component.literal("This commission could not be accepted."));
+                return false;
+            }
+        }
         if (!KingdomQuestLifecycle.bindAtAccept(accepted, active, player, villager)) {
             if (McaQuestsConfig.COMMON.questChatMessages.get()) {
                 player.sendSystemMessage(Component.translatable("mcaquests.message.offer_gone",
@@ -725,6 +789,13 @@ public final class QuestManager {
         // hand before it ever appears is a feature most players would never find.
         if (McaQuestsConfig.COMMON.autoTrackNewQuests.get()) {
             data.trackIfNothingTracked(active);
+        }
+        if (active.isInstitutional()
+                && !CompletionReceiptDurability.flushInstitutionalAcceptance(player, active)) {
+            player.sendSystemMessage(Component.literal(
+                    "The commission was bound, but its quest save could not be verified. It remains active; "
+                            + "reopen this menu after storage recovers."));
+            return false;
         }
         if (situationLink != null && player.getServer() != null) {
             SituationSavedData.get(player.getServer()).recordParticipant(situationLink, player.getUUID());
@@ -976,7 +1047,7 @@ public final class QuestManager {
                 active.dimension(), active.villageId(), def.id(),
                 // This copy of the quest, so a reward whose effect must land once per acceptance —
                 // and again on the next acceptance of a repeatable quest — has an identity to key on
-                // (1.6.6). Minted here rather than read through instanceIfPresent(): this runs inside
+                // (1.7.0). Minted here rather than read through instanceIfPresent(): this runs inside
                 // the turn-in, which is already writing the quest state, and a key that fell back to
                 // "no instance" would make two runs of a repeatable quest look like one operation.
                 java.util.Optional.of(active.instance()));
@@ -1027,6 +1098,35 @@ public final class QuestManager {
         if (active.rewardClaimed() || !data.active().contains(active)) {
             return false;
         }
+        QuestDefinition current = QuestDefinitions.resolve(active.questId()).orElse(null);
+        if (!active.institutionalShapeMatches(current)) {
+            if (active.isInstitutional() || (current != null && current.institutionalCommission())) {
+                player.sendSystemMessage(Component.literal(
+                        "This commission is suspended because its accepted terms are unavailable."));
+            }
+            return false;
+        }
+        boolean institutional = active.isInstitutional();
+        if (institutional) {
+            Entity issuer = resolveGiver(player, active);
+            if (issuer == null) {
+                player.sendSystemMessage(Component.literal(
+                        "This commission is suspended because its issuer or accepted terms are unavailable."));
+                return false;
+            }
+            String refusal = InstitutionalCommissionBridge.validate(player, issuer, active.questId(),
+                    active.institutionalBinding(), true);
+            if (!refusal.isEmpty()) {
+                player.sendSystemMessage(Component.literal(refusal));
+                return false;
+            }
+            ItemReward payment = (ItemReward) def.rewards().get(0);
+            if (!ItemRewardDelivery.canFitExactly(player, payment.item(), payment.count())) {
+                player.sendSystemMessage(Component.literal(
+                        "Make room for the full commission payment before turning in the delivery."));
+                return false;
+            }
+        }
         if (KingdomQuestLifecycle.activeStatus(def, active, player, resolveGiver(player, active))
                 != KingdomQuestLifecycle.ActiveStatus.ALLOW) {
             return false;
@@ -1039,10 +1139,16 @@ public final class QuestManager {
             return false;
         }
         long now = ((ServerLevel) player.level()).getGameTime();
+        if (institutional && (!data.hasActiveCompletionReceiptConsumer(INSTITUTIONAL_RECEIPT_CONSUMER, now)
+                || !data.canCaptureCompletionReceipt(now))) {
+            player.sendSystemMessage(Component.literal(
+                    "The civic receipt service is unavailable; no goods or payment were moved."));
+            return false;
+        }
         // A polling add-on opts this player into receipts. Standalone MCA: Quests never accumulates an
         // outbox merely because a possible future consumer could be installed. Once subscribed, refuse
         // before delivery or rewards rather than evict evidence its frozen consumer cohort has not acked.
-        boolean captureCompletionReceipt = data.shouldCaptureCompletionReceipt(now);
+        boolean captureCompletionReceipt = institutional || data.shouldCaptureCompletionReceipt(now);
         if (captureCompletionReceipt && !data.canCaptureCompletionReceipt(now)) {
             McaQuests.LOGGER.error("[MCA: Quests] Refusing completion of '{}' for {}: completion receipt "
                     + "outbox status is {}", def.id(), player.getUUID(), data.completionReceiptStatus());
@@ -1100,6 +1206,15 @@ public final class QuestManager {
                 int choice = pool.clamp(frozenChoice.isPresent() ? frozenChoice.getAsInt()
                         : pool.pick(player.getRandom()));
                 grantSafely(player, reward, def, () -> pool.grantChoice(player, choice));
+                continue;
+            }
+            if (active.isInstitutional() && reward instanceof ItemReward item) {
+                if (!ItemRewardDelivery.grantExactly(player, item.item(), item.count())) {
+                    active.setRewardClaimed(false);
+                    player.sendSystemMessage(Component.literal(
+                            "The commission payment could not be stored; completion was not recorded."));
+                    return false;
+                }
                 continue;
             }
             if (reward instanceof FactionStandingReward faction) {
@@ -1351,6 +1466,15 @@ public final class QuestManager {
         if (!data.active().contains(active)) {
             return false; // already reached a terminal state this tick — never abandon twice
         }
+        // The owner contract reserves civic capacity and an honor slot. Release it durably before
+        // removing the native quest; a crash after that callback can only resurrect an unpayable quest,
+        // and the callback is idempotent when the player retries abandonment after restart.
+        if (active.isInstitutional() && !InstitutionalCommissionBridge.cancelled(player, active.questId(),
+                active.institutionalBinding(), active.instance())) {
+            player.sendSystemMessage(Component.literal(
+                    "This commission could not be cancelled; it remains active until storage recovers."));
+            return false;
+        }
         // Said before the quest disappears, because afterwards there is nothing left to explain it with.
         // Committed goods are already in somebody else's hands or already consumed, so abandoning does
         // not give them back; a player who is not told that reads the loss as a bug.
@@ -1550,6 +1674,13 @@ public final class QuestManager {
     // ---------------------------------------------------------------- helpers
 
     public static boolean isComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        if (active != null && active.isInstitutional()) {
+            QuestDefinition current = QuestDefinitions.resolve(active.questId()).orElse(null);
+            if (!active.institutionalShapeMatches(current)
+                    || resolveGiver(player, active) == null) return false;
+        } else if (def.institutionalCommission()) {
+            return false;
+        }
         if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
             return false;
         }
@@ -1596,6 +1727,17 @@ public final class QuestManager {
      */
     public static Optional<Component> suspensionReason(ServerPlayer player, QuestDefinition def,
                                                        ActiveQuest active) {
+        if (active != null && active.isInstitutional()) {
+            QuestDefinition current = QuestDefinitions.resolve(active.questId()).orElse(null);
+            if (!active.institutionalShapeMatches(current)) {
+                return Optional.of(Component.literal("Commission terms changed; cancel it or contact the issuer."));
+            }
+            if (resolveGiver(player, active) == null) {
+                return Optional.of(Component.literal("Commission issuer unavailable"));
+            }
+        } else if (def.institutionalCommission()) {
+            return Optional.of(Component.literal("Commission ownership is missing; cancel this quest."));
+        }
         Optional<Component> capitals = CapitalsQuestRequirements.unavailableReason(def);
         if (capitals.isPresent()) {
             return capitals;

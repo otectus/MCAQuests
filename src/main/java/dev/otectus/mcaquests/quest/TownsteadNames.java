@@ -107,7 +107,7 @@ public final class TownsteadNames {
 
     /**
      * A village spirit by the name Townstead itself shows for it — "Tourism", "Commercial" — for the
-     * places a player has to find the same value in Townstead's own screens (1.6.6). {@link #spirit}
+     * places a player has to find the same value in Townstead's own screens (1.7.0). {@link #spirit}
      * keeps this mod's descriptive words ("welcoming", "mercantile") for flavour text; an objective that
      * asks for points of that value names Townstead's metric, because "welcoming points" named nothing a
      * player could look up.

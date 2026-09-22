@@ -193,7 +193,7 @@
   "mcaquests.project.help.spirit.values": "Started at %1$s, now %2$s: +%3$s of +%4$s.",
   "mcaquests.project.help.spirit.pending": "Waiting to read the village's spirit for its starting value. Progress and the deadline are paused until it can be read.",
   "mcaquests.project.help.spirit.unreadable": "The village's spirit could not be read just now.",
-  "mcaquests.project.help.spirit.legacy": "This project started before MCA: Quests 1.6.6, so this phase keeps the rule it began with. A server operator can repair its starting value.",
+  "mcaquests.project.help.spirit.legacy": "This project started before MCA: Quests 1.7.0, so this phase keeps the rule it began with. A server operator can repair its starting value.",
   "mcaquests.project.help.spirit.sources": "Raised by completing: %s",
   "mcaquests.project.help.spirit.source": "%1$s +%2$s",
   "mcaquests.project.help.spirit.sources_unknown": "Townstead gives spirit for completed village buildings; its village screen shows which ones.",
@@ -3387,8 +3387,9 @@
   "mcaquests.atlas.kind.portal": "Portal",
   "mcaquests.atlas.kind.location": "Location",
   "mcaquests.atlas.status_held": "Held atlas: hook=%s, visible=%s",
-  "condition.ultima_kingdoms.standing": "Kingdom standing requirement",
+  "mcaquests.condition.kingdom_standing": "Kingdom standing requirement",
   "mcaquests.reward.faction_standing": "%s kingdom standing",
   "mcaquests.reward.faction_standing_unavailable": "Quest completion is waiting for kingdom standing to be saved.",
+  "mcaquests.condition.institutional_service_available": "Requires Ultima Kingdoms' institutional commission service",
   "mcaquests.message.kingdom_context_changed": "Quest failed: its kingdom context changed."
 }

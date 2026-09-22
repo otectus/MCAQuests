@@ -193,7 +193,7 @@
   "mcaquests.project.help.spirit.values": "Começou em %1$s, agora %2$s: +%3$s de +%4$s.",
   "mcaquests.project.help.spirit.pending": "Aguardando ler o espírito da vila para o valor inicial. O progresso e o prazo ficam pausados até que possa ser lido.",
   "mcaquests.project.help.spirit.unreadable": "Não foi possível ler o espírito da vila agora.",
-  "mcaquests.project.help.spirit.legacy": "Este projeto começou antes do MCA: Quests 1.6.6, então esta fase mantém a regra com que começou. Um operador do servidor pode corrigir o valor inicial.",
+  "mcaquests.project.help.spirit.legacy": "Este projeto começou antes do MCA: Quests 1.7.0, então esta fase mantém a regra com que começou. Um operador do servidor pode corrigir o valor inicial.",
   "mcaquests.project.help.spirit.sources": "Aumenta ao concluir: %s",
   "mcaquests.project.help.spirit.source": "%1$s +%2$s",
   "mcaquests.project.help.spirit.sources_unknown": "O Townstead dá espírito por construções completas da vila; a tela da vila dele mostra quais.",
@@ -3387,8 +3387,9 @@
   "mcaquests.atlas.kind.portal": "Portal",
   "mcaquests.atlas.kind.location": "Localização",
   "mcaquests.atlas.status_held": "Atlas na mão: integração=%s, visíveis=%s",
-  "condition.ultima_kingdoms.standing": "Requisito de reputação do reino",
+  "mcaquests.condition.kingdom_standing": "Requisito de reputação do reino",
   "mcaquests.reward.faction_standing": "%s de reputação do reino",
   "mcaquests.reward.faction_standing_unavailable": "A conclusão da missão aguarda o salvamento da reputação do reino.",
+  "mcaquests.condition.institutional_service_available": "Requer o serviço de encomendas institucionais do Ultima Kingdoms",
   "mcaquests.message.kingdom_context_changed": "Missão fracassada: o contexto do reino mudou."
 }

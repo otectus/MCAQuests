@@ -10,11 +10,20 @@ public final class AtlasMarkerStore {
     public static final Comparator<WaypointSpec> ORDER = Comparator
             .comparing((WaypointSpec s) -> !s.presentation().primary()).thenComparing(WaypointSpec::key);
     private final Map<String, WaypointSpec> markers = new HashMap<>();
+    private final Map<String, Map<String, WaypointSpec>> external = new HashMap<>();
     private long epoch, revision;
     private volatile Snapshot snapshot = new Snapshot(0, 0, List.of(), Map.of());
     public record Bucket(ResourceKey<Level> dimension, int x, int z) { }
     public record Snapshot(long epoch, long revision, List<WaypointSpec> all,
                            Map<Bucket, List<WaypointSpec>> buckets) {
+        public Snapshot {
+            all = List.copyOf(all);
+            Map<Bucket, List<WaypointSpec>> copy = new HashMap<>();
+            for (var entry : buckets.entrySet()) {
+                copy.put(entry.getKey(), List.copyOf(entry.getValue()));
+            }
+            buckets = Map.copyOf(copy);
+        }
         public List<WaypointSpec> near(ResourceKey<Level> dim, int cx, int cz, int scale) {
             // Small halo permits a validated loaded giver to cross a map/bucket seam between snapshots.
             int half = (64 << scale) + 64;
@@ -37,15 +46,42 @@ public final class AtlasMarkerStore {
         if (markers.remove(key) == null) return false;
         publish(); return true;
     }
-    public synchronized void clear() { markers.clear(); epoch++; publish(); }
+    public synchronized void clear() { markers.clear(); external.clear(); epoch++; publish(); }
     public synchronized Set<String> keys() { return Set.copyOf(markers.keySet()); }
+    /**
+     * Replaces everything one integration has on the atlas. External points are drawn with the quest
+     * destinations but kept apart from them, so quest reconciliation ({@link #remove}, {@link #keys})
+     * never touches them; only the next snapshot from the same owner, or {@link #clear}, does.
+     */
+    public synchronized void replaceExternal(String owner, Collection<WaypointSpec> points) {
+        Map<String, WaypointSpec> replacement = new HashMap<>();
+        for (WaypointSpec point : points) {
+            if (point.ownership() != WaypointSpec.Ownership.AUTOMATIC
+                    || replacement.putIfAbsent(point.key(), point) != null) {
+                throw new IllegalArgumentException("invalid external atlas snapshot");
+            }
+        }
+        if (replacement.equals(external.get(owner))) {
+            return;
+        }
+        if (replacement.isEmpty()) {
+            external.remove(owner);
+        } else {
+            external.put(owner, Map.copyOf(replacement));
+        }
+        publish();
+    }
     private void publish() {
-        List<WaypointSpec> all = markers.values().stream().sorted(ORDER).toList();
+        List<WaypointSpec> all = new ArrayList<>(markers.values());
+        for (var values : external.values()) {
+            all.addAll(values.values());
+        }
+        all.sort(ORDER);
         Map<Bucket, List<WaypointSpec>> buckets = new HashMap<>();
         for (WaypointSpec spec : all) buckets.computeIfAbsent(new Bucket(spec.dimension(),
                 Math.floorDiv(spec.pos().getX(), 2048), Math.floorDiv(spec.pos().getZ(), 2048)),
                 ignored -> new ArrayList<>()).add(spec);
         buckets.replaceAll((key, values) -> List.copyOf(values));
-        snapshot = new Snapshot(epoch, ++revision, all, Map.copyOf(buckets));
+        snapshot = new Snapshot(epoch, ++revision, all, buckets);
     }
 }

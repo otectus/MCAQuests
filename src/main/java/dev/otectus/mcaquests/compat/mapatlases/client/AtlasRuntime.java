@@ -6,6 +6,7 @@ import dev.otectus.mcaquests.client.QuestWaypointSync;
 import dev.otectus.mcaquests.client.map.*;
 import dev.otectus.mcaquests.compat.*;
 import dev.otectus.mcaquests.compat.mapatlases.*;
+import dev.otectus.mcaquests.api.ExternalMapPoint;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -52,6 +53,26 @@ public final class AtlasRuntime implements MapAtlasesWaypointBackend.Actions {
         }
     }
     public static AtlasRuntime get() { return instance; }
+    /**
+     * Draws one integration's already-filtered points (1.7.0), reached by name from
+     * {@code ExternalMapPointsS2CPacket} so the common packet never links this client-only class.
+     */
+    public static void acceptExternal(String owner, List<ExternalMapPoint> points) {
+        AtlasRuntime runtime = instance;
+        if (runtime == null) {
+            return;
+        }
+        List<WaypointSpec> specs = new ArrayList<>(points.size());
+        for (ExternalMapPoint point : points) {
+            dev.otectus.mcaquests.quest.guidance.GuidanceKind kind = point.kind() == ExternalMapPoint.Kind.ROUTE
+                    ? dev.otectus.mcaquests.quest.guidance.GuidanceKind.LOCATION
+                    : dev.otectus.mcaquests.quest.guidance.GuidanceKind.STRUCTURE;
+            specs.add(new WaypointSpec("external/" + owner + "/" + point.key(), point.position(), point.dimension(),
+                    point.label(), kind, WaypointSpec.Ownership.AUTOMATIC,
+                    new WaypointPresentation(point.approximate(), point.lastKnown(), 8, false, true, "", false)));
+        }
+        runtime.store.replaceExternal(owner, specs);
+    }
     public AtlasMarkerStore store() { return store; }
     public AtlasNativeBinding binding() { return binding; }
     public Screen context() { return MapContextScreen.unwrap(Minecraft.getInstance().screen); }

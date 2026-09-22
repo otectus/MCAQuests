@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * A project's build area, shown to the player who asked for it (1.6.6).
+ * A project's build area, shown to the player who asked for it (1.7.0).
  *
  * <p>The geometry is the server's own: the same box or radius it tests every placement and kill
  * against, so what is drawn is what counts. It is outlined in the world for

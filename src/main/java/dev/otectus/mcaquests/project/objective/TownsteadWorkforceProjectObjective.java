@@ -43,7 +43,7 @@ import java.util.TreeSet;
  * completing work tasks in their trade under a daily XP cap. It is not the vanilla trading level and
  * not the player's experience, and the project card now says so in those words.
  *
- * <h2>Which trades count ({@code profession_policy}, 1.6.6)</h2>
+ * <h2>Which trades count ({@code profession_policy}, 1.7.0)</h2>
  * <ul>
  *   <li>{@code "listed"} (the default, and the behaviour every existing datapack has): only the
  *       {@code professions} named, each still required to have a Townstead track that reaches
@@ -97,7 +97,7 @@ public record TownsteadWorkforceProjectObjective(List<String> professions, int m
         professions = List.copyOf(professions);
     }
 
-    /** The pre-1.6.6 shape: listed professions only. */
+    /** The pre-1.7.0 shape: listed professions only. */
     public TownsteadWorkforceProjectObjective(List<String> professions, int minimumTier, int count) {
         this(professions, minimumTier, count, ProfessionPolicy.LISTED);
     }

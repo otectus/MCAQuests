@@ -29,6 +29,19 @@ class CompletionReceiptOutboxTest {
     }
 
     @Test
+    void institutionalCompletionRequiresItsExactActiveConsumerLease() {
+        CompletionReceiptOutbox outbox = new CompletionReceiptOutbox();
+        ResourceLocation civic = new ResourceLocation("ultima_kingdoms", "regional_civic_network");
+        assertFalse(outbox.hasActiveConsumer(civic, 10L));
+        outbox.read(AUDIT, 8, 10L);
+        assertFalse(outbox.hasActiveConsumer(civic, 10L), "an unrelated subscriber is insufficient");
+        outbox.read(civic, 8, 10L);
+        assertTrue(outbox.hasActiveConsumer(civic, 10L));
+        assertFalse(outbox.hasActiveConsumer(civic,
+                10L + CompletionReceiptOutbox.SUBSCRIPTION_LEASE_TICKS + 1L));
+    }
+
+    @Test
     void receiptIsInvisibleUntilDurabilityFenceAndRoundTripsFrozenContext() {
         CompletionReceiptOutbox outbox = new CompletionReceiptOutbox();
         outbox.read(CONSUMER, 8, 9L);

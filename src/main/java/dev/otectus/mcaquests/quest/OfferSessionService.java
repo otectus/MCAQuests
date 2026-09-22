@@ -92,6 +92,12 @@ public final class OfferSessionService {
     /** Same native offer session, restricted to an authorized caller's bounded commission catalogue. */
     public static List<Offer> currentOffers(ServerPlayer player, Entity villager, PlayerQuestData data,
                                             @javax.annotation.Nullable Set<ResourceLocation> allowedQuestIds) {
+        return currentOffers(player, villager, data, allowedQuestIds, null);
+    }
+
+    /** Institutional menu session carrying the opaque owner binding through the eventual accept click. */
+    public static List<Offer> currentOffers(ServerPlayer player, Entity villager, PlayerQuestData data,
+                                            Set<ResourceLocation> allowedQuestIds, String binding) {
         ServerLevel level = (ServerLevel) player.level();
         long now = level.getGameTime();
         int refreshTicks = McaQuestsConfig.COMMON.offerRefreshTicks.get();
@@ -102,9 +108,9 @@ public final class OfferSessionService {
         session.pruneDeclines(now);
 
         OfferFilters.Pass pass = OfferFilters.Pass.of(player, villager, data);
-        if (!session.scopeMatches(allowedQuestIds)
+        if (!session.scopeMatches(allowedQuestIds, binding)
                 || session.isStale(now, refreshTicks, QuestRegistry.generation())) {
-            redraw(pass, session, now, refreshTicks, allowedQuestIds);
+            redraw(pass, session, now, refreshTicks, allowedQuestIds, binding);
         } else {
             revalidate(pass, session, now);
         }
@@ -156,19 +162,25 @@ public final class OfferSessionService {
 
     private static void redraw(OfferFilters.Pass pass, OfferSession session, long now, int refreshTicks,
                                @javax.annotation.Nullable Set<ResourceLocation> allowedQuestIds) {
+        redraw(pass, session, now, refreshTicks, allowedQuestIds, null);
+    }
+
+    private static void redraw(OfferFilters.Pass pass, OfferSession session, long now, int refreshTicks,
+                               @javax.annotation.Nullable Set<ResourceLocation> allowedQuestIds,
+                               @javax.annotation.Nullable String binding) {
         // OfferSession#redraw drops the refusals that were only meant to last as long as the old set --
         // turning something down is meant to last until the villager has something new to say, not to ban
         // it. A refusal given an explicit declineCooldownTicks is about the clock rather than about this
         // menu, so it survives.
         long epoch = refreshTicks <= 0 ? 0L : now / refreshTicks;
         long seed = offerSeed(pass.player(), session.villagerUuid(), epoch);
-        List<QuestDefinition> pool = offerablePool(pass, session, now, allowedQuestIds);
+        List<QuestDefinition> pool = offerablePool(pass, session, now, allowedQuestIds, binding);
         List<QuestDefinition> chosen = QuestManager.selectOffers(pass, pool, seed);
         List<OfferSession.Slot> slots = new ArrayList<>();
         for (QuestDefinition def : chosen) {
             freeze(pass, def).ifPresent(slots::add);
         }
-        session.redraw(slots, now, QuestRegistry.generation(), seed, allowedQuestIds);
+        session.redraw(slots, now, QuestRegistry.generation(), seed, allowedQuestIds, binding);
     }
 
     /**
@@ -248,6 +260,7 @@ public final class OfferSessionService {
 
     private static List<QuestDefinition> offerablePool(OfferFilters.Pass pass, OfferSession session, long now) {
         return QuestManager.eligibleOffers(pass).stream()
+                .filter(def -> def.institutionalCommission() == session.institutionalBinding().isPresent())
                 .filter(def -> !session.isDeclined(def.id(), now))
                 .filter(def -> session.allowsInCurrentScope(def.id()))
                 .toList();
@@ -255,7 +268,14 @@ public final class OfferSessionService {
 
     private static List<QuestDefinition> offerablePool(OfferFilters.Pass pass, OfferSession session, long now,
                                                        @javax.annotation.Nullable Set<ResourceLocation> allowed) {
+        return offerablePool(pass, session, now, allowed, null);
+    }
+
+    private static List<QuestDefinition> offerablePool(OfferFilters.Pass pass, OfferSession session, long now,
+                                                       @javax.annotation.Nullable Set<ResourceLocation> allowed,
+                                                       @javax.annotation.Nullable String binding) {
         return QuestManager.eligibleOffers(pass).stream()
+                .filter(def -> def.institutionalCommission() == (binding != null))
                 .filter(def -> !session.isDeclined(def.id(), now))
                 .filter(def -> allowed == null || allowed.contains(def.id()))
                 .toList();

@@ -14,11 +14,13 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class QuestNetwork {
 
-    // Bumped to 17 — the 1.6.6 reliability update. ProjectObjectiveLine carries a status and expanded
-    // help, ProjectCard names its live instance, revision and whether it has a build area,
-    // ProjectLogEntry names its instance and why it is paused, and ProjectScopeRequestC2SPacket /
-    // ProjectScopeS2CPacket are new. A 1.6.5 client would decode each of those as the old shape, so
-    // client and server must match.
+    // Bumped to 18 — 1.7.0. ProjectObjectiveLine carries a status and expanded help, ProjectCard names
+    // its live instance, revision and whether it has a build area, ProjectLogEntry names its instance
+    // and why it is paused, and ProjectScopeRequestC2SPacket / ProjectScopeS2CPacket and
+    // ExternalMapPointsS2CPacket are new. A 1.6.5 client would decode each of those as the old shape, so
+    // client and server must match. 17 was never released: it named both an unreleased 1.6.6 build and
+    // Ultima Kingdoms' privately patched R3 provider jar, whose packet tables differ, so 1.7.0 skips it
+    // rather than let either of those pass the handshake against this one.
     // (16 was item delivery. QuestDeliverC2SPacket is new, CardObjective carries what has been
     // handed over, what the player is carrying, whether this villager may take it and why not,
     // QuestCard names the active copy and its own per-card state, and the menu packet carries the
@@ -52,7 +54,7 @@ public final class QuestNetwork {
     // 3 was v0.7.0: the reputation tier-up toast and journal request/sync packets; 2 was v0.4.0: the
     // community-project menu/log/contribute packets.)
     // The channel handshake requires matching client+server (save data is unaffected).
-    private static final String PROTOCOL_VERSION = "17";
+    private static final String PROTOCOL_VERSION = "18";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(McaQuests.MOD_ID, "main"),
@@ -164,7 +166,7 @@ public final class QuestNetwork {
                 QuestDeliverC2SPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
-        // v1.6.6 — a project's build area. Appended for the same reason as everything above.
+        // v1.7.0 — a project's build area. Appended for the same reason as everything above.
         CHANNEL.registerMessage(nextId++, ProjectScopeRequestC2SPacket.class,
                 ProjectScopeRequestC2SPacket::encode, ProjectScopeRequestC2SPacket::decode,
                 ProjectScopeRequestC2SPacket::handle,
@@ -173,5 +175,8 @@ public final class QuestNetwork {
                 ProjectScopeS2CPacket::encode, ProjectScopeS2CPacket::decode,
                 ProjectScopeS2CPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextId++, ExternalMapPointsS2CPacket.class,
+                ExternalMapPointsS2CPacket::encode, ExternalMapPointsS2CPacket::decode,
+                ExternalMapPointsS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }

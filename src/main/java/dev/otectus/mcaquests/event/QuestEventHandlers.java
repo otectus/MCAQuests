@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.Mod;
  * Decides what counts as <em>talking to</em> an MCA villager, and credits it to both quest and project
  * {@code talk_to_profession} objectives through {@link ConversationCredit}.
  *
- * <p><b>Since 1.6.6 the authoritative signal is MCA's own</b>: a hook on MCA's interaction handler
+ * <p><b>Since 1.7.0 the authoritative signal is MCA's own</b>: a hook on MCA's interaction handler
  * reports when MCA opens its dialogue for a player ({@code McaDialogueHookEvents}). Until then this class
  * credited Forge's {@code EntityInteract} event, which an ordinary MCA conversation never produces: MCA
  * 7.6.x opens its dialogue from {@code interactAt} and answers {@code SUCCESS}, so the client never sends

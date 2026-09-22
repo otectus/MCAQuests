@@ -162,7 +162,7 @@ class TownsteadSpiritBaselineTest {
     }
 
     @Test
-    @DisplayName("SPIRIT-04: a pre-1.6.6 record keeps its phase rule and its old number, and is not given a fake start")
+    @DisplayName("SPIRIT-04: a pre-1.7.0 record keeps its phase rule and its old number, and is not given a fake start")
     void legacyRecordKeepsItsRule() {
         ProjectDefinition def = project("mcaquests:townstead_known_far_and_wide", "project");
         // Built the way an older version built it: no project-start reading, phase entered, no baseline yet.

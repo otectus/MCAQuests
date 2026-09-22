@@ -7,6 +7,7 @@ import dev.otectus.mcaquests.compat.mca.McaGiftHookProbe;
 import dev.otectus.mcaquests.quest.CapitalsQuestRequirements;
 import dev.otectus.mcaquests.quest.situation.QuestDefinitions;
 import dev.otectus.mcaquests.quest.QuestDefinition;
+import dev.otectus.mcaquests.quest.InstitutionalCommissionBridge;
 import dev.otectus.mcaquests.quest.QuestManager;
 import dev.otectus.mcaquests.quest.objective.DeliverToVillagerObjective;
 import dev.otectus.mcaquests.quest.objective.DeliveryDestination;
@@ -476,6 +477,22 @@ public final class DeliveryService {
     private static Outcome commitTo(ServerPlayer player, ServerLevel level, ActiveQuest active,
                                     QuestDefinition def, Obligation obligation, LivingEntity recipient,
                                     DeliveryRequest request) {
+        QuestDefinition current = QuestDefinitions.resolve(active.questId()).orElse(null);
+        if (current == null || !active.institutionalShapeMatches(current)) {
+            return Outcome.of(DeliveryResult.OBJECTIVE_PAUSED);
+        }
+        if (active.isInstitutional()) {
+            Entity issuer = level.getEntity(active.villagerUuid());
+            if (issuer == null) {
+                return Outcome.of(DeliveryResult.OBJECTIVE_PAUSED);
+            }
+            String refusal = InstitutionalCommissionBridge.validate(player, issuer, active.questId(),
+                    active.institutionalBinding(), true);
+            if (!refusal.isEmpty()) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(refusal));
+                return Outcome.of(DeliveryResult.OBJECTIVE_PAUSED);
+            }
+        }
         ObjectiveProgress progress = active.progress(obligation.index());
         if (paused(player, level, active, def, obligation, progress)) {
             return Outcome.of(DeliveryResult.OBJECTIVE_PAUSED);

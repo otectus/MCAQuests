@@ -69,7 +69,7 @@ public interface QuestReward {
      * need the entity. {@code villageId} is empty on a giver who belonged to no resolvable village and
      * on quests accepted before 1.5.1.
      *
-     * <p>{@code instance} names <em>this copy</em> of the quest (1.6.6), which is what a reward needs
+     * <p>{@code instance} names <em>this copy</em> of the quest (1.7.0), which is what a reward needs
      * when its effect has to happen exactly once per acceptance and yet again on the next acceptance
      * of a repeatable quest — the incident resolution behind a restitution quest being the case that
      * asked for it. Empty for a caller with no quest copy to name, such as a project's shared rewards.
@@ -77,7 +77,7 @@ public interface QuestReward {
     record RewardContext(UUID giverUuid, Component giverName, ResourceLocation dimension,
                          OptionalInt villageId, ResourceLocation questId, Optional<UUID> instance) {
 
-        /** The shape rewards were written against before 1.6.6, for a caller with no quest copy. */
+        /** The shape rewards were written against before 1.7.0, for a caller with no quest copy. */
         public RewardContext(UUID giverUuid, Component giverName, ResourceLocation dimension,
                              OptionalInt villageId, ResourceLocation questId) {
             this(giverUuid, giverName, dimension, villageId, questId, Optional.empty());

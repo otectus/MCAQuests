@@ -4,6 +4,7 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.quest.QuestDefinition;
+import dev.otectus.mcaquests.quest.InstitutionalCommissionBridge;
 import dev.otectus.mcaquests.quest.objective.ObjectiveProgress;
 import dev.otectus.mcaquests.quest.reputation.QuestReputation;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
@@ -103,6 +104,12 @@ public final class ActiveQuest {
      */
     @Nullable
     private UUID instance;
+    /** Opaque Ultima contract UUID; empty on every ordinary and legacy quest. */
+    private boolean institutionalMarker;
+    private String institutionalBinding = "";
+    /** Canonical accepted definition, persisted so reloads cannot reinterpret institutional terms. */
+    private String institutionalDefinitionJson = "";
+    private String institutionalDefinitionFingerprint = "";
     private boolean rewardClaimed;
     private boolean readyNotified;
     /**
@@ -221,6 +228,13 @@ public final class ActiveQuest {
      * objectives -- see {@link #reconcile(QuestDefinition)}.
      */
     public QuestDefinition resolve(QuestDefinition base) {
+        if (!institutionalBinding.isEmpty()) {
+            if (resolvedCache == null) {
+                resolvedCache = InstitutionalCommissionBridge.decodeSnapshot(
+                        institutionalDefinitionJson, institutionalDefinitionFingerprint).orElse(base);
+            }
+            return resolvedCache;
+        }
         reconcile(base);
         if (template == null || base.template().isEmpty()) {
             return base;
@@ -345,6 +359,45 @@ public final class ActiveQuest {
     /** True when {@code candidate} names this copy. A copy with no id yet matches nothing. */
     public boolean isInstance(@Nullable UUID candidate) {
         return candidate != null && candidate.equals(instance);
+    }
+
+    /**
+     * Freezes owner and terms before Ultima's accepted callback. The returned instance is already the
+     * identity the callback must durably bind, although this quest has not yet entered player state.
+     */
+    public Optional<UUID> bindInstitutional(String binding, QuestDefinition acceptedDefinition) {
+        if (!institutionalBinding.isEmpty() || !InstitutionalCommissionBridge.validBinding(binding)) {
+            return Optional.empty();
+        }
+        Optional<InstitutionalCommissionBridge.Snapshot> snapshot =
+                InstitutionalCommissionBridge.snapshot(acceptedDefinition);
+        if (snapshot.isEmpty()) return Optional.empty();
+        institutionalBinding = binding;
+        institutionalMarker = true;
+        institutionalDefinitionJson = snapshot.get().json();
+        institutionalDefinitionFingerprint = snapshot.get().fingerprint();
+        resolvedCache = acceptedDefinition;
+        return Optional.of(instance());
+    }
+
+    public String institutionalBinding() {
+        return institutionalBinding;
+    }
+
+    public boolean isInstitutional() {
+        return institutionalMarker;
+    }
+
+    /** True only while the currently loaded datapack definition is byte-for-byte equivalent in codec form. */
+    public boolean institutionalDefinitionMatches(QuestDefinition current) {
+        return !isInstitutional()
+                || InstitutionalCommissionBridge.matches(current, institutionalDefinitionFingerprint);
+    }
+
+    /** Prevents either persisted kind of quest from being reinterpreted as the other after a reload. */
+    public boolean institutionalShapeMatches(QuestDefinition current) {
+        return current != null && current.institutionalCommission() == isInstitutional()
+                && institutionalDefinitionMatches(current);
     }
 
     public ObjectiveProgress progress(int index) {
@@ -522,6 +575,11 @@ public final class ActiveQuest {
             // Absent on every quest that never needed an identity, so an untouched save stays untouched.
             tag.putUUID("instance", instance);
         }
+        if (institutionalMarker) {
+            tag.putString("institutional_binding", institutionalBinding);
+            tag.putString("institutional_definition", institutionalDefinitionJson);
+            tag.putString("institutional_definition_fingerprint", institutionalDefinitionFingerprint);
+        }
         if (!frozenRewards.isEmpty()) {
             CompoundTag frozen = new CompoundTag();
             frozenRewards.forEach((index, amount) -> frozen.putInt(String.valueOf(index), amount));
@@ -566,6 +624,24 @@ public final class ActiveQuest {
                 situationInstance);
         if (tag.hasUUID("instance")) {
             quest.instance = tag.getUUID("instance");
+        }
+        // Raw key presence is the trust boundary. A corrupt wrong-type value must stay institutional
+        // and fail its bounded typed reads below, never silently downgrade into an ordinary quest.
+        boolean institutionalMarker = tag.contains("institutional_binding")
+                || tag.contains("institutional_definition")
+                || tag.contains("institutional_definition_fingerprint");
+        if (institutionalMarker) {
+            quest.institutionalMarker = true;
+            String institutionalBinding = tag.getString("institutional_binding");
+            String institutionalDefinition = tag.getString("institutional_definition");
+            String institutionalFingerprint = tag.getString("institutional_definition_fingerprint");
+            // Presence is the security boundary. Bound malformed content before retaining it so corrupted
+            // data fails closed without carrying an unbounded string through every later save.
+            quest.institutionalBinding = institutionalBinding.length() <= 128 ? institutionalBinding : "";
+            quest.institutionalDefinitionJson = institutionalDefinition.length() <= 131_072
+                    ? institutionalDefinition : "";
+            quest.institutionalDefinitionFingerprint = institutionalFingerprint.length() <= 128
+                    ? institutionalFingerprint : "";
         }
         if (tag.contains("kingdom_binding", Tag.TAG_COMPOUND)) {
             KingdomBindingSnapshot.load(tag.getCompound("kingdom_binding")).ifPresent(quest::bindKingdom);

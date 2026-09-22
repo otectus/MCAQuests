@@ -65,6 +65,6 @@ public record KingdomStandingCondition(KingdomGateSpec gate) implements QuestCon
 
     @Override
     public Component describe() {
-        return Component.translatable("condition.ultima_kingdoms.standing");
+        return Component.translatable("mcaquests.condition.kingdom_standing");
     }
 }

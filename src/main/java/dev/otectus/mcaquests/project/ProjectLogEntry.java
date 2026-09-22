@@ -21,7 +21,7 @@ public record ProjectLogEntry(ResourceLocation projectId,
                               java.util.Optional<Component> pausedReason) {
 
     /**
-     * The pre-1.6.6 shape. {@code pausedReason} is present for a project the player is part of whose
+     * The pre-1.7.0 shape. {@code pausedReason} is present for a project the player is part of whose
      * definition is not loaded because an optional mod it needs is missing: it stays in the log, paused
      * and named, instead of vanishing until the mod returns.
      */

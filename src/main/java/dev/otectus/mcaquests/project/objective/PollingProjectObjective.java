@@ -39,7 +39,7 @@ public interface PollingProjectObjective extends ProjectObjective {
      * Called once when the phase holding this objective becomes current — for a new instance, a phase
      * advance, a seeded follow-up and an operator repair alike ({@code ProjectPhases}). The place to
      * capture any reading that progress will be measured from, so it is taken at the phase boundary and
-     * not on whichever periodic poll happens to come first (1.6.6).
+     * not on whichever periodic poll happens to come first (1.7.0).
      */
     default void onPhaseEntered(MinecraftServer server, ServerLevel level, ProjectDefinition definition,
                                 ProjectState state, int objectiveIndex, SharedObjectiveProgress progress) {

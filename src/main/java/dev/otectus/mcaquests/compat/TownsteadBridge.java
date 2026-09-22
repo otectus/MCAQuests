@@ -81,7 +81,7 @@ public interface TownsteadBridge {
 
     /**
      * The spirit points one completed building of {@code buildingType} adds to its village, by spirit id,
-     * as the running Townstead's data defines them (1.6.6). Best-effort and empty when unknown; only used
+     * as the running Townstead's data defines them (1.7.0). Best-effort and empty when unknown; only used
      * to tell a player which buildings raise a spirit, never to decide progress.
      */
     default java.util.Map<String, Integer> spiritContributions(String buildingType) {

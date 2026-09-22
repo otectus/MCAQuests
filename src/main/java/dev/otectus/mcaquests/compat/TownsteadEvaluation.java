@@ -126,7 +126,7 @@ public final class TownsteadEvaluation {
     }
 
     /**
-     * What a village has of one building type, told apart the way a player needs it told apart (1.6.6):
+     * What a village has of one building type, told apart the way a player needs it told apart (1.7.0):
      * complete buildings, registered-but-incomplete ones, and whether the village could be read at all.
      * An unreadable village is {@code readable == false}, never a confident zero.
      *
@@ -158,7 +158,7 @@ public final class TownsteadEvaluation {
             if (!view.matches(type) || view.level() < minimumLevel) {
                 continue;
             }
-            // An MCA without the completeness read counts every registered building, as before 1.6.6.
+            // An MCA without the completeness read counts every registered building, as before 1.7.0.
             if (McaHandles.buildingComplete(building).orElse(true)) {
                 complete++;
             } else {

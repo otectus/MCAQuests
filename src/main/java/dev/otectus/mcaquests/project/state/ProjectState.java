@@ -57,8 +57,8 @@ public final class ProjectState {
     private final Map<String, Integer> frozenRewards = new HashMap<>();
     /**
      * The anchor radius this instance was created with, frozen so a later change to
-     * {@code defaultScopeFallbackRadius} cannot silently resize a village's build area (1.6.6). Empty on
-     * saves from before 1.6.6 until {@code ProjectManager} freezes the radius they were actually using.
+     * {@code defaultScopeFallbackRadius} cannot silently resize a village's build area (1.7.0). Empty on
+     * saves from before 1.7.0 until {@code ProjectManager} freezes the radius they were actually using.
      */
     private OptionalInt anchorRadius = OptionalInt.empty();
     /**
@@ -74,7 +74,7 @@ public final class ProjectState {
     private CompoundTag extra = new CompoundTag();
     /**
      * Follow-up projects that could not be seeded when this one finished because their optional mod was
-     * missing. Seeded on a later sweep once they load; never dropped (1.6.6).
+     * missing. Seeded on a later sweep once they load; never dropped (1.7.0).
      */
     private final Set<ResourceLocation> deferredFollowUps = new LinkedHashSet<>();
 
@@ -234,7 +234,7 @@ public final class ProjectState {
 
     /**
      * A copy of this instance under another identity string, for the one-time dimension re-key of
-     * pre-1.6.6 saves. Everything else — progress, sponsors, ledgers — is carried over exactly.
+     * pre-1.7.0 saves. Everything else — progress, sponsors, ledgers — is carried over exactly.
      */
     public ProjectState rekeyed(String newIdentity) {
         CompoundTag copy = save();

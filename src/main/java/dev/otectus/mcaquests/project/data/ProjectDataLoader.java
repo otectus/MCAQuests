@@ -61,9 +61,18 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
         Map<ResourceLocation, ResourceLocation> fileOf = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
 
+        Map<String, Integer> absentMods = new java.util.TreeMap<>();
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            dev.otectus.mcaquests.data.StrictCodecs.parse(ProjectDefinition.CODEC, JsonOps.INSTANCE, entry.getValue(), message -> recordError(errors, strict, "Project '" + fileId + "': " + message))
+            String[] failure = new String[1];
+            java.util.Optional<ProjectDefinition> parsed = dev.otectus.mcaquests.data.StrictCodecs.parse(ProjectDefinition.CODEC,
+                    JsonOps.INSTANCE, entry.getValue(), message -> failure[0] = message);
+            // Content for an optional mod that is not installed is excluded, not malformed (1.7.0).
+            if (parsed.isEmpty() && failure[0] != null
+                    && !dev.otectus.mcaquests.data.OptionalModNamespaces.excludedForAbsentMod(failure[0], absentMods)) {
+                recordError(errors, strict, "Project '" + fileId + "': " + failure[0]);
+            }
+            parsed
                     .ifPresent(def -> {
                         if (loaded.containsKey(def.id())) {
                             recordError(errors, strict, "Duplicate project id '" + def.id() + "' (from " + fileId + ")");
@@ -104,6 +113,7 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
         }
 
         unavailable.publish();
+        dev.otectus.mcaquests.data.OptionalModNamespaces.report("project", absentMods);
         ProjectRegistry.replaceAll(loaded, errors);
         McaQuests.LOGGER.info("Loaded {} MCA project(s) with {} validation note(s).", loaded.size(), errors.size());
     }

@@ -47,6 +47,26 @@ public final class CompletionReceiptDurability {
         return all;
     }
 
+    /**
+     * Forces and verifies the institutional acceptance snapshot before the native accept action reports
+     * success. Ultima has already bound the instance by this point; on a failed fence the active quest is
+     * deliberately retained in memory and success is withheld so a later vanilla save can recover it.
+     */
+    public static boolean flushInstitutionalAcceptance(ServerPlayer player, ActiveQuest expected) {
+        if (expected == null || !expected.isInstitutional() || expected.instanceIfPresent().isEmpty()) return false;
+        MinecraftServer server = player.getServer();
+        if (server == null || !server.isSameThread()) return false;
+        savePlayer(server, player);
+        PlayerQuestData disk = readPlayerQuestData(server, player);
+        boolean durable = disk != null && containsActiveSnapshot(disk, expected);
+        if (!durable) {
+            McaQuests.LOGGER.error("[MCA: Quests] Player save did not contain institutional acceptance "
+                    + "{} instance {}; acceptance success remains fenced", expected.questId(),
+                    expected.instanceIfPresent().orElse(null));
+        }
+        return durable;
+    }
+
     /** Forces and verifies an acknowledgement. The caller rolls its in-memory mutation back on false. */
     public static boolean flushAcknowledgement(ServerPlayer player, ResourceLocationAck acknowledgement) {
         MinecraftServer server = player.getServer();
@@ -64,6 +84,12 @@ public final class CompletionReceiptDurability {
             return false;
         }
         return disk.active().stream().noneMatch(active -> active.isInstance(expected.receiptId()));
+    }
+
+    static boolean containsActiveSnapshot(PlayerQuestData disk, ActiveQuest expected) {
+        return expected.instanceIfPresent().map(instance -> disk.active().stream()
+                .filter(active -> active.isInstance(instance))
+                .anyMatch(active -> active.save().equals(expected.save()))).orElse(false);
     }
 
     private static void savePlayer(MinecraftServer server, ServerPlayer player) {

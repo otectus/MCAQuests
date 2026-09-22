@@ -33,6 +33,7 @@ import dev.otectus.mcaquests.quest.condition.leaf.TownsteadSkillCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadSpiritCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadValueCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.InfectedCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.InstitutionalServiceAvailableCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.IsFamilyMemberCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.IsPlayerSpouseCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.ItemHeldCondition;
@@ -95,7 +96,7 @@ public final class ConditionTypes {
 
     /**
      * {@code mcareputation:profile} — the player's public profile: how widely they are known in this
-     * village, and what they are known for (MCA: Reputation 0.6.0, 1.6.6).
+     * village, and what they are known for (MCA: Reputation 0.6.0, 1.7.0).
      *
      * <p>Registered unconditionally for the same reason the two above are. The difference is that its
      * degradation is <b>authored</b> rather than fixed: an installation that cannot answer the
@@ -188,6 +189,14 @@ public final class ConditionTypes {
     // installed, and an unknown provider id answers "not present" rather than failing the load.
     public static final QuestConditionType<CompatCapabilityCondition> COMPAT_CAPABILITY =
             register("compat_capability", CompatCapabilityCondition.CODEC);
+
+    /**
+     * Required tripwire for institutional definitions. Its unknown type makes pre-protocol providers
+     * quarantine the whole quest instead of treating its paid content as an ordinary native quest.
+     */
+    public static final QuestConditionType<InstitutionalServiceAvailableCondition>
+            INSTITUTIONAL_SERVICE_AVAILABLE = register("institutional_service_available",
+            InstitutionalServiceAvailableCondition.CODEC);
 
     public static final QuestConditionType<KingdomStandingCondition> KINGDOM_STANDING =
             register(new ResourceLocation("ultima_kingdoms", "standing"), KingdomStandingCondition.CODEC);

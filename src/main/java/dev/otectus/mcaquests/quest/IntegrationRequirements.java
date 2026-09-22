@@ -1,6 +1,7 @@
 package dev.otectus.mcaquests.quest;
 
 import dev.otectus.mcaquests.compat.CompatStatus;
+import dev.otectus.mcaquests.compat.KingdomIntegration;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
 import dev.otectus.mcaquests.compat.capitals.CapitalsBridge;
@@ -21,6 +22,8 @@ import dev.otectus.mcaquests.quest.condition.leaf.CapitalPresentCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.CapitalRelationCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.CapitalRoleCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.CompatCapabilityCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.InstitutionalServiceAvailableCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.KingdomStandingCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadAvailableCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadBuildingCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.TownsteadProfessionTrackCondition;
@@ -40,11 +43,15 @@ import dev.otectus.mcaquests.quest.objective.VillagerTargeted;
 import dev.otectus.mcaquests.quest.reward.CapitalChronicleReward;
 import dev.otectus.mcaquests.quest.reward.CapitalTitleReward;
 import dev.otectus.mcaquests.quest.reward.CapitalVillagerTitleReward;
+import dev.otectus.mcaquests.quest.reward.FactionStandingReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.quest.situation.SituationDefinition;
 import dev.otectus.mcaquests.quest.situation.SituationIds;
 import dev.otectus.mcaquests.quest.situation.trigger.CapitalInterregnumTrigger;
 import dev.otectus.mcaquests.quest.situation.trigger.CapitalWarTrigger;
+import dev.otectus.mcaquests.quest.kingdom.KingdomGateSpec;
+import dev.otectus.mcaquests.quest.kingdom.KingdomLifecycleMode;
+import dev.otectus.mcaquests.quest.kingdom.KingdomLifecycleSpec;
 import dev.otectus.mcaquests.quest.target.LocationAnchor;
 import dev.otectus.mcaquests.quest.target.VillagerTarget;
 import net.minecraft.network.chat.Component;
@@ -61,8 +68,8 @@ import java.util.TreeSet;
  * What a definition cannot be played without, and whether this installation has it.
  *
  * <p>One contract for every optional integration whose content ships in this jar or in a datapack:
- * <b>a definition that needs Townstead or MCA Capitals is not loaded as playable content unless that
- * mod is installed and the capabilities the definition reads are bound.</b> The loaders ask this class
+ * <b>a definition that needs Townstead, MCA Capitals or Ultima Kingdoms is not loaded as playable
+ * content unless that mod is installed and the capabilities the definition reads are bound.</b> The loaders ask this class
  * before registering a quest, project or situation; a definition it rejects becomes an inert
  * {@code UnavailableContent} descriptor instead, so a record a player already accepted can say why it
  * is paused while nothing new of the kind is offered.
@@ -87,6 +94,11 @@ import java.util.TreeSet;
  *   <li>Townstead <em>rewards</em> are optional side effects: a Townstead reward that cannot apply is
  *       skipped and the quest completes regardless, so it never makes a core quest unavailable. Capitals
  *       rewards were declared required in 1.6.0 and stay so.</li>
+ *   <li>Ultima Kingdoms: a faction-standing reward is required, because turn-in refuses to complete
+ *       until it is durably applied. A {@code kingdom_lifecycle} needs Ultima unless it is an
+ *       {@code offer_only} gate with {@code when_unknown: allow} and no standing clause; a civic
+ *       building binding needs Ultima's Townstead facade; an institutional commission needs its service.
+ *       A kingdom-standing condition under {@code not} is an absent-mod gate, as for Townstead.</li>
  * </ul>
  *
  * <p>Several integrations combine with AND. Content that needs both mods needs both; content needing
@@ -100,7 +112,8 @@ public final class IntegrationRequirements {
     /** The optional integrations whose content is gated here, by their real loader id. */
     public enum Integration {
         TOWNSTEAD("townstead", "Townstead"),
-        CAPITALS("mcacapitals", "MCA Capitals");
+        CAPITALS("mcacapitals", "MCA Capitals"),
+        ULTIMA(KingdomIntegration.MOD_ID, "Ultima Kingdoms");
 
         private final String modId;
         private final String displayName;
@@ -171,6 +184,7 @@ public final class IntegrationRequirements {
                     CompatStatus status = CapitalsCompat.bridge().status();
                     yield status == CompatStatus.FULL || status == CompatStatus.PARTIAL;
                 }
+                case ULTIMA -> KingdomIntegration.available();
             };
         }
 
@@ -183,6 +197,7 @@ public final class IntegrationRequirements {
                     CapitalsBridge bridge = CapitalsCompat.bridge();
                     yield capitalsCapability(capability).map(bridge::has).orElse(false);
                 }
+                case ULTIMA -> KingdomIntegration.has(capability.toLowerCase(Locale.ROOT));
             };
         }
     };
@@ -347,11 +362,34 @@ public final class IntegrationRequirements {
         for (QuestReward reward : def.rewards()) {
             rewardRequirements(reward, out);
         }
+        def.kingdomLifecycle().ifPresent(lifecycle -> lifecycleRequirements(lifecycle, out));
+        if (def.institutionalCommission()) {
+            out.add(ultima(KingdomIntegration.INSTITUTIONS));
+        }
         // Every capital capability implies the registry, exactly as 1.6.0 derived it.
         if (out.stream().anyMatch(r -> r.integration() == Integration.CAPITALS)) {
             out.add(new Requirement(Integration.CAPITALS, CapitalsCapability.REGISTRY.id()));
         }
         return out;
+    }
+
+    /**
+     * What a {@code kingdom_lifecycle} cannot work without. Only an offer-time inline gate that authored
+     * {@code when_unknown: allow} and asks nothing about standing is playable without Ultima
+     * ({@link KingdomGateSpec#allowsWhenUnavailable}): every other shape names an Ultima gate, captures a
+     * binding at acceptance, reads faction standing or binds a civic building, and none of those has an
+     * answer on an installation without the mod.
+     */
+    private static void lifecycleRequirements(KingdomLifecycleSpec lifecycle, List<Requirement> out) {
+        lifecycle.civicBuilding().ifPresent(ignored -> out.add(ultima(KingdomIntegration.CIVIC_BUILDINGS)));
+        lifecycle.gate().ifPresent(gate -> {
+            if (gate.standing().isPresent()) {
+                out.add(ultima(KingdomIntegration.FACTIONS));
+            }
+            if (lifecycle.mode() != KingdomLifecycleMode.OFFER_ONLY || !gate.allowsWhenUnavailable()) {
+                out.add(ultima(KingdomIntegration.GATING));
+            }
+        });
     }
 
     private static Set<String> questCapabilities(QuestDefinition def, Integration integration) {
@@ -388,6 +426,7 @@ public final class IntegrationRequirements {
             out.add(capitals(CapitalsCapability.VILLAGER_TITLES));
             target(title.villager(), out);
         }
+        if (reward instanceof FactionStandingReward) out.add(ultima(KingdomIntegration.FACTIONS));
     }
 
     private static void anchor(LocationAnchor anchor, List<Requirement> out) {
@@ -502,9 +541,14 @@ public final class IntegrationRequirements {
         return new Requirement(Integration.CAPITALS, capability.id());
     }
 
+    private static Requirement ultima(String capability) {
+        return new Requirement(Integration.ULTIMA, capability);
+    }
+
     private static boolean requirementsMet(List<Requirement> requirements, Availability availability) {
         for (Requirement requirement : requirements) {
-            if (requirement.integration() == Integration.TOWNSTEAD && !availability.usable(Integration.TOWNSTEAD)) {
+            if ((requirement.integration() == Integration.TOWNSTEAD || requirement.integration() == Integration.ULTIMA)
+                    && !availability.usable(requirement.integration())) {
                 return false;
             }
             if (requirement.capability() != null
@@ -554,6 +598,15 @@ public final class IntegrationRequirements {
         if (isTownsteadLeaf(condition)) {
             return negated || availability.usable(Integration.TOWNSTEAD);
         }
+        // Ultima: a standing or institutional gate needs the mod; under `not` it is an absent-mod gate.
+        if (condition instanceof KingdomStandingCondition) {
+            return negated || (availability.usable(Integration.ULTIMA)
+                    && availability.has(Integration.ULTIMA, KingdomIntegration.FACTIONS));
+        }
+        if (condition instanceof InstitutionalServiceAvailableCondition) {
+            return negated || (availability.usable(Integration.ULTIMA)
+                    && availability.has(Integration.ULTIMA, KingdomIntegration.INSTITUTIONS));
+        }
         // Capitals: the 1.6.0 rules, unchanged — a court gate needs the court whichever way it points.
         if (condition instanceof CapitalPresentCondition) return capital(availability, CapitalsCapability.REGISTRY);
         if (condition instanceof CapitalRoleCondition role) {
@@ -592,6 +645,9 @@ public final class IntegrationRequirements {
         } else if (condition instanceof CompatCapabilityCondition compat && compat.present() != negated
                 && Integration.byModId(compat.provider()).filter(i -> i == integration).isPresent()) {
             out.add(normalise(integration, compat.capability()));
+        } else if (integration == Integration.ULTIMA && !negated) {
+            if (condition instanceof KingdomStandingCondition) out.add(KingdomIntegration.FACTIONS);
+            if (condition instanceof InstitutionalServiceAvailableCondition) out.add(KingdomIntegration.INSTITUTIONS);
         } else if (integration == Integration.CAPITALS) {
             if (condition instanceof CapitalPresentCondition) out.add(CapitalsCapability.REGISTRY.id());
             if (condition instanceof CapitalInterregnumCondition) out.add(CapitalsCapability.INTERREGNUM.id());
@@ -619,7 +675,7 @@ public final class IntegrationRequirements {
     /** Capability ids as the provider spells them: Townstead lowercased names, Capitals dotted ids. */
     private static String normalise(Integration integration, String capability) {
         return switch (integration) {
-            case TOWNSTEAD -> capability.toLowerCase(Locale.ROOT);
+            case TOWNSTEAD, ULTIMA -> capability.toLowerCase(Locale.ROOT);
             case CAPITALS -> capitalsCapability(capability).map(CapitalsCapability::id).orElse(capability);
         };
     }
@@ -642,24 +698,41 @@ public final class IntegrationRequirements {
         return Optional.empty();
     }
 
-    /** Test seam: an availability built from explicit sets. */
+    /** Test seam: an availability built from explicit sets, with Ultima Kingdoms absent. */
     public static Availability availabilityOf(boolean townstead, Set<TownsteadCapability> townsteadCapabilities,
                                               Set<CapitalsCapability> capitalsCapabilities) {
+        return availabilityOf(townstead, townsteadCapabilities, capitalsCapabilities, Set.of());
+    }
+
+    /**
+     * Test seam: an availability built from explicit sets. Ultima is usable when any of its capabilities
+     * ({@link KingdomIntegration#GATING} and the rest) is listed.
+     */
+    public static Availability availabilityOf(boolean townstead, Set<TownsteadCapability> townsteadCapabilities,
+                                              Set<CapitalsCapability> capitalsCapabilities,
+                                              Set<String> ultimaCapabilities) {
         Set<TownsteadCapability> ts = townsteadCapabilities.isEmpty()
                 ? EnumSet.noneOf(TownsteadCapability.class) : EnumSet.copyOf(townsteadCapabilities);
         Set<CapitalsCapability> cs = capitalsCapabilities.isEmpty()
                 ? EnumSet.noneOf(CapitalsCapability.class) : EnumSet.copyOf(capitalsCapabilities);
+        Set<String> us = Set.copyOf(ultimaCapabilities);
         return new Availability() {
             @Override
             public boolean usable(Integration integration) {
-                return integration == Integration.TOWNSTEAD ? townstead : !cs.isEmpty();
+                return switch (integration) {
+                    case TOWNSTEAD -> townstead;
+                    case CAPITALS -> !cs.isEmpty();
+                    case ULTIMA -> !us.isEmpty();
+                };
             }
 
             @Override
             public boolean has(Integration integration, String capability) {
-                return integration == Integration.TOWNSTEAD
-                        ? townstead && townsteadCapability(capability).map(ts::contains).orElse(false)
-                        : capitalsCapability(capability).map(cs::contains).orElse(false);
+                return switch (integration) {
+                    case TOWNSTEAD -> townstead && townsteadCapability(capability).map(ts::contains).orElse(false);
+                    case CAPITALS -> capitalsCapability(capability).map(cs::contains).orElse(false);
+                    case ULTIMA -> us.contains(capability.toLowerCase(Locale.ROOT));
+                };
             }
         };
     }

@@ -201,4 +201,44 @@ class TargetGateValidatorTest {
         assertEquals(List.of(), errorsFor(quest(VillagerTarget.SELF, Optional.empty())));
         assertFalse(VillagerTarget.SELF.requiresExistence());
     }
+
+    @Test
+    @DisplayName("1.7.0: outside strict validation an ungated family quest is skipped, not merely warned about")
+    void lenientLoadSkipsUngatedQuest() {
+        Map<ResourceLocation, QuestDefinition> quests = new LinkedHashMap<>();
+        QuestDefinition def = quest(family("sibling", null), Optional.empty());
+        quests.put(def.id(), def);
+        List<String> errors = new ArrayList<>();
+        TargetGateValidator.enforce(quests, errors, new ArrayList<>(), false);
+
+        assertTrue(quests.isEmpty(), "the quest must not reach the registry");
+        assertEquals(1, errors.size(), () -> "expected exactly one error, got " + errors);
+        assertTrue(errors.get(0).contains("skipped at load"), errors.get(0));
+    }
+
+    @Test
+    @DisplayName("1.7.0: under strict validation the finding is an error and the loader fails the reload")
+    void strictLoadReportsWithoutSkipping() {
+        Map<ResourceLocation, QuestDefinition> quests = new LinkedHashMap<>();
+        QuestDefinition def = quest(family("sibling", null), Optional.empty());
+        quests.put(def.id(), def);
+        List<String> errors = new ArrayList<>();
+        TargetGateValidator.enforce(quests, errors, new ArrayList<>(), true);
+
+        assertEquals(1, quests.size(), "strict mode leaves skipping to the reload failure");
+        assertEquals(1, errors.size());
+    }
+
+    @Test
+    @DisplayName("1.7.0: a properly gated quest is untouched by enforcement")
+    void gatedQuestSurvivesEnforcement() {
+        Map<ResourceLocation, QuestDefinition> quests = new LinkedHashMap<>();
+        QuestDefinition def = quest(family("sibling", "same_village"), Optional.of(gate("sibling", "same_village")));
+        quests.put(def.id(), def);
+        List<String> errors = new ArrayList<>();
+        TargetGateValidator.enforce(quests, errors, new ArrayList<>(), false);
+
+        assertEquals(1, quests.size());
+        assertTrue(errors.isEmpty(), () -> "unexpected errors " + errors);
+    }
 }

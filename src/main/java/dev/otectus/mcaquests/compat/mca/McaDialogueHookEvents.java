@@ -12,7 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import javax.annotation.Nullable;
 
 /**
- * MCA opened its dialogue for a player: the server-side proof of a real conversation (1.6.6).
+ * MCA opened its dialogue for a player: the server-side proof of a real conversation (1.7.0).
  *
  * <p>Why a hook at all. A talk objective was credited from Forge's {@code EntityInteract} event, which
  * the server fires for the client's INTERACT packet. MCA 7.6.x (and 7.7.36 on NeoForge) opens its

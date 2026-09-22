@@ -30,7 +30,7 @@ import java.util.Optional;
  * author who wants one writes it; otherwise nothing happens. Punishing a player for abandoning a
  * quest they never had to accept would be a behaviour change imposed on every existing pack.
  *
- * <h2>The social profile (1.6.6)</h2>
+ * <h2>The social profile (1.7.0)</h2>
  *
  * <p>{@code incident_profile} names which authored <em>social profile</em> the deed's evidence is read
  * under, for MCA: Reputation 0.6.0 and later. The incident id says what happened; the profile says
@@ -117,7 +117,7 @@ public record ReputationOutcome(
         incidentProfile = incidentProfile == null ? Optional.empty() : incidentProfile;
     }
 
-    /** The pre-1.6.6 shape, for callers that state no social profile. */
+    /** The pre-1.7.0 shape, for callers that state no social profile. */
     public ReputationOutcome(int delta, Optional<ResourceLocation> incident,
                              Optional<String> visibility, List<String> tags, Recipients recipients) {
         this(delta, incident, visibility, tags, recipients, Optional.empty());

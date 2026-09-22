@@ -50,7 +50,7 @@ public interface ReputationBackend {
      * Whether the live backend advertises one of the {@link ReputationFeatures} capability strings
      * <em>right now</em>.
      *
-     * <p>The replacement for reflecting over API methods (1.6.6). MCA: Reputation publishes its
+     * <p>The replacement for reflecting over API methods (1.7.0). MCA: Reputation publishes its
      * capability set through {@code capabilities(server)}, and the 0.6.0 profile rows appear only
      * while profiles can actually answer — so this is a runtime readiness question rather than a "does
      * the binary have the method" question, and it is asked again after a world change rather than
@@ -102,7 +102,7 @@ public interface ReputationBackend {
     int award(ReputationAward award);
 
     /**
-     * Records one reputation outcome and returns the ledger's <b>typed</b> answer (1.6.6).
+     * Records one reputation outcome and returns the ledger's <b>typed</b> answer (1.7.0).
      *
      * <p>{@link #award} and {@link #recordIncident} are the two shorthands over this, kept because
      * most call sites only want the resulting score or a boolean. A caller that has to tell an
@@ -140,10 +140,10 @@ public interface ReputationBackend {
                         IncidentSelector selector);
 
     /**
-     * The same question asked on behalf of a named giver (1.6.6).
+     * The same question asked on behalf of a named giver (1.7.0).
      *
      * <p>A selector may ask for deeds {@linkplain IncidentSelector#knownToGiver() the giver actually
-     * knows about}, and that cannot be answered without knowing who the giver is. Until 1.6.6 Quests
+     * knows about}, and that cannot be answered without knowing who the giver is. Until 1.7.0 Quests
      * set the flag and supplied nobody, which MCA: Reputation 0.4.1 onward correctly answers with
      * nothing — so a restitution quest gated on "they know what you did" never offered itself. Passing
      * the entity lets Reputation resolve the villager's residency and knowledge itself.
@@ -161,7 +161,7 @@ public interface ReputationBackend {
                             IncidentSelector selector, String resolution, @Nullable String dedupeKey);
 
     /**
-     * The same resolution, with the giver whose knowledge the selector may depend on (1.6.6).
+     * The same resolution, with the giver whose knowledge the selector may depend on (1.7.0).
      *
      * <p>Also the overload that honours {@code dedupeKey}: the canonical backend binds the discovered
      * incident id and settles it under that key, so a retry after a crash cannot resolve a

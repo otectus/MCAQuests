@@ -61,7 +61,7 @@ public final class QuestClientHandlers {
         }
     }
 
-    /** The server's answer to Show build area: outline it and describe it (1.6.6). */
+    /** The server's answer to Show build area: outline it and describe it (1.7.0). */
     public static void onBuildArea(Component title, Component summary,
                                    dev.otectus.mcaquests.project.scope.ScopeGeometry geometry,
                                    List<Component> materials) {

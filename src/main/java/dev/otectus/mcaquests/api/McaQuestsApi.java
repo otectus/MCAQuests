@@ -21,6 +21,12 @@ import net.minecraft.world.entity.Entity;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Map;
+import net.minecraft.core.BlockPos;
+import net.minecraftforge.network.PacketDistributor;
+import dev.otectus.mcaquests.network.ExternalMapPointsS2CPacket;
+import dev.otectus.mcaquests.network.QuestNetwork;
 
 /**
  * Public registration API for MCA: Quests add-ons (spec section 28).
@@ -32,7 +38,73 @@ import java.util.UUID;
  */
 public final class McaQuestsApi {
 
+    private static final ResourceLocation INSTITUTIONAL_COMPLETION_CONSUMER =
+            new ResourceLocation("ultima_kingdoms", "regional_civic_network");
+
     private McaQuestsApi() {
+    }
+
+    /**
+     * Publishes a complete, already viewer-filtered atlas snapshot for one integration (1.7.0). Each
+     * entry is a map with {@code key}, {@code dimension}, {@code label}, {@code kind} ({@code "site"} or
+     * {@code "route"}), {@code x}/{@code y}/{@code z} and {@code approximate}/{@code lastKnown}; the
+     * map-shaped input lets an integration call this by reflection without linking any MCA: Quests type.
+     * Every field is validated before it is networked, at most {@link ExternalMapPointsS2CPacket#MAX_POINTS}
+     * points are accepted, and the call must be made on the server thread. An empty list clears the
+     * owner's points for that player.
+     *
+     * @throws IllegalArgumentException for a malformed owner, entry or oversize snapshot
+     */
+    public static void publishExternalMapPoints(ServerPlayer player, String owner, List<?> encoded) {
+        if (player == null || owner == null || encoded == null) {
+            throw new NullPointerException("external map snapshot");
+        }
+        if (player.getServer() == null || !player.getServer().isSameThread()) {
+            throw new IllegalStateException("external map publication requires server thread");
+        }
+        if (!owner.matches("[a-z0-9_.-]{1,64}") || encoded.size() > ExternalMapPointsS2CPacket.MAX_POINTS) {
+            throw new IllegalArgumentException("invalid external map snapshot");
+        }
+        List<ExternalMapPoint> points = new ArrayList<>(encoded.size());
+        for (Object raw : encoded) {
+            if (!(raw instanceof Map<?, ?> value)) {
+                throw new IllegalArgumentException("map point must be a map");
+            }
+            String key = string(value, "key", 160);
+            String dimension = string(value, "dimension", 128);
+            String label = string(value, "label", 128);
+            String kind = string(value, "kind", 32);
+            BlockPos position = new BlockPos(number(value, "x"), number(value, "y"), number(value, "z"));
+            points.add(new ExternalMapPoint(key, ExternalMapPoint.dimension(dimension), position, label,
+                    "route".equals(kind) ? ExternalMapPoint.Kind.ROUTE : ExternalMapPoint.Kind.SITE,
+                    bool(value, "approximate"), bool(value, "lastKnown")));
+        }
+        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new ExternalMapPointsS2CPacket(owner, points));
+    }
+
+    private static String string(Map<?, ?> map, String key, int max) {
+        Object value = map.get(key);
+        if (!(value instanceof String text) || text.length() > max) {
+            throw new IllegalArgumentException("invalid " + key);
+        }
+        return text;
+    }
+
+    private static int number(Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (!(value instanceof Number number)) {
+            throw new IllegalArgumentException("invalid " + key);
+        }
+        return number.intValue();
+    }
+
+    private static boolean bool(Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (!(value instanceof Boolean flag)) {
+            throw new IllegalArgumentException("invalid " + key);
+        }
+        return flag;
     }
 
     public static <T extends QuestObjective> QuestObjectiveType<T> registerObjective(ResourceLocation id, Codec<T> codec) {
@@ -123,6 +195,26 @@ public final class McaQuestsApi {
     }
 
     /**
+     * Renews the one receipt lease required by institutional completion without invoking a player save.
+     * Ultima calls this synchronously from its validation boundary so the native completion preflight
+     * can prove the intended consumer is in the frozen receipt cohort. A pending save, full/corrupt
+     * outbox, unavailable capability, or consumer-capacity failure returns false.
+     */
+    public static boolean renewInstitutionalCompletionConsumer(ServerPlayer player) {
+        if (player == null) throw new NullPointerException("player");
+        return QuestCapabilities.get(player).map(data -> {
+            long now = player.serverLevel().getGameTime();
+            try {
+                data.readCompletionReceipts(INSTITUTIONAL_COMPLETION_CONSUMER, 8, now);
+                return "ready".equals(data.completionReceiptStatus())
+                        && data.hasActiveCompletionReceiptConsumer(INSTITUTIONAL_COMPLETION_CONSUMER, now);
+            } catch (RuntimeException failure) {
+                return false;
+            }
+        }).orElse(false);
+    }
+
+    /**
      * Opens MCA: Quests' native offer UI for a trusted server-side commission service, drawing only from
      * {@code allowedQuestIds}. The set may contain at most 32 existing template ids. This does not accept a
      * quest or bypass its giver, conditions, chain, cooldown, capacity, target, or acceptance revalidation.
@@ -138,5 +230,26 @@ public final class McaQuestsApi {
         }
         Set<ResourceLocation> scope = Set.copyOf(allowedQuestIds);
         return dev.otectus.mcaquests.quest.QuestManager.openCommissionMenu(player, giver, scope);
+    }
+
+    /**
+     * Opens the native UI for paid institutional work owned by one opaque Ultima contract UUID.
+     * Institutional definitions are excluded from ordinary menus and fail closed if Ultima's validation
+     * or durable acceptance callback is absent. The binding is persisted through completion receipts.
+     */
+    public static boolean openInstitutionalCommissionMenu(ServerPlayer player, Entity giver,
+                                                          Set<ResourceLocation> allowedQuestIds,
+                                                          String binding) {
+        if (player == null || giver == null || allowedQuestIds == null || binding == null) {
+            throw new NullPointerException("institutional commission menu argument");
+        }
+        if (allowedQuestIds.isEmpty() || allowedQuestIds.size() > 32) {
+            throw new IllegalArgumentException("allowedQuestIds must contain between 1 and 32 ids");
+        }
+        if (!dev.otectus.mcaquests.quest.InstitutionalCommissionBridge.validBinding(binding)) {
+            throw new IllegalArgumentException("binding must be one canonical UUID");
+        }
+        return dev.otectus.mcaquests.quest.QuestManager.openInstitutionalCommissionMenu(
+                player, giver, Set.copyOf(allowedQuestIds), binding);
     }
 }

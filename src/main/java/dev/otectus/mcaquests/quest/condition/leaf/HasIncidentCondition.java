@@ -77,7 +77,7 @@ public record HasIncidentCondition(Optional<ResourceLocation> incident, List<Str
         IncidentSelector selector = new IncidentSelector(
                 incident.map(List::of).orElseGet(List::of), status, tags, knownToGiver, 0L);
         // The giver is passed so a known_to_giver selector can actually be evaluated against what
-        // this villager knows (1.6.6). Without it the flag was set and no speaker supplied, which
+        // this villager knows (1.7.0). Without it the flag was set and no speaker supplied, which
         // MCA: Reputation answers with nothing — the gate was unmeetable rather than strict.
         boolean found = QuestReputation.hasIncident(context.player().server, context.player().getUUID(),
                 community.get(), selector, context.villager());

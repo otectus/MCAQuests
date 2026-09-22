@@ -88,7 +88,7 @@ public record ResolveIncidentReward(Optional<ResourceLocation> incident, List<St
     }
 
     /**
-     * The same resolution, keyed to the quest copy that earned it (1.6.6).
+     * The same resolution, keyed to the quest copy that earned it (1.7.0).
      *
      * <p>The key is what lets the backend <em>bind</em> the incident: the selector discovers a deed,
      * and this operation identity settles that one deed, so a retry after a crash cannot atone for a

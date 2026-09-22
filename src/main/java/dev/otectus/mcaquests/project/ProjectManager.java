@@ -338,7 +338,7 @@ public final class ProjectManager {
     /**
      * One row per objective of {@code phaseIdx}: the shared count, the player's own share, a status in
      * words and a glyph, and the objective's own explanation built from the predicates that grant its
-     * credit (1.6.6), so the help can never describe a rule the server does not apply.
+     * credit (1.7.0), so the help can never describe a rule the server does not apply.
      */
     private static List<ProjectObjectiveLine> objectiveLines(ServerPlayer player, ProjectDefinition def,
                                                              @Nullable ProjectState state, int phaseIdx) {
@@ -601,7 +601,7 @@ public final class ProjectManager {
         ProjectDefinition target = ProjectRegistry.get(targetId).orElse(null);
         if (target == null && UnavailableContent.contains(UnavailableContent.Kind.PROJECT, targetId)) {
             // Its optional mod is missing. Remember the debt and seed it once the project loads, rather
-            // than dropping a follow-up the village earned (1.6.6).
+            // than dropping a follow-up the village earned (1.7.0).
             if (from.deferredFollowUps().add(targetId)) {
                 data.setDirty();
             }
@@ -721,7 +721,7 @@ public final class ProjectManager {
      * re-talking to the same villager never advances the objective again, and the credit is idempotent if
      * several routes report the same conversation.
      *
-     * <p>Who counts (1.6.6): a village-bound project counts a <b>resident</b> of its village wherever the
+     * <p>Who counts (1.7.0): a village-bound project counts a <b>resident</b> of its village wherever the
      * conversation happens, and otherwise anyone standing inside the village's area with MCA's own
      * villager margin. Before this, the villager had to be inside the box of registered buildings at the
      * moment of the conversation, so a librarian out in the fields did not count.
@@ -939,7 +939,7 @@ public final class ProjectManager {
     }
 
     /**
-     * The anchor radius this instance was created with. Instances from before 1.6.6 never stored one and
+     * The anchor radius this instance was created with. Instances from before 1.7.0 never stored one and
      * were tested against the global {@code defaultScopeFallbackRadius} — not their definition's own
      * override — so that is the value they keep; {@link #pollProjects} freezes it on first sight.
      */
@@ -1160,7 +1160,7 @@ public final class ProjectManager {
             Optional<ProjectDefinition> loaded = ProjectRegistry.get(state.projectId());
             if (loaded.isEmpty()) {
                 // Not loaded because an optional mod it needs is missing: still the player's project,
-                // paused and named, never silently gone (1.6.6).
+                // paused and named, never silently gone (1.7.0).
                 UnavailableContent.get(UnavailableContent.Kind.PROJECT, state.projectId()).ifPresent(missing ->
                         entries.add(new ProjectLogEntry(state.projectId(), missing.title(),
                                 sponsorLogLabel(player, state), Component.empty(),
@@ -1291,7 +1291,7 @@ public final class ProjectManager {
     /**
      * True when an owed phase reward's project is only unloaded because an optional mod it needs is
      * missing. That is not a failed delivery and must not use up the retry allowance: the debt waits for
-     * the mod, and is paid once when it returns (1.6.6).
+     * the mod, and is paid once when it returns (1.7.0).
      */
     static boolean waitsForOptionalMod(PendingReward reward) {
         return reward.kind() == PendingReward.Kind.PROJECT_PHASE && reward.projectId() != null
@@ -1386,7 +1386,7 @@ public final class ProjectManager {
     /**
      * Force-advances every non-terminal instance of {@code projectId} by one phase, paying nothing. Kept
      * for tests and for the explicit {@code advance <id> all} bulk form; the command refuses a bare id that
-     * matches more than one instance (1.6.6). Uses {@link #adminSkipPhase}, so the next phase's baselines
+     * matches more than one instance (1.7.0). Uses {@link #adminSkipPhase}, so the next phase's baselines
      * are taken and a finished project is marked complete without a payout.
      */
     public static int adminAdvance(MinecraftServer server, ResourceLocation projectId) {
@@ -1451,7 +1451,7 @@ public final class ProjectManager {
             return dirty;
         }
         if (state.freezeAnchorRadius(fallbackRadius())) {
-            // Saved before 1.6.6: freeze the radius it was actually being tested against.
+            // Saved before 1.7.0: freeze the radius it was actually being tested against.
             dirty = true;
         }
         ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
@@ -1499,7 +1499,7 @@ public final class ProjectManager {
     }
 
     /**
-     * Operator repair: moves one instance past its current phase (1.6.6). A skip is not proof the work
+     * Operator repair: moves one instance past its current phase (1.7.0). A skip is not proof the work
      * happened, so by default ({@code normalRewards == false}) the phase is marked settled without paying
      * anything, awarding reputation or posting a completion; with {@code normalRewards} the phase settles
      * through exactly the path a finished phase takes, guarded by the same one-shot distribution flag, so
@@ -1553,7 +1553,7 @@ public final class ProjectManager {
     static final int BUILD_AREA_REQUEST_DISTANCE = 256;
 
     /**
-     * Answers "show me the build area" for one instance (1.6.6): the geometry {@link #inScopeAt} tests
+     * Answers "show me the build area" for one instance (1.7.0): the geometry {@link #inScopeAt} tests
      * for the current phase's positional work, the village's name and dimension, and what counts there.
      * Only a participant or a player near the project is answered, so a request cannot be used to find
      * other people's villages.

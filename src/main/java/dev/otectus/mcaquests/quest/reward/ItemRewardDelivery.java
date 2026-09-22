@@ -62,13 +62,46 @@ public final class ItemRewardDelivery {
         }
     }
 
+    /** True only when the whole fixed reward fits in the player-file-backed main inventory. */
+    public static boolean canFitExactly(ServerPlayer player, Item item, int count) {
+        if (count <= 0 || !player.isAlive() || player.isRemoved()) return false;
+        return canFitExactly(mainInventory(player), item, count);
+    }
+
+    /**
+     * Inserts the whole fixed reward without ever dropping an entity or using the deferred ledger.
+     * Institutional completion preflights this before consuming delivery goods and checks it again here.
+     */
+    public static boolean grantExactly(ServerPlayer player, Item item, int count) {
+        if (!canFitExactly(player, item, count)) return false;
+        try {
+            ItemStack remainder = ItemHandlerHelper.insertItemStacked(
+                    mainInventory(player), new ItemStack(item, count), false);
+            if (!remainder.isEmpty()) return false;
+            player.getInventory().setChanged();
+            player.inventoryMenu.broadcastChanges();
+            return true;
+        } catch (RuntimeException | LinkageError failure) {
+            return false;
+        }
+    }
+
+    static boolean canFitExactly(IItemHandler inventory, Item item, int count) {
+        return count > 0 && ItemHandlerHelper.insertItemStacked(
+                inventory, new ItemStack(item, count), true).isEmpty();
+    }
+
+    private static IItemHandler mainInventory(ServerPlayer player) {
+        return new RangedWrapper(new InvWrapper(player.getInventory()),
+                0, player.getInventory().items.size());
+    }
+
     /** Pays only into available inventory slots; a full inventory cannot create a stream of entities. */
     public static void flush(ServerPlayer player) {
         if (!player.isAlive() || player.isRemoved()) { return; }
         var data = QuestCapabilities.get(player).orElse(null);
         if (data == null || data.pendingItems().isEmpty()) { return; }
-        IItemHandler inventory = new RangedWrapper(new InvWrapper(player.getInventory()),
-                0, player.getInventory().items.size());
+        IItemHandler inventory = mainInventory(player);
         if (flush(data.pendingItems(), inventory, id -> BuiltInRegistries.ITEM.containsKey(id)
                 ? BuiltInRegistries.ITEM.get(id) : null, player.serverLevel().getGameTime())) {
             player.getInventory().setChanged();

@@ -82,7 +82,7 @@ class McaGiftMixinPluginTest {
     }
 
     @Test
-    @DisplayName("a merged callback under Mixin's decorated handler name reads as applied (1.6.6)")
+    @DisplayName("a merged callback under Mixin's decorated handler name reads as applied (1.7.0)")
     void decoratedCallbackIsFound() {
         MethodNode handle = method("handle", DESCRIPTOR);
         ClassNode target = classWith(handle);

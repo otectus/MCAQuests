@@ -56,7 +56,7 @@ public final class ScopeResolver {
 
     /**
      * The identity of a village scope. MCA numbers villages per dimension, so village 3 of the Nether and
-     * village 3 of the Overworld are different places; before 1.6.6 both were {@code v:3}, and a Nether
+     * village 3 of the Overworld are different places; before 1.7.0 both were {@code v:3}, and a Nether
      * sponsor's donations landed in the Overworld village's project. Overworld identities keep their
      * historical spelling, so no Overworld save changes; any other dimension is qualified.
      */
@@ -72,7 +72,7 @@ public final class ScopeResolver {
     }
 
     /**
-     * The identity a pre-1.6.6 instance should carry, given the dimension it was saved in. Unchanged for
+     * The identity a pre-1.7.0 instance should carry, given the dimension it was saved in. Unchanged for
      * the Overworld, for already-qualified identities and for scopes that were never numbered per
      * dimension (players, villagers, families, anchors).
      */

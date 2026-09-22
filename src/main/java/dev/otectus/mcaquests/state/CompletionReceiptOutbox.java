@@ -54,6 +54,11 @@ final class CompletionReceiptOutbox {
         return health == Health.READY ? !activeConsumers(now).isEmpty() : unreadableRequiresFence;
     }
 
+    boolean hasActiveConsumer(ResourceLocation consumer, long now) {
+        return health == Health.READY && consumer != null
+                && activeConsumers(now).contains(consumer.toString());
+    }
+
     QuestCompletionReceipt append(UUID playerId, ActiveQuest active, long completedGameTime) {
         if (!canAppend(completedGameTime)) {
             throw new IllegalStateException("completion receipt outbox is not writable: " + status());
@@ -81,7 +86,8 @@ final class CompletionReceiptOutbox {
                                 ? Optional.of(binding.localVillageId().getAsInt()) : Optional.empty())),
                 active.civicBuildingBinding().map(binding -> new QuestCompletionReceipt.CivicBuildingBinding(
                         binding.bindingId(), binding.settlementId(), binding.dimension(), binding.villageId(),
-                        binding.buildingId(), binding.family(), binding.typeAtBinding())));
+                        binding.buildingId(), binding.family(), binding.typeAtBinding())),
+                active.institutionalBinding());
         if (entries.putIfAbsent(receipt.receiptId(), new Entry(receipt, intendedConsumers)) != null) {
             throw new IllegalStateException("duplicate completion receipt id " + receipt.receiptId());
         }
@@ -493,6 +499,9 @@ final class CompletionReceiptOutbox {
         receipt.acceptedVillageId().ifPresent(value -> tag.putInt("accepted_village", value));
         receipt.kingdomBinding().ifPresent(value -> tag.put("kingdom_binding", saveKingdom(value)));
         receipt.civicBuildingBinding().ifPresent(value -> tag.put("civic_building_binding", saveCivic(value)));
+        if (!receipt.institutionalBinding().isEmpty()) {
+            tag.putString("institutional_binding", receipt.institutionalBinding());
+        }
         return tag;
     }
 
@@ -512,7 +521,7 @@ final class CompletionReceiptOutbox {
         return new QuestCompletionReceipt(tag.getUUID("provider_epoch"), tag.getUUID("receipt_id"),
                 tag.getUUID("player_id"), quest, tag.getLong("revision"), outcome,
                 tag.getLong("completed"), tag.getLong("accepted"), tag.getUUID("giver_id"), dimension,
-                village, kingdom, civic);
+                village, kingdom, civic, tag.getString("institutional_binding"));
     }
 
     private static CompoundTag saveKingdom(QuestCompletionReceipt.KingdomBinding value) {

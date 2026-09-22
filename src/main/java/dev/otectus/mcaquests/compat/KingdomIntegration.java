@@ -16,13 +16,31 @@ import javax.annotation.Nullable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Reflection-only access to Ultima's stable gating, factions, and Townstead facades. */
+/**
+ * Reflection-only access to Ultima's stable gating, factions, and Townstead facades.
+ *
+ * <p>Every class and method is looked up once and kept, including the answer "not there": a gate is
+ * asked on every offer pass, and a failed {@code Class.forName} on an installation without Ultima costs
+ * an exception each time. Ultima's classes cannot change while the game runs, so nothing expires.
+ */
 public final class KingdomIntegration {
+    /** The loader id Ultima Kingdoms registers under. */
+    public static final String MOD_ID = "ultima_kingdoms";
+
+    /** Capabilities content can require, by the facade that answers them (see {@link #has}). */
+    public static final String GATING = "gating";
+    public static final String FACTIONS = "factions";
+    public static final String CIVIC_BUILDINGS = "civic_buildings";
+    public static final String INSTITUTIONS = "institutions";
+
     private static final String GATE_API = "com.ultimakingdoms.api.gating.KingdomGateApi";
     private static final String KINGDOM_CONTEXT = "com.ultimakingdoms.api.gating.KingdomContext";
     private static final String FACTIONS_API = "com.ultimakingdoms.api.factions.UltimaFactionsApi";
@@ -36,19 +54,56 @@ public final class KingdomIntegration {
     private static final String BOUND_BUILDING = "com.ultimakingdoms.api.townstead.BoundCivicBuilding";
     private static final String RECOVERY_POLICY = "com.ultimakingdoms.api.townstead.BuildingRecoveryPolicy";
     private static final AtomicBoolean FAILURE_REPORTED = new AtomicBoolean();
+    private static final Map<String, Optional<Class<?>>> CLASSES = new ConcurrentHashMap<>();
+    private static final Map<String, Method> METHODS = new ConcurrentHashMap<>();
 
     private KingdomIntegration() {
+    }
+
+    /** Ultima is installed and its gating facade is present. */
+    public static boolean available() {
+        return net.minecraftforge.fml.ModList.get() != null
+                && net.minecraftforge.fml.ModList.get().isLoaded(MOD_ID)
+                && present(GATE_API);
+    }
+
+    /**
+     * Whether one facade of an installed Ultima is present. Used by the loaders to decide whether
+     * kingdom content can be played here at all; whether a particular player passes a gate is the offer
+     * pipeline's question.
+     */
+    public static boolean has(String capability) {
+        if (!available()) return false;
+        return switch (capability) {
+            case GATING -> true;
+            case FACTIONS -> present(FACTIONS_API) && present(FACTIONS_SERVICE);
+            case CIVIC_BUILDINGS -> present(TOWNSTEAD_API) && present(TOWNSTEAD_SERVICE);
+            case INSTITUTIONS -> dev.otectus.mcaquests.quest.InstitutionalCommissionBridge.serviceAvailable();
+            default -> false;
+        };
+    }
+
+    private static boolean present(String name) {
+        return CLASSES.computeIfAbsent(name, KingdomIntegration::find).isPresent();
+    }
+
+    private static Optional<Class<?>> find(String name) {
+        try {
+            return Optional.of(Class.forName(name, false, KingdomIntegration.class.getClassLoader()));
+        } catch (Throwable absent) {
+            return Optional.empty();
+        }
     }
 
     public static boolean allows(KingdomGateSpec spec, ServerPlayer player, Entity giver) {
         try {
             Class<?> api = load(GATE_API);
             if (spec.namedGate().isPresent()) {
-                return (boolean) api.getMethod("testNamed", ServerPlayer.class, Entity.class,
+                return (boolean) method(api, "testNamed", ServerPlayer.class, Entity.class,
                                 ResourceLocation.class, Optional.class)
                         .invoke(null, player, giver, spec.namedGate().get(), spec.explicitSettlementId());
             }
-            return (boolean) api.getMethod("testJson", ServerPlayer.class, Entity.class, String.class, Optional.class)
+            return (boolean) method(api, "testJson", ServerPlayer.class, Entity.class, String.class, Optional.class)
                     .invoke(null, player, giver, spec.predicateJson().toString(), spec.explicitSettlementId());
         } catch (ClassNotFoundException unavailable) {
             return spec.allowsWhenUnavailable();
@@ -61,7 +116,7 @@ public final class KingdomIntegration {
     public static Optional<KingdomBindingSnapshot> capture(String subject, Optional<UUID> settlement,
                                                             ServerPlayer player, Entity giver) {
         try {
-            Object context = load(GATE_API).getMethod("resolveSnapshot", ServerPlayer.class, Entity.class,
+            Object context = method(load(GATE_API), "resolveSnapshot", ServerPlayer.class, Entity.class,
                             String.class, Optional.class)
                     .invoke(null, player, giver, subject, settlement);
             if (!(context instanceof Optional<?> optional) || optional.isEmpty()) return Optional.empty();
@@ -70,7 +125,7 @@ public final class KingdomIntegration {
             Optional<ResourceLocation> localDimension = Optional.empty();
             OptionalInt localVillage = OptionalInt.empty();
             try {
-                Object community = load(GATE_API).getMethod("resolveMcaCommunity", ServerPlayer.class, UUID.class)
+                Object community = method(load(GATE_API), "resolveMcaCommunity", ServerPlayer.class, UUID.class)
                         .invoke(null, player, settlementId);
                 if (community instanceof Optional<?> local && local.isPresent()) {
                     localDimension = Optional.of((ResourceLocation) accessor(local.get(), "dimension"));
@@ -99,11 +154,11 @@ public final class KingdomIntegration {
                     snapshot.dimension(), snapshot.settlementRevision());
             Class<?> api = load(GATE_API);
             if (spec.namedGate().isPresent()) {
-                return (boolean) api.getMethod("testNamedAgainst", ServerPlayer.class, ResourceLocation.class,
+                return (boolean) method(api, "testNamedAgainst", ServerPlayer.class, ResourceLocation.class,
                                 contextType)
                         .invoke(null, player, spec.namedGate().get(), context);
             }
-            return (boolean) api.getMethod("testJsonAgainst", String.class, contextType)
+            return (boolean) method(api, "testJsonAgainst", String.class, contextType)
                     .invoke(null, spec.predicateJson().toString(), context);
         } catch (Throwable failure) {
             report(failure);
@@ -116,7 +171,7 @@ public final class KingdomIntegration {
         MinecraftServer server = player.getServer();
         if (server == null) return false;
         try {
-            Object service = load(FACTIONS_API).getMethod("get", MinecraftServer.class).invoke(null, server);
+            Object service = method(load(FACTIONS_API), "get", MinecraftServer.class).invoke(null, server);
             ResourceLocation kingdom = gate.kingdom().orElse(context.kingdomId());
             OptionalInt local = OptionalInt.empty();
             if (gate.scope() != KingdomGateSpec.StandingScope.FACTION
@@ -146,7 +201,7 @@ public final class KingdomIntegration {
         Entity target = spec.target() == CivicBuildingSpec.Target.PLAYER ? player : giver;
         if (server == null || !(target.level() instanceof ServerLevel level)) return Optional.empty();
         try {
-            Object service = load(TOWNSTEAD_API).getMethod("get", MinecraftServer.class).invoke(null, server);
+            Object service = method(load(TOWNSTEAD_API), "get", MinecraftServer.class).invoke(null, server);
             Object found = invokePublic(service, TOWNSTEAD_SERVICE, "buildingAt",
                     new Class<?>[]{ServerLevel.class, net.minecraft.core.BlockPos.class},
                     level, target.blockPosition());
@@ -171,7 +226,7 @@ public final class KingdomIntegration {
                 net.minecraft.core.registries.Registries.DIMENSION, binding.dimension()));
         if (server == null || level == null) return new Recovery(RecoveryStatus.WAITING, Optional.of(binding), "dimension unavailable");
         try {
-            Object service = load(TOWNSTEAD_API).getMethod("get", MinecraftServer.class).invoke(null, server);
+            Object service = method(load(TOWNSTEAD_API), "get", MinecraftServer.class).invoke(null, server);
             Class<?> boundType = load(BOUND_BUILDING);
             Object bound = boundType.getConstructor(UUID.class, UUID.class, ResourceLocation.class, int.class,
                             int.class, String.class, String.class)
@@ -202,7 +257,7 @@ public final class KingdomIntegration {
         MinecraftServer server = player.getServer();
         if (server == null) return false;
         try {
-            Object service = load(FACTIONS_API).getMethod("get", MinecraftServer.class).invoke(null, server);
+            Object service = method(load(FACTIONS_API), "get", MinecraftServer.class).invoke(null, server);
             Class<?> causeType = load(CHANGE_CAUSE);
             @SuppressWarnings({"unchecked", "rawtypes"})
             Object cause = Enum.valueOf((Class<? extends Enum>) causeType.asSubclass(Enum.class), "QUEST");
@@ -238,17 +293,29 @@ public final class KingdomIntegration {
     }
 
     private static Object accessor(Object target, String name) throws ReflectiveOperationException {
-        return target.getClass().getMethod(name).invoke(target);
+        return method(target.getClass(), name).invoke(target);
     }
 
     static Object invokePublic(Object target, String interfaceName, String method,
                                Class<?>[] parameterTypes, Object... arguments)
             throws ReflectiveOperationException {
-        return load(interfaceName).getMethod(method, parameterTypes).invoke(target, arguments);
+        return method(load(interfaceName), method, parameterTypes).invoke(target, arguments);
     }
 
     private static Class<?> load(String name) throws ClassNotFoundException {
-        return Class.forName(name, false, KingdomIntegration.class.getClassLoader());
+        return CLASSES.computeIfAbsent(name, KingdomIntegration::find)
+                .orElseThrow(() -> new ClassNotFoundException(name));
+    }
+
+    private static Method method(Class<?> owner, String name, Class<?>... parameterTypes)
+            throws NoSuchMethodException {
+        String key = owner.getName() + '#' + name + Arrays.toString(parameterTypes);
+        Method found = METHODS.get(key);
+        if (found == null) {
+            found = owner.getMethod(name, parameterTypes);
+            METHODS.put(key, found);
+        }
+        return found;
     }
 
     private static Throwable unwrap(Throwable throwable) {

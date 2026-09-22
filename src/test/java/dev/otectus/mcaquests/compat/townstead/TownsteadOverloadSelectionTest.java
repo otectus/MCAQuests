@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Townstead overloads {@code ProfessionProgressions.spec} (String or ProfessionXpType) and the
- * {@code LearnedSkills} methods (LivingEntity or UUID) under one name and arity. Before 1.6.6 the binder
+ * {@code LearnedSkills} methods (LivingEntity or UUID) under one name and arity. Before 1.7.0 the binder
  * took whichever {@code getMethods()} listed first, and on a production server that was the enum
  * overload: every profession track read as "no progression", so workforce objectives could never count
  * a resident. These pin the selection rule in both orders the JVM might list the methods.

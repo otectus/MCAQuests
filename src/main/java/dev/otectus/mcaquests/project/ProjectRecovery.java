@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Operator diagnostics and repair for <b>one</b> project instance (1.6.6).
+ * Operator diagnostics and repair for <b>one</b> project instance (1.7.0).
  *
  * <p>Before this, the only tools were {@code /mcaquests project advance <id>} and {@code reset <id>},
  * which acted on every instance of a project id in every village at once — advance by writing the phase

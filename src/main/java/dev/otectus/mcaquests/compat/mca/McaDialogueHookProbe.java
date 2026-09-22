@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * What became of the MCA dialogue hook's four variants (1.6.6), for {@code /mcaquests debug mca} and
+ * What became of the MCA dialogue hook's four variants (1.7.0), for {@code /mcaquests debug mca} and
  * for the conversation fallback's decision.
  *
  * <p>Kept apart from {@link McaGiftHookProbe} because the two hooks target different classes and can

@@ -104,6 +104,22 @@ class OfferSessionTest {
     }
 
     @Test
+    void institutionalBindingSurvivesAndAStaleOwnerCannotReuseTheOffer() {
+        String binding = "11111111-2222-3333-4444-555555555555";
+        Set<ResourceLocation> allowed = Set.of(ONE);
+        OfferSession session = new OfferSession(VILLAGER);
+        session.redraw(List.of(slot(ONE)), 1000L, GENERATION, 42L, allowed, binding);
+
+        OfferSession restored = OfferSession.load(session.save());
+        assertEquals(binding, restored.institutionalBinding().orElseThrow());
+        assertEquals(GENERATION, restored.packGeneration(),
+                "acceptance can compare the displayed catalogue generation after restart");
+        assertTrue(restored.scopeMatches(allowed, binding));
+        assertFalse(restored.scopeMatches(allowed, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+        assertFalse(restored.scopeMatches(allowed), "ordinary R1 callers cannot inherit the owner token");
+    }
+
+    @Test
     @DisplayName("a decline cooldown longer than the pruning horizon survives pruning")
     void timedRefusalSurvivesPruning() {
         OfferSessions sessions = new OfferSessions();

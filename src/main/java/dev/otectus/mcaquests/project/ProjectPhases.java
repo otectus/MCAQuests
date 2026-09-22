@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * The one way a project instance begins and a phase becomes current (1.6.6).
+ * The one way a project instance begins and a phase becomes current (1.7.0).
  *
  * <p>Before this, a new instance, a phase advance, a seeded follow-up and {@code /mcaquests project
  * advance} each set the phase index on their own, and anything a phase needed to remember about its
@@ -34,7 +34,7 @@ import java.util.OptionalInt;
  *       could only be taken after the start, or {@code operator} after a repair;</li>
  *   <li>{@code spirit_start_pending}: set while that reading could not be taken.</li>
  * </ul>
- * An instance created before 1.6.6 has none of these. Nothing pretends to reconstruct its start: its
+ * An instance created before 1.7.0 has none of these. Nothing pretends to reconstruct its start: its
  * project-measured objectives fall back to what they did before, measured from the phase, and an
  * operator can repair one explicitly.
  */
@@ -177,7 +177,7 @@ public final class ProjectPhases {
         return state.extra().getBoolean(K_SPIRIT_START_PENDING);
     }
 
-    /** {@code project_start}, {@code late} or {@code operator}; empty for an instance from before 1.6.6. */
+    /** {@code project_start}, {@code late} or {@code operator}; empty for an instance from before 1.7.0. */
     public static Optional<String> spiritAtStartSource(ProjectState state) {
         return state.extra().contains(K_SPIRIT_START_SOURCE)
                 ? Optional.of(state.extra().getString(K_SPIRIT_START_SOURCE)) : Optional.empty();

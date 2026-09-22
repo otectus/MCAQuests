@@ -65,6 +65,9 @@ public final class OfferSession {
     /** Null for the ordinary villager repertoire; otherwise the trusted commission API's bounded scope. */
     @Nullable
     private Set<ResourceLocation> restrictedQuestIds;
+    /** Opaque contract UUID for the institutional menu surface; null for every native/R1 menu. */
+    @Nullable
+    private String institutionalBinding;
     /** Quest id (as a string, because that is what NBT keys are) to the game time the refusal lapses. */
     private final Map<String, Long> declinedUntil = new HashMap<>();
 
@@ -119,6 +122,11 @@ public final class OfferSession {
     /** Replaces the set and records which public menu surface drew it. */
     public void redraw(List<Slot> drawn, long gameTime, int generation, long drawSeed,
                        @Nullable Set<ResourceLocation> restriction) {
+        redraw(drawn, gameTime, generation, drawSeed, restriction, null);
+    }
+
+    public void redraw(List<Slot> drawn, long gameTime, int generation, long drawSeed,
+                       @Nullable Set<ResourceLocation> restriction, @Nullable String binding) {
         declinedUntil.values().removeIf(until -> until == UNTIL_REFRESH);
         slots.clear();
         slots.addAll(drawn);
@@ -126,10 +134,16 @@ public final class OfferSession {
         packGeneration = generation;
         seed = drawSeed;
         restrictedQuestIds = restriction == null ? null : Set.copyOf(restriction);
+        institutionalBinding = binding;
     }
 
     public boolean scopeMatches(@Nullable Set<ResourceLocation> restriction) {
-        return java.util.Objects.equals(restrictedQuestIds, restriction);
+        return scopeMatches(restriction, null);
+    }
+
+    public boolean scopeMatches(@Nullable Set<ResourceLocation> restriction, @Nullable String binding) {
+        return java.util.Objects.equals(restrictedQuestIds, restriction)
+                && java.util.Objects.equals(institutionalBinding, binding);
     }
 
     public boolean allowsInCurrentScope(ResourceLocation questId) {
@@ -138,6 +152,10 @@ public final class OfferSession {
 
     public Optional<Set<ResourceLocation>> restrictedQuestIds() {
         return Optional.ofNullable(restrictedQuestIds);
+    }
+
+    public Optional<String> institutionalBinding() {
+        return Optional.ofNullable(institutionalBinding);
     }
 
     /**
@@ -245,6 +263,7 @@ public final class OfferSession {
                     .forEach(value -> restricted.add(net.minecraft.nbt.StringTag.valueOf(value)));
             tag.put("restricted_quests", restricted);
         }
+        if (institutionalBinding != null) tag.putString("institutional_binding", institutionalBinding);
         ListTag list = new ListTag();
         for (Slot slot : slots) {
             CompoundTag entry = new CompoundTag();
@@ -287,6 +306,10 @@ public final class OfferSession {
             }
             session.restrictedQuestIds = Set.copyOf(restricted);
         }
+        if (tag.contains("institutional_binding", Tag.TAG_STRING)) {
+            String binding = tag.getString("institutional_binding");
+            if (binding.length() <= 128) session.institutionalBinding = binding;
+        }
         ListTag list = tag.getList("slots", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = list.getCompound(i);
@@ -316,6 +339,7 @@ public final class OfferSession {
         packGeneration = other.packGeneration;
         seed = other.seed;
         restrictedQuestIds = other.restrictedQuestIds == null ? null : Set.copyOf(other.restrictedQuestIds);
+        institutionalBinding = other.institutionalBinding;
         slots.clear();
         slots.addAll(other.slots);
         declinedUntil.clear();

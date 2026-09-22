@@ -40,6 +40,11 @@ public final class PlayerQuestData {
         return completionReceipts.shouldCapture(now);
     }
 
+    /** True only while this exact consumer will be frozen into a newly appended receipt's cohort. */
+    public boolean hasActiveCompletionReceiptConsumer(ResourceLocation consumer, long now) {
+        return completionReceipts.hasActiveConsumer(consumer, now);
+    }
+
     /** Internal completion pipeline hook; the returned receipt is hidden until marked durable. */
     public QuestCompletionReceipt captureCompletionReceipt(UUID playerId, ActiveQuest active, long now) {
         return completionReceipts.append(playerId, active, now);

@@ -146,4 +146,60 @@ class IntegrationRequirementsTest {
         QuestDefinition def = quest("\"rewards\":[{\"type\":\"mcaquests:townstead_profession_xp\",\"profession\":\"minecraft:farmer\",\"amount\":10}]");
         assertFalse(IntegrationRequirements.dependsOn(def, Integration.TOWNSTEAD));
     }
+
+    private static final Availability ULTIMA_ALL = IntegrationRequirements.availabilityOf(false, Set.of(), Set.of(),
+            Set.of("gating", "factions", "civic_buildings", "institutions"));
+    private static final Availability ULTIMA_GATING_ONLY = IntegrationRequirements.availabilityOf(false, Set.of(),
+            Set.of(), Set.of("gating"));
+
+    @Test
+    @DisplayName("Ultima Kingdoms content loads only where Ultima offers what it reads (1.7.0)")
+    void ultimaContentNeedsUltima() {
+        QuestDefinition faction = quest("\"rewards\":[{\"type\":\"ultima_kingdoms:faction_standing\",\"amount\":5}]");
+        assertEquals(Integration.ULTIMA, IntegrationRequirements.unavailable(faction, NONE).orElseThrow().integration(),
+                "a faction reward blocks turn-in until applied, so it is required");
+        assertTrue(IntegrationRequirements.unavailable(faction, ULTIMA_ALL).isEmpty());
+        assertEquals(Set.of("factions"),
+                IntegrationRequirements.unavailable(faction, ULTIMA_GATING_ONLY).orElseThrow().missingCapabilities());
+
+        QuestDefinition standing = quest("\"conditions\":{\"type\":\"ultima_kingdoms:standing\","
+                + "\"standing\":{\"min\":10}}");
+        assertTrue(IntegrationRequirements.dependsOn(standing, Integration.ULTIMA));
+        QuestDefinition notStanding = quest("\"conditions\":{\"not\":{\"type\":\"ultima_kingdoms:standing\","
+                + "\"standing\":{\"min\":10}}}");
+        assertFalse(IntegrationRequirements.dependsOn(notStanding, Integration.ULTIMA),
+                "under not, a standing gate is an absent-mod gate");
+
+        QuestDefinition institutional = quest("\"institutional_commission\":true");
+        assertTrue(IntegrationRequirements.dependsOn(institutional, Integration.ULTIMA));
+    }
+
+    @Test
+    @DisplayName("only an offer_only inline gate that allows when unknown is playable without Ultima")
+    void kingdomLifecycleRequirements() {
+        QuestDefinition lenient = quest("\"kingdom_lifecycle\":{\"mode\":\"offer_only\",\"gate\":"
+                + "{\"include\":[\"test:realm\"],\"when_unknown\":\"allow\"}}");
+        assertFalse(IntegrationRequirements.dependsOn(lenient, Integration.ULTIMA));
+
+        QuestDefinition strict = quest("\"kingdom_lifecycle\":{\"mode\":\"offer_only\",\"gate\":"
+                + "{\"include\":[\"test:realm\"]}}");
+        assertTrue(IntegrationRequirements.dependsOn(strict, Integration.ULTIMA), "when_unknown defaults to deny");
+
+        QuestDefinition bound = quest("\"kingdom_lifecycle\":{\"mode\":\"bound_at_accept\",\"gate\":"
+                + "{\"include\":[\"test:realm\"],\"when_unknown\":\"allow\"}}");
+        assertTrue(IntegrationRequirements.dependsOn(bound, Integration.ULTIMA),
+                "a binding captured at acceptance has no answer without Ultima");
+        assertTrue(IntegrationRequirements.unavailable(bound, ULTIMA_GATING_ONLY).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Ultima content never waits on Townstead or Capitals, and theirs never waits on Ultima")
+    void ultimaIsIndependent() {
+        QuestDefinition townstead = quest("\"objectives\":[" + TOWNSTEAD_OBJECTIVE + "]");
+        assertTrue(IntegrationRequirements.unavailable(townstead, TOWNSTEAD_ONLY).isEmpty());
+        QuestDefinition faction = quest("\"rewards\":[{\"type\":\"ultima_kingdoms:faction_standing\",\"amount\":5}]");
+        assertTrue(IntegrationRequirements.unavailable(faction, ULTIMA_ALL).isEmpty());
+        assertFalse(IntegrationRequirements.dependsOn(faction, Integration.TOWNSTEAD));
+        assertFalse(IntegrationRequirements.dependsOn(faction, Integration.CAPITALS));
+    }
 }

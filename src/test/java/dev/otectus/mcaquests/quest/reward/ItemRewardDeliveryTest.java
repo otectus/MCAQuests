@@ -26,6 +26,18 @@ class ItemRewardDeliveryTest {
         assertEquals(4998L, pending.snapshot().get(ITEM));
     }
 
+    @Test void exactInstitutionalPaymentRequiresPlayerFileBackedCapacity() {
+        SimpleContainer full = new SimpleContainer(new ItemStack(Items.DIAMOND, 64));
+        assertFalse(ItemRewardDelivery.canFitExactly(new InvWrapper(full), Items.EMERALD, 6));
+
+        SimpleContainer partial = new SimpleContainer(new ItemStack(Items.EMERALD, 58));
+        assertTrue(ItemRewardDelivery.canFitExactly(new InvWrapper(partial), Items.EMERALD, 6));
+        assertEquals(58, partial.getItem(0).getCount(), "capacity simulation must not mutate inventory");
+
+        SimpleContainer empty = new SimpleContainer(1);
+        assertTrue(ItemRewardDelivery.canFitExactly(new InvWrapper(empty), Items.EMERALD, 6));
+    }
+
     @Test void eachTickCanInsertAtMostSixteenStacksAcrossCalls() {
         PendingItemRewards pending = new PendingItemRewards();
         pending.add(ITEM, 5000);
