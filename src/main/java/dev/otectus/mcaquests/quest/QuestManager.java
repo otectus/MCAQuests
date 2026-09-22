@@ -248,7 +248,7 @@ public final class QuestManager {
             if (!InstitutionalCommissionBridge.supportedDefinition(definition)) return false;
             String refusal = InstitutionalCommissionBridge.validate(player, villager, questId, binding, false);
             if (!refusal.isEmpty()) {
-                player.sendSystemMessage(Component.literal(refusal));
+                player.sendSystemMessage(InstitutionalCommissionBridge.message(refusal));
                 return false;
             }
         }
@@ -755,7 +755,7 @@ public final class QuestManager {
             String refusal = InstitutionalCommissionBridge.validate(
                     player, villager, questId, institutionalBinding, false);
             if (!refusal.isEmpty()) {
-                player.sendSystemMessage(Component.literal(refusal));
+                player.sendSystemMessage(InstitutionalCommissionBridge.message(refusal));
                 return false;
             }
         }
@@ -770,7 +770,7 @@ public final class QuestManager {
             Optional<UUID> instance = active.bindInstitutional(institutionalBinding, accepted);
             if (instance.isEmpty() || !InstitutionalCommissionBridge.accepted(
                     player, villager, questId, institutionalBinding, instance.get())) {
-                player.sendSystemMessage(Component.literal("This commission could not be accepted."));
+                player.sendSystemMessage(Component.translatable("mcaquests.commission.accept_failed"));
                 return false;
             }
         }
@@ -795,9 +795,7 @@ public final class QuestManager {
         }
         if (active.isInstitutional()
                 && !CompletionReceiptDurability.flushInstitutionalAcceptance(player, active)) {
-            player.sendSystemMessage(Component.literal(
-                    "The commission was bound, but its quest save could not be verified. It remains active; "
-                            + "reopen this menu after storage recovers."));
+            player.sendSystemMessage(Component.translatable("mcaquests.commission.unverified_save"));
             return false;
         }
         if (situationLink != null && player.getServer() != null) {
@@ -1221,8 +1219,7 @@ public final class QuestManager {
         QuestDefinition current = QuestDefinitions.resolve(active.questId()).orElse(null);
         if (!active.institutionalShapeMatches(current)) {
             if (active.isInstitutional() || (current != null && current.institutionalCommission())) {
-                player.sendSystemMessage(Component.literal(
-                        "This commission is suspended because its accepted terms are unavailable."));
+                player.sendSystemMessage(Component.translatable("mcaquests.commission.terms_unavailable"));
             }
             return false;
         }
@@ -1230,20 +1227,18 @@ public final class QuestManager {
         if (institutional) {
             Entity issuer = resolveGiver(player, active);
             if (issuer == null) {
-                player.sendSystemMessage(Component.literal(
-                        "This commission is suspended because its issuer or accepted terms are unavailable."));
+                player.sendSystemMessage(Component.translatable("mcaquests.commission.issuer_unavailable"));
                 return false;
             }
             String refusal = InstitutionalCommissionBridge.validate(player, issuer, active.questId(),
                     active.institutionalBinding(), true);
             if (!refusal.isEmpty()) {
-                player.sendSystemMessage(Component.literal(refusal));
+                player.sendSystemMessage(InstitutionalCommissionBridge.message(refusal));
                 return false;
             }
             ItemReward payment = (ItemReward) def.rewards().get(0);
             if (!ItemRewardDelivery.canFitExactly(player, payment.item(), payment.count())) {
-                player.sendSystemMessage(Component.literal(
-                        "Make room for the full commission payment before turning in the delivery."));
+                player.sendSystemMessage(Component.translatable("mcaquests.commission.make_room"));
                 return false;
             }
         }
@@ -1261,8 +1256,7 @@ public final class QuestManager {
         long now = ((ServerLevel) player.level()).getGameTime();
         if (institutional && (!data.hasActiveCompletionReceiptConsumer(INSTITUTIONAL_RECEIPT_CONSUMER, now)
                 || !data.canCaptureCompletionReceipt(now))) {
-            player.sendSystemMessage(Component.literal(
-                    "The civic receipt service is unavailable; no goods or payment were moved."));
+            player.sendSystemMessage(Component.translatable("mcaquests.commission.receipts_unavailable"));
             return false;
         }
         // A polling add-on opts this player into receipts. Standalone MCA: Quests never accumulates an
@@ -1332,8 +1326,7 @@ public final class QuestManager {
             if (active.isInstitutional() && reward instanceof ItemReward item) {
                 if (!ItemRewardDelivery.grantExactly(player, item.item(), item.count())) {
                     active.setRewardClaimed(false);
-                    player.sendSystemMessage(Component.literal(
-                            "The commission payment could not be stored; completion was not recorded."));
+                    player.sendSystemMessage(Component.translatable("mcaquests.commission.payment_failed"));
                     return false;
                 }
                 continue;
@@ -1595,8 +1588,7 @@ public final class QuestManager {
         // and the callback is idempotent when the player retries abandonment after restart.
         if (active.isInstitutional() && !InstitutionalCommissionBridge.cancelled(player, active.questId(),
                 active.institutionalBinding(), active.instance())) {
-            player.sendSystemMessage(Component.literal(
-                    "This commission could not be cancelled; it remains active until storage recovers."));
+            player.sendSystemMessage(Component.translatable("mcaquests.commission.cancel_failed"));
             return false;
         }
         // Said before the quest disappears, because afterwards there is nothing left to explain it with.
@@ -1854,13 +1846,13 @@ public final class QuestManager {
         if (active != null && active.isInstitutional()) {
             QuestDefinition current = QuestDefinitions.resolve(active.questId()).orElse(null);
             if (!active.institutionalShapeMatches(current)) {
-                return Optional.of(Component.literal("Commission terms changed; cancel it or contact the issuer."));
+                return Optional.of(Component.translatable("mcaquests.commission.suspended.terms_changed"));
             }
             if (resolveGiver(player, active) == null) {
-                return Optional.of(Component.literal("Commission issuer unavailable"));
+                return Optional.of(Component.translatable("mcaquests.commission.suspended.issuer"));
             }
         } else if (def.institutionalCommission()) {
-            return Optional.of(Component.literal("Commission ownership is missing; cancel this quest."));
+            return Optional.of(Component.translatable("mcaquests.commission.suspended.ownership"));
         }
         // A datapack edit that moved this quest's objectives would reinterpret its progress (1.7.0).
         if (active != null && QuestDrift.drifted(active, def)) {

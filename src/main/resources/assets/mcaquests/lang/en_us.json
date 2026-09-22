@@ -24,6 +24,7 @@
   "mcaquests.title.honored_of_village": "Honored",
   "mcaquests.title.revered_of_village": "Revered",
   "mcaquests.hud.title": "Quests",
+  "mcaquests.hud.more": "+%s more in the Quest Log",
   "mcaquests.hud.deadline": "Time left: %s",
   "mcaquests.hud.ready_suffix": " — ready to turn in",
   "mcaquests.guidance.giver.unloaded": "%s is not nearby — bring this back when you find them",
@@ -3397,5 +3398,18 @@
   "mcaquests.reward.faction_standing": "%s kingdom standing",
   "mcaquests.reward.faction_standing_unavailable": "Quest completion is waiting for kingdom standing to be saved.",
   "mcaquests.condition.institutional_service_available": "Requires Ultima Kingdoms' institutional commission service",
-  "mcaquests.message.kingdom_context_changed": "Quest failed: its kingdom context changed."
+  "mcaquests.message.kingdom_context_changed": "Quest failed: its kingdom context changed.",
+  "mcaquests.commission.accept_failed": "This commission could not be accepted.",
+  "mcaquests.commission.unverified_save": "The commission was bound, but its quest save could not be verified. It remains active; reopen this menu after storage recovers.",
+  "mcaquests.commission.terms_unavailable": "This commission is suspended because its accepted terms are unavailable.",
+  "mcaquests.commission.issuer_unavailable": "This commission is suspended because its issuer or accepted terms are unavailable.",
+  "mcaquests.commission.make_room": "Make room for the full commission payment before turning in the delivery.",
+  "mcaquests.commission.receipts_unavailable": "The civic receipt service is unavailable; no goods or payment were moved.",
+  "mcaquests.commission.payment_failed": "The commission payment could not be stored; completion was not recorded.",
+  "mcaquests.commission.cancel_failed": "This commission could not be cancelled; it remains active until storage recovers.",
+  "mcaquests.commission.suspended.terms_changed": "Commission terms changed; cancel it or contact the issuer.",
+  "mcaquests.commission.suspended.issuer": "Commission issuer unavailable",
+  "mcaquests.commission.suspended.ownership": "Commission ownership is missing; cancel this quest.",
+  "mcaquests.commission.not_authorized": "This commission is not currently authorized.",
+  "mcaquests.commission.service_unavailable": "This commission service is currently unavailable."
 }

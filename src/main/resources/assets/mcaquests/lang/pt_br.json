@@ -24,6 +24,7 @@
   "mcaquests.title.honored_of_village": "Honrado",
   "mcaquests.title.revered_of_village": "Reverenciado",
   "mcaquests.hud.title": "Missões",
+  "mcaquests.hud.more": "+%s no Registro de Missões",
   "mcaquests.hud.deadline": "Tempo restante: %s",
   "mcaquests.hud.ready_suffix": " — pronta para entregar",
   "mcaquests.guidance.giver.unloaded": "%s não está por perto — entregue isto quando o encontrar",
@@ -3397,5 +3398,18 @@
   "mcaquests.reward.faction_standing": "%s de reputação do reino",
   "mcaquests.reward.faction_standing_unavailable": "A conclusão da missão aguarda o salvamento da reputação do reino.",
   "mcaquests.condition.institutional_service_available": "Requer o serviço de encomendas institucionais do Ultima Kingdoms",
-  "mcaquests.message.kingdom_context_changed": "Missão fracassada: o contexto do reino mudou."
+  "mcaquests.message.kingdom_context_changed": "Missão fracassada: o contexto do reino mudou.",
+  "mcaquests.commission.accept_failed": "Esta encomenda não pôde ser aceita.",
+  "mcaquests.commission.unverified_save": "A encomenda foi vinculada, mas o salvamento da missão não pôde ser verificado. Ela continua ativa; reabra este menu quando o armazenamento se recuperar.",
+  "mcaquests.commission.terms_unavailable": "Esta encomenda está suspensa porque os termos aceitos não estão disponíveis.",
+  "mcaquests.commission.issuer_unavailable": "Esta encomenda está suspensa porque quem a emitiu ou os termos aceitos não estão disponíveis.",
+  "mcaquests.commission.make_room": "Abra espaço para o pagamento completo da encomenda antes de entregar.",
+  "mcaquests.commission.receipts_unavailable": "O serviço de comprovantes cívicos está indisponível; nenhum item ou pagamento foi movido.",
+  "mcaquests.commission.payment_failed": "O pagamento da encomenda não pôde ser guardado; a conclusão não foi registrada.",
+  "mcaquests.commission.cancel_failed": "Esta encomenda não pôde ser cancelada; ela continua ativa até o armazenamento se recuperar.",
+  "mcaquests.commission.suspended.terms_changed": "Os termos da encomenda mudaram; cancele-a ou fale com quem a emitiu.",
+  "mcaquests.commission.suspended.issuer": "Quem emitiu a encomenda não está disponível",
+  "mcaquests.commission.suspended.ownership": "A titularidade da encomenda está ausente; cancele esta missão.",
+  "mcaquests.commission.not_authorized": "Esta encomenda não está autorizada no momento.",
+  "mcaquests.commission.service_unavailable": "O serviço de encomendas está indisponível no momento."
 }

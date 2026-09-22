@@ -73,11 +73,13 @@ public class QuestHudOverlay implements IGuiOverlay {
 
         List<Line> lines = new ArrayList<>();
         if (!entries.isEmpty()) {
-            int max = Math.min(entries.size(), McaQuestsConfig.CLIENT.questTrackerMaxEntries.get());
+            List<Integer> shown = HudRows.visible(entries.stream().map(QuestLogEntry::tracked).toList(),
+                    McaQuestsConfig.CLIENT.questTrackerMaxEntries.get());
             addHeading(lines, font, screenWidth, Component.translatable("mcaquests.hud.title"),
                     Palette.Hud.TITLE, GuiTextures.ICON_QUEST);
-            for (int i = 0; i < max; i++) {
-                QuestLogEntry entry = entries.get(i);
+            for (int row = 0; row < shown.size(); row++) {
+                int i = row;
+                QuestLogEntry entry = entries.get(shown.get(row));
                 MutableComponent title = entry.title().copy()
                         .append(Component.literal(" - ").withStyle(ChatFormatting.GRAY))
                         .append(entry.giverName().copy().withStyle(ChatFormatting.GRAY));
@@ -127,6 +129,12 @@ public class QuestHudOverlay implements IGuiOverlay {
                             Component.translatable("mcaquests.hud.deadline", formatCountdown(remaining)),
                             remaining <= URGENT_TICKS ? Palette.Hud.URGENT : Palette.Hud.WARNING, 6, 0);
                 }
+            }
+            if (entries.size() > shown.size()) {
+                // Says the list goes on, rather than letting a quest silently fall off the tracker.
+                addText(lines, font, screenWidth,
+                        Component.translatable("mcaquests.hud.more", entries.size() - shown.size()),
+                        Palette.Hud.OBJECTIVE, 2, GROUP_GAP);
             }
         }
         if (!projects.isEmpty()) {
@@ -308,6 +316,7 @@ public class QuestHudOverlay implements IGuiOverlay {
         // Ready, and the server had nowhere to point: the giver is in no loaded chunk.
         return Optional.of(GuidanceText.awaitingGiver(entry.giverName()));
     }
+
 
     /**
      * The first not-yet-satisfied objective of a quest, or the first one when they are all done.

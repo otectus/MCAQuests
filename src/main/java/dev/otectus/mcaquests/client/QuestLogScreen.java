@@ -252,12 +252,15 @@ public class QuestLogScreen extends McaQuestsScreen {
 
     @Override
     public void tick() {
-        // The server pushes a fresh log on every quest change (including the abandon we just sent), and
-        // both quest caches swap their list reference on update, so an identity check is a cheap,
-        // sufficient "the list changed" signal. Guidance is compared by what the layout actually
+        // The server pushes a fresh log on every quest change (including the abandon we just sent) and on a
+        // regular heartbeat, and both caches swap their list reference on every update even when nothing in
+        // it changed. So the lists are compared by content (1.7.0): a rebuild used to follow every
+        // heartbeat, re-announcing an unchanged screen to the narrator and resetting hover state. The
+        // entries are records, so equality is structural. Guidance is compared by what the layout actually
         // depends on instead -- see layoutSignature.
         List<String> layout = layoutSignature();
-        if (rendered != ClientQuestData.active() || renderedProjects != ClientProjectData.projects()
+        if (!java.util.Objects.equals(rendered, ClientQuestData.active())
+                || !java.util.Objects.equals(renderedProjects, ClientProjectData.projects())
                 || !renderedLayout.equals(layout)) {
             ControlKey focused = focusedControl();
             rebuildWidgets();

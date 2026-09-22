@@ -62,8 +62,11 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
             // quarantined under the namespace its error blamed, which is what lets the quest log tell
             // a player "this needs content from X" instead of "unknown quest". See QuestRegistry.
             String[] failure = new String[1];
-            Optional<QuestDefinition> parsed = StrictCodecs.parse(QuestDefinition.CODEC,
-                    JsonOps.INSTANCE, entry.getValue(), message -> failure[0] = message);
+            Optional<String> newerFormat = FormatVersion.refusal(entry.getValue());
+            newerFormat.ifPresent(message -> failure[0] = message);
+            Optional<QuestDefinition> parsed = newerFormat.isPresent() ? Optional.empty()
+                    : StrictCodecs.parse(QuestDefinition.CODEC, JsonOps.INSTANCE, entry.getValue(),
+                            message -> failure[0] = message);
             if (parsed.isEmpty()) {
                 // Content for an optional mod that is not installed is excluded, not malformed (1.7.0);
                 // anything else that failed to parse is an error, as it always was.
@@ -112,6 +115,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         FailureValidator.validate(loaded, errors);
         ObjectiveValidator.validate(loaded, errors, warnings);
         AgeEligibilityValidator.validate(loaded, warnings);
+        warnOnRewardless(loaded, warnings);
         // An error since 1.7.0 (a warning outside strict mode from 1.4.3): outside strict mode the quest
         // is skipped at load rather than offered for a relative who may not exist.
         TargetGateValidator.enforce(loaded, errors, warnings, strict);
@@ -175,6 +179,23 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         McaQuests.LOGGER.error("[MCA: Quests] {}", message);
         if (strict) {
             throw new QuestValidationException(message);
+        }
+    }
+
+    /**
+     * Non-fatal (1.7.0): a quest that pays nothing on completion — no rewards, no template rewards, no
+     * reputation — is legal, and sometimes meant (a chain step whose payoff is the next stage), but far
+     * more often a forgotten block, so the author hears about it.
+     */
+    static void warnOnRewardless(Map<ResourceLocation, QuestDefinition> quests, List<String> warnings) {
+        for (QuestDefinition def : quests.values()) {
+            boolean templateRewards = def.template()
+                    .map(template -> template.rewards().isJsonArray() && !template.rewards().getAsJsonArray().isEmpty())
+                    .orElse(false);
+            if (def.rewards().isEmpty() && !templateRewards && def.reputation().isEmpty()) {
+                warnings.add("Quest '" + def.id() + "' pays nothing on completion (no rewards, no template "
+                        + "rewards, no reputation). Intended for a chain step; otherwise add a rewards block.");
+            }
         }
     }
 

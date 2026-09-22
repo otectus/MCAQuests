@@ -63,6 +63,16 @@ public final class InstitutionalCommissionBridge {
     }
 
     /** True only when Ultima exposes the complete, exact ABI used by offer and acceptance commits. */
+    /**
+     * A refusal as the player should read it: this bridge's own refusals are translation keys (1.7.0);
+     * anything else is Ultima's own wording and is shown as it came.
+     */
+    public static net.minecraft.network.chat.Component message(String refusal) {
+        return refusal.startsWith("mcaquests.")
+                ? net.minecraft.network.chat.Component.translatable(refusal)
+                : net.minecraft.network.chat.Component.literal(refusal);
+    }
+
     public static boolean serviceAvailable() {
         try {
             apiMethod("validate", ServerPlayer.class, Entity.class,
@@ -97,7 +107,7 @@ public final class InstitutionalCommissionBridge {
     public static String validate(ServerPlayer player, Entity giver, ResourceLocation questId,
                                   String binding, boolean completion) {
         if (player == null || giver == null || questId == null || !validBinding(binding)) {
-            return "This commission is not currently authorized.";
+            return "mcaquests.commission.not_authorized";
         }
         try {
             Method method = apiMethod("validate", ServerPlayer.class, Entity.class,
@@ -106,12 +116,12 @@ public final class InstitutionalCommissionBridge {
             return validationResult(result);
         } catch (ReflectiveOperationException | LinkageError failure) {
             logBridgeFailure("validate", failure);
-            return "This commission service is currently unavailable.";
+            return "mcaquests.commission.service_unavailable";
         }
     }
 
     static String validationResult(@Nullable Object result) {
-        if (!(result instanceof String reason)) return "This commission is not currently authorized.";
+        if (!(result instanceof String reason)) return "mcaquests.commission.not_authorized";
         if (reason.isEmpty()) return "";
         return reason.length() <= 512 ? reason : "This commission is not currently authorized.";
     }

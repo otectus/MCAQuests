@@ -45,12 +45,18 @@
     {
       "type": "mcaquests:kill_entity",
       "entity": "minecraft:pillager",
-      "count": 12
+      "count": 12,
+      "source": {
+        "structure": "minecraft:pillager_outpost"
+      }
     },
     {
       "type": "mcaquests:kill_entity",
       "entity": "minecraft:vindicator",
-      "count": 4
+      "count": 4,
+      "source": {
+        "structure": "minecraft:mansion"
+      }
     },
     {
       "type": "mcaquests:deliver_to_villager",

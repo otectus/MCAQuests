@@ -46,7 +46,18 @@ public final class CompatLifecycleEvents {
         TownsteadBridge.Holder.get().invalidateDataCaches();
         if (event.getPlayer() == null) {
             // A /reload can load or drop definitions; the outage ledger records which (1.7.0).
-            dev.otectus.mcaquests.state.ContentOutageData.sampleNow(event.getPlayerList().getServer());
+            net.minecraft.server.MinecraftServer server = event.getPlayerList().getServer();
+            dev.otectus.mcaquests.state.ContentOutageData.sampleNow(server);
+            // And every open view built from the old catalogue is refreshed, not left to go stale until
+            // it is closed: project menus, the log and tracker, and any open Quests menu (1.7.0).
+            dev.otectus.mcaquests.project.ProjectMenuSessions.refreshAll(server);
+            for (net.minecraft.server.level.ServerPlayer player : event.getPlayerList().getPlayers()) {
+                dev.otectus.mcaquests.quest.QuestManager.syncLog(player);
+                dev.otectus.mcaquests.project.ProjectManager.syncProjects(player);
+                dev.otectus.mcaquests.network.QuestNetwork.CHANNEL.send(
+                        net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                        new dev.otectus.mcaquests.network.QuestMenusStaleS2CPacket());
+            }
         }
     }
 

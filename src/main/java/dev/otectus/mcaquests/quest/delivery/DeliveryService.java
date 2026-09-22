@@ -489,7 +489,7 @@ public final class DeliveryService {
             String refusal = InstitutionalCommissionBridge.validate(player, issuer, active.questId(),
                     active.institutionalBinding(), true);
             if (!refusal.isEmpty()) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(refusal));
+                player.sendSystemMessage(dev.otectus.mcaquests.quest.InstitutionalCommissionBridge.message(refusal));
                 return Outcome.of(DeliveryResult.OBJECTIVE_PAUSED);
             }
         }

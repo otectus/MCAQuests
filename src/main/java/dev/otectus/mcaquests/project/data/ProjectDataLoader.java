@@ -65,8 +65,11 @@ public final class ProjectDataLoader extends SimpleJsonResourceReloadListener {
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
             String[] failure = new String[1];
-            java.util.Optional<ProjectDefinition> parsed = dev.otectus.mcaquests.data.StrictCodecs.parse(ProjectDefinition.CODEC,
-                    JsonOps.INSTANCE, entry.getValue(), message -> failure[0] = message);
+            java.util.Optional<String> newerFormat = dev.otectus.mcaquests.data.FormatVersion.refusal(entry.getValue());
+            newerFormat.ifPresent(message -> failure[0] = message);
+            java.util.Optional<ProjectDefinition> parsed = newerFormat.isPresent() ? java.util.Optional.empty()
+                    : dev.otectus.mcaquests.data.StrictCodecs.parse(ProjectDefinition.CODEC, JsonOps.INSTANCE,
+                            entry.getValue(), message -> failure[0] = message);
             // Content for an optional mod that is not installed is excluded, not malformed (1.7.0).
             if (parsed.isEmpty() && failure[0] != null
                     && !dev.otectus.mcaquests.data.OptionalModNamespaces.excludedForAbsentMod(failure[0], absentMods)) {

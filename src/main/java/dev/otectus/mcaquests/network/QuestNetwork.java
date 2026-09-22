@@ -178,5 +178,8 @@ public final class QuestNetwork {
         CHANNEL.registerMessage(nextId++, ExternalMapPointsS2CPacket.class,
                 ExternalMapPointsS2CPacket::encode, ExternalMapPointsS2CPacket::decode,
                 ExternalMapPointsS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextId++, QuestMenusStaleS2CPacket.class,
+                QuestMenusStaleS2CPacket::encode, QuestMenusStaleS2CPacket::decode,
+                QuestMenusStaleS2CPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }
