@@ -1327,8 +1327,9 @@ public final class QuestProgressEvents {
                     // Resolve template values so progress is tracked against this copy's concrete objectives.
                     ServerLevel level = (ServerLevel) player.level();
                     QuestDefinition def = active.resolve(base);
-                    if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
-                        return;
+                    if (CapitalsQuestRequirements.unavailableReason(def).isPresent()
+                            || dev.otectus.mcaquests.quest.QuestDrift.drifted(active, def)) {
+                        return; // drifted: paused until an operator accepts the new definition (1.7.0)
                     }
                     List<QuestObjective> objectives = def.objectives();
                     for (int i = 0; i < objectives.size(); i++) {

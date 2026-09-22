@@ -40,6 +40,8 @@ public final class ProjectState {
     private long lastClockSample = Long.MIN_VALUE;
     /** How far missing-definition outages have been credited from {@code ContentOutageData} (1.7.0); -1 before. */
     private long outageAccountedUntil = -1L;
+    /** Fingerprints of the current phase's objectives as it opened (1.7.0; see {@code ProjectDrift}). */
+    private java.util.List<String> phaseFingerprints = java.util.List.of();
     private long retryAt = Long.MAX_VALUE;
 
     private int currentPhase;
@@ -186,6 +188,12 @@ public final class ProjectState {
         }
         outageAccountedUntil = now;
         return ledger.covers(key);
+    }
+
+    public java.util.List<String> phaseFingerprints() { return phaseFingerprints; }
+
+    public void setPhaseFingerprints(java.util.List<String> fingerprints) {
+        this.phaseFingerprints = java.util.List.copyOf(fingerprints);
     }
 
     public void allowRetryAt(long gameTime) { retryAt = gameTime; }
@@ -361,6 +369,11 @@ public final class ProjectState {
         if (suspendedTicks != 0L) { tag.putLong("suspended_ticks", suspendedTicks); }
         if (lastClockSample != Long.MIN_VALUE) { tag.putLong("clock_sample", lastClockSample); }
         if (outageAccountedUntil >= 0L) { tag.putLong("outage_accounted", outageAccountedUntil); }
+        if (!phaseFingerprints.isEmpty()) {
+            ListTag fingerprints = new ListTag();
+            phaseFingerprints.forEach(fp -> fingerprints.add(net.minecraft.nbt.StringTag.valueOf(fp)));
+            tag.put("phase_fp", fingerprints);
+        }
         if (retryAt != Long.MAX_VALUE) { tag.putLong("retry_at", retryAt); }
         tag.putInt("phase", currentPhase);
         tag.putString("status", status.lower());
@@ -420,6 +433,12 @@ public final class ProjectState {
         state.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks"));
         if (tag.contains("clock_sample")) { state.lastClockSample = tag.getLong("clock_sample"); }
         if (tag.contains("outage_accounted")) { state.outageAccountedUntil = tag.getLong("outage_accounted"); }
+        ListTag phaseFp = tag.getList("phase_fp", Tag.TAG_STRING);
+        java.util.List<String> fingerprints = new java.util.ArrayList<>(phaseFp.size());
+        for (int i = 0; i < phaseFp.size(); i++) {
+            fingerprints.add(phaseFp.getString(i));
+        }
+        state.phaseFingerprints = java.util.List.copyOf(fingerprints);
         if (tag.contains("retry_at")) { state.retryAt = tag.getLong("retry_at"); }
         state.phaseRewardsDistributed.or(BitSet.valueOf(tag.getByteArray("distributed")));
         ListTag sponsorList = tag.getList("sponsors", Tag.TAG_STRING);

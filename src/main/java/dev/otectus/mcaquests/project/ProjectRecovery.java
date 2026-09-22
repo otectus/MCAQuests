@@ -54,6 +54,8 @@ public final class ProjectRecovery {
         REBIND_ANCHOR,
         /** Move an instance whose village is gone to the MCA village now at its anchor (1.7.0). */
         REBIND_VILLAGE,
+        /** Accept the current definition of a phase a datapack edit changed (1.7.0). */
+        REBASE,
         /** Every non-terminal instance of one project id, no rewards: the old bare {@code advance}. */
         BULK_SKIP,
         /** Every instance of one project id: the old bare {@code reset}. */
@@ -111,6 +113,12 @@ public final class ProjectRecovery {
                 + "  village " + (state.villageId().isPresent() ? state.villageId().getAsInt() : "none")
                 + "  anchor radius " + ProjectManager.anchorRadius(state)
                 + (state.anchorRadius().isEmpty() ? " (not yet frozen)" : "")));
+        ProjectDefinition loadedDef = ProjectRegistry.get(state.projectId()).orElse(null);
+        if (loadedDef != null && ProjectDrift.drifted(state, loadedDef)) {
+            out.add(Component.literal("  DEFINITION CHANGED: phase " + (state.currentPhase() + 1)
+                    + "'s objectives were edited since it opened. The instance is paused; accept the new "
+                    + "phase with '... rebase'."));
+        }
         if (ProjectManager.villageGone(server, state)) {
             out.add(Component.literal("  VILLAGE GONE: MCA no longer has village " + state.villageId().getAsInt()
                     + " (deleted or merged). The instance is paused, clock included; rebind it with "
@@ -214,6 +222,20 @@ public final class ProjectRecovery {
             }
             case RESET -> out.add(Component.literal("  remove this one instance; every other village's copy is untouched. "
                     + "Its progress, deposits and sponsors are discarded; a fresh copy can be started later."));
+            case REBASE -> {
+                if (!ProjectDrift.drifted(state, def)) {
+                    out.clear();
+                    out.add(Component.literal("Refused: phase " + (state.currentPhase() + 1)
+                            + " matches its definition; there is nothing to rebase."));
+                    return out;
+                }
+                ProjectPhase phase = def.phase(state.currentPhase());
+                for (int i = 0; i < phase.objectives().size(); i++) {
+                    out.add(Component.literal("  [" + i + "] shared progress " + state.progress(i).count() + " -> ")
+                            .append(phase.objectives().get(i).describe()));
+                }
+                out.add(Component.literal("  each count stays at its position; nothing is paid, reset or re-counted"));
+            }
             case REBIND_ANCHOR, REBIND_VILLAGE -> {
                 Optional<Rebind> target = rebindTarget(server, state, operation);
                 if (target.isEmpty()) {
@@ -367,6 +389,16 @@ public final class ProjectRecovery {
             }
             case BULK_SKIP, BULK_RESET -> {
                 return Component.literal("Unexpected bulk token.");
+            }
+            case REBASE -> {
+                if (def == null) {
+                    return Component.literal("The definition is no longer loaded. Nothing was changed.");
+                }
+                ProjectDrift.capture(state, def);
+                state.bumpRevision();
+                data.setDirty();
+                server.getPlayerList().getPlayers().forEach(ProjectManager::syncProjects);
+                ProjectMenuSessions.refreshAll(server);
             }
             case REBIND_ANCHOR, REBIND_VILLAGE -> {
                 Optional<Rebind> target = rebindTarget(server, state, pending.operation());

@@ -127,6 +127,25 @@ public final class McaQuestsCommand {
                                 .executes(McaQuestsCommand::debugOffers)
                                 .then(Commands.literal("reroll")
                                         .executes(McaQuestsCommand::debugOffersReroll))))
+                .then(Commands.literal("quest")
+                        .requires(src -> src.hasPermission(3))
+                        .then(Commands.literal("rebase")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("id", ResourceLocationArgument.id())
+                                                .executes(ctx -> {
+                                                    ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+                                                    QuestManager.previewRebase(target, ResourceLocationArgument.getId(ctx, "id"))
+                                                            .forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+                                                    return 1;
+                                                })
+                                                .then(Commands.literal("confirm")
+                                                        .executes(ctx -> {
+                                                            ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+                                                            Component result = QuestManager.applyRebase(target,
+                                                                    ResourceLocationArgument.getId(ctx, "id"));
+                                                            ctx.getSource().sendSuccess(() -> result, true);
+                                                            return 1;
+                                                        }))))))
                 .then(Commands.literal("rewards")
                         .then(Commands.literal("held")
                                 .requires(src -> src.hasPermission(2))
@@ -192,6 +211,9 @@ public final class McaQuestsCommand {
                                                 .then(Commands.literal("reset")
                                                         .requires(src -> src.hasPermission(3))
                                                         .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.RESET, -1, 0)))
+                                                .then(Commands.literal("rebase")
+                                                        .requires(src -> src.hasPermission(3))
+                                                        .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.REBASE, -1, 0)))
                                                 .then(Commands.literal("rebind")
                                                         .requires(src -> src.hasPermission(3))
                                                         .then(Commands.literal("anchor")

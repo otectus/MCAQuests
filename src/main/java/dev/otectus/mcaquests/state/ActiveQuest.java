@@ -141,6 +141,12 @@ public final class ActiveQuest {
     private long outageAccountedUntil = -1L;
 
     /**
+     * Fingerprints of the objectives this quest was accepted with, by position (1.7.0; see
+     * {@code QuestDrift}). Empty on older saves until the first check records the current definition.
+     */
+    private List<String> objectiveFingerprints = List.of();
+
+    /**
      * Lifecycle phases already announced to Townstead, one bit per
      * {@code TownsteadLifecycle.Phase} (Townstead spec 7.1). Persisted so a reconnect or a restart
      * cannot make a villager react a second time to something that happened days ago. Absent on saves
@@ -501,6 +507,14 @@ public final class ActiveQuest {
         return outageAccountedUntil;
     }
 
+    public List<String> objectiveFingerprints() {
+        return objectiveFingerprints;
+    }
+
+    public void setObjectiveFingerprints(List<String> fingerprints) {
+        this.objectiveFingerprints = List.copyOf(fingerprints);
+    }
+
     public void setOutageAccountedUntil(long gameTime) {
         this.outageAccountedUntil = gameTime;
     }
@@ -576,6 +590,11 @@ public final class ActiveQuest {
         }
         if (outageAccountedUntil >= 0L) {
             tag.putLong("outage_accounted", outageAccountedUntil);
+        }
+        if (!objectiveFingerprints.isEmpty()) {
+            net.minecraft.nbt.ListTag fingerprints = new net.minecraft.nbt.ListTag();
+            objectiveFingerprints.forEach(fp -> fingerprints.add(net.minecraft.nbt.StringTag.valueOf(fp)));
+            tag.put("objective_fp", fingerprints);
         }
         if (situationSuspendedTicks != 0L) {
             tag.putLong("situation_suspended_ticks", situationSuspendedTicks);
@@ -680,6 +699,12 @@ public final class ActiveQuest {
                 Math.min(quest.suspendedTicks, tag.getLong("situation_suspended_ticks")));
         quest.outageAccountedUntil = tag.contains("outage_accounted", net.minecraft.nbt.Tag.TAG_LONG)
                 ? tag.getLong("outage_accounted") : -1L;
+        net.minecraft.nbt.ListTag fingerprints = tag.getList("objective_fp", net.minecraft.nbt.Tag.TAG_STRING);
+        List<String> loadedFingerprints = new ArrayList<>(fingerprints.size());
+        for (int i = 0; i < fingerprints.size(); i++) {
+            loadedFingerprints.add(fingerprints.getString(i));
+        }
+        quest.objectiveFingerprints = List.copyOf(loadedFingerprints);
         if (tag.contains("townstead_phases", Tag.TAG_BYTE_ARRAY)) {
             quest.dispatchedPhases.or(java.util.BitSet.valueOf(tag.getByteArray("townstead_phases")));
         }

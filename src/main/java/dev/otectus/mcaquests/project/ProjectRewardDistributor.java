@@ -107,6 +107,10 @@ public final class ProjectRewardDistributor {
             }
 
             Collection<UUID> recipients = recipientsFor(shared.target(), state, phaseContributors, top);
+            if (canQueueOffline(reward)) {
+                // Before any entry is queued, so the instance snapshot each one carries has it too.
+                recordRewardFingerprint(state, phaseIndex, ri, reward);
+            }
             for (UUID pid : recipients) {
                 ServerPlayer player = server.getPlayerList().getPlayer(pid);
                 if (player != null) {
@@ -279,11 +283,41 @@ public final class ProjectRewardDistributor {
                     state.anchorDimension());
             return DeliveryOutcome.FAILED_UNAPPLIED;
         }
+        QuestReward reward = rewards.get(rewardIndex).reward();
+        if (rewardChangedSinceOwed(state, phase, rewardIndex, reward)) {
+            // A datapack edit changed this reward row after it was owed (1.7.0). Paying the new row would
+            // pay something nobody earned, so it is held for an operator instead of retried.
+            McaQuests.LOGGER.warn("[MCA: Quests] owed reward {} of phase {} of '{}' changed since it was owed; "
+                    + "held for an operator", rewardIndex, phase, state.projectId());
+            return DeliveryOutcome.FAILED_UNKNOWN;
+        }
         Entity sponsor = ProjectManager.resolveSponsor(player.getServer(), state);
         // Reads the amount frozen when the phase was distributed, so a player who was offline then is paid
         // exactly what everyone else was — never a fresh roll on login.
-        return grantPlayerReward(anchorLevel, state, player, rewards.get(rewardIndex).reward(), sponsor,
+        return grantPlayerReward(anchorLevel, state, player, reward, sponsor,
                 state.frozenReward(phase, rewardIndex));
+    }
+
+    private static final String K_REWARD_FINGERPRINTS = "reward_fp";
+
+    /** Remembers what an owed reward row was, so a later edit to it is not paid in its place (1.7.0). */
+    static void recordRewardFingerprint(ProjectState state, int phase, int rewardIndex, QuestReward reward) {
+        dev.otectus.mcaquests.quest.DefinitionFingerprint.of(dev.otectus.mcaquests.quest.reward.RewardTypes.CODEC, reward)
+                .ifPresent(fp -> {
+                    net.minecraft.nbt.CompoundTag recorded = state.extra().getCompound(K_REWARD_FINGERPRINTS);
+                    recorded.putString(phase + ":" + rewardIndex, fp);
+                    state.extra().put(K_REWARD_FINGERPRINTS, recorded);
+                });
+    }
+
+    /** True only when both sides have a fingerprint and they differ; an unrecorded row is paid as before. */
+    static boolean rewardChangedSinceOwed(ProjectState state, int phase, int rewardIndex, QuestReward reward) {
+        String recorded = state.extra().getCompound(K_REWARD_FINGERPRINTS).getString(phase + ":" + rewardIndex);
+        if (recorded.isEmpty()) {
+            return false;
+        }
+        return dev.otectus.mcaquests.quest.DefinitionFingerprint.of(dev.otectus.mcaquests.quest.reward.RewardTypes.CODEC, reward)
+                .map(now -> !now.equals(recorded)).orElse(false);
     }
 
     private static Collection<UUID> recipientsFor(SharedRewardTarget target, ProjectState state,

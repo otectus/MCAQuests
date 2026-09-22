@@ -74,6 +74,7 @@ public final class ProjectPhases {
         if (phase < 0 || phase >= def.phaseCount()) {
             return;
         }
+        ProjectDrift.capture(state, def);
         var objectives = def.phase(phase).objectives();
         for (int i = 0; i < objectives.size(); i++) {
             if (objectives.get(i) instanceof PollingProjectObjective polling) {

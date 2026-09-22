@@ -202,6 +202,11 @@ public final class ProjectManager {
             return;
         }
 
+        if (ProjectDrift.drifted(state, def)) {
+            // The phase changed under it: nothing is taken until an operator accepts the new phase (1.7.0).
+            sendProjectMenu(player, villager);
+            return;
+        }
         int defaultCap = McaQuestsConfig.COMMON.defaultPerPlayerContributionCap.get();
         boolean contributed = false;
         var phase = def.phase(state.currentPhase());
@@ -359,6 +364,7 @@ public final class ProjectManager {
                 ? server.getLevel(dimensionKey(state.anchorDimension()))
                 : player.level() instanceof ServerLevel own ? own : null;
         boolean villageGone = state != null && server != null && villageGone(server, state);
+        boolean drifted = state != null && state.currentPhase() == phaseIdx && ProjectDrift.drifted(state, def);
         for (int i = 0; i < phase.objectives().size(); i++) {
             ProjectObjective objective = phase.objectives().get(i);
             boolean live = state != null && i < state.progressCount() && state.currentPhase() == phaseIdx;
@@ -377,7 +383,13 @@ public final class ProjectManager {
                         : ProjectObjectiveStatus.IN_PROGRESS;
                 details = List.of();
             }
-            if (villageGone && status != ProjectObjectiveStatus.SATISFIED) {
+            if (drifted && status != ProjectObjectiveStatus.SATISFIED) {
+                status = ProjectObjectiveStatus.BLOCKED;
+                List<Component> withReason = new ArrayList<>();
+                withReason.add(Component.translatable("mcaquests.project.help.definition_changed"));
+                withReason.addAll(details);
+                details = withReason;
+            } else if (villageGone && status != ProjectObjectiveStatus.SATISFIED) {
                 // The village this instance belongs to is gone, so nothing can count until an operator
                 // rebinds it (1.7.0). Say so rather than describe an area that no longer exists.
                 status = ProjectObjectiveStatus.BLOCKED;
@@ -850,6 +862,11 @@ public final class ProjectManager {
                         state.currentPhase(), def.phaseCount());
                 continue;
             }
+            if (ProjectDrift.drifted(state, def)) {
+                debugLog("project '{}' phase {} changed since it opened; paused until rebased",
+                        state.projectId(), state.currentPhase());
+                continue;
+            }
             ProjectPhase phase = def.phase(state.currentPhase());
             if (phase.objectives().stream().noneMatch(ProjectObjective::isEventDriven)) {
                 continue;
@@ -1200,6 +1217,8 @@ public final class ProjectManager {
                     objectiveLines(player, def, state, state.currentPhase(), false), state.key().asString(),
                     villageGone(player.getServer(), state)
                             ? Optional.of(Component.translatable("mcaquests.project.paused.village_gone"))
+                            : ProjectDrift.drifted(state, def)
+                            ? Optional.of(Component.translatable("mcaquests.project.paused.definition_changed"))
                             : Optional.empty())));
         }
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProjectLogSyncS2CPacket(entries));
@@ -1485,7 +1504,8 @@ public final class ProjectManager {
         ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
         boolean unavailable = !projectsEnabled || state.status() != ProjectStatus.ACTIVE || isScopeStale(state)
                 || def == null || !def.enabled() || level == null || state.currentPhase() < 0
-                || state.currentPhase() >= def.phaseCount() || villageGone(server, state);
+                || state.currentPhase() >= def.phaseCount() || villageGone(server, state)
+                || ProjectDrift.drifted(state, def);
         if (!unavailable) {
             // Readings a phase could not take at its boundary are retried before anything else, so a
             // pending baseline resolves the moment its source can be read.

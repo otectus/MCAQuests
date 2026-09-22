@@ -774,6 +774,8 @@ public final class QuestManager {
                 return false;
             }
         }
+        // What this copy was accepted against, so a later datapack edit cannot reinterpret its progress.
+        QuestDrift.capture(active, accepted);
         if (!KingdomQuestLifecycle.bindAtAccept(accepted, active, player, villager)) {
             if (McaQuestsConfig.COMMON.questChatMessages.get()) {
                 player.sendSystemMessage(Component.translatable("mcaquests.message.offer_gone",
@@ -1080,6 +1082,73 @@ public final class QuestManager {
             player.sendSystemMessage(Component.translatable("mcaquests.reward.failed",
                     Component.literal(rewardName(reward))));
         }
+    }
+
+    /**
+     * What accepting the current definition would do to each drifted copy of a player's quest (1.7.0).
+     * Read-only. Progress is kept by position, so the lines say which count lands on which objective.
+     */
+    public static List<Component> previewRebase(ServerPlayer player, ResourceLocation questId) {
+        List<Component> out = new ArrayList<>();
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        QuestDefinition base = QuestDefinitions.resolve(questId).orElse(null);
+        if (data == null || base == null) {
+            out.add(Component.literal("Nothing to rebase: " + player.getScoreboardName() + " has no loaded quest '"
+                    + questId + "'."));
+            return out;
+        }
+        for (ActiveQuest active : data.active()) {
+            if (!active.questId().equals(questId)) {
+                continue;
+            }
+            QuestDefinition def = active.resolve(base);
+            boolean drifted = QuestDrift.drifted(active, def);
+            out.add(Component.literal(questId + " from " + active.villagerUuid() + ": "
+                    + (drifted ? "DRIFTED — accepted with " + active.objectiveFingerprints().size()
+                    + " objective(s), the definition now has " + def.objectives().size()
+                    : "matches its definition; nothing to do")));
+            if (!drifted) {
+                continue;
+            }
+            for (int i = 0; i < def.objectives().size(); i++) {
+                out.add(Component.literal("  [" + i + "] progress " + active.progress(i).count() + " -> ")
+                        .append(def.objectives().get(i).describe()));
+            }
+        }
+        if (out.isEmpty()) {
+            out.add(Component.literal(player.getScoreboardName() + " holds no copy of '" + questId + "'."));
+        } else {
+            out.add(Component.literal("Back up the world first. To accept the current definition, keeping each "
+                    + "count at its position: /mcaquests quest rebase " + player.getScoreboardName() + " "
+                    + questId + " confirm"));
+        }
+        return out;
+    }
+
+    /** Accepts the current definition for every drifted copy of the quest (1.7.0). */
+    public static Component applyRebase(ServerPlayer player, ResourceLocation questId) {
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        QuestDefinition base = QuestDefinitions.resolve(questId).orElse(null);
+        if (data == null || base == null) {
+            return Component.literal("Nothing was changed: no loaded quest '" + questId + "'.");
+        }
+        int rebased = 0;
+        for (ActiveQuest active : data.active()) {
+            if (active.questId().equals(questId)) {
+                QuestDefinition def = active.resolve(base);
+                if (QuestDrift.drifted(active, def)) {
+                    QuestDrift.capture(active, def);
+                    rebased++;
+                }
+            }
+        }
+        if (rebased > 0) {
+            McaQuests.LOGGER.info("[MCA: Quests] rebased {} copy(ies) of '{}' for {} onto the current definition",
+                    rebased, questId, player.getScoreboardName());
+            syncLog(player);
+        }
+        return Component.literal("Rebased " + rebased + " copy(ies) of '" + questId + "' for "
+                + player.getScoreboardName() + ".");
     }
 
     /**
@@ -1792,6 +1861,10 @@ public final class QuestManager {
             }
         } else if (def.institutionalCommission()) {
             return Optional.of(Component.literal("Commission ownership is missing; cancel this quest."));
+        }
+        // A datapack edit that moved this quest's objectives would reinterpret its progress (1.7.0).
+        if (active != null && QuestDrift.drifted(active, def)) {
+            return Optional.of(Component.translatable("mcaquests.quest.suspended.definition_changed"));
         }
         Optional<Component> capitals = CapitalsQuestRequirements.unavailableReason(def);
         if (capitals.isPresent()) {
