@@ -134,6 +134,13 @@ public final class ActiveQuest {
     private long situationSuspendedTicks;
 
     /**
+     * The game time up to which missing-definition outages have been credited from
+     * {@code ContentOutageData} (1.7.0), or -1 before the first poll. Absent on older saves, which start
+     * accounting from their first poll: the ledger cannot vouch for time before it existed.
+     */
+    private long outageAccountedUntil = -1L;
+
+    /**
      * Lifecycle phases already announced to Townstead, one bit per
      * {@code TownsteadLifecycle.Phase} (Townstead spec 7.1). Persisted so a reconnect or a restart
      * cannot make a villager react a second time to something that happened days ago. Absent on saves
@@ -407,6 +414,11 @@ public final class ActiveQuest {
         return progress.get(index);
     }
 
+    /** Every objective's progress, in order, as a read-only view. Never pads, unlike {@link #progress(int)}. */
+    public List<ObjectiveProgress> allProgress() {
+        return java.util.Collections.unmodifiableList(progress);
+    }
+
     /**
      * Pads this quest's progress list up to {@code base}'s objective count, logging once per quest id.
      * The player is told nothing: the new objective simply shows up at 0, which is what it is.
@@ -485,6 +497,14 @@ public final class ActiveQuest {
         }
     }
 
+    public long outageAccountedUntil() {
+        return outageAccountedUntil;
+    }
+
+    public void setOutageAccountedUntil(long gameTime) {
+        this.outageAccountedUntil = gameTime;
+    }
+
     /**
      * "Now", with suspended time removed — the value every deadline comparison must use so a quest is
      * never failed for time that passed while it could not be played.
@@ -553,6 +573,9 @@ public final class ActiveQuest {
         tag.putBoolean("ready_notified", readyNotified);
         if (suspendedTicks != 0L) {
             tag.putLong("suspended_ticks", suspendedTicks);
+        }
+        if (outageAccountedUntil >= 0L) {
+            tag.putLong("outage_accounted", outageAccountedUntil);
         }
         if (situationSuspendedTicks != 0L) {
             tag.putLong("situation_suspended_ticks", situationSuspendedTicks);
@@ -655,6 +678,8 @@ public final class ActiveQuest {
         quest.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks")); // 0 when absent
         quest.situationSuspendedTicks = Math.max(0L,
                 Math.min(quest.suspendedTicks, tag.getLong("situation_suspended_ticks")));
+        quest.outageAccountedUntil = tag.contains("outage_accounted", net.minecraft.nbt.Tag.TAG_LONG)
+                ? tag.getLong("outage_accounted") : -1L;
         if (tag.contains("townstead_phases", Tag.TAG_BYTE_ARRAY)) {
             quest.dispatchedPhases.or(java.util.BitSet.valueOf(tag.getByteArray("townstead_phases")));
         }

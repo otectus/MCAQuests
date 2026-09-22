@@ -44,6 +44,8 @@ public final class SituationInstance {
     /** Completed unavailable-content pauses, plus the start of an ongoing pause (both survive restart). */
     private long suspendedTicks;
     private long suspendedAtGameTime = -1L;
+    /** How far missing-definition outages have been credited from {@code ContentOutageData} (1.7.0); -1 before. */
+    private long outageAccountedUntil = -1L;
     private final Map<UUID, Set<CapitalsCapability>> participantRequirements = new LinkedHashMap<>();
     private boolean participantRequirementsTracked;
 
@@ -130,6 +132,23 @@ public final class SituationInstance {
     }
 
     /** Starts or finishes a pause; the caller marks the containing saved data dirty on a change. */
+    /**
+     * Credits the time since it was last accounted during which this situation's definition was missing
+     * (1.7.0), and returns how much was credited. The maintenance tick runs only while someone is online,
+     * so an outage nobody saw would otherwise expire the situation. An uncredited span credits nothing
+     * however often it is re-read, so only a positive result needs saving.
+     */
+    public long creditOutage(dev.otectus.mcaquests.state.ContentOutageData ledger, long now) {
+        long credit = 0L;
+        if (outageAccountedUntil >= 0L && now > outageAccountedUntil) {
+            credit = ledger.overlap(dev.otectus.mcaquests.state.ContentOutageData.situationKey(defId),
+                    outageAccountedUntil, now);
+            suspendedTicks += credit;
+        }
+        outageAccountedUntil = now;
+        return credit;
+    }
+
     public boolean updateSuspension(long now, boolean suspended) {
         if (suspended && suspendedAtGameTime < 0L) {
             suspendedAtGameTime = now;
@@ -208,6 +227,9 @@ public final class SituationInstance {
         if (suspendedAtGameTime >= 0L) {
             tag.putLong("suspended_at", suspendedAtGameTime);
         }
+        if (outageAccountedUntil >= 0L) {
+            tag.putLong("outage_accounted", outageAccountedUntil);
+        }
         ListTag participantList = new ListTag();
         participants.forEach(uuid -> participantList.add(StringTag.valueOf(uuid.toString())));
         tag.put("participants", participantList);
@@ -240,6 +262,8 @@ public final class SituationInstance {
         instance.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks"));
         instance.suspendedAtGameTime = tag.contains("suspended_at", Tag.TAG_LONG)
                 ? tag.getLong("suspended_at") : -1L;
+        instance.outageAccountedUntil = tag.contains("outage_accounted", Tag.TAG_LONG)
+                ? tag.getLong("outage_accounted") : -1L;
         ListTag participantList = tag.getList("participants", Tag.TAG_STRING);
         for (int i = 0; i < participantList.size(); i++) {
             try {

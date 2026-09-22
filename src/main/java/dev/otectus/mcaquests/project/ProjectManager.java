@@ -1471,7 +1471,12 @@ public final class ProjectManager {
                                 && polling.isPending(state, state.progress(i)));
             }
         }
-        state.sampleClock(server.overworld().getGameTime(), unavailable);
+        long clockNow = server.overworld().getGameTime();
+        // A missing definition the outage ledger tracks is credited from it, including time no sweep ran
+        // because nobody was online (1.7.0); the sweep's own sample must not count that time twice.
+        boolean ledgerTracks = dev.otectus.mcaquests.state.ContentOutageData.current()
+                .map(ledger -> state.creditOutage(ledger, clockNow)).orElse(false);
+        state.sampleClock(clockNow, unavailable && !(def == null && ledgerTracks));
         data.setDirty();
         if (unavailable) {
             return dirty;

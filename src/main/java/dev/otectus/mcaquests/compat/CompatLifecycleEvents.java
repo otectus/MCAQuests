@@ -44,6 +44,10 @@ public final class CompatLifecycleEvents {
         // Reload listeners can consult an old definition during preparation. Clear once more after
         // every loader has applied; a login's sync is harmless and does not rebind third-party classes.
         TownsteadBridge.Holder.get().invalidateDataCaches();
+        if (event.getPlayer() == null) {
+            // A /reload can load or drop definitions; the outage ledger records which (1.7.0).
+            dev.otectus.mcaquests.state.ContentOutageData.sampleNow(event.getPlayerList().getServer());
+        }
     }
 
     @SubscribeEvent

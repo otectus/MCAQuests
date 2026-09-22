@@ -288,6 +288,22 @@ public final class SituationManager {
     /** Accepted work keeps its shared deadline while Capitals content or a required capability is absent. */
     public static boolean pauseUnavailableSituation(SituationSavedData data, SituationInstance instance,
                                                      long now) {
+        // A missing definition the outage ledger tracks is credited from it, including time nobody was
+        // online to run this (1.7.0); the live pause below then covers only the other reasons.
+        dev.otectus.mcaquests.state.ContentOutageData ledger =
+                dev.otectus.mcaquests.state.ContentOutageData.current().orElse(null);
+        boolean ledgerTracks = false;
+        if (ledger != null) {
+            if (instance.creditOutage(ledger, now) > 0L) {
+                data.setDirty();
+            }
+            ledgerTracks = SituationRegistry.get(instance.defId()).isEmpty()
+                    && ledger.covers(dev.otectus.mcaquests.state.ContentOutageData.situationKey(instance.defId()));
+        }
+        if (ledgerTracks) {
+            pauseUnavailableSituation(data, instance, now, false);
+            return instance.isOpen() && instance.hasActiveParticipants();
+        }
         boolean unavailable = instance.hasActiveParticipants() && (instance.needsUnavailableCapability(
                 CapitalsCompat.bridge()::has) || SituationRegistry.get(instance.defId())
                 .map(def -> CapitalsQuestRequirements.unavailableReason(def.offer().toQuestDefinition(

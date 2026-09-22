@@ -267,6 +267,7 @@ public final class McaCompat {
         }
         EscortHoldRegistry.hold(villager.getUUID(), owner);
         try {
+            EscortHoldRegistry.rememberPriorFlags(mob);
             mob.setNoAi(true);
             mob.setInvulnerable(true);
             mob.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -277,9 +278,10 @@ public final class McaCompat {
     }
 
     /**
-     * Releases a {@link #holdVillagerInPlace} hold: restores normal AI and vulnerability. Idempotent and
-     * fail-safe; call it when the escort engages, completes, or the quest ends so a held villager is never
-     * left frozen/invulnerable. <b>Server side only.</b>
+     * Releases a {@link #holdVillagerInPlace} hold: restores the AI and vulnerability the villager had
+     * before the hold (1.7.0; before that both were simply set to false). Idempotent and fail-safe; call
+     * it when the escort engages, completes, or the quest ends so a held villager is never left
+     * frozen/invulnerable. <b>Server side only.</b>
      */
     public static void releaseVillagerHold(Entity villager) {
         if (!isMcaVillager(villager) || !(villager instanceof Mob mob)) {
@@ -287,8 +289,7 @@ public final class McaCompat {
         }
         EscortHoldRegistry.release(villager.getUUID());
         try {
-            mob.setInvulnerable(false);
-            mob.setNoAi(false);
+            EscortHoldRegistry.restorePriorFlags(mob);
         } catch (Throwable t) {
             McaQuests.LOGGER.debug("MCA releaseVillagerHold failed; ignoring", t);
         }

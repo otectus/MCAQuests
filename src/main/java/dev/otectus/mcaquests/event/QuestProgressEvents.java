@@ -853,7 +853,13 @@ public final class QuestProgressEvents {
         QuestCapabilities.get(player).ifPresent(data -> {
             MinecraftServer server = player.getServer();
             long now = player.level().getGameTime();
+            dev.otectus.mcaquests.state.ContentOutageData ledger =
+                    dev.otectus.mcaquests.state.ContentOutageData.current().orElse(null);
             for (ActiveQuest active : data.active()) {
+                // Time the definition was missing, whether or not this player was online to notice it
+                // (1.7.0). A situation's copies follow its shared clock instead, which the ledger feeds.
+                boolean ledgerTracks = ledger != null && active.situationInstance().isEmpty()
+                        && creditOutage(ledger, active, now);
                 if (server != null && active.situationInstance().isPresent()) {
                     SituationSavedData situations = SituationSavedData.get(server);
                     SituationInstance instance = situations.getInstance(active.situationInstance().get())
@@ -882,13 +888,29 @@ public final class QuestProgressEvents {
                     // A quest whose definition is quarantined, or whose compat pack is not mounted, is
                     // exactly as unplayable as one whose objective reports unavailable — so its clock
                     // must freeze too, or removing a mod for a week would expire every quest that
-                    // needed it (1.5.4).
-                    if (QuestManager.compatSuspensionSubject(active.questId()).isPresent()) {
+                    // needed it (1.5.4). The outage ledger credits that above when it is tracking the
+                    // definition; this second-by-second accrual is the fallback for one it never saw.
+                    if (!ledgerTracks && QuestManager.compatSuspensionSubject(active.questId()).isPresent()) {
                         active.addSuspendedTicks(POLL_INTERVAL_TICKS);
                     }
                 });
             }
         });
+    }
+
+    /**
+     * Credits the time since this quest was last accounted during which its definition was missing, and
+     * says whether the ledger is tracking it as missing now. A quest seen for the first time starts
+     * accounting from now.
+     */
+    static boolean creditOutage(dev.otectus.mcaquests.state.ContentOutageData ledger, ActiveQuest active, long now) {
+        String key = dev.otectus.mcaquests.state.ContentOutageData.questKey(active.questId());
+        long from = active.outageAccountedUntil();
+        if (from >= 0L && now > from) {
+            active.addSuspendedTicks(ledger.overlap(key, from, now));
+        }
+        active.setOutageAccountedUntil(now);
+        return ledger.covers(key);
     }
 
     private static void checkFailureTriggers(ServerPlayer player) {

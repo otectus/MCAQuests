@@ -38,6 +38,8 @@ public final class ProjectState {
     private OptionalLong startDayTime = OptionalLong.empty();
     private long suspendedTicks;
     private long lastClockSample = Long.MIN_VALUE;
+    /** How far missing-definition outages have been credited from {@code ContentOutageData} (1.7.0); -1 before. */
+    private long outageAccountedUntil = -1L;
     private long retryAt = Long.MAX_VALUE;
 
     private int currentPhase;
@@ -169,6 +171,21 @@ public final class ProjectState {
             suspendedTicks = suspendedTicks > Long.MAX_VALUE - elapsed ? Long.MAX_VALUE : suspendedTicks + elapsed;
         }
         lastClockSample = now;
+    }
+
+    /**
+     * Credits the time since the last sweep during which this project's definition was missing, whoever
+     * was online (1.7.0), and says whether the ledger is tracking it as missing now. The sweep runs only
+     * while someone is online, so an outage nobody saw would otherwise run the deadline down.
+     */
+    public boolean creditOutage(dev.otectus.mcaquests.state.ContentOutageData ledger, long now) {
+        String key = dev.otectus.mcaquests.state.ContentOutageData.projectKey(projectId);
+        if (outageAccountedUntil >= 0L && now > outageAccountedUntil) {
+            long credit = ledger.overlap(key, outageAccountedUntil, now);
+            suspendedTicks = suspendedTicks > Long.MAX_VALUE - credit ? Long.MAX_VALUE : suspendedTicks + credit;
+        }
+        outageAccountedUntil = now;
+        return ledger.covers(key);
     }
 
     public void allowRetryAt(long gameTime) { retryAt = gameTime; }
@@ -327,6 +344,7 @@ public final class ProjectState {
         startDayTime.ifPresent(value -> tag.putLong("start_day", value));
         if (suspendedTicks != 0L) { tag.putLong("suspended_ticks", suspendedTicks); }
         if (lastClockSample != Long.MIN_VALUE) { tag.putLong("clock_sample", lastClockSample); }
+        if (outageAccountedUntil >= 0L) { tag.putLong("outage_accounted", outageAccountedUntil); }
         if (retryAt != Long.MAX_VALUE) { tag.putLong("retry_at", retryAt); }
         tag.putInt("phase", currentPhase);
         tag.putString("status", status.lower());
@@ -385,6 +403,7 @@ public final class ProjectState {
         if (tag.contains("start_day")) { state.startDayTime = OptionalLong.of(tag.getLong("start_day")); }
         state.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks"));
         if (tag.contains("clock_sample")) { state.lastClockSample = tag.getLong("clock_sample"); }
+        if (tag.contains("outage_accounted")) { state.outageAccountedUntil = tag.getLong("outage_accounted"); }
         if (tag.contains("retry_at")) { state.retryAt = tag.getLong("retry_at"); }
         state.phaseRewardsDistributed.or(BitSet.valueOf(tag.getByteArray("distributed")));
         ListTag sponsorList = tag.getList("sponsors", Tag.TAG_STRING);

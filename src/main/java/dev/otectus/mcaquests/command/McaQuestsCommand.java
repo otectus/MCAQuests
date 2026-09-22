@@ -127,6 +127,11 @@ public final class McaQuestsCommand {
                                 .executes(McaQuestsCommand::debugOffers)
                                 .then(Commands.literal("reroll")
                                         .executes(McaQuestsCommand::debugOffersReroll))))
+                .then(Commands.literal("escort")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("release")
+                                .then(Commands.argument("targets", EntityArgument.entities())
+                                        .executes(McaQuestsCommand::escortRelease))))
                 .then(Commands.literal("project")
                         .then(Commands.literal("list")
                                 .requires(src -> src.hasPermission(2))
@@ -1025,6 +1030,28 @@ public final class McaQuestsCommand {
      * repackaged mid-version-line before, and the difference between "bound to forge.net.mca.",
      * "bound to net.conczin.mca." and "no root matched" explains most MCA-shaped reports outright.
      */
+    /**
+     * Frees escortees a quest left frozen (1.7.0). Every selected MCA villager gets its AI and
+     * vulnerability back — the values a hold recorded, or moving and vulnerable when none was recorded —
+     * stops being led, and loses its lease. The recovery for a villager held by a quest from before 1.7.0,
+     * when holds were not saved and a restart could orphan one.
+     */
+    private static int escortRelease(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        int released = 0;
+        for (Entity entity : EntityArgument.getEntities(ctx, "targets")) {
+            if (!McaCompat.isMcaVillager(entity)) {
+                continue;
+            }
+            McaCompat.releaseVillagerHold(entity);
+            McaCompat.stopVillagerLeading(entity);
+            released++;
+        }
+        int count = released;
+        ctx.getSource().sendSuccess(() -> Component.literal("Released " + count
+                + " villager(s) from escort holds: AI and vulnerability restored, leading stopped."), true);
+        return count;
+    }
+
     private static int debugMca(CommandContext<CommandSourceStack> ctx) {
         String report = "MCA binding: " + McaBinding.describe();
         ctx.getSource().sendSuccess(() -> Component.literal(report), false);
