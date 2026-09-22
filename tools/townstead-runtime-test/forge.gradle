@@ -1,0 +1,20 @@
+// Explicit disposable test mod, separate from every published MCA: Quests artifact. Built only with
+// -PtownsteadRuntimeFixture=true; dropped into a dedicated server's mods folder next to the real
+// mcaquests jar, MCA and a Townstead, it exercises the bound Townstead bridge headlessly and writes
+// townstead-fixture-results.txt. See TOWNSTEAD.md, "Release checklist".
+sourceSets {
+    townsteadRuntimeTest {
+        java.srcDir 'tools/townstead-runtime-test'
+        resources.srcDir 'tools/townstead-runtime-test/resources'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += compileClasspath
+    }
+}
+tasks.named('compileTownsteadRuntimeTestJava', JavaCompile).configure { options.compilerArgs += ['-proc:none'] }
+tasks.register('townsteadRuntimeTestJar', Jar) {
+    from sourceSets.townsteadRuntimeTest.output
+    archiveBaseName = 'mcaquests-townstead-runtime-test'
+    archiveVersion = '1'
+}
+reobf { townsteadRuntimeTestJar { } }
+tasks.named('townsteadRuntimeTestJar').configure { finalizedBy 'reobfTownsteadRuntimeTestJar' }

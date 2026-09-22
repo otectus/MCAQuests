@@ -35,7 +35,9 @@ import java.util.UUID;
 public final class ConversationCredit {
 
     public enum Source {
-        MCA_DIALOGUE, API, INTERACT_EVENT
+        MCA_DIALOGUE, API, INTERACT_EVENT,
+        /** Townstead 0.8's own dialogue, reported through its API v1 {@code DialogueOpenedEvent} (1.7.0). */
+        TOWNSTEAD_DIALOGUE
     }
 
     private record Recent(UUID villager, long tick) {

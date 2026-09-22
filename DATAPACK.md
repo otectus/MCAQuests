@@ -1487,7 +1487,7 @@ the project's pool, not a single player's inventory or kill count. **Quest objec
 | `mcaquests:townstead_building_project` | `building_type` (required), `minimum_level` (def `1`), `count` (def `1`) | *(optional [Townstead](TOWNSTEAD.md))* The village has that many buildings of the family at the tier. **Polled**, not banked: it reads the village's real building registry, so it is satisfied by whoever raises the dock, and it un-satisfies if the dock is lost. |
 | `mcaquests:townstead_spirit_project` | `spirit` (optional), `points_delta` **or** `target_tier`, `baseline` (`phase` default, or `project`) | *(optional Townstead)* The village's Townstead spirit has grown — by so many points, or up to a tier outright. `points_delta` is measured from a reading taken **when the phase opens** (`baseline: "phase"`) or **when the project began** (`baseline: "project"`, 1.7.0), so spirit the village already had does not count. |
 | `mcaquests:townstead_workforce_project` | `professions` (list, required), `minimum_tier` (def `1`), `count` (def `1`), `profession_policy` (`listed` default, or `any_progressive`) | *(optional Townstead)* That many residents of the village reach **Townstead profession tier** `minimum_tier` — Townstead's work tier, not the vanilla trading level. `listed` counts only the trades named; `any_progressive` (1.7.0) counts any trade whose Townstead track reaches the tier, and the list becomes an example. |
-| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed` (def `1`), `minimum_fraction` (0–1), `hunger_min`, `energy_min`, `hold_ticks` | *(optional Townstead)* Enough of the village has been fed and rested for long enough. `minimum_observed` stops a one-resident village trivially satisfying a fraction. |
+| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed` (def `3`), `minimum_fraction` (0–1), `hunger_min`, `energy_min`, `hold_ticks`, `last_known_max_age_days` (def `0`) | *(optional Townstead)* Enough of the village has been fed and rested for long enough. `minimum_observed` stops a one-resident village trivially satisfying a fraction. `last_known_max_age_days` (Townstead 0.8+) additionally counts a fresh-enough last-known record of an unloaded resident; `0` (default) counts only loaded residents. |
 
 The four `townstead_*` project objectives are **polled** rather than contributed to: they read village state on the project sweep instead of banking a player's donation. A project that uses one in **any** phase is Townstead content, and since 1.7.0 it is **not loaded at all** without Townstead — see [Content that needs an optional mod](#content-that-needs-an-optional-mod-is-not-loaded-without-it-170). See **[TOWNSTEAD.md](TOWNSTEAD.md)**.
 
@@ -2022,7 +2022,8 @@ Gated by the `allowFtbqProgressRewards` config option (on by default) — when d
 ## Townstead integration (optional)
 
 *(1.4.0; requires the optional [Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead) mod,
-version range `[0.7.5,0.8)` and verified against **0.7.6** — see [TOWNSTEAD.md](TOWNSTEAD.md) for the
+version range `[0.7.5,0.9)`, reflective binding verified against **0.7.6** and a typed `api.v1`
+binding verified against a locally built 0.8.0 test jar — see [TOWNSTEAD.md](TOWNSTEAD.md) for the
 full guide, including the bundled quests, projects and situations, the capability model, and what
 happens to a save when Townstead is removed.)*
 
@@ -2098,7 +2099,7 @@ village-wide when it does not.
 | `mcaquests:townstead_profession_progress` | `target`, `profession` (optional), `xp_delta` **or** `target_xp` **or** `target_tier`, `require_current_profession` (bool, def `true`) | Advance a trade. Leave `profession` out to mean *whatever they practise*, frozen at accept. |
 | `mcaquests:townstead_building_registered` | `building_type` (required), `minimum_level`, `count`, `minimum_size`, `require_new_or_upgraded` (bool, def `true`) | Get something built. |
 | `mcaquests:townstead_spirit_progress` | `spirit` (optional), `points_delta` **or** `target_tier` | Grow a village's character. |
-| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `energy_min`, `require_not_collapsed`, `hold_ticks` | Keep a whole village well. |
+| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `energy_min`, `require_not_collapsed`, `hold_ticks`, `last_known_max_age_days` (def `0`) | Keep a whole village well. `last_known_max_age_days` (Townstead 0.8+) additionally counts a fresh-enough last-known record of an unloaded resident; `0` (default) counts only loaded residents. |
 
 **Baselines are frozen once, when the quest is accepted**, and stored with the quest. That is what makes
 "raise their hunger by 40" mean *forty from where they were when you took the job* rather than forty

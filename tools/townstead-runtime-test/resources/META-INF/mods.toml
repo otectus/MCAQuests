@@ -1,0 +1,13 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="GPL-3.0-only"
+[[mods]]
+modId="mcaquests_townstead_fixture"
+version="1"
+displayName="MCA Quests disposable Townstead runtime fixture"
+[[dependencies.mcaquests_townstead_fixture]]
+modId="mcaquests"
+mandatory=true
+versionRange="*"
+ordering="AFTER"
+side="BOTH"

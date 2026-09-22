@@ -48,7 +48,7 @@ An RPG-style, **datapack-driven quest system** for **[Minecraft Comes Alive: Reb
 | **[Architectury API](https://www.curseforge.com/minecraft/mc-mods/architectury-api)** | **Required** (Forge) — MCA Reborn depends on it |
 | **MCA: Conversations** | *Optional* — enables voiced quest dialogue & conversation-driven objectives |
 | **[FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge)** | *Optional* — compiled against 2001.4.22; enables the FTB task/reward integration ([FTBQUESTS.md](FTBQUESTS.md)) |
-| **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.8)`, legacy binding probed against **0.7.6**; modern API gameplay still needs runtime verification; adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
+| **[Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead)** | *Optional* — `[0.7.5,0.9)`; reflective binding verified against **0.7.6**, typed `api.v1` binding verified against a locally built 0.8.0 test jar (Townstead 0.8 has not shipped a release yet); adds villager needs, professions, skills and village character as quest state ([TOWNSTEAD.md](TOWNSTEAD.md)) |
 | **[Ice & Fire](https://www.curseforge.com/minecraft/mc-mods/iceandfire)** | *Optional* — original or Community Edition; hunt dragons and mythical creatures ([ICEANDFIRE.md](ICEANDFIRE.md)) |
 | **[Bountiful](https://www.curseforge.com/minecraft/mc-mods/bountiful)** | *Optional* — discover the contract board and complete bounties ([BOUNTIFUL.md](BOUNTIFUL.md)) |
 | **[MCA Capitals](https://www.curseforge.com/minecraft/mc-mods/mca-capitals)** | *Optional* — serve a sovereign, earn a title, and keep peace between capitals ([CAPITALS.md](CAPITALS.md)) |

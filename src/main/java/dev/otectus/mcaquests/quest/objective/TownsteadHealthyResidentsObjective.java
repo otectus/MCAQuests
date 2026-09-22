@@ -6,9 +6,7 @@ import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.api.PollingObjective;
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
-import dev.otectus.mcaquests.compat.TownsteadEvaluation;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
-import dev.otectus.mcaquests.compat.TownsteadVillagerView;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.target.TownsteadTargetResolver;
@@ -36,22 +34,43 @@ import java.util.Set;
  *   "minimum_fraction": 0.75,
  *   "hunger_min": 60,
  *   "energy_min": 8,
- *   "hold_ticks": 1200
+ *   "hold_ticks": 1200,
+ *   "last_known_max_age_days": 0
  * }
  * }</pre>
  *
- * <p>Two safeguards make this honest rather than exploitable. Only <b>loaded</b> villagers can be read,
- * so {@code minimum_observed} sets a floor on how many the check must actually see — otherwise a
+ * <p>Two safeguards make this honest rather than exploitable. Only <b>loaded</b> villagers can be read
+ * live, so {@code minimum_observed} sets a floor on how many the check must actually see — otherwise a
  * player could stand somewhere with one contented villager in range and satisfy "the village is well
  * fed". And residents are visited in a capped, rotating window, so a large village costs a bounded
  * amount of work per second and still gets seen in full over a few passes.
+ *
+ * <p>{@code last_known_max_age_days} (default {@code 0}, off) additionally lets Townstead's own
+ * last-known record stand in for a resident who is <em>not</em> loaded, when that record is no older
+ * than the given number of world days -- see {@link TownsteadResidentEvidence} for exactly what is
+ * accepted. It widens what the village is judged on; it never lowers {@code minimum_loaded_fraction},
+ * which is still measured against loaded residents. Townstead 0.7.x keeps no such record, so there
+ * the field changes nothing.
  */
 public record TownsteadHealthyResidentsObjective(int minimumObserved, double minimumFraction,
                                                  OptionalInt hungerMin, OptionalInt thirstMin,
                                                  OptionalInt energyMin,
                                                  boolean requireNotCollapsed,
-                                                 double minimumLoadedFraction, int holdTicks)
+                                                 double minimumLoadedFraction, int holdTicks,
+                                                 int lastKnownMaxAgeDays)
         implements PollingObjective, TownsteadObjective {
+
+    /**
+     * The shape this objective had before {@code last_known_max_age_days} (1.7.0), kept so an add-on
+     * that builds one in code still compiles. No last-known age means only loaded residents are judged.
+     */
+    public TownsteadHealthyResidentsObjective(int minimumObserved, double minimumFraction,
+                                              OptionalInt hungerMin, OptionalInt thirstMin,
+                                              OptionalInt energyMin, boolean requireNotCollapsed,
+                                              double minimumLoadedFraction, int holdTicks) {
+        this(minimumObserved, minimumFraction, hungerMin, thirstMin, energyMin, requireNotCollapsed,
+                minimumLoadedFraction, holdTicks, 0);
+    }
 
     private static final int TICKS_PER_SECOND = 20;
 
@@ -76,10 +95,12 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
                                     DEFAULT_LOADED_FRACTION)
                             .forGetter(TownsteadHealthyResidentsObjective::minimumLoadedFraction),
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "hold_ticks", TICKS_PER_SECOND)
-                            .forGetter(TownsteadHealthyResidentsObjective::holdTicks)
-            ).apply(instance, (observed, fraction, hunger, thirst, energy, collapsed, loaded, hold) ->
+                            .forGetter(TownsteadHealthyResidentsObjective::holdTicks),
+                    StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "last_known_max_age_days", 0)
+                            .forGetter(TownsteadHealthyResidentsObjective::lastKnownMaxAgeDays)
+            ).apply(instance, (observed, fraction, hunger, thirst, energy, collapsed, loaded, hold, lastKnown) ->
                     new TownsteadHealthyResidentsObjective(observed, fraction, unbox(hunger), unbox(thirst),
-                            unbox(energy), collapsed, loaded, hold)));
+                            unbox(energy), collapsed, loaded, hold, lastKnown)));
 
     private static Optional<Integer> box(OptionalInt value) {
         return value.isPresent() ? Optional.of(value.getAsInt()) : Optional.empty();
@@ -126,27 +147,29 @@ public record TownsteadHealthyResidentsObjective(int minimumObserved, double min
                 McaQuestsConfig.COMMON.townsteadPollIntervalTicks.get());
         Entity giver = level.getEntity(quest.villagerUuid());
         List<Entity> residents = TownsteadTargetResolver.residents(level, giver, level.getGameTime());
-        if (residents.size() < minimumObserved || !enoughOfTheVillageIsLoaded(level, giver, residents)) {
-            // Too few visible to make a claim about the village. Not a failure -- come back with more
-            // of the village loaded -- but not evidence of health either, so the timer does not run.
+        if (!enoughOfTheVillageIsLoaded(level, giver, residents)) {
+            // Too little of the village visible to make a claim about it. Not a failure -- come back
+            // with more of the village loaded -- but not evidence of health either, so the timer does
+            // not run. Last-known records never relax this: they widen the judgement, not the gate.
             return resetIfRunning(progress);
         }
 
-        TownsteadEvaluation evaluation = new TownsteadEvaluation();
-        int observed = 0;
-        int healthy = 0;
-        for (Entity resident : residents) {
-            TownsteadVillagerView view = evaluation.villager(resident).orElse(null);
-            if (view == null) {
-                continue;
-            }
-            observed++;
-            if (isHealthy(view.needs())) {
-                healthy++;
-            }
-        }
+        // Loaded residents are read live. With last_known_max_age_days set, Townstead's last-known
+        // record of each unloaded resident on the roll is added when it is fresh enough.
+        OptionalInt villageId = TownsteadResidentEvidence.villageOf(giver);
+        Set<java.util.UUID> roll = villageId.isPresent() && lastKnownMaxAgeDays > 0
+                ? McaCompat.villageResidentUuids(level, villageId.getAsInt()) : Set.of();
+        TownsteadResidentEvidence.Readings readings = TownsteadResidentEvidence.readings(level,
+                villageId.orElse(-1), residents, roll, lastKnownMaxAgeDays);
+        int observed = readings.size();
         if (observed < minimumObserved) {
             return resetIfRunning(progress);
+        }
+        int healthy = 0;
+        for (TownsteadNeedsView needs : readings.needs()) {
+            if (isHealthy(needs)) {
+                healthy++;
+            }
         }
         if ((double) healthy / observed < minimumFraction) {
             return resetIfRunning(progress);
