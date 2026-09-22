@@ -14,7 +14,7 @@
         "in_progress": { "translate": "mcaquests.project.after_raid_recovery.clear_threats.in_progress" }
       },
       "objectives": [
-        { "type": "mcaquests:project_kill_entity", "entity": "minecraft:zombie", "count": 8 }
+        { "type": "mcaquests:project_kill_entity", "entity": "minecraft:zombie", "count": 8, "border_margin": 32 }
       ],
       "rewards": [
         { "reward": { "type": "mcaquests:xp", "amount": 40 }, "target": "contributors" }

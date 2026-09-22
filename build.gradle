@@ -573,6 +573,12 @@ if (project.findProperty('atlasRuntimeFixture')?.toString()?.toBoolean()) {
     apply from: 'tools/atlas-runtime-test/forge.gradle'
 }
 
+// 1.6.6 reliability runtime checks: a disposable fixture mod, never part of a release artifact.
+//     ./gradlew reliabilityRuntimeTestJar -PreliabilityRuntimeFixture=true
+if (project.findProperty('reliabilityRuntimeFixture')?.toString()?.toBoolean()) {
+    apply from: 'tools/reliability-runtime-test/forge.gradle'
+}
+
 // A compile-only contract for the sibling add-ons (MCA: Conversations) that link against this mod.
 // Classes outside `api/` are included here as a read model of the quest domain, not as a stability
 // promise: they change with the mod and downstream code that leans on them will break. Consumers

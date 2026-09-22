@@ -55,6 +55,8 @@ public final class RewardTypes {
 
     public static final QuestRewardType<VillageReputationReward> VILLAGE_REPUTATION =
             register(new ResourceLocation(McaQuests.MOD_ID, "village_reputation"), VillageReputationReward.CODEC);
+    public static final QuestRewardType<FactionStandingReward> FACTION_STANDING =
+            register(new ResourceLocation("ultima_kingdoms", "faction_standing"), FactionStandingReward.CODEC);
     public static final QuestRewardType<UnlockReward> UNLOCK =
             register(new ResourceLocation(McaQuests.MOD_ID, "unlock"), UnlockReward.CODEC);
 

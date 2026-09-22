@@ -849,6 +849,49 @@ public final class McaCompat {
         }
     }
 
+    /**
+     * True when {@code pos} lies within the village's building box inflated by {@code margin} blocks —
+     * MCA's own containment rule with an explicit allowance. Safe default: {@code false}.
+     */
+    public static boolean isWithinVillage(ServerLevel level, int villageId, BlockPos pos, int margin) {
+        try {
+            return McaHandles.isWithinBorder(McaHandles.village(level, villageId), pos, margin);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA isWithinVillage(margin) failed; defaulting false", t);
+            return false;
+        }
+    }
+
+    /** The box spanned by a village's registered buildings, when this MCA exposes it. Safe default: empty. */
+    public static Optional<net.minecraft.world.level.levelgen.structure.BoundingBox> villageBox(ServerLevel level,
+                                                                                             int villageId) {
+        try {
+            return McaHandles.villageBox(McaHandles.village(level, villageId));
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA villageBox failed; defaulting empty", t);
+            return Optional.empty();
+        }
+    }
+
+    /** Every building type id MCA has loaded. Safe default: empty. */
+    public static List<String> buildingTypeIds() {
+        try {
+            return McaHandles.buildingTypeIds();
+        } catch (Throwable t) {
+            return List.of();
+        }
+    }
+
+    /** What MCA requires inside a building of {@code type} (block or tag id to count). Safe default: empty. */
+    public static java.util.Map<ResourceLocation, Integer> buildingRequirements(String type) {
+        try {
+            return McaHandles.buildingTypeRequirements(type);
+        } catch (Throwable t) {
+            McaQuests.LOGGER.debug("MCA buildingTypeRequirements failed; defaulting empty", t);
+            return java.util.Map.of();
+        }
+    }
+
     /** True when {@code pos} lies within the border of the village with {@code villageId}. Safe default: {@code false}. */
     public static boolean isWithinVillage(ServerLevel level, int villageId, BlockPos pos) {
         try {

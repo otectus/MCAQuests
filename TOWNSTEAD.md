@@ -266,16 +266,58 @@ event, it is a condition that becomes true quietly, usually with nobody nearby.
 | `type` | Fields | Meaning |
 |---|---|---|
 | `mcaquests:townstead_building_project` | `building_type` (required), `minimum_level`, `count` | The village has the buildings |
-| `mcaquests:townstead_spirit_project` | `spirit`, `points_delta`, `target_tier` | The village has grown into something |
-| `mcaquests:townstead_workforce_project` | `professions` (required), `minimum_tier`, `count` | Enough people can do the job |
+| `mcaquests:townstead_spirit_project` | `spirit`, `points_delta`, `target_tier`, `baseline` (`phase` or `project`) | The village has grown into something |
+| `mcaquests:townstead_workforce_project` | `professions` (required), `minimum_tier`, `count`, `profession_policy` (`listed` or `any_progressive`) | Enough people can do the job |
 | `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `thirst_min`, `energy_min`, `require_not_collapsed`, `minimum_loaded_fraction`, `hold_ticks` | The village has been well for a while |
 
-**`townstead_workforce_project` counts only trades that can really get there.** The `professions` list is
-the guaranteed baseline, not the whole answer: a resident is counted when their profession has a real
-progressive track whose maximum tier reaches `minimum_tier`. A pack that adds a fisherman track gets
-fishermen counted with no change to the JSON, and one that removes a track stops them counting again.
-Before 1.4.1 a village whose only candidates were fishermen could be asked for three tier-2 workers it
-was never going to produce.
+**`townstead_workforce_project` counts Townstead profession tiers, and only trades that can get there.**
+The tier is Townstead's own work tier — Novice (1), Apprentice (2), Journeyman (3), Expert (4), Master (5)
+— which residents raise by doing their trade's work tasks, up to a daily XP cap (Townstead's guide:
+*Professions → Leveling Up*). It is not the vanilla trading level and not the player's experience. A
+resident is counted when they live in the project's village, their trade has a Townstead track whose
+maximum reaches `minimum_tier`, and they have reached it. Which trades are eligible is
+`profession_policy` (1.6.6):
+
+- `listed` (the default): only the `professions` named. Every pack written before 1.6.6 behaves exactly
+  as it did. (The 1.4.1 notes described this list as "the baseline, not the whole answer"; the code never
+  did that, and 1.6.6 makes the broader behaviour an explicit choice rather than changing anyone's list.)
+- `any_progressive`: any trade whose track reaches the tier; the list becomes an example. The bundled
+  **A Working Village** and **The Apprentices' Guild** use it, so a village of cooks is not told to go and
+  find farmers. A fisherman still does not count: Townstead gives that trade no progression.
+
+Only loaded residents can be read. The card says how many were loaded at the last check, how many
+qualified, how many are in an eligible trade but below the tier, and how many work a trade with no track
+that high, and the count is a high-water mark: a resident who walks out of range has not stopped being
+qualified. Jobs are assigned in MCA's Blueprint screen under *Professions*; the trade's workstation must be
+in the village.
+
+**`townstead_spirit_project` measures growth from a reading taken at a boundary (1.6.6).** Spirit is the
+character a Townstead village gets from its **completed** buildings — in Townstead 0.7.6 an inn gives
+*Tourism* +2 and *Commercial* +5, a music store *Commercial* +5 and *Scholar* +2. With `points_delta`,
+`baseline: "phase"` (the default) measures from the moment the phase opened and `baseline: "project"`
+from the moment the project began. Before 1.6.6 the phase reading was taken on the first project sweep
+*after* the phase opened, so spirit earned in between became part of the starting value and was asked for
+a second time; it is now taken as the phase opens. When the village cannot be read at that moment the
+reading is recorded as pending and the phase pauses — deadline included — until it can be taken; missing
+data is never read as zero. Spirit already there does not count as growth, and progress never goes
+backwards if a building is later lost. MCA: Quests names these values by Townstead's own names
+(*Tourism*, *Commercial*); its flavour words — "welcoming", "mercantile" — appear only in quest text.
+
+**Known Far and Wide** now measures from the project's start: phase 2 wants an inn and Tourism +2 since
+the project began, phase 3 a music store and Commercial +10 since the project began (the inn's 5 and the
+music store's 5). An inn built while the welcome fund was still being collected therefore counts for both
+phases, as players expected; before, it fell into the phase-2 starting value and the phase silently asked
+for a second inn. A project already under way when 1.6.6 arrived keeps the rule it was started under
+(phase-2 Tourism +2 and phase-3 Commercial +5, each from its phase) — no starting value is invented for
+it — and an operator can set one with `/mcaquests project instance <id> <n> rebaseline`.
+
+**`townstead_building_project` counts complete, registered buildings (1.6.6).** It reads MCA's building
+registry, so a building must be registered with MCA — stand inside it and add it in MCA's Blueprint
+screen — and, since 1.6.6, **complete**: a registered inn that is missing a bed no longer counts, the same
+rule Townstead's spirit uses, and the card says "registered but incomplete" and lists MCA's requirements
+for the type (in MCA 7.6: an inn needs four beds, a jukebox and a smoker). A building that already stood
+when the phase opened counts at once; one registered later counts on the next sweep. A village that cannot
+be read leaves the count where it was instead of dropping it to zero.
 
 **`minimum_loaded_fraction` (default `0.50`) is why an empty village no longer reads as a healthy one.**
 `minimum_observed` alone was not enough: in a village of forty, seeing three contented residents is
@@ -424,8 +466,14 @@ A quest you accepted while Townstead was installed **does not fail**. It:
 - and picks up exactly where it left off if Townstead returns.
 
 Suspension is decided fresh every pass rather than written into the save, so recovery needs no
-migration and nothing can go stale. Offers simply stop appearing, because every bundled definition
-gates on `townstead_available`.
+migration and nothing can go stale.
+
+**Since 1.6.6 Townstead content is not loaded at all without Townstead.** Every quest, project and
+situation that needs Townstead — in any phase, including a project whose first phase is only a donation —
+is left out of the registries, so nothing offers it. A quest or project already under way keeps its
+record: it stays in the log, paused and named ("needs Townstead"), its clock stops, rewards it owes wait
+rather than failing, and a follow-up it earned is seeded once Townstead returns. Adding or removing the
+mod needs a restart.
 
 The same applies at a finer grain: if a Townstead update moves one internal method, only the quests
 that declared the capability that needed it suspend.
@@ -448,7 +496,7 @@ All at permission level 2, all read-only.
 
 | Situation | Result |
 |---|---|
-| Townstead absent | Types register, packs parse, `townstead_available` is false, no bundled content is offered, no Townstead class is loaded. Nothing is logged — this is the normal state |
+| Townstead absent | Types register and packs parse, but every definition that needs Townstead is left out of the registries (1.6.6) — one INFO line per kind says how many. No Townstead class is loaded |
 | Townstead present, all capabilities bound | Everything in this document works |
 | Townstead present, some capabilities missing | One WARN naming them. Content declaring those capabilities is ineligible; everything else works. `status` lists what is missing |
 | Townstead installed but unbindable | One WARN, the integration disables itself, the server keeps running |
@@ -509,7 +557,19 @@ quest log's context lines show only what the quest is about.
 pack written for 1.3.x loads unchanged.
 
 **Can I write Townstead quests without Townstead installed?** Yes — the types register regardless, so
-your pack parses and validates. It just will not be offered until Townstead is there.
+your pack parses and validates. Definitions that need Townstead are then left out of the registries until
+Townstead is there (`/mcaquests validate` lists how many).
+
+**How do I train villagers for A Working Village?** It asks for residents of *that* village at
+**Townstead profession tier 2** (Apprentice) — Townstead's work tier, not vanilla trading. Residents earn
+it by working their trade; any trade with a Townstead track that reaches tier 2 counts. Open the project
+card and press **Details** to see who was counted and why. Before 1.6.6, a binding defect in MCA: Quests
+could make every trade read as having no track on some server starts, so no resident was ever counted;
+that is fixed.
+
+**What are the "welcoming points" in Known Far and Wide?** Townstead's **Tourism** spirit. A completed,
+registered inn gives +2. Since 1.6.6 it is measured from when the project began, so the inn you built for
+the project counts.
 
 **Why does my Townstead quest say "On hold"?** Townstead is not installed, or the specific capability
 that quest needs did not bind. Run `/mcaquests compat townstead status`.

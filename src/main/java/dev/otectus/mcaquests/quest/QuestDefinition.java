@@ -49,7 +49,20 @@ public record QuestDefinition(
         Optional<FailureSpec> failure,
         Optional<TemplateSpec> template,
         OfferShaping offerShaping,
-        dev.otectus.mcaquests.quest.reputation.QuestReputationBlock reputation) {
+        dev.otectus.mcaquests.quest.reputation.QuestReputationBlock reputation,
+        Optional<dev.otectus.mcaquests.quest.kingdom.KingdomLifecycleSpec> kingdomLifecycle) {
+
+    /** Source-compatible shape for add-ons and tests written before kingdom lifecycle metadata. */
+    public QuestDefinition(ResourceLocation id, boolean enabled, int weight, Optional<String> category,
+                           Optional<QuestText> titleOverride, RepeatRule repeat, GiverSpec giver,
+                           Map<String, QuestText> dialogue, List<QuestObjective> objectives,
+                           List<QuestReward> rewards, TurnInSpec turnIn, Optional<QuestCondition> conditions,
+                           Optional<ChainSpec> chain, Optional<FailureSpec> failure,
+                           Optional<TemplateSpec> template, OfferShaping offerShaping,
+                           dev.otectus.mcaquests.quest.reputation.QuestReputationBlock reputation) {
+        this(id, enabled, weight, category, titleOverride, repeat, giver, dialogue, objectives, rewards,
+                turnIn, conditions, chain, failure, template, offerShaping, reputation, Optional.empty());
+    }
 
     /** Dialogue states (spec section 9). */
     public static final String OFFER = "offer";
@@ -86,14 +99,18 @@ public record QuestDefinition(
             // pair still reads both fields from the same object.
             Codec.mapPair(
                             OfferShaping.MAP_CODEC,
-                            StrictCodecs.strictOptional(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.CODEC, "reputation",
-                                            dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE))
-                    .forGetter(def -> com.mojang.datafixers.util.Pair.of(def.offerShaping(), def.reputation()))
+                            Codec.mapPair(
+                                    StrictCodecs.strictOptional(dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.CODEC, "reputation",
+                                                    dev.otectus.mcaquests.quest.reputation.QuestReputationBlock.NONE),
+                                    StrictCodecs.strictOptional(dev.otectus.mcaquests.quest.kingdom.KingdomLifecycleSpec.CODEC,
+                                            "kingdom_lifecycle")))
+                    .forGetter(def -> com.mojang.datafixers.util.Pair.of(def.offerShaping(),
+                            com.mojang.datafixers.util.Pair.of(def.reputation(), def.kingdomLifecycle())))
     ).apply(instance, (id, enabled, weight, category, title, repeat, giver, dialogue, objectives, rewards,
                        turnIn, conditions, chain, failure, template, tail) ->
             new QuestDefinition(id, enabled, weight, category, title, repeat, giver, dialogue, objectives,
                     rewards, turnIn, conditions, chain, failure, template, tail.getFirst(),
-                    tail.getSecond())));
+                    tail.getSecond().getFirst(), tail.getSecond().getSecond())));
 
     /** Translation key for this quest's display title (spec section 32), e.g. {@code mcaquests.quest.<path>.title}. */
     public String titleKey() {
@@ -132,7 +149,7 @@ public record QuestDefinition(
     public QuestDefinition withConcrete(TemplateSpec.Concrete concrete) {
         return new QuestDefinition(id, enabled, weight, category, titleOverride, repeat, giver, dialogue,
                 concrete.objectives(), concrete.rewards(), turnIn, conditions, chain, failure, template,
-                offerShaping, reputation);
+                offerShaping, reputation, kingdomLifecycle);
     }
 
     /** Datapack offer priority tier, if set (see {@link OfferShaping}). */

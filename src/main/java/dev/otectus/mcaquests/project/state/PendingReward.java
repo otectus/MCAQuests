@@ -62,6 +62,21 @@ public record PendingReward(Kind kind, @Nullable ResourceLocation projectId, int
         this(kind, projectId, phase, rewardIndex, banked, instanceKey, instanceSnapshot, 0);
     }
 
+    /**
+     * The same owed reward pointed at an instance whose key changed ({@code ProjectSavedData}'s one-time
+     * dimension re-key). The instance snapshot is rewritten with it, so the two keep agreeing.
+     */
+    public PendingReward rekeyed(String oldKey, String newKey, String newIdentity) {
+        if (instanceKey == null || !instanceKey.equals(oldKey)) {
+            return this;
+        }
+        CompoundTag snapshot = instanceSnapshot == null ? null : instanceSnapshot.copy();
+        if (snapshot != null) {
+            snapshot.putString("identity", newIdentity);
+        }
+        return new PendingReward(kind, projectId, phase, rewardIndex, banked, newKey, snapshot, attempts);
+    }
+
     /** The same owed reward, with a different count of failed delivery passes. */
     public PendingReward withAttempts(int attempts) {
         return new PendingReward(kind, projectId, phase, rewardIndex, banked, instanceKey,

@@ -163,6 +163,11 @@ public final class McaBinding {
         return new Member(Kind.STATIC, ownerRelative, name, ret, arity, null, true);
     }
 
+    /** As {@link #statik}, but a miss is recorded and tolerated instead of failing the probe test. */
+    private static Member optionalStatik(String ownerRelative, String name, Class<?> ret, int arity) {
+        return new Member(Kind.STATIC, ownerRelative, name, ret, arity, null, false);
+    }
+
     private static Member getter(String ownerRelative, String field) {
         return new Member(Kind.GETTER, ownerRelative, field, Object.class, 0, null, true);
     }
@@ -191,6 +196,8 @@ public final class McaBinding {
     private static final String C_BUILDING = "server.world.data.Building";
     private static final String C_VILLAGE_MANAGER = "server.world.data.VillageManager";
     private static final String C_COMMAND_HANDLER = "entity.interaction.EntityCommandHandler";
+    private static final String C_BUILDING_TYPES = "resources.BuildingTypes";
+    private static final String C_BUILDING_TYPE = "resources.data.BuildingType";
 
     // Classes ------------------------------------------------------------------------------------
     public static final Member VILLAGER_CLASS = cls(C_VILLAGER);
@@ -291,6 +298,30 @@ public final class McaBinding {
     public static final Member BUILDING_GET_SIZE = virtual(C_BUILDING, "getSize", int.class, 0);
     public static final Member BUILDING_GET_CENTER = virtual(C_BUILDING, "getCenter", Object.class, 0);
 
+    // Build-area geometry and building completeness (1.6.6). All optional: each only sharpens what a
+    // player is shown, and every caller has an honest fallback when a future MCA drops one.
+    /**
+     * {@code Village.getBox()}: the box spanned by the village's registered buildings, as MCA's own
+     * {@code BlockBoxExtended}, a subclass of vanilla {@code BoundingBox}. {@code isWithinBorder(pos, m)}
+     * is exactly "this box, inflated by m, contains pos", which is what lets the build-area outline a
+     * player sees and the placement credit the server grants be the same predicate.
+     */
+    public static final Member VILLAGE_GET_BOX = optionalVirtual(C_VILLAGE, "getBox", Object.class, 0);
+    /** {@code Building.isComplete()}: every block group the type requires is present. */
+    public static final Member BUILDING_IS_COMPLETE = optionalVirtual(C_BUILDING, "isComplete", boolean.class, 0);
+    /** {@code BuildingTypes.getInstance()}, the data-driven building-type registry. */
+    public static final Member BUILDING_TYPES_GET = optionalStatik(C_BUILDING_TYPES, "getInstance", Object.class, 0);
+    public static final Member BUILDING_TYPES_GET_TYPE =
+            optionalVirtual(C_BUILDING_TYPES, "getBuildingType", Object.class, 1);
+    /** {@code BuildingTypes.getBuildingTypes()}: every loaded type, by id. */
+    public static final Member BUILDING_TYPES_ALL =
+            optionalVirtual(C_BUILDING_TYPES, "getBuildingTypes", Object.class, 0);
+    /**
+     * {@code BuildingType.getGroups()}: what a building of this type must contain, block or block-tag id
+     * to count. Arity 0 picks it over the {@code getGroups(Map)} overload that matches blocks.
+     */
+    public static final Member BUILDING_TYPE_GROUPS = optionalVirtual(C_BUILDING_TYPE, "getGroups", Object.class, 0);
+
     // EntityCommandHandler — the owner of an MCA interaction, for the Gift bridge -------------------
     // Both members are read from the handler instance the gift mixin is compiled into, which is how
     // that mixin can carry no MCA type at all: it hands `this` over as an Object and this layer says
@@ -336,6 +367,8 @@ public final class McaBinding {
             VILLAGE_RESIDENT_UUIDS, VILLAGE_GET_RESIDENTS, VILLAGE_HAS_RESIDENT, VILLAGE_STORAGE_BUFFER,
             VILLAGE_GET_BUILDINGS, VILLAGE_BUILDINGS_OF_TYPE,
             BUILDING_GET_ID, BUILDING_GET_TYPE, BUILDING_GET_SIZE, BUILDING_GET_CENTER,
+            VILLAGE_GET_BOX, BUILDING_IS_COMPLETE, BUILDING_TYPES_GET, BUILDING_TYPES_GET_TYPE, BUILDING_TYPES_ALL,
+            BUILDING_TYPE_GROUPS,
             VILLAGE_MANAGER_GET, VILLAGE_MANAGER_GET_OR_EMPTY, FIND_NEAREST_VILLAGE,
             COMMAND_HANDLER_ENTITY, COMMAND_HANDLER_INTERACTING_PLAYER);
 
@@ -531,7 +564,8 @@ public final class McaBinding {
      * Finds a method by name, arity, and staticness — never by exact parameter types, which would
      * mean naming MCA types. Every member in the manifest is unique under that key in both known MCA
      * layouts, except {@code Village#getResidents}, whose two one-argument overloads are separated by
-     * {@link Member#firstParamHint}.
+     * {@link Member#firstParamHint}. A key that still matches two methods is left unbound rather than
+     * guessed, so a future overload shows up in {@code McaBindingProbeTest} instead of at random.
      */
     private static MethodHandle bindMethod(MethodHandles.Lookup lookup, Class<?> owner, Member member) {
         Method match = null;
@@ -551,8 +585,12 @@ public final class McaBinding {
                     && (member.arity == 0 || !candidate.getParameterTypes()[0].equals(member.firstParamHint))) {
                 continue;
             }
+            if (match != null) {
+                // Two non-bridge methods under one key: refuse to guess, for the same reason bridges
+                // are skipped. An unbound member is a named probe failure; a guessed one is not.
+                return null;
+            }
             match = candidate;
-            break;
         }
         if (match == null) {
             return null;

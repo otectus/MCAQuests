@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.command;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.otectus.mcaquests.McaQuests;
@@ -14,7 +15,9 @@ import dev.otectus.mcaquests.compat.mca.McaGiftHookProbe;
 import dev.otectus.mcaquests.data.FtbqReferenceWalker;
 import dev.otectus.mcaquests.data.QuestRegistry;
 import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
+import dev.otectus.mcaquests.event.ConversationCredit;
 import dev.otectus.mcaquests.project.ProjectManager;
+import dev.otectus.mcaquests.project.ProjectRecovery;
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
 import dev.otectus.mcaquests.project.state.PendingReward;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
@@ -138,11 +141,48 @@ public final class McaQuestsCommand {
                         .then(Commands.literal("reset")
                                 .requires(src -> src.hasPermission(3))
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
-                                        .executes(McaQuestsCommand::projectReset)))
+                                        .executes(McaQuestsCommand::projectReset)
+                                        .then(Commands.literal("all")
+                                                .executes(ctx -> projectBulk(ctx, ProjectRecovery.Operation.BULK_RESET)))))
                         .then(Commands.literal("advance")
                                 .requires(src -> src.hasPermission(3))
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
-                                        .executes(McaQuestsCommand::projectAdvance)))
+                                        .executes(McaQuestsCommand::projectAdvance)
+                                        .then(Commands.literal("all")
+                                                .executes(ctx -> projectBulk(ctx, ProjectRecovery.Operation.BULK_SKIP)))))
+                        // 1.6.6: one instance at a time. Read-only at level 2; every change is a preview
+                        // that issues a token, applied by `confirm` at level 3.
+                        .then(Commands.literal("instances")
+                                .requires(src -> src.hasPermission(2))
+                                .then(Commands.argument("id", ResourceLocationArgument.id())
+                                        .executes(McaQuestsCommand::projectInstances)))
+                        .then(Commands.literal("instance")
+                                .requires(src -> src.hasPermission(2))
+                                .then(Commands.argument("id", ResourceLocationArgument.id())
+                                        .then(Commands.argument("n", IntegerArgumentType.integer(1))
+                                                .then(Commands.literal("info")
+                                                        .executes(McaQuestsCommand::projectInstanceInfo))
+                                                .then(Commands.literal("recheck")
+                                                        .executes(McaQuestsCommand::projectInstanceRecheck))
+                                                .then(Commands.literal("skip")
+                                                        .requires(src -> src.hasPermission(3))
+                                                        .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.SKIP_NO_REWARDS, -1, 0))
+                                                        .then(Commands.literal("normal_rewards")
+                                                                .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.SKIP_NORMAL_REWARDS, -1, 0))))
+                                                .then(Commands.literal("reset")
+                                                        .requires(src -> src.hasPermission(3))
+                                                        .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.RESET, -1, 0)))
+                                                .then(Commands.literal("rebaseline")
+                                                        .requires(src -> src.hasPermission(3))
+                                                        .then(Commands.argument("objective", IntegerArgumentType.integer(0))
+                                                                .then(Commands.argument("value", IntegerArgumentType.integer(0))
+                                                                        .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.REBASELINE,
+                                                                                IntegerArgumentType.getInteger(ctx, "objective"),
+                                                                                IntegerArgumentType.getInteger(ctx, "value")))))))))
+                        .then(Commands.literal("confirm")
+                                .requires(src -> src.hasPermission(3))
+                                .then(Commands.argument("token", StringArgumentType.word())
+                                        .executes(McaQuestsCommand::projectConfirm)))
                         .then(Commands.literal("debug")
                                 .requires(src -> src.hasPermission(2))
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
@@ -530,18 +570,129 @@ public final class McaQuestsCommand {
         return 0;
     }
 
+    /**
+     * The pre-1.6.6 bare form. It still works when exactly one instance matches — that one is the only
+     * reading of the request — and refuses otherwise, listing the instances, rather than silently resetting
+     * every village running the project. {@code reset <id> all} is the explicit, confirmed bulk form.
+     */
     private static int projectReset(CommandContext<CommandSourceStack> ctx) {
         ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
-        int n = ProjectManager.adminReset(ctx.getSource().getServer(), id);
-        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + n + " instance(s) of '" + id + "'."), true);
+        MinecraftServer server = ctx.getSource().getServer();
+        List<ProjectState> matching = ProjectRecovery.instancesOf(server, id);
+        if (matching.size() != 1) {
+            return refuseAmbiguous(ctx, id, matching, "reset");
+        }
+        int n = ProjectManager.adminReset(server, id);
+        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + n + " instance of '" + id + "'."), true);
         return n;
     }
 
+    /** As {@link #projectReset}: one match only, no rewards; {@code advance <id> all} for bulk. */
     private static int projectAdvance(CommandContext<CommandSourceStack> ctx) {
         ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
-        int n = ProjectManager.adminAdvance(ctx.getSource().getServer(), id);
-        ctx.getSource().sendSuccess(() -> Component.literal("Advanced " + n + " instance(s) of '" + id + "'."), true);
+        MinecraftServer server = ctx.getSource().getServer();
+        List<ProjectState> matching = ProjectRecovery.instancesOf(server, id).stream()
+                .filter(state -> !state.status().isTerminal()).toList();
+        if (matching.size() != 1) {
+            return refuseAmbiguous(ctx, id, matching, "advance");
+        }
+        int n = ProjectManager.adminAdvance(server, id);
+        ctx.getSource().sendSuccess(() -> Component.literal("Advanced " + n + " instance of '" + id
+                + "' one phase, without rewards."), true);
         return n;
+    }
+
+    private static int refuseAmbiguous(CommandContext<CommandSourceStack> ctx, ResourceLocation id,
+                                       List<ProjectState> matching, String verb) {
+        MinecraftServer server = ctx.getSource().getServer();
+        if (matching.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("No instance of '" + id + "' to " + verb + "."));
+            return 0;
+        }
+        ctx.getSource().sendFailure(Component.literal("Refused: '" + id + "' has " + matching.size()
+                + " instances, and a bare id would " + verb + " all of them. Pick one with "
+                + "/mcaquests project instance " + id + " <n> ..., or use '" + verb + " " + id
+                + " all' to preview every one."));
+        List<ProjectState> all = ProjectRecovery.instancesOf(server, id);
+        for (int i = 0; i < all.size(); i++) {
+            Component line = ProjectRecovery.summary(server, i + 1, all.get(i));
+            ctx.getSource().sendSuccess(() -> line, false);
+        }
+        return 0;
+    }
+
+    private static int projectBulk(CommandContext<CommandSourceStack> ctx, ProjectRecovery.Operation operation) {
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
+        ProjectRecovery.previewBulk(ctx.getSource().getTextName(), ctx.getSource().getServer(), id, operation)
+                .forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+        return 1;
+    }
+
+    private static int projectInstances(CommandContext<CommandSourceStack> ctx) {
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
+        MinecraftServer server = ctx.getSource().getServer();
+        List<ProjectState> all = ProjectRecovery.instancesOf(server, id);
+        if (all.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("No instance of '" + id + "'."));
+            return 0;
+        }
+        for (int i = 0; i < all.size(); i++) {
+            Component line = ProjectRecovery.summary(server, i + 1, all.get(i));
+            ctx.getSource().sendSuccess(() -> line, false);
+        }
+        return all.size();
+    }
+
+    private static java.util.Optional<ProjectState> selectedInstance(CommandContext<CommandSourceStack> ctx) {
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "id");
+        int n = IntegerArgumentType.getInteger(ctx, "n");
+        java.util.Optional<ProjectState> state = ProjectRecovery.instance(ctx.getSource().getServer(), id, n);
+        if (state.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("No instance #" + n + " of '" + id
+                    + "'. List them with /mcaquests project instances " + id + "."));
+        }
+        return state;
+    }
+
+    private static int projectInstanceInfo(CommandContext<CommandSourceStack> ctx) {
+        return selectedInstance(ctx).map(state -> {
+            ProjectRecovery.describe(ctx.getSource().getServer(), state)
+                    .forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+            return 1;
+        }).orElse(0);
+    }
+
+    /** Runs exactly the periodic sweep for one instance and refreshes every open view of it. */
+    private static int projectInstanceRecheck(CommandContext<CommandSourceStack> ctx) {
+        return selectedInstance(ctx).map(state -> {
+            MinecraftServer server = ctx.getSource().getServer();
+            dev.otectus.mcaquests.project.state.ProjectSavedData data =
+                    dev.otectus.mcaquests.project.state.ProjectSavedData.get(server);
+            boolean changed = ProjectManager.pollOne(server, data, state, true);
+            server.getPlayerList().getPlayers().forEach(ProjectManager::syncProjects);
+            dev.otectus.mcaquests.project.ProjectMenuSessions.refreshAll(server);
+            ctx.getSource().sendSuccess(() -> Component.literal("Rechecked " + state.key().asString() + ": "
+                    + (changed ? "state changed" : "no change") + ". Now phase " + (state.currentPhase() + 1)
+                    + ", " + state.status().lower() + "."), false);
+            ProjectRecovery.describe(server, state).forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+            return 1;
+        }).orElse(0);
+    }
+
+    private static int projectPreview(CommandContext<CommandSourceStack> ctx, ProjectRecovery.Operation operation,
+                                      int objective, int value) {
+        return selectedInstance(ctx).map(state -> {
+            ProjectRecovery.preview(ctx.getSource().getTextName(), ctx.getSource().getServer(), state, operation,
+                    objective, value).forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+            return 1;
+        }).orElse(0);
+    }
+
+    private static int projectConfirm(CommandContext<CommandSourceStack> ctx) {
+        Component result = ProjectRecovery.confirm(ctx.getSource().getTextName(), ctx.getSource().getServer(),
+                StringArgumentType.getString(ctx, "token"));
+        ctx.getSource().sendSuccess(() -> result, true);
+        return 1;
     }
 
     private static int projectDebug(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -714,6 +865,7 @@ public final class McaQuestsCommand {
     }
 
     private static int validateQuests(CommandContext<CommandSourceStack> ctx) {
+        reportUnavailableContent(ctx);
         var errors = QuestRegistry.lastErrors();
         var warnings = new java.util.ArrayList<>(QuestRegistry.lastWarnings());
         // Progression cross-refs are computed here (after all datapacks loaded) since runtime fails safe.
@@ -747,6 +899,24 @@ public final class McaQuestsCommand {
             warnings.forEach(w -> ctx.getSource().sendSuccess(() -> Component.literal(" - " + w), false));
         }
         return errors.isEmpty() ? 1 : 0;
+    }
+
+    /**
+     * What the last reload deliberately did not load because an optional mod it needs is missing (1.6.6).
+     * Informational: this is the supported state of an installation without that mod, not an error.
+     */
+    private static void reportUnavailableContent(CommandContext<CommandSourceStack> ctx) {
+        for (dev.otectus.mcaquests.data.UnavailableContent.Kind kind : dev.otectus.mcaquests.data.UnavailableContent.Kind.values()) {
+            var excluded = dev.otectus.mcaquests.data.UnavailableContent.all(kind);
+            if (excluded.isEmpty()) {
+                continue;
+            }
+            java.util.Map<String, Integer> byMod = new java.util.TreeMap<>();
+            excluded.values().forEach(entry -> byMod.merge(entry.why().describe(), 1, Integer::sum));
+            ctx.getSource().sendSuccess(() -> Component.literal(excluded.size() + " "
+                    + kind.name().toLowerCase(java.util.Locale.ROOT) + " definition(s) not loaded (optional mod missing): "
+                    + byMod), false);
+        }
     }
 
     private static int reloadQuests(CommandContext<CommandSourceStack> ctx) {
@@ -858,6 +1028,13 @@ public final class McaQuestsCommand {
     private static int debugMca(CommandContext<CommandSourceStack> ctx) {
         String report = "MCA binding: " + McaBinding.describe();
         ctx.getSource().sendSuccess(() -> Component.literal(report), false);
+        // 1.6.6: how conversations reach talk objectives on this installation.
+        String conversations = "Conversation signal: " + (ConversationCredit.dialogueHookActive()
+                ? "MCA dialogue hook" + (dev.otectus.mcaquests.compat.mca.McaDialogueHookProbe.wasObserved()
+                        ? " (seen working)" : " (applied, not yet seen)")
+                : "interaction-event fallback (empty hand, not sneaking)")
+                + " | hook: " + dev.otectus.mcaquests.compat.mca.McaDialogueHookProbe.describe();
+        ctx.getSource().sendSuccess(() -> Component.literal(conversations), false);
         return 1;
     }
 

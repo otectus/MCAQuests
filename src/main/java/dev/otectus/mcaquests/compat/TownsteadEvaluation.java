@@ -125,6 +125,49 @@ public final class TownsteadEvaluation {
         });
     }
 
+    /**
+     * What a village has of one building type, told apart the way a player needs it told apart (1.6.6):
+     * complete buildings, registered-but-incomplete ones, and whether the village could be read at all.
+     * An unreadable village is {@code readable == false}, never a confident zero.
+     *
+     * @param complete   registered buildings of the type (or any tier of it) at {@code minimumLevel} or
+     *                   above that MCA considers complete — the ones Townstead's spirit counts too
+     * @param incomplete the same, registered but missing blocks MCA's type requires
+     */
+    public record BuildingCensus(boolean readable, int complete, int incomplete) {
+        public static final BuildingCensus UNREADABLE = new BuildingCensus(false, 0, 0);
+    }
+
+    public BuildingCensus buildingCensus(@Nullable ServerLevel level, int villageId, String type, int minimumLevel) {
+        if (level == null || villageId < 0) {
+            return BuildingCensus.UNREADABLE;
+        }
+        Object village = McaHandles.village(level, villageId);
+        if (village == null) {
+            return BuildingCensus.UNREADABLE;
+        }
+        int complete = 0;
+        int incomplete = 0;
+        for (Object building : McaHandles.villageBuildings(village)) {
+            String buildingType = McaHandles.buildingType(building);
+            if (buildingType.isEmpty()) {
+                continue;
+            }
+            TownsteadVillageBuilding view = new TownsteadVillageBuilding(McaHandles.buildingId(building),
+                    buildingType, McaHandles.buildingSize(building), BlockPos.ZERO);
+            if (!view.matches(type) || view.level() < minimumLevel) {
+                continue;
+            }
+            // An MCA without the completeness read counts every registered building, as before 1.6.6.
+            if (McaHandles.buildingComplete(building).orElse(true)) {
+                complete++;
+            } else {
+                incomplete++;
+            }
+        }
+        return new BuildingCensus(true, complete, incomplete);
+    }
+
     /** How many buildings of a type (or of any tier of it) the village has. */
     public int countBuildings(@Nullable ServerLevel level, int villageId, String type, int minimumLevel) {
         int count = 0;

@@ -86,6 +86,12 @@ public final class OfferSessionService {
      * so the answer is the same on the next open.
      */
     public static List<Offer> currentOffers(ServerPlayer player, Entity villager, PlayerQuestData data) {
+        return currentOffers(player, villager, data, null);
+    }
+
+    /** Same native offer session, restricted to an authorized caller's bounded commission catalogue. */
+    public static List<Offer> currentOffers(ServerPlayer player, Entity villager, PlayerQuestData data,
+                                            @javax.annotation.Nullable Set<ResourceLocation> allowedQuestIds) {
         ServerLevel level = (ServerLevel) player.level();
         long now = level.getGameTime();
         int refreshTicks = McaQuestsConfig.COMMON.offerRefreshTicks.get();
@@ -96,8 +102,9 @@ public final class OfferSessionService {
         session.pruneDeclines(now);
 
         OfferFilters.Pass pass = OfferFilters.Pass.of(player, villager, data);
-        if (session.isStale(now, refreshTicks, QuestRegistry.generation())) {
-            redraw(pass, session, now, refreshTicks);
+        if (!session.scopeMatches(allowedQuestIds)
+                || session.isStale(now, refreshTicks, QuestRegistry.generation())) {
+            redraw(pass, session, now, refreshTicks, allowedQuestIds);
         } else {
             revalidate(pass, session, now);
         }
@@ -144,19 +151,24 @@ public final class OfferSessionService {
     // ---------------------------------------------------------------- drawing
 
     private static void redraw(OfferFilters.Pass pass, OfferSession session, long now, int refreshTicks) {
+        redraw(pass, session, now, refreshTicks, null);
+    }
+
+    private static void redraw(OfferFilters.Pass pass, OfferSession session, long now, int refreshTicks,
+                               @javax.annotation.Nullable Set<ResourceLocation> allowedQuestIds) {
         // OfferSession#redraw drops the refusals that were only meant to last as long as the old set --
         // turning something down is meant to last until the villager has something new to say, not to ban
         // it. A refusal given an explicit declineCooldownTicks is about the clock rather than about this
         // menu, so it survives.
         long epoch = refreshTicks <= 0 ? 0L : now / refreshTicks;
         long seed = offerSeed(pass.player(), session.villagerUuid(), epoch);
-        List<QuestDefinition> pool = offerablePool(pass, session, now);
+        List<QuestDefinition> pool = offerablePool(pass, session, now, allowedQuestIds);
         List<QuestDefinition> chosen = QuestManager.selectOffers(pass, pool, seed);
         List<OfferSession.Slot> slots = new ArrayList<>();
         for (QuestDefinition def : chosen) {
             freeze(pass, def).ifPresent(slots::add);
         }
-        session.redraw(slots, now, QuestRegistry.generation(), seed);
+        session.redraw(slots, now, QuestRegistry.generation(), seed, allowedQuestIds);
     }
 
     /**
@@ -237,6 +249,15 @@ public final class OfferSessionService {
     private static List<QuestDefinition> offerablePool(OfferFilters.Pass pass, OfferSession session, long now) {
         return QuestManager.eligibleOffers(pass).stream()
                 .filter(def -> !session.isDeclined(def.id(), now))
+                .filter(def -> session.allowsInCurrentScope(def.id()))
+                .toList();
+    }
+
+    private static List<QuestDefinition> offerablePool(OfferFilters.Pass pass, OfferSession session, long now,
+                                                       @javax.annotation.Nullable Set<ResourceLocation> allowed) {
+        return QuestManager.eligibleOffers(pass).stream()
+                .filter(def -> !session.isDeclined(def.id(), now))
+                .filter(def -> allowed == null || allowed.contains(def.id()))
                 .toList();
     }
 

@@ -32,13 +32,42 @@ public interface ProjectObjective {
     /** Target amount. */
     int required();
 
-    /** Shared amount toward {@link #required()} (clamped). */
+    /**
+     * The target for one instance's progress. The same as {@link #required()} except where an instance
+     * carries its own, frozen by a migration (1.6.6): a project already under way when a bundled
+     * definition's number changed keeps the number it was started with.
+     */
+    default int requiredFor(SharedObjectiveProgress progress) {
+        return required();
+    }
+
+    /** Shared amount toward {@link #requiredFor} (clamped). */
     default int current(SharedObjectiveProgress progress) {
-        return Math.min(progress.count(), required());
+        return Math.min(progress.count(), requiredFor(progress));
     }
 
     default boolean isSatisfied(SharedObjectiveProgress progress) {
-        return progress.count() >= required();
+        return progress.count() >= requiredFor(progress);
+    }
+
+    /**
+     * Expanded help for one objective of one instance: what counts, where, the next useful action and
+     * why it is blocked, built from the same predicates that grant credit (1.6.6). Shown behind the
+     * objective's help toggle, never in the one-line summary. Empty when there is nothing to add.
+     */
+    default java.util.List<Component> explain(ProjectObjectiveContext context) {
+        return java.util.List.of();
+    }
+
+    /** A coarse state for text-and-glyph display and operator diagnostics. */
+    default ProjectObjectiveStatus status(ProjectObjectiveContext context) {
+        if (isSatisfied(context.progress())) {
+            return ProjectObjectiveStatus.SATISFIED;
+        }
+        if (context.level() != null && context.state() != null && !isAvailable(context.level(), context.state())) {
+            return ProjectObjectiveStatus.UNAVAILABLE;
+        }
+        return ProjectObjectiveStatus.IN_PROGRESS;
     }
 
     /** Missing optional content pauses deadlines as well as objective polling. */

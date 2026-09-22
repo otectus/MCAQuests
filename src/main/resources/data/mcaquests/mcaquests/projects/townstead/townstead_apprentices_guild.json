@@ -90,7 +90,8 @@
             "minecraft:butcher"
           ],
           "minimum_tier": 2,
-          "count": 3
+          "count": 3,
+          "profession_policy": "any_progressive"
         }
       ],
       "rewards": [
@@ -129,7 +130,8 @@
             "minecraft:butcher"
           ],
           "minimum_tier": 3,
-          "count": 1
+          "count": 1,
+          "profession_policy": "any_progressive"
         },
         {
           "type": "mcaquests:townstead_building_project",

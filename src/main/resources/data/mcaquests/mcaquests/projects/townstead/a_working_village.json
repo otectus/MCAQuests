@@ -77,7 +77,8 @@
             "minecraft:butcher"
           ],
           "minimum_tier": 2,
-          "count": 3
+          "count": 3,
+          "profession_policy": "any_progressive"
         }
       ],
       "rewards": [

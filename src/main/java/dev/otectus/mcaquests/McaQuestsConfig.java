@@ -713,6 +713,7 @@ public final class McaQuestsConfig {
         public final ForgeConfigSpec.BooleanValue showProjectTrackerHud;
         public final ForgeConfigSpec.IntValue projectTrackerMaxEntries;
         public final ForgeConfigSpec.BooleanValue showSituationToast;
+        public final ForgeConfigSpec.IntValue showBuildAreaSeconds;
 
         Client(ForgeConfigSpec.Builder b) {
             b.push("client");
@@ -849,6 +850,11 @@ public final class McaQuestsConfig {
                     .defineInRange("projectTrackerMaxEntries", 3, 1, 10);
             showSituationToast = b.comment("Show a toast when the village opens a new situation that needs help (0.8.0).")
                     .define("showSituationToast", true);
+            showBuildAreaSeconds = b.comment(
+                    "How long a project's build area stays outlined after you press Show build area on its",
+                    "card, in seconds (1.6.6). The outline is the area the server actually counts placements",
+                    "and kills in. 0 turns the outline off; the area is still described in chat.")
+                    .defineInRange("showBuildAreaSeconds", 60, 0, 600);
 
             // Forge's builder splits a dotted path into one level per segment, so this pushes two.
             b.push("marker.edge");

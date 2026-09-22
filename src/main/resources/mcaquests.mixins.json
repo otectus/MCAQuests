@@ -4,6 +4,9 @@
   "package": "dev.otectus.mcaquests.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "mcaquests.refmap.json",
+  "mixins": [
+    "PlayerListAccessor"
+  ],
   "client": [
     "MinecraftGlowMixin",
     "ScreenAccessor"

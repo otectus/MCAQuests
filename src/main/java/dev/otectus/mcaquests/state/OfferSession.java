@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -61,6 +62,9 @@ public final class OfferSession {
     private int packGeneration;
     private long seed;
     private final List<Slot> slots = new ArrayList<>();
+    /** Null for the ordinary villager repertoire; otherwise the trusted commission API's bounded scope. */
+    @Nullable
+    private Set<ResourceLocation> restrictedQuestIds;
     /** Quest id (as a string, because that is what NBT keys are) to the game time the refusal lapses. */
     private final Map<String, Long> declinedUntil = new HashMap<>();
 
@@ -109,12 +113,31 @@ public final class OfferSession {
      * time rather than about this particular menu.
      */
     public void redraw(List<Slot> drawn, long gameTime, int generation, long drawSeed) {
+        redraw(drawn, gameTime, generation, drawSeed, null);
+    }
+
+    /** Replaces the set and records which public menu surface drew it. */
+    public void redraw(List<Slot> drawn, long gameTime, int generation, long drawSeed,
+                       @Nullable Set<ResourceLocation> restriction) {
         declinedUntil.values().removeIf(until -> until == UNTIL_REFRESH);
         slots.clear();
         slots.addAll(drawn);
         refreshedAtGameTime = gameTime;
         packGeneration = generation;
         seed = drawSeed;
+        restrictedQuestIds = restriction == null ? null : Set.copyOf(restriction);
+    }
+
+    public boolean scopeMatches(@Nullable Set<ResourceLocation> restriction) {
+        return java.util.Objects.equals(restrictedQuestIds, restriction);
+    }
+
+    public boolean allowsInCurrentScope(ResourceLocation questId) {
+        return restrictedQuestIds == null || restrictedQuestIds.contains(questId);
+    }
+
+    public Optional<Set<ResourceLocation>> restrictedQuestIds() {
+        return Optional.ofNullable(restrictedQuestIds);
     }
 
     /**
@@ -216,6 +239,12 @@ public final class OfferSession {
         tag.putLong("refreshed", refreshedAtGameTime);
         tag.putInt("generation", packGeneration);
         tag.putLong("seed", seed);
+        if (restrictedQuestIds != null) {
+            ListTag restricted = new ListTag();
+            restrictedQuestIds.stream().map(ResourceLocation::toString).sorted()
+                    .forEach(value -> restricted.add(net.minecraft.nbt.StringTag.valueOf(value)));
+            tag.put("restricted_quests", restricted);
+        }
         ListTag list = new ListTag();
         for (Slot slot : slots) {
             CompoundTag entry = new CompoundTag();
@@ -249,6 +278,15 @@ public final class OfferSession {
         session.refreshedAtGameTime = tag.getLong("refreshed");
         session.packGeneration = tag.getInt("generation");
         session.seed = tag.getLong("seed");
+        if (tag.contains("restricted_quests", Tag.TAG_LIST)) {
+            Set<ResourceLocation> restricted = new java.util.LinkedHashSet<>();
+            ListTag values = tag.getList("restricted_quests", Tag.TAG_STRING);
+            for (int i = 0; i < values.size() && i < 32; i++) {
+                ResourceLocation id = ResourceLocation.tryParse(values.getString(i));
+                if (id != null) restricted.add(id);
+            }
+            session.restrictedQuestIds = Set.copyOf(restricted);
+        }
         ListTag list = tag.getList("slots", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = list.getCompound(i);
@@ -277,6 +315,7 @@ public final class OfferSession {
         refreshedAtGameTime = other.refreshedAtGameTime;
         packGeneration = other.packGeneration;
         seed = other.seed;
+        restrictedQuestIds = other.restrictedQuestIds == null ? null : Set.copyOf(other.restrictedQuestIds);
         slots.clear();
         slots.addAll(other.slots);
         declinedUntil.clear();

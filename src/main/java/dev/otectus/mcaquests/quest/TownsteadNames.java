@@ -106,6 +106,18 @@ public final class TownsteadNames {
     }
 
     /**
+     * A village spirit by the name Townstead itself shows for it — "Tourism", "Commercial" — for the
+     * places a player has to find the same value in Townstead's own screens (1.6.6). {@link #spirit}
+     * keeps this mod's descriptive words ("welcoming", "mercantile") for flavour text; an objective that
+     * asks for points of that value names Townstead's metric, because "welcoming points" named nothing a
+     * player could look up.
+     */
+    public static Component spiritMetric(String id) {
+        String key = normalise(id);
+        return Component.translatableWithFallback("townstead.spirit." + key, DisplayNames.humanize(key));
+    }
+
+    /**
      * A building family, normalised first so {@code butcher_shop} and {@code butcher} — and every tier
      * of {@code dock} — resolve to one name rather than three near-duplicates.
      */

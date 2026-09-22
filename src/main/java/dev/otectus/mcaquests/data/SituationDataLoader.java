@@ -51,6 +51,7 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
         Map<ResourceLocation, SituationDefinition> loaded = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
+        Map<ResourceLocation, ResourceLocation> fileOf = new LinkedHashMap<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
@@ -61,8 +62,19 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
                             return;
                         }
                         loaded.put(def.id(), def);
+                        fileOf.put(def.id(), fileId);
                     });
         }
+
+        // A situation whose trigger or offer needs an optional mod this installation lacks never opens,
+        // so it is not loaded at all (IntegrationRequirements); an open one keeps its descriptor.
+        UnavailableContent.Collector unavailable = new UnavailableContent.Collector(UnavailableContent.Kind.SITUATION);
+        loaded.values().removeIf(def -> dev.otectus.mcaquests.quest.IntegrationRequirements.unavailable(def)
+                .map(why -> {
+                    unavailable.add(def.id(), why, UnavailableContent.sourceOf(manager, DIRECTORY, fileOf.get(def.id())),
+                    def.offer().title().map(text -> text.resolve()).orElseGet(() -> net.minecraft.network.chat.Component.literal(def.id().toString())));
+                    return true;
+                }).orElse(false));
 
         // The first cross-reference validation situations have ever had. Until 1.4.3 a situation offer
         // was parsed and nothing else, which is how two of the shipped ones carried a family target with
@@ -76,6 +88,7 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
             throw new QuestValidationException(errors.get(errors.size() - 1));
         }
 
+        unavailable.publish();
         SituationRegistry.replaceAll(loaded, errors, warnings);
         warnings.forEach(w -> McaQuests.LOGGER.warn("[MCA: Quests] {}", w));
         McaQuests.LOGGER.info("Loaded {} MCA situation(s) with {} error(s), {} warning(s).",

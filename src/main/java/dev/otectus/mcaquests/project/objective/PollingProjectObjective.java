@@ -35,6 +35,34 @@ public interface PollingProjectObjective extends ProjectObjective {
     boolean poll(MinecraftServer server, ServerLevel level, ProjectDefinition definition,
                  ProjectState state, SharedObjectiveProgress progress);
 
+    /**
+     * Called once when the phase holding this objective becomes current — for a new instance, a phase
+     * advance, a seeded follow-up and an operator repair alike ({@code ProjectPhases}). The place to
+     * capture any reading that progress will be measured from, so it is taken at the phase boundary and
+     * not on whichever periodic poll happens to come first (1.6.6).
+     */
+    default void onPhaseEntered(MinecraftServer server, ServerLevel level, ProjectDefinition definition,
+                                ProjectState state, int objectiveIndex, SharedObjectiveProgress progress) {
+    }
+
+    /**
+     * True while this objective is waiting for a reading it could not take at the phase boundary. The
+     * phase counts as unavailable meanwhile, so its clock is paused rather than running on an objective
+     * that cannot yet measure anything.
+     */
+    default boolean isPending(ProjectState state, SharedObjectiveProgress progress) {
+        return false;
+    }
+
+    /**
+     * Retries a pending reading. Returns true when it changed persistent state. Runs before availability
+     * is judged on every sweep, so a pending objective resolves as soon as its source can be read.
+     */
+    default boolean resolvePending(MinecraftServer server, ServerLevel level, ProjectDefinition definition,
+                                   ProjectState state, SharedObjectiveProgress progress) {
+        return false;
+    }
+
     /** Polled objectives are not credited by events. */
     @Override
     default boolean isEventDriven() {

@@ -8,6 +8,8 @@ import dev.otectus.mcaquests.network.ProjectCard;
 import dev.otectus.mcaquests.network.ProjectContributeC2SPacket;
 import dev.otectus.mcaquests.network.ProjectMenuStatus;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
+import dev.otectus.mcaquests.network.ProjectScopeRequestC2SPacket;
+import dev.otectus.mcaquests.project.objective.ProjectObjectiveStatus;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -45,6 +47,8 @@ public class ProjectMenuScreen extends McaQuestsScreen {
 
     private final UUID villagerUuid;
     private List<ProjectCard> cards;
+    /** Cards whose objective help is expanded; kept across in-place refreshes. */
+    private final java.util.Set<ResourceLocation> expanded = new java.util.HashSet<>();
     /** Card tops in content space (0 = first card), turned into screen y through {@link #view}. */
     private final List<Integer> cardTops = new ArrayList<>();
 
@@ -103,15 +107,34 @@ public class ProjectMenuScreen extends McaQuestsScreen {
         for (ProjectCard card : cards) {
             cardTops.add(y);
             int height = cardHeight(card);
+            List<McaButton.Builder> strip = new ArrayList<>();
             if (card.status() != ProjectMenuStatus.COMPLETE) {
-                int contentY = y + height - CARD_PAD - 20;
-                McaButton contribute = McaButton.create(
-                                Component.translatable("mcaquests.button.project.contribute"),
+                strip.add(McaButton.create(Component.translatable("mcaquests.button.project.contribute"),
                                 b -> contribute(card.projectId()))
-                        .bounds(centerX() - 60, view.screenY(contentY), 120, 20)
-                        .tooltip(Component.translatable("mcaquests.tooltip.project.contribute"))
-                        .build();
-                addScrolledWidget(contribute, contentY, 20);
+                        .tooltip(Component.translatable("mcaquests.tooltip.project.contribute")));
+            }
+            if (hasHelp(card)) {
+                boolean open = expanded.contains(card.projectId());
+                strip.add(McaButton.create(Component.translatable(open
+                                        ? "mcaquests.button.project.hide_details" : "mcaquests.button.project.details"),
+                                b -> toggleDetails(card.projectId()))
+                        .tooltip(Component.translatable("mcaquests.tooltip.project.details")));
+            }
+            if (card.buildArea() && !card.instanceKey().isEmpty()) {
+                strip.add(McaButton.create(Component.translatable("mcaquests.button.project.build_area"),
+                                b -> QuestNetwork.CHANNEL.sendToServer(new ProjectScopeRequestC2SPacket(card.instanceKey())))
+                        .tooltip(Component.translatable("mcaquests.tooltip.project.build_area")));
+            }
+            if (!strip.isEmpty()) {
+                int contentY = y + height - CARD_PAD - 20;
+                int gap = 4;
+                int total = Math.min(wrapWidth(), strip.size() * 120 + (strip.size() - 1) * gap);
+                int each = (total - (strip.size() - 1) * gap) / strip.size();
+                int x = centerX() - total / 2;
+                for (McaButton.Builder builder : strip) {
+                    addScrolledWidget(builder.bounds(x, view.screenY(contentY), each, 20).build(), contentY, 20);
+                    x += each + gap;
+                }
             }
             y += height + CARD_GAP;
         }
@@ -131,6 +154,30 @@ public class ProjectMenuScreen extends McaQuestsScreen {
         super.onClose();
     }
 
+    private void toggleDetails(ResourceLocation projectId) {
+        if (!expanded.remove(projectId)) {
+            expanded.add(projectId);
+        }
+        rebuildWidgets();
+    }
+
+    private static boolean hasHelp(ProjectCard card) {
+        return card.objectives().stream().anyMatch(line -> !line.details().isEmpty());
+    }
+
+    private boolean showsHelp(ProjectCard card) {
+        return expanded.contains(card.projectId()) && hasHelp(card);
+    }
+
+    /** Help lines for one objective, wrapped once so height and draw agree. */
+    private List<FormattedCharSequence> helpLines(ProjectObjectiveLine line) {
+        List<FormattedCharSequence> out = new ArrayList<>();
+        for (Component detail : line.details()) {
+            out.addAll(this.font.split(detail, Math.max(1, wrapWidth() - 12)));
+        }
+        return out;
+    }
+
     private void contribute(ResourceLocation projectId) {
         QuestNetwork.CHANNEL.sendToServer(new ProjectContributeC2SPacket(villagerUuid, projectId));
     }
@@ -142,15 +189,20 @@ public class ProjectMenuScreen extends McaQuestsScreen {
         height += 10; // scope + sponsor
         height += 10; // phase
         height += this.font.split(card.dialogue(), wrapWidth()).size() * 10;
+        boolean help = showsHelp(card);
         for (ProjectObjectiveLine line : card.objectives()) {
             height += CardText.heightBulleted(this.font, BULLET, objectiveLabel(line), wrapWidth());
             height += Panel.barHeight() + 2;
             if (line.yourContribution() > 0) {
                 height += 9;
             }
+            if (help) {
+                height += helpLines(line).size() * 9 + 2;
+            }
         }
         height += CardText.height(this.font, joinRewards(card.rewards()), wrapWidth()) + 2;
-        if (card.status() != ProjectMenuStatus.COMPLETE) {
+        if (card.status() != ProjectMenuStatus.COMPLETE || hasHelp(card)
+                || (card.buildArea() && !card.instanceKey().isEmpty())) {
             height += BUTTON_STRIP;
         }
         return height;
@@ -217,6 +269,13 @@ public class ProjectMenuScreen extends McaQuestsScreen {
                         left + 8, y, Palette.CONTRIBUTION, false);
                 y += 9;
             }
+            if (showsHelp(card)) {
+                for (FormattedCharSequence help : helpLines(line)) {
+                    graphics.drawString(this.font, help, left + 12, y, Palette.SUBTITLE, false);
+                    y += 9;
+                }
+                y += 2;
+            }
         }
         CardText.draw(graphics, this.font, joinRewards(card.rewards()), left, y, wrapWidth(),
                 Palette.REWARD);
@@ -224,9 +283,15 @@ public class ProjectMenuScreen extends McaQuestsScreen {
 
     /** Built once so the height calculation and the draw wrap identical text. */
     private static Component objectiveLabel(ProjectObjectiveLine line) {
-        return Component.empty().append(line.label()).append(Component.literal("  "))
+        MutableComponent label = Component.empty().append(line.label()).append(Component.literal("  "))
                 .append(Component.translatable("mcaquests.label.project.shared",
                         line.sharedCurrent(), line.required()));
+        // A state other than plain progress is said in words and a glyph, never by colour alone.
+        if (line.status() == ProjectObjectiveStatus.BLOCKED || line.status() == ProjectObjectiveStatus.UNAVAILABLE
+                || line.status() == ProjectObjectiveStatus.UNOBSERVED) {
+            label.append(Component.literal("  " + line.status().glyph() + " ")).append(line.status().label());
+        }
+        return label;
     }
 
     private static Component joinRewards(List<Component> rewards) {

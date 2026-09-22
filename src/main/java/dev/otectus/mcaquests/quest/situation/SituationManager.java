@@ -63,12 +63,13 @@ public final class SituationManager {
     }
 
     /**
-     * True when this situation is driven by Townstead state, so the content switch knows whether it
-     * applies. Read off the trigger's own id rather than the file's location, so the answer stays right
-     * if a definition moves.
+     * True when this situation cannot run without Townstead, so the content switch knows whether it
+     * applies. Derived from the typed trigger and offer (IntegrationRequirements) rather than the file's
+     * location, so the answer stays right if a definition moves.
      */
     private static boolean readsTownstead(SituationDefinition def) {
-        return def.trigger().type().id().getPath().startsWith("townstead_");
+        return dev.otectus.mcaquests.quest.IntegrationRequirements.dependsOn(def,
+                dev.otectus.mcaquests.quest.IntegrationRequirements.Integration.TOWNSTEAD);
     }
 
     /** Dispatches a detected signal: matches definitions, picks one, and opens it if the throttle allows. */
@@ -291,7 +292,10 @@ public final class SituationManager {
                 CapitalsCompat.bridge()::has) || SituationRegistry.get(instance.defId())
                 .map(def -> CapitalsQuestRequirements.unavailableReason(def.offer().toQuestDefinition(
                         SituationIds.syntheticId(def.id()), def.enabled(), Optional.empty())).isPresent())
-                .orElse(CapitalsQuestRequirements.isBundled(instance.defId())));
+                .orElse(CapitalsQuestRequirements.isBundled(instance.defId())
+                        // Kept out of the registry because its optional mod is missing: paused, not failed.
+                        || dev.otectus.mcaquests.data.UnavailableContent.contains(
+                                dev.otectus.mcaquests.data.UnavailableContent.Kind.SITUATION, instance.defId())));
         return pauseUnavailableSituation(data, instance, now, unavailable);
     }
 

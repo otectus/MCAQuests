@@ -7,6 +7,7 @@ import dev.otectus.mcaquests.compat.McaVillagerSnapshot;
 import dev.otectus.mcaquests.compat.TownsteadContentGate;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
+import dev.otectus.mcaquests.quest.kingdom.KingdomQuestLifecycle;
 import dev.otectus.mcaquests.quest.objective.EscortEntityObjective;
 import dev.otectus.mcaquests.quest.objective.QuestObjective;
 import dev.otectus.mcaquests.quest.situation.DynamicOfferSource;
@@ -164,6 +165,9 @@ public final class OfferFilters {
         QuestContext context = pass.contextFor(def);
         if (!def.effectiveConditions().map(condition -> condition.test(context)).orElse(true)) {
             return Result.fail("LOCKED (prerequisite or condition unmet)");
+        }
+        if (!KingdomQuestLifecycle.allowsOffer(def, pass.player(), pass.villager())) {
+            return Result.fail("KINGDOM_LIFECYCLE (kingdom, standing, or civic binding unavailable)");
         }
         // An escort is a journey out of, or back to, somewhere. A villager standing in a village asking
         // to be walked home is the case this refuses; the answer is deliberately withheld rather than

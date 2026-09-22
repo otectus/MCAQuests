@@ -35,6 +35,15 @@ public final class ProjectValidator {
     }
 
     public static void validate(Map<ResourceLocation, ProjectDefinition> loaded, List<String> errors) {
+        validate(loaded, java.util.Set.of(), errors);
+    }
+
+    /**
+     * As {@link #validate(Map, List)}, knowing which projects were left out because the optional mod they
+     * need is not installed. A link to one of those is intentional, not dangling.
+     */
+    public static void validate(Map<ResourceLocation, ProjectDefinition> loaded,
+                                java.util.Set<ResourceLocation> excluded, List<String> errors) {
         boolean mcaLoaded = ModList.get() != null && ModList.get().isLoaded("mca");
         boolean allowCommands = McaQuestsConfig.COMMON.allowProjectCommandRewards.get();
 
@@ -58,14 +67,14 @@ public final class ProjectValidator {
             }
 
             // follow-up must resolve.
-            def.followUp().ifPresent(target -> validateLink(def, target, "follow_up", loaded, errors));
+            def.followUp().ifPresent(target -> validateLink(def, target, "follow_up", loaded, excluded, errors));
 
             for (int i = 0; i < def.phases().size(); i++) {
                 validatePhase(def, i, errors, allowCommands);
                 for (SharedReward reward : def.phase(i).rewards()) {
                     if (reward.reward() instanceof UnlockReward unlock) {
                         validateLink(def, unlock.target(), "phase '" + def.phase(i).keyOr(i) + "' unlock",
-                                loaded, errors);
+                                loaded, excluded, errors);
                     }
                 }
             }
@@ -114,7 +123,16 @@ public final class ProjectValidator {
 
     static void validateLink(ProjectDefinition source, ResourceLocation targetId, String kind,
                              Map<ResourceLocation, ProjectDefinition> loaded, List<String> errors) {
+        validateLink(source, targetId, kind, loaded, java.util.Set.of(), errors);
+    }
+
+    static void validateLink(ProjectDefinition source, ResourceLocation targetId, String kind,
+                             Map<ResourceLocation, ProjectDefinition> loaded, java.util.Set<ResourceLocation> excluded,
+                             List<String> errors) {
         ProjectDefinition target = loaded.get(targetId);
+        if (target == null && excluded.contains(targetId)) {
+            return; // a project for an optional mod this installation does not have; seeded once it does
+        }
         if (target == null) {
             errors.add(error(source.id(), kind + " references unknown project '" + targetId + "'"));
         } else if (!target.enabled()) {

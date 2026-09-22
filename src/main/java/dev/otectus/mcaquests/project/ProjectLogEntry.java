@@ -16,7 +16,19 @@ public record ProjectLogEntry(ResourceLocation projectId,
                               Component sponsorLabel,
                               Component scopeLabel,
                               Component phaseLabel,
-                              List<ProjectObjectiveLine> objectives) {
+                              List<ProjectObjectiveLine> objectives,
+                              String instanceKey,
+                              java.util.Optional<Component> pausedReason) {
+
+    /**
+     * The pre-1.6.6 shape. {@code pausedReason} is present for a project the player is part of whose
+     * definition is not loaded because an optional mod it needs is missing: it stays in the log, paused
+     * and named, instead of vanishing until the mod returns.
+     */
+    public ProjectLogEntry(ResourceLocation projectId, Component title, Component sponsorLabel,
+                           Component scopeLabel, Component phaseLabel, List<ProjectObjectiveLine> objectives) {
+        this(projectId, title, sponsorLabel, scopeLabel, phaseLabel, objectives, "", java.util.Optional.empty());
+    }
 
     public static void encode(FriendlyByteBuf buf, ProjectLogEntry entry) {
         buf.writeResourceLocation(entry.projectId);
@@ -25,6 +37,8 @@ public record ProjectLogEntry(ResourceLocation projectId,
         buf.writeComponent(entry.scopeLabel);
         buf.writeComponent(entry.phaseLabel);
         buf.writeCollection(entry.objectives, ProjectObjectiveLine::encode);
+        buf.writeUtf(entry.instanceKey);
+        buf.writeOptional(entry.pausedReason, FriendlyByteBuf::writeComponent);
     }
 
     public static ProjectLogEntry decode(FriendlyByteBuf buf) {
@@ -34,6 +48,8 @@ public record ProjectLogEntry(ResourceLocation projectId,
                 buf.readComponent(),
                 buf.readComponent(),
                 buf.readComponent(),
-                dev.otectus.mcaquests.network.PacketCollections.readList(buf, ProjectObjectiveLine::decode));
+                dev.otectus.mcaquests.network.PacketCollections.readList(buf, ProjectObjectiveLine::decode),
+                buf.readUtf(),
+                buf.readOptional(FriendlyByteBuf::readComponent));
     }
 }

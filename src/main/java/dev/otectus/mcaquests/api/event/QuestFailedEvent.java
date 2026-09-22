@@ -27,6 +27,10 @@ public class QuestFailedEvent extends QuestEvent {
         PROTECT_TARGET_DIED,
         /** A staged {@code escort_entity} objective's escortee died after the escort began (player engaged). */
         ESCORT_TARGET_DIED,
+        /** An explicitly opted-in political binding changed after acceptance. */
+        KINGDOM_CHANGED,
+        /** An explicitly bound civic building disappeared under fail_with_reason policy. */
+        CIVIC_BUILDING_LOST,
         /** The situation this quest was accepted from closed (deadline expired or the condition resolved) — 0.8.0. */
         SITUATION_CLOSED
     }

@@ -9,6 +9,7 @@ import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.network.FtbqEditorIdsSync;
 import dev.otectus.mcaquests.project.ProjectManager;
 import dev.otectus.mcaquests.quest.FailureSpec;
+import dev.otectus.mcaquests.quest.kingdom.KingdomQuestLifecycle;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.CapitalsQuestRequirements;
 import dev.otectus.mcaquests.quest.QuestManager;
@@ -870,7 +871,11 @@ public final class QuestProgressEvents {
                     }
                 }
                 QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base -> {
-                    if (QuestManager.isSuspended(player, active.resolve(base), active)) {
+                    QuestDefinition def = active.resolve(base);
+                    if (KingdomQuestLifecycle.activeStatus(def, active, player,
+                            QuestManager.resolveGiverForLifecycle(player, active))
+                            == KingdomQuestLifecycle.ActiveStatus.WAIT
+                            || QuestManager.isSuspended(player, def, active)) {
                         active.addSuspendedTicks(POLL_INTERVAL_TICKS);
                     }
                 }, () -> {
@@ -893,6 +898,18 @@ public final class QuestProgressEvents {
             for (ActiveQuest active : data.active()) {
                 QuestDefinitions.resolve(active.questId()).ifPresent(base -> {
                     QuestDefinition def = active.resolve(base);
+                    KingdomQuestLifecycle.ActiveStatus lifecycle = KingdomQuestLifecycle.activeStatus(
+                            def, active, player, QuestManager.resolveGiverForLifecycle(player, active));
+                    if (lifecycle == KingdomQuestLifecycle.ActiveStatus.FAIL_KINGDOM
+                            || lifecycle == KingdomQuestLifecycle.ActiveStatus.FAIL_CIVIC) {
+                        boolean civic = lifecycle == KingdomQuestLifecycle.ActiveStatus.FAIL_CIVIC;
+                        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                                KingdomQuestLifecycle.failureReason(def, civic)));
+                        toFail.add(new FailedTrigger(active, def, civic
+                                ? QuestFailedEvent.Reason.CIVIC_BUILDING_LOST
+                                : QuestFailedEvent.Reason.KINGDOM_CHANGED));
+                        return;
+                    }
                     def.failure().ifPresent(failure -> {
                         if (QuestManager.isComplete(player, def, active)) {
                             return; // ready to turn in — never failed by a time/weather trigger
@@ -1207,14 +1224,20 @@ public final class QuestProgressEvents {
         ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
         UUID villagerUuid = villager.getUUID();
         boolean[] advanced = {false};
+        ServerLevel level = (ServerLevel) player.level();
         forActiveObjectives(player, TalkToProfessionObjective.class,
-                (objective, progress) -> {
+                (objective, active, progress) -> {
                     if (progress.count() >= objective.required()) {
                         return; // already satisfied
                     }
                     if (!objective.matches(profession)) {
                         QuestEventHandlers.debugReject("profession mismatch (wanted " + objective.profession()
                                 + ", villager is " + profession + ")", villager);
+                        return;
+                    }
+                    if (!objective.acceptsPlace(player, active, level, villager)) {
+                        // The same test the guidance marker uses, so nobody is pointed at who would not count.
+                        QuestEventHandlers.debugReject("not at the quest's destination", villager);
                         return;
                     }
                     if (!progress.markTalkedTo(villagerUuid)) {

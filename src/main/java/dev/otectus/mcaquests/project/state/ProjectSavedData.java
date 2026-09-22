@@ -264,6 +264,42 @@ public final class ProjectSavedData extends SavedData {
                 // skip malformed UUID key
             }
         }
+        data.qualifyLegacyDimensionKeys();
         return data;
+    }
+
+    /**
+     * One-time migration for pre-1.6.6 saves: an instance saved outside the Overworld under a bare
+     * {@code v:<id>} / {@code p:<id>:…} identity is re-keyed with its dimension, and every owed reward
+     * naming the old key follows it. Overworld instances never change. Nothing is ever merged: when the
+     * qualified key is somehow taken already, the instance keeps its old key and a warning says so.
+     */
+    void qualifyLegacyDimensionKeys() {
+        List<ProjectState> moved = new ArrayList<>();
+        for (ProjectState state : new ArrayList<>(instances.values())) {
+            String qualified = dev.otectus.mcaquests.project.scope.ScopeResolver
+                    .dimensionQualified(state.identity(), state.anchorDimension());
+            if (qualified.equals(state.identity())) {
+                continue;
+            }
+            ProjectState rekeyed = state.rekeyed(qualified);
+            String oldKey = state.key().asString();
+            String newKey = rekeyed.key().asString();
+            if (instances.containsKey(newKey)) {
+                McaQuests.LOGGER.warn("[MCA: Quests] project instance {} could not take its dimension-qualified "
+                        + "key {} (already in use); left unchanged", oldKey, newKey);
+                continue;
+            }
+            instances.remove(oldKey);
+            moved.add(rekeyed);
+            pending.replaceAll((player, owed) -> new ArrayList<>(owed.stream()
+                    .map(reward -> reward.rekeyed(oldKey, newKey, qualified)).toList()));
+            McaQuests.LOGGER.info("[MCA: Quests] project instance {} re-keyed as {} (village ids are per dimension)",
+                    oldKey, newKey);
+        }
+        moved.forEach(state -> instances.put(state.key().asString(), state));
+        if (!moved.isEmpty()) {
+            setDirty();
+        }
     }
 }

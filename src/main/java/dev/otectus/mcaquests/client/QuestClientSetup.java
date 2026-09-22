@@ -60,6 +60,7 @@ public final class QuestClientSetup {
     @SubscribeEvent
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("quest_tracker", new QuestHudOverlay());
+        event.registerAboveAll("build_area", new BuildAreaClient.Overlay());
     }
 
     /**

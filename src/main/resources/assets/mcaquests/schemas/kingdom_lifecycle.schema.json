@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mcaquests:schemas/kingdom_lifecycle",
+  "title": "MCA Quests kingdom lifecycle",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mode": { "enum": ["offer_only", "bound_at_accept", "live", "fail_on_change"] },
+    "failure_reason": { "type": "string", "minLength": 1 },
+    "binding_subject": { "enum": ["giver_residence", "giver_origin", "giver_location", "player_location", "explicit_settlement"] },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gate": { "type": "string", "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$" },
+        "settlement_id": { "type": "string", "format": "uuid" },
+        "subject": { "enum": ["giver_residence", "giver_origin", "giver_location", "player_location", "explicit_settlement"] },
+        "include": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "exclude": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "when_unknown": { "enum": ["deny", "allow"] },
+        "standing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": { "enum": ["local", "faction", "effective", "either", "both"] },
+            "kingdom": { "type": "string" },
+            "min": { "type": "integer" },
+            "max": { "type": "integer" }
+          },
+          "anyOf": [{ "required": ["min"] }, { "required": ["max"] }]
+        }
+      }
+    },
+    "civic_building": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target": { "enum": ["giver", "player"] },
+        "recovery": { "enum": ["wait", "rebind_same_family", "fail_with_reason"] },
+        "failure_reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "anyOf": [{ "required": ["gate"] }, { "required": ["civic_building"] }]
+}

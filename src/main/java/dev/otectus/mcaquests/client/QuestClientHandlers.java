@@ -54,10 +54,18 @@ public final class QuestClientHandlers {
      * so giving to a project several entries down bounced you back to the top of the list.
      */
     public static void onProjectMenuData(UUID villagerUuid, List<ProjectCard> cards) {
+        cards = ClientProjectData.newestOf(villagerUuid, cards);
         ClientProjectData.cacheMenu(villagerUuid, cards);
         if (Minecraft.getInstance().screen instanceof ProjectMenuScreen open && open.villagerUuid().equals(villagerUuid)) {
             open.refresh(cards);
         }
+    }
+
+    /** The server's answer to Show build area: outline it and describe it (1.6.6). */
+    public static void onBuildArea(Component title, Component summary,
+                                   dev.otectus.mcaquests.project.scope.ScopeGeometry geometry,
+                                   List<Component> materials) {
+        BuildAreaClient.show(title, summary, geometry, materials);
     }
 
     /**

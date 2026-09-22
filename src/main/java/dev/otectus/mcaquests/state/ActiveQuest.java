@@ -57,6 +57,10 @@ public final class ActiveQuest {
      * resolvable village; the reward path then falls back to a resident scan.
      */
     private final OptionalInt villageId;
+    @Nullable
+    private KingdomBindingSnapshot kingdomBinding;
+    @Nullable
+    private CivicBuildingBinding civicBuildingBinding;
     private final List<ObjectiveProgress> progress;
     /** Frozen template values for a quest accepted from a template (spec: chosen values must not reroll). */
     @Nullable
@@ -282,6 +286,24 @@ public final class ActiveQuest {
         return villageId;
     }
 
+    public Optional<KingdomBindingSnapshot> kingdomBinding() {
+        return Optional.ofNullable(kingdomBinding);
+    }
+
+    /** Acceptance is the only writer; an existing snapshot always wins on replay. */
+    public void bindKingdom(KingdomBindingSnapshot binding) {
+        if (kingdomBinding == null) kingdomBinding = java.util.Objects.requireNonNull(binding, "binding");
+    }
+
+    public Optional<CivicBuildingBinding> civicBuildingBinding() {
+        return Optional.ofNullable(civicBuildingBinding);
+    }
+
+    /** Recovery may replace the stable identifier with the deterministic same-family rebind. */
+    public void bindCivicBuilding(CivicBuildingBinding binding) {
+        civicBuildingBinding = java.util.Objects.requireNonNull(binding, "binding");
+    }
+
     /** The giver's community, for the reward paths that must work without the giver entity. */
     public Optional<QuestReputation.Community> community() {
         return villageId.isPresent()
@@ -472,6 +494,8 @@ public final class ActiveQuest {
         if (villageId.isPresent()) {
             tag.putInt("village", villageId.getAsInt());
         }
+        if (kingdomBinding != null) tag.put("kingdom_binding", kingdomBinding.save());
+        if (civicBuildingBinding != null) tag.put("civic_building_binding", civicBuildingBinding.save());
         tag.putBoolean("claimed", rewardClaimed);
         tag.putBoolean("ready_notified", readyNotified);
         if (suspendedTicks != 0L) {
@@ -542,6 +566,13 @@ public final class ActiveQuest {
                 situationInstance);
         if (tag.hasUUID("instance")) {
             quest.instance = tag.getUUID("instance");
+        }
+        if (tag.contains("kingdom_binding", Tag.TAG_COMPOUND)) {
+            KingdomBindingSnapshot.load(tag.getCompound("kingdom_binding")).ifPresent(quest::bindKingdom);
+        }
+        if (tag.contains("civic_building_binding", Tag.TAG_COMPOUND)) {
+            CivicBuildingBinding.load(tag.getCompound("civic_building_binding"))
+                    .ifPresent(quest::bindCivicBuilding);
         }
         quest.rewardClaimed = tag.getBoolean("claimed");
         quest.readyNotified = tag.getBoolean("ready_notified");

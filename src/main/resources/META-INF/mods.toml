@@ -17,8 +17,9 @@ description='''${mod_description}'''
 [[mixins]]
     config="mcaquests.compat.mixins.json"
 
-# Common mixin, one variant per MCA package root. Its plugin applies the single variant whose class
-# MCA actually ships and skips the other three; that is the normal, healthy outcome.
+# Common mixins, one variant per MCA package root for each of two observe-only hooks: MCA's Gift
+# hand-in and MCA's dialogue opening (talk objectives). The plugin applies the variants whose class
+# MCA actually ships and skips the other three of each; that is the normal, healthy outcome.
 [[mixins]]
     config="mcaquests.mca.mixins.json"
 
@@ -81,6 +82,16 @@ description='''${mod_description}'''
     mandatory=false
     versionRange="[0.7.5,0.8)"
     ordering="AFTER"
+    side="BOTH"
+
+# Ultima Kingdoms is optional. Ordering is deliberately NONE: Ultima loads after Quests to register
+# its public kingdom condition, while Quests resolves lifecycle/faction/Townstead services lazily from
+# active server state. AFTER here would create a load-order cycle.
+[[dependencies.${mod_id}]]
+    modId="ultima_kingdoms"
+    mandatory=false
+    versionRange="[0.1,)"
+    ordering="NONE"
     side="BOTH"
 
 # JourneyMap is an OPTIONAL, CLIENT-SIDE integration. When present, the quest destinations the tracker

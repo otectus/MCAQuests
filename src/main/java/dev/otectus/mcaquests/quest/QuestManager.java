@@ -4,11 +4,13 @@ import dev.otectus.mcaquests.McaQuests;
 import dev.otectus.mcaquests.McaQuestsConfig;
 import dev.otectus.mcaquests.McaQuestsConfig.ProfessionMatchingMode;
 import dev.otectus.mcaquests.api.ExternalSignalObjective;
+import dev.otectus.mcaquests.api.QuestCompletionReceipt;
 import dev.otectus.mcaquests.api.QuestDialogueHooks;
 import dev.otectus.mcaquests.api.event.QuestAbandonedEvent;
 import dev.otectus.mcaquests.api.event.QuestAcceptedEvent;
 import dev.otectus.mcaquests.api.event.QuestDeclinedEvent;
 import dev.otectus.mcaquests.api.event.QuestCompletedEvent;
+import dev.otectus.mcaquests.api.event.QuestCompletionReceiptReadyEvent;
 import dev.otectus.mcaquests.api.event.QuestFailedEvent;
 import dev.otectus.mcaquests.api.event.QuestReadyEvent;
 import dev.otectus.mcaquests.compat.McaCompat;
@@ -25,6 +27,7 @@ import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.quest.dialogue.VoicePool;
 import dev.otectus.mcaquests.quest.dialogue.VoicePools;
 import dev.otectus.mcaquests.quest.guidance.GuidanceService;
+import dev.otectus.mcaquests.quest.kingdom.KingdomQuestLifecycle;
 import dev.otectus.mcaquests.network.CardObjective;
 import dev.otectus.mcaquests.network.QuestCard;
 import dev.otectus.mcaquests.network.QuestLogSyncS2CPacket;
@@ -56,6 +59,7 @@ import dev.otectus.mcaquests.quest.situation.state.SituationSavedData;
 import dev.otectus.mcaquests.quest.reward.CurrencyReward;
 import dev.otectus.mcaquests.quest.reward.ItemPoolReward;
 import dev.otectus.mcaquests.quest.reward.HeartsReward;
+import dev.otectus.mcaquests.quest.reward.FactionStandingReward;
 import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.quest.reward.TownsteadReward;
 import dev.otectus.mcaquests.quest.template.PlaceholderResolver;
@@ -64,6 +68,7 @@ import dev.otectus.mcaquests.quest.template.TemplateSpec;
 import dev.otectus.mcaquests.quest.escort.EscortHoldRegistry;
 import dev.otectus.mcaquests.quest.turnin.GiverPresence;
 import dev.otectus.mcaquests.state.ActiveQuest;
+import dev.otectus.mcaquests.state.CompletionReceiptDurability;
 import dev.otectus.mcaquests.state.OfferSession;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -97,6 +102,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToIntFunction;
+import java.util.function.IntPredicate;
 
 /**
  * Server-authoritative quest controller: builds the menu view, and handles accept / decline /
@@ -133,7 +139,7 @@ public final class QuestManager {
         } else {
             decline(player, villager, questId);
         }
-        sendMenu(player, villager);
+        resendCurrentMenu(player, villager);
         syncLog(player);
     }
 
@@ -143,7 +149,7 @@ public final class QuestManager {
             return;
         }
         turnIn(player, villager, questId);
-        sendMenu(player, villager);
+        resendCurrentMenu(player, villager);
         syncLog(player);
     }
 
@@ -153,7 +159,7 @@ public final class QuestManager {
             return;
         }
         abandon(player, villager, questId);
-        sendMenu(player, villager);
+        resendCurrentMenu(player, villager);
         syncLog(player);
     }
 
@@ -209,6 +215,29 @@ public final class QuestManager {
     }
 
     /**
+     * Opens the native quest menu with its offer draw restricted to an authorized commission catalogue.
+     * All ordinary giver, condition, cooldown, active-cap and target checks still run here and again on
+     * acceptance. The caller supplies eligibility scope, not permission to accept any quest.
+     */
+    public static boolean openCommissionMenu(ServerPlayer player, Entity villager,
+                                             Set<ResourceLocation> allowedQuestIds) {
+        if (player.getServer() == null || !player.getServer().isSameThread()
+                || player.level() != villager.level() || !McaCompat.canPlayerInteract(player, villager)) {
+            return false;
+        }
+        sendMenu(player, villager, Component.empty(), Set.copyOf(allowedQuestIds));
+        return true;
+    }
+
+    /** Keeps a curated session curated while its own buttons refresh the open screen. */
+    private static void resendCurrentMenu(ServerPlayer player, Entity villager) {
+        Optional<Set<ResourceLocation>> restriction = QuestCapabilities.get(player)
+                .flatMap(data -> data.offers().find(villager.getUUID()))
+                .flatMap(OfferSession::restrictedQuestIds);
+        sendMenu(player, villager, Component.empty(), restriction.orElse(null));
+    }
+
+    /**
      * The villager's screen, with a line reporting whatever the player just did.
      *
      * <p>The notice travels with the cards it changed rather than only into the chat behind the screen:
@@ -216,6 +245,11 @@ public final class QuestManager {
      * message the player cannot see is barely better than none.
      */
     public static void sendMenu(ServerPlayer player, Entity villager, Component notice) {
+        sendMenu(player, villager, notice, null);
+    }
+
+    private static void sendMenu(ServerPlayer player, Entity villager, Component notice,
+                                 @Nullable Set<ResourceLocation> allowedQuestIds) {
         // Co-send community-project cards first so the client cache is populated before the quest menu
         // opens (drives the "View Project" button). Individual quests stay visually unchanged.
         ProjectManager.sendProjectMenu(player, villager);
@@ -287,12 +321,15 @@ public final class QuestManager {
         // reopening the menu shows the same quests, the same numbers and the same words — and so a
         // decline has somewhere to be recorded (0.8.0 recomputed all of it on every open, which is why
         // declining an offer brought the very same three straight back).
-        List<OfferSessionService.Offer> offers = OfferSessionService.currentOffers(player, villager, data);
+        List<OfferSessionService.Offer> offers = allowedQuestIds == null
+                ? OfferSessionService.currentOffers(player, villager, data)
+                : OfferSessionService.currentOffers(player, villager, data, allowedQuestIds);
         if (offers.isEmpty()) {
             // "I do not need anything right now" is true but unhelpful when the reason is "you did that
             // yesterday" or "not until you have done something else first". Every quest already authors a
             // `cooldown` and a `locked` line for exactly this, and both were parsed and never shown.
-            List<QuestCard> explanation = whyNothingIsOffered(player, villager, data);
+            List<QuestCard> explanation = allowedQuestIds == null
+                    ? whyNothingIsOffered(player, villager, data) : List.of();
             send(player, notice, explanation.isEmpty()
                     ? QuestMenuDataS2CPacket.noQuest(villagerUuid, name, profession, hearts, QuestMenuStatus.NO_QUESTS)
                     : QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts,
@@ -672,6 +709,13 @@ public final class QuestManager {
                 player.level().dimension().location(),
                 startTime, OptionalLong.of(startDayTime), villageId,
                 accepted.objectives().size(), frozen, situationLink);
+        if (!KingdomQuestLifecycle.bindAtAccept(accepted, active, player, villager)) {
+            if (McaQuestsConfig.COMMON.questChatMessages.get()) {
+                player.sendSystemMessage(Component.translatable("mcaquests.message.offer_gone",
+                        accepted.title(resolver)));
+            }
+            return false;
+        }
         active.addSituationSuspendedTicks(situationPausedTicks);
         freezeRandomizedRewards(player, accepted, active);
         bindVillagerTargets(player, villager, accepted, active);
@@ -983,11 +1027,26 @@ public final class QuestManager {
         if (active.rewardClaimed() || !data.active().contains(active)) {
             return false;
         }
+        if (KingdomQuestLifecycle.activeStatus(def, active, player, resolveGiver(player, active))
+                != KingdomQuestLifecycle.ActiveStatus.ALLOW) {
+            return false;
+        }
         // Optional strictness (Townstead spec 5.5). Off by default, because refusing a turn-in the
         // player has already earned is worse than quietly skipping the villager-facing half of the
         // reward -- but a server that would rather the quest waited can say so.
         if (McaQuestsConfig.COMMON.townsteadRewardFailureBlocksCompletion.get()
                 && !townsteadRewardsCanApply(player, def, grantVillager)) {
+            return false;
+        }
+        long now = ((ServerLevel) player.level()).getGameTime();
+        // A polling add-on opts this player into receipts. Standalone MCA: Quests never accumulates an
+        // outbox merely because a possible future consumer could be installed. Once subscribed, refuse
+        // before delivery or rewards rather than evict evidence its frozen consumer cohort has not acked.
+        boolean captureCompletionReceipt = data.shouldCaptureCompletionReceipt(now);
+        if (captureCompletionReceipt && !data.canCaptureCompletionReceipt(now)) {
+            McaQuests.LOGGER.error("[MCA: Quests] Refusing completion of '{}' for {}: completion receipt "
+                    + "outbox status is {}", def.id(), player.getUUID(), data.completionReceiptStatus());
+            player.sendSystemMessage(Component.translatable("mcaquests.message.completion_receipts_unavailable"));
             return false;
         }
         // A delivery with nowhere to go always blocks, whatever the reward policy says: consuming the
@@ -997,6 +1056,12 @@ public final class QuestManager {
             return false;
         }
         active.setRewardClaimed(true);
+        QuestReward.RewardContext context = rewardContext(active, def);
+        if (!grantFactionRewards(player, grantVillager, def, active, context)) {
+            active.setRewardClaimed(false);
+            player.sendSystemMessage(Component.translatable("mcaquests.reward.faction_standing_unavailable"));
+            return false;
+        }
         if (!deliveries.commit()) {
             active.setRewardClaimed(false);
             return false;
@@ -1013,7 +1078,6 @@ public final class QuestManager {
             }
             objective.consumeOnTurnIn(player, active.progress(i));
         }
-        QuestReward.RewardContext context = rewardContext(active, def);
         List<QuestReward> rewards = def.rewards();
         for (int i = 0; i < rewards.size(); i++) {
             QuestReward reward = rewards.get(i);
@@ -1038,6 +1102,9 @@ public final class QuestManager {
                 grantSafely(player, reward, def, () -> pool.grantChoice(player, choice));
                 continue;
             }
+            if (reward instanceof FactionStandingReward faction) {
+                continue; // granted durably before delivery consumption; see grantFactionRewards
+            }
             grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
         }
         for (QuestReward reward : def.rewards()) {
@@ -1048,7 +1115,6 @@ public final class QuestManager {
         grantQuestReputation(player, grantVillager, def, active, "complete");
         TownsteadLifecycle.dispatch(player, active, grantVillager, TownsteadLifecycle.Phase.COMPLETED);
 
-        long now = ((ServerLevel) player.level()).getGameTime();
         data.history().recordCompletion(def.id(), active.villagerUuid());
         switch (def.repeat().type()) {
             case COOLDOWN -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), now + def.cooldownTicks());
@@ -1067,6 +1133,15 @@ public final class QuestManager {
         }
         releaseEscortMovement(player, def, active);
         data.remove(active);
+        // Capture only after the authoritative history/cooldown transition and active removal. The API
+        // hides this object until the complete player snapshot is reread from the on-disk .dat file.
+        if (captureCompletionReceipt) {
+            QuestCompletionReceipt completionReceipt =
+                    data.captureCompletionReceipt(player.getUUID(), active, now);
+            if (CompletionReceiptDurability.flushPending(player, data)) {
+                MinecraftForge.EVENT_BUS.post(new QuestCompletionReceiptReadyEvent(player, completionReceipt));
+            }
+        }
         MinecraftForge.EVENT_BUS.post(new QuestCompletedEvent(player, grantVillager, def));
         if (McaQuestsConfig.COMMON.questChatMessages.get()) {
             PlaceholderResolver resolver = active.textResolver(player);
@@ -1081,6 +1156,32 @@ public final class QuestManager {
                 SituationManager.resolveSuccess(player.getServer(), instanceId, player);
             }
         });
+        return true;
+    }
+
+    /**
+     * Faction writes are a completion prerequisite: each uses a stable receipt id and crosses Ultima's
+     * durability fence before objective items are consumed or the active quest can be removed.
+     */
+    private static boolean grantFactionRewards(ServerPlayer player, @Nullable Entity villager,
+                                               QuestDefinition def, ActiveQuest active,
+                                               QuestReward.RewardContext context) {
+        return applyFactionRewardBatch(def.rewards(), i -> {
+            FactionStandingReward faction = (FactionStandingReward) def.rewards().get(i);
+            try {
+                return faction.grantBound(player, villager, context, active.kingdomBinding(), i);
+            } catch (Throwable failure) {
+                McaQuests.LOGGER.error("[MCA: Quests] faction reward {} of '{}' was not durably applied",
+                        i, def.id(), failure);
+                return false;
+            }
+        });
+    }
+
+    static boolean applyFactionRewardBatch(List<QuestReward> rewards, IntPredicate grant) {
+        for (int i = 0; i < rewards.size(); i++) {
+            if (rewards.get(i) instanceof FactionStandingReward && !grant.test(i)) return false;
+        }
         return true;
     }
 
@@ -1314,7 +1415,10 @@ public final class QuestManager {
         if (!data.active().contains(active)) {
             return; // already reached a terminal state this tick — never fail (or double-fail) twice
         }
-        if (reason != QuestFailedEvent.Reason.TARGET_LOST && isSuspended(player, def, active)) {
+        if (reason != QuestFailedEvent.Reason.TARGET_LOST
+                && reason != QuestFailedEvent.Reason.KINGDOM_CHANGED
+                && reason != QuestFailedEvent.Reason.CIVIC_BUILDING_LOST
+                && isSuspended(player, def, active)) {
             // The quest cannot be played right now, so it cannot be lost right now either. Guarding the
             // funnel every failure path routes through covers deadlines, weather, and the protect /
             // escort / giver death handlers in one place.
@@ -1447,6 +1551,10 @@ public final class QuestManager {
 
     public static boolean isComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
         if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
+            return false;
+        }
+        if (KingdomQuestLifecycle.activeStatus(def, active, player, resolveGiver(player, active))
+                != KingdomQuestLifecycle.ActiveStatus.ALLOW) {
             return false;
         }
         ServerLevel level = (ServerLevel) player.level();
@@ -1608,12 +1716,21 @@ public final class QuestManager {
     }
 
     private static Entity resolveGiver(ServerPlayer player, ActiveQuest active) {
+        if (player.level() == null) {
+            return null;
+        }
         MinecraftServer server = player.getServer();
         if (server == null) {
             return null;
         }
         ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, active.dimension()));
         return level != null ? level.getEntity(active.villagerUuid()) : null;
+    }
+
+    /** Shared lifecycle lookup; callers must tolerate an unloaded giver. */
+    @Nullable
+    public static Entity resolveGiverForLifecycle(ServerPlayer player, ActiveQuest active) {
+        return resolveGiver(player, active);
     }
 
     /**
@@ -2236,6 +2353,10 @@ public final class QuestManager {
      * compatibility problem, and calling it one would be a lie the player could not act on.
      */
     public static Optional<Component> compatSuspensionSubject(ResourceLocation questId) {
+        Optional<dev.otectus.mcaquests.data.UnavailableContent.Entry> excluded = unavailableDescriptor(questId);
+        if (excluded.isPresent()) {
+            return Optional.of(Component.literal(excluded.get().why().integration().displayName()));
+        }
         CompatRegistry registry = CompatRegistry.get();
         Optional<CompatProvider> byPath = providerFromQuestPath(registry, questId);
         if (byPath.isPresent()) {
@@ -2248,6 +2369,22 @@ public final class QuestManager {
         return Optional.of(registry.forNamespace(namespace)
                 .<Component>map(CompatProvider::displayName)
                 .orElse(Component.literal(namespace)));
+    }
+
+    /**
+     * The descriptor the loader kept for a quest — or for the situation whose offer it is — that was
+     * left out of the registry because its optional mod is not installed ({@code UnavailableContent}).
+     */
+    public static Optional<dev.otectus.mcaquests.data.UnavailableContent.Entry> unavailableDescriptor(
+            ResourceLocation questId) {
+        Optional<dev.otectus.mcaquests.data.UnavailableContent.Entry> quest = dev.otectus.mcaquests.data
+                .UnavailableContent.get(dev.otectus.mcaquests.data.UnavailableContent.Kind.QUEST, questId);
+        if (quest.isPresent()) {
+            return quest;
+        }
+        return dev.otectus.mcaquests.quest.situation.SituationIds.sourceIdOf(questId).flatMap(source ->
+                dev.otectus.mcaquests.data.UnavailableContent.get(
+                        dev.otectus.mcaquests.data.UnavailableContent.Kind.SITUATION, source));
     }
 
     /** The provider owning a {@code compat/<provider>/…} quest path, when one is registered. */
@@ -2315,8 +2452,12 @@ public final class QuestManager {
                                     Component.translatable("mcaquests.quest.suspended.compat", subject),
                                     0, 0, CardObjective.State.UNAVAILABLE, ItemStack.EMPTY)))
                             .orElse(List.of());
-                    entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(),
-                            Component.translatable("mcaquests.status.unknown_quest", active.questId().toString()),
+                    // A descriptor still knows the quest's own title, so a paused quest keeps its name.
+                    Component title = unavailableDescriptor(active.questId())
+                            .map(dev.otectus.mcaquests.data.UnavailableContent.Entry::title)
+                            .orElseGet(() -> Component.translatable("mcaquests.status.unknown_quest",
+                                    active.questId().toString()));
+                    entries.add(new QuestLogEntry(active.questId(), active.villagerUuid(), title,
                             active.villagerName(), Component.empty(), lines, false, compat.isPresent(),
                             data.isTracked(active), java.util.OptionalLong.empty(),
                             List.of()));

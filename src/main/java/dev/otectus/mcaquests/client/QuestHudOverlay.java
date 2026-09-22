@@ -140,7 +140,11 @@ public class QuestHudOverlay implements IGuiOverlay {
                         .append(project.phaseLabel().copy().withStyle(ChatFormatting.GRAY));
                 addText(lines, font, screenWidth, header, Palette.Hud.TEXT, 2, i == 0 ? 0 : GROUP_GAP);
                 ProjectObjectiveLine first = firstIncomplete(project);
-                if (first != null) {
+                if (project.pausedReason().isPresent()) {
+                    // Paused because an optional mod it needs is missing: say so instead of a counter.
+                    addText(lines, font, screenWidth, Component.literal("\u23F8 ").append(project.pausedReason().get()),
+                            Palette.Hud.WARNING, 6, 0);
+                } else if (first != null) {
                     // The counts were already here; the bar under them is what makes "nearly there"
                     // readable without stopping to do the division.
                     addBar(lines, font, screenWidth, first.label().copy()

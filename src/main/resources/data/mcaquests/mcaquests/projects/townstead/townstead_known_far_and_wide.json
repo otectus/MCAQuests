@@ -88,7 +88,8 @@
         {
           "type": "mcaquests:townstead_spirit_project",
           "spirit": "tourism",
-          "points_delta": 2
+          "points_delta": 2,
+          "baseline": "project"
         }
       ],
       "rewards": [
@@ -127,7 +128,8 @@
         {
           "type": "mcaquests:townstead_spirit_project",
           "spirit": "commercial",
-          "points_delta": 5
+          "points_delta": 10,
+          "baseline": "project"
         },
         {
           "type": "mcaquests:project_talk_to_profession",

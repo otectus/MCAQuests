@@ -82,6 +82,21 @@ class McaGiftMixinPluginTest {
     }
 
     @Test
+    @DisplayName("a merged callback under Mixin's decorated handler name reads as applied (1.6.6)")
+    void decoratedCallbackIsFound() {
+        MethodNode handle = method("handle", DESCRIPTOR);
+        ClassNode target = classWith(handle);
+        // Mixin merges injector handlers as handler$<unique>$<name>; production shows exactly this.
+        handle.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, TARGET,
+                "handler$zza000$mcaquests$routeGift",
+                "(Lnet/minecraft/server/level/ServerPlayer;Ljava/lang/String;"
+                        + "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;)V", false));
+
+        assertTrue(McaGiftMixinPlugin.invokesHandler(target, handle));
+        assertFalse(McaGiftMixinPlugin.isOurCallback("handler$zza000$othermod$routeGift"));
+    }
+
+    @Test
     @DisplayName("an inlined static call to the handler also reads as applied")
     void inlinedHandlerCallIsFound() {
         MethodNode handle = method("handle", DESCRIPTOR);

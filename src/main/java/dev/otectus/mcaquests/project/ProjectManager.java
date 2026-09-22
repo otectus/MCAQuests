@@ -11,15 +11,19 @@ import dev.otectus.mcaquests.network.ProjectMenuDataS2CPacket;
 import dev.otectus.mcaquests.network.ProjectMenuStatus;
 import dev.otectus.mcaquests.network.ProjectObjectiveLine;
 import dev.otectus.mcaquests.network.ProjectPhaseToastS2CPacket;
+import dev.otectus.mcaquests.network.ProjectScopeS2CPacket;
 import dev.otectus.mcaquests.network.QuestNetwork;
 import dev.otectus.mcaquests.profession.ProfessionMatcher;
 import dev.otectus.mcaquests.project.data.ProjectRegistry;
 import dev.otectus.mcaquests.project.objective.ProjectKillObjective;
 import dev.otectus.mcaquests.project.objective.PollingProjectObjective;
 import dev.otectus.mcaquests.project.objective.ProjectObjective;
+import dev.otectus.mcaquests.project.objective.ProjectObjectiveContext;
+import dev.otectus.mcaquests.project.objective.ProjectObjectiveStatus;
 import dev.otectus.mcaquests.project.objective.ProjectPlaceBlockObjective;
 import dev.otectus.mcaquests.project.objective.ProjectTalkObjective;
 import dev.otectus.mcaquests.project.scope.ScopeIdentity;
+import dev.otectus.mcaquests.project.scope.ScopeGeometry;
 import dev.otectus.mcaquests.project.scope.ScopeResolver;
 import dev.otectus.mcaquests.project.state.PendingReward;
 import dev.otectus.mcaquests.project.state.ProjectInstanceKey;
@@ -28,6 +32,8 @@ import dev.otectus.mcaquests.project.state.ProjectState;
 import dev.otectus.mcaquests.project.state.ProjectStatus;
 import dev.otectus.mcaquests.project.state.SharedObjectiveProgress;
 import dev.otectus.mcaquests.api.event.ProjectEvent;
+import dev.otectus.mcaquests.data.UnavailableContent;
+import dev.otectus.mcaquests.quest.IntegrationRequirements;
 import dev.otectus.mcaquests.quest.condition.QuestContext;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.ProgressionStats;
@@ -107,6 +113,10 @@ public final class ProjectManager {
      */
     public static void clearSessionState() {
         lastContributeTick.clear();
+        PlacementFeedback.clearSessionState();
+        ProjectMenuSessions.clearSessionState();
+        dev.otectus.mcaquests.event.ConversationCredit.clearSessionState();
+        ProjectRecovery.clearSessionState();
     }
 
     private ProjectManager() {
@@ -173,6 +183,8 @@ public final class ProjectManager {
                     scope.anchor(), scope.villageId(), now, def.phase(0).objectives().size());
             state.setStartDayTime(level.getDayTime());
             state.sampleClock(now, false);
+            state.freezeAnchorRadius(def.scope().fallbackRadiusOr(fallbackRadius()));
+            ProjectPhases.begin(server, level, def, state);
             data.putInstance(state);
         }
         if (state.status().isTerminal() || state.currentPhase() < 0
@@ -302,6 +314,7 @@ public final class ProjectManager {
         }
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new ProjectMenuDataS2CPacket(villager.getUUID(), cards));
+        ProjectMenuSessions.opened(player, villager.getUUID());
     }
 
     private static ProjectCard buildCard(ServerPlayer player, Entity villager, ProjectDefinition def,
@@ -317,22 +330,54 @@ public final class ProjectManager {
         Component dialogue = phase.dialogueOr(status == ProjectMenuStatus.OFFER ? "offer" : "in_progress", def.displayTitle());
         return new ProjectCard(def.id(), def.displayTitle(), scopeLabel(def),
                 sponsorLabel(def, villager, scope, state), phaseLabel(def, phaseIdx), dialogue,
-                objectiveLines(player, def, state, phaseIdx), rewardLines(phase), status);
+                objectiveLines(player, def, state, phaseIdx), rewardLines(phase), status,
+                state == null ? "" : state.key().asString(), state == null ? 0L : state.revision(),
+                state != null && !state.status().isTerminal() && hasPositionalWork(def, phaseIdx));
     }
 
+    /**
+     * One row per objective of {@code phaseIdx}: the shared count, the player's own share, a status in
+     * words and a glyph, and the objective's own explanation built from the predicates that grant its
+     * credit (1.6.6), so the help can never describe a rule the server does not apply.
+     */
     private static List<ProjectObjectiveLine> objectiveLines(ServerPlayer player, ProjectDefinition def,
                                                              @Nullable ProjectState state, int phaseIdx) {
+        return objectiveLines(player, def, state, phaseIdx, true);
+    }
+
+    /**
+     * {@code withHelp} is false for the quest-log sync, which goes to every participant after every
+     * credited event and never shows the expanded help; the status still travels with each row.
+     */
+    private static List<ProjectObjectiveLine> objectiveLines(ServerPlayer player, ProjectDefinition def,
+                                                             @Nullable ProjectState state, int phaseIdx,
+                                                             boolean withHelp) {
         List<ProjectObjectiveLine> lines = new ArrayList<>();
         ProjectPhase phase = def.phase(phaseIdx);
+        MinecraftServer server = player.getServer();
+        ServerLevel level = state != null && server != null
+                ? server.getLevel(dimensionKey(state.anchorDimension()))
+                : player.level() instanceof ServerLevel own ? own : null;
         for (int i = 0; i < phase.objectives().size(); i++) {
             ProjectObjective objective = phase.objectives().get(i);
-            if (state != null && i < state.progressCount()) {
-                SharedObjectiveProgress progress = state.progress(i);
-                lines.add(new ProjectObjectiveLine(objective.describe(), objective.current(progress),
-                        objective.required(), progress.contributionOf(player.getUUID())));
-            } else {
-                lines.add(new ProjectObjectiveLine(objective.describe(), 0, objective.required(), 0));
+            boolean live = state != null && i < state.progressCount() && state.currentPhase() == phaseIdx;
+            SharedObjectiveProgress progress = live ? state.progress(i) : new SharedObjectiveProgress();
+            ProjectObjectiveContext context = new ProjectObjectiveContext(server, level, def, live ? state : null,
+                    phaseIdx, i, progress, player);
+            ProjectObjectiveStatus status;
+            List<Component> details;
+            try {
+                status = objective.status(context);
+                details = withHelp ? objective.explain(context) : List.of();
+            } catch (RuntimeException failure) {
+                // Help is a courtesy; it must never take the project screen down with it.
+                McaQuests.LOGGER.debug("[MCA: Quests] could not explain objective {} of {}", i, def.id(), failure);
+                status = objective.isSatisfied(progress) ? ProjectObjectiveStatus.SATISFIED
+                        : ProjectObjectiveStatus.IN_PROGRESS;
+                details = List.of();
             }
+            lines.add(new ProjectObjectiveLine(objective.describe(), objective.current(progress),
+                    objective.requiredFor(progress), progress.contributionOf(player.getUUID()), status, details));
         }
         return lines;
     }
@@ -388,7 +433,8 @@ public final class ProjectManager {
         if (!McaCompat.isMcaVillager(villager)) {
             return false;
         }
-        if (!TownsteadContentGate.allowsProject(def.id(), readsTownstead(def))) {
+        if (IntegrationRequirements.unavailable(def).isPresent()
+                || !TownsteadContentGate.allowsProject(def.id(), readsTownstead(def))) {
             return false;
         }
         if (def.sponsor().adultOnly() && !McaCompat.isAdult(villager)) {
@@ -404,13 +450,12 @@ public final class ProjectManager {
     }
 
     /**
-     * True when any phase of this project reads Townstead state, so the content switch knows whether it
-     * applies. Derived from the objective types rather than from the id, so a project that stops using
-     * Townstead stops being gated by it without anyone having to remember to rename the file.
+     * True when any phase of this project needs Townstead, so the content switch knows whether it
+     * applies. Derived from the typed content (IntegrationRequirements) rather than from the id, so a
+     * project that stops using Townstead stops being gated by it without anyone renaming the file.
      */
     private static boolean readsTownstead(ProjectDefinition def) {
-        return def.phases().stream().flatMap(phase -> phase.objectives().stream())
-                .anyMatch(objective -> objective.type().id().getPath().startsWith("townstead_"));
+        return IntegrationRequirements.dependsOn(def, IntegrationRequirements.Integration.TOWNSTEAD);
     }
 
     private static boolean conditionsPass(ServerPlayer player, Entity villager, ProjectDefinition def) {
@@ -479,7 +524,7 @@ public final class ProjectManager {
                 if (!unlockPasses(nextPhase, player, villager, data, state)) {
                     return; // wait — a later trigger (contribution/tick) re-checks the unlock gate
                 }
-                state.enterPhase(next, nextPhase.objectives().size());
+                ProjectPhases.enter(server, level, def, state, next);
             } else {
                 state.setStatus(ProjectStatus.COMPLETED);
                 ProjectReputation.apply(server, level, state, def, def.reputation().completeOutcome(),
@@ -554,6 +599,14 @@ public final class ProjectManager {
     public static void seedFollowUp(MinecraftServer server, ServerLevel level, ProjectSavedData data,
                                     ProjectState from, ResourceLocation targetId) {
         ProjectDefinition target = ProjectRegistry.get(targetId).orElse(null);
+        if (target == null && UnavailableContent.contains(UnavailableContent.Kind.PROJECT, targetId)) {
+            // Its optional mod is missing. Remember the debt and seed it once the project loads, rather
+            // than dropping a follow-up the village earned (1.6.6).
+            if (from.deferredFollowUps().add(targetId)) {
+                data.setDirty();
+            }
+            return;
+        }
         if (target == null || !target.enabled() || target.phases().isEmpty()) {
             return;
         }
@@ -570,16 +623,21 @@ public final class ProjectManager {
                 from.anchorPos(), from.villageId(), level.getGameTime(), target.phase(0).objectives().size());
         seeded.setStartDayTime(level.getDayTime());
         seeded.sampleClock(level.getGameTime(), false);
+        seeded.freezeAnchorRadius(target.scope().fallbackRadiusOr(fallbackRadius()));
         from.sponsors().forEach(seeded::addSponsor);
+        ServerLevel home = server.getLevel(dimensionKey(from.anchorDimension()));
+        ProjectPhases.begin(server, home != null ? home : level, target, seeded);
         data.putInstance(seeded);
+        from.deferredFollowUps().remove(targetId);
     }
 
     // ---------------------------------------------------------------- event-driven credit
 
     public static void onProjectKill(ServerPlayer player, Entity killed) {
-        creditEvent(player, killed.blockPosition(), (state, def, phase, i) -> {
+        creditEvent(player, killed.blockPosition(), (state, def, phase, i, where, capped) -> {
             ProjectObjective objective = def.phase(phase).objectives().get(i);
-            if (objective instanceof ProjectKillObjective kill && kill.matches(killed)) {
+            if (!capped && objective instanceof ProjectKillObjective kill && kill.matches(killed)
+                    && where.within(kill.borderMargin())) {
                 credit(def, state, i, player, 1);
                 return true;
             }
@@ -588,34 +646,102 @@ public final class ProjectManager {
     }
 
     public static void onProjectPlace(ServerPlayer player, BlockState placed, BlockPos pos) {
-        creditEvent(player, pos, (state, def, phase, i) -> {
+        PlacementFeedback feedback = new PlacementFeedback();
+        boolean credited = creditEvent(player, pos, (state, def, phase, i, where, capped) -> {
             ProjectObjective objective = def.phase(phase).objectives().get(i);
-            if (objective instanceof ProjectPlaceBlockObjective place && place.matches(placed)
-                    && state.progress(i).markPlaced(pos)) {
-                credit(def, state, i, player, 1);
-                return true;
+            if (!(objective instanceof ProjectPlaceBlockObjective place) || !place.matches(placed)) {
+                return false;
             }
-            return false;
+            if (!where.within(place.borderMargin())) {
+                feedback.offer(PlacementFeedback.Reason.OUTSIDE, state, def,
+                        geometry(where.level(), state, place.borderMargin()).blocksOutside(pos));
+                return false;
+            }
+            if (capped) {
+                feedback.offer(PlacementFeedback.Reason.LIMIT, state, def, 0);
+                return false;
+            }
+            if (!state.progress(i).markPlaced(pos)) {
+                feedback.offer(PlacementFeedback.Reason.ALREADY_COUNTED, state, def, 0);
+                return false;
+            }
+            credit(def, state, i, player, 1);
+            return true;
         });
+        if (!credited) {
+            collectInactivePlacement(player, placed, pos, feedback);
+            feedback.send(player);
+        }
     }
+
+    /**
+     * Explains a relevant placement that could not count because of <em>when</em> or <em>where</em> it
+     * happened rather than what it was: the material belongs to a later phase of a project in whose
+     * area the player is building, or to a project the player is helping in another dimension.
+     * Checked only after nothing was credited, so an ordinary placement costs one list walk.
+     */
+    private static void collectInactivePlacement(ServerPlayer player, BlockState placed, BlockPos pos,
+                                                 PlacementFeedback feedback) {
+        if (!enabled() || !(player.level() instanceof ServerLevel level) || player.getServer() == null
+                || feedback.hasReason()) {
+            return;
+        }
+        for (ProjectState state : ProjectSavedData.get(player.getServer()).allInstances()) {
+            if (state.status() != ProjectStatus.ACTIVE) {
+                continue;
+            }
+            ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
+            if (def == null || state.currentPhase() < 0 || state.currentPhase() >= def.phaseCount()) {
+                continue;
+            }
+            boolean sameDimension = state.anchorDimension().equals(level.dimension().location());
+            for (int p = 0; p < def.phaseCount(); p++) {
+                for (ProjectObjective objective : def.phase(p).objectives()) {
+                    if (!(objective instanceof ProjectPlaceBlockObjective place) || !place.matches(placed)) {
+                        continue;
+                    }
+                    if (!sameDimension) {
+                        if (p == state.currentPhase() && state.participants().contains(player.getUUID())) {
+                            feedback.offer(PlacementFeedback.Reason.WRONG_DIMENSION, state, def, 0);
+                        }
+                    } else if (p != state.currentPhase() && inScopeAt(level, state, pos, place.borderMargin())) {
+                        feedback.offerPhase(state, def, p);
+                    }
+                }
+            }
+        }
+    }
+
+    /** Project talk counts a resident of the bound village anywhere, or anyone within MCA's villager margin. */
+    static final int TALK_VILLAGE_MARGIN = 48;
 
     /**
      * Credits one conversation with {@code villager} to every active project's {@code project_talk_to_profession}
      * objectives. Counts distinct villagers only — the villager UUID is recorded on the shared progress, so
      * re-talking to the same villager never advances the objective again, and the credit is idempotent if
-     * both the interaction hook and MCA: Conversations report the same conversation.
+     * several routes report the same conversation.
+     *
+     * <p>Who counts (1.6.6): a village-bound project counts a <b>resident</b> of its village wherever the
+     * conversation happens, and otherwise anyone standing inside the village's area with MCA's own
+     * villager margin. Before this, the villager had to be inside the box of registered buildings at the
+     * moment of the conversation, so a librarian out in the fields did not count.
      */
     public static void onProjectTalk(ServerPlayer player, Entity villager) {
         ResourceLocation profession = McaCompat.getProfessionId(villager).orElse(null);
         UUID villagerUuid = villager.getUUID();
-        creditEvent(player, villager.blockPosition(), (state, def, phase, i) -> {
+        OptionalInt home = McaCompat.getHomeVillageId(villager);
+        creditEvent(player, villager.blockPosition(), (state, def, phase, i, where, capped) -> {
             ProjectObjective objective = def.phase(phase).objectives().get(i);
-            if (!(objective instanceof ProjectTalkObjective talk)) {
+            if (!(objective instanceof ProjectTalkObjective talk) || capped) {
                 return false;
             }
             if (!talk.matches(profession)) {
                 debugReject(def, "profession mismatch (wanted " + talk.profession() + ", villager is "
                         + profession + ")");
+                return false;
+            }
+            if (!talkCounts(state, home, where)) {
+                debugReject(def, "villager " + villagerUuid + " is neither a resident nor inside the village");
                 return false;
             }
             if (!state.progress(i).markTalkedTo(villagerUuid)) {
@@ -625,6 +751,15 @@ public final class ProjectManager {
             credit(def, state, i, player, 1);
             return true;
         });
+    }
+
+    /** Whether a conversation with a villager whose home village is {@code home} counts for {@code state}. */
+    static boolean talkCounts(ProjectState state, OptionalInt home, EventSite where) {
+        if (state.villageId().isPresent()) {
+            return (home.isPresent() && home.getAsInt() == state.villageId().getAsInt())
+                    || where.within(TALK_VILLAGE_MARGIN);
+        }
+        return where.within(0);
     }
 
     private static void debugReject(ProjectDefinition def, String reason) {
@@ -638,21 +773,50 @@ public final class ProjectManager {
         }
     }
 
-    private interface ObjectiveCredit {
-        boolean apply(ProjectState state, ProjectDefinition def, int phase, int objectiveIndex);
+    /** Where one event happened, relative to one instance; the scope test is memoised per margin. */
+    static final class EventSite {
+        private final ServerLevel level;
+        private final ProjectState state;
+        private final BlockPos pos;
+        private final Map<Integer, Boolean> within = new HashMap<>(2);
+
+        EventSite(ServerLevel level, ProjectState state, BlockPos pos) {
+            this.level = level;
+            this.state = state;
+            this.pos = pos;
+        }
+
+        ServerLevel level() {
+            return level;
+        }
+
+        boolean within(int margin) {
+            return within.computeIfAbsent(margin, m -> inScopeAt(level, state, pos, m));
+        }
     }
 
-    private static void creditEvent(ServerPlayer player, BlockPos where, ObjectiveCredit credit) {
+    private interface ObjectiveCredit {
+        /**
+         * @param capped true when the player has already reached this objective's per-player cap; the
+         *               credit is refused either way, but a placement can still explain why
+         */
+        boolean apply(ProjectState state, ProjectDefinition def, int phase, int objectiveIndex, EventSite where,
+                      boolean capped);
+    }
+
+    /** Returns true when anything was credited. */
+    private static boolean creditEvent(ServerPlayer player, BlockPos where, ObjectiveCredit credit) {
         if (!enabled() || !(player.level() instanceof ServerLevel level)) {
-            return;
+            return false;
         }
         MinecraftServer server = player.getServer();
         if (server == null) {
             debugLog("no server for player {} — contribution dropped", player.getGameProfile().getName());
-            return;
+            return false;
         }
         ProjectSavedData data = ProjectSavedData.get(server);
         boolean dirty = false;
+        boolean anyCredited = false;
         for (ProjectState state : data.allInstances()) {
             if (state.status() != ProjectStatus.ACTIVE) {
                 debugLog("project '{}' is {}, not ACTIVE", state.projectId(), state.status());
@@ -663,9 +827,7 @@ public final class ProjectManager {
                         state.projectId(), state.scope());
                 continue;
             }
-            if (!inScopeAt(level, state, where)) {
-                debugLog("project '{}' is out of scope at {} (scope={}, village={}, anchor={})",
-                        state.projectId(), where, state.scope(), state.villageId(), state.anchorPos());
+            if (!state.anchorDimension().equals(level.dimension().location())) {
                 continue;
             }
             ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
@@ -679,22 +841,29 @@ public final class ProjectManager {
                 continue;
             }
             ProjectPhase phase = def.phase(state.currentPhase());
+            if (phase.objectives().stream().noneMatch(ProjectObjective::isEventDriven)) {
+                continue;
+            }
             if (checkProjectFailure(server, level, data, state, def)) {
                 dirty = true;
                 continue;
             }
+            EventSite site = new EventSite(level, state, where);
             boolean changed = false;
             for (int i = 0; i < phase.objectives().size(); i++) {
                 ProjectObjective objective = phase.objectives().get(i);
+                if (!objective.isEventDriven() || objective.isSatisfied(state.progress(i))) {
+                    continue;
+                }
                 int cap = objective.perPlayerCap() > 0 ? objective.perPlayerCap()
                         : McaQuestsConfig.COMMON.defaultPerPlayerContributionCap.get();
-                if (objective.isEventDriven() && !objective.isSatisfied(state.progress(i))
-                        && (cap <= 0 || state.progress(i).contributionOf(player.getUUID()) < cap)
-                        && credit.apply(state, def, state.currentPhase(), i)) {
+                boolean capped = cap > 0 && state.progress(i).contributionOf(player.getUUID()) >= cap;
+                if (credit.apply(state, def, state.currentPhase(), i, site, capped)) {
                     changed = true;
                 }
             }
             if (changed) {
+                anyCredited = true;
                 checkPhaseAdvance(server, level, data, state, def, player, null);
                 dirty = true;
             }
@@ -702,7 +871,9 @@ public final class ProjectManager {
         if (dirty) {
             data.setDirty();
             server.getPlayerList().getPlayers().forEach(ProjectManager::syncProjects);
+            ProjectMenuSessions.refreshAll(server);
         }
+        return anyCredited;
     }
 
     private static void credit(ProjectDefinition def, ProjectState state, int objectiveIndex, ServerPlayer player,
@@ -753,9 +924,65 @@ public final class ProjectManager {
     }
 
     private static boolean inScopeAt(ServerLevel level, ProjectState state, BlockPos where) {
+        return inScopeAt(level, state, where, 0);
+    }
+
+    /**
+     * Whether {@code where} counts for this instance, with {@code margin} blocks of allowance beyond a
+     * village's registered buildings. The one predicate server credit uses, and exactly what
+     * {@link #geometry} draws for the player.
+     */
+    public static boolean inScopeAt(ServerLevel level, ProjectState state, BlockPos where, int margin) {
         return state.anchorDimension().equals(level.dimension().location())
                 && ScopeResolver.isWithinScope(level, state.scope(), state.villageId(), state.anchorPos(),
-                        fallbackRadius(), where);
+                        anchorRadius(state), margin, where);
+    }
+
+    /**
+     * The anchor radius this instance was created with. Instances from before 1.6.6 never stored one and
+     * were tested against the global {@code defaultScopeFallbackRadius} — not their definition's own
+     * override — so that is the value they keep; {@link #pollProjects} freezes it on first sight.
+     */
+    public static int anchorRadius(ProjectState state) {
+        return state.anchorRadius().orElseGet(ProjectManager::fallbackRadius);
+    }
+
+    /** What {@link #inScopeAt} tests, as geometry a player can be shown. */
+    public static ScopeGeometry geometry(ServerLevel level, ProjectState state, int margin) {
+        ResourceLocation dimension = state.anchorDimension();
+        if (state.villageId().isEmpty()) {
+            return ScopeGeometry.anchorRadius(dimension, state.anchorPos(), anchorRadius(state));
+        }
+        int village = state.villageId().getAsInt();
+        BlockPos center = McaCompat.villageCenter(level, village).orElse(state.anchorPos());
+        return McaCompat.villageBox(level, village)
+                .map(box -> ScopeGeometry.villageBox(dimension, center, box, margin))
+                .orElseGet(() -> ScopeGeometry.villageApproximate(dimension, center, anchorRadius(state), margin));
+    }
+
+    /**
+     * The widest positional allowance any objective of the instance's current phase asks for, which is
+     * the area a player building for this phase needs to see. Zero when the phase has none.
+     */
+    public static int currentPhaseMargin(ProjectDefinition def, ProjectState state) {
+        if (state.currentPhase() < 0 || state.currentPhase() >= def.phaseCount()) {
+            return 0;
+        }
+        int margin = 0;
+        for (ProjectObjective objective : def.phase(state.currentPhase()).objectives()) {
+            if (objective instanceof ProjectPlaceBlockObjective place) margin = Math.max(margin, place.borderMargin());
+            if (objective instanceof ProjectKillObjective kill) margin = Math.max(margin, kill.borderMargin());
+        }
+        return margin;
+    }
+
+    /** True when the current phase has any objective credited by where something happens. */
+    public static boolean hasPositionalWork(ProjectDefinition def, int phase) {
+        if (phase < 0 || phase >= def.phaseCount()) {
+            return false;
+        }
+        return def.phase(phase).objectives().stream().anyMatch(objective ->
+                objective instanceof ProjectPlaceBlockObjective || objective instanceof ProjectKillObjective);
     }
 
     // ---------------------------------------------------------------- sponsor loss
@@ -770,6 +997,12 @@ public final class ProjectManager {
         ProjectPhase phase = def.phase(state.currentPhase());
         if (phase.objectives().stream().anyMatch(objective -> !objective.isAvailable(level, state))) {
             return false;
+        }
+        for (int i = 0; i < phase.objectives().size(); i++) {
+            if (phase.objectives().get(i) instanceof PollingProjectObjective polling
+                    && polling.isPending(state, state.progress(i))) {
+                return false; // paused waiting for a reading, not late
+            }
         }
         if (state.currentPhase() == def.phaseCount() - 1 && phaseSatisfied(state, phase)) {
             return false; // the final work was completed in time
@@ -924,12 +1157,23 @@ public final class ProjectManager {
                     || isScopeStale(state)) {
                 continue; // a quarantined instance is no longer reachable, so don't list it as active
             }
-            ProjectRegistry.get(state.projectId())
-                    .filter(def -> state.currentPhase() >= 0 && state.currentPhase() < def.phaseCount())
+            Optional<ProjectDefinition> loaded = ProjectRegistry.get(state.projectId());
+            if (loaded.isEmpty()) {
+                // Not loaded because an optional mod it needs is missing: still the player's project,
+                // paused and named, never silently gone (1.6.6).
+                UnavailableContent.get(UnavailableContent.Kind.PROJECT, state.projectId()).ifPresent(missing ->
+                        entries.add(new ProjectLogEntry(state.projectId(), missing.title(),
+                                sponsorLogLabel(player, state), Component.empty(),
+                                Component.translatable("mcaquests.label.project.phase", state.currentPhase() + 1, "?"),
+                                List.of(), state.key().asString(), Optional.of(missing.why().reason()))));
+                continue;
+            }
+            loaded.filter(def -> state.currentPhase() >= 0 && state.currentPhase() < def.phaseCount())
                     .ifPresent(def -> entries.add(new ProjectLogEntry(
                     state.projectId(), def.displayTitle(), sponsorLogLabel(player, state),
                     scopeLabel(def), phaseLabel(def, state.currentPhase()),
-                    objectiveLines(player, def, state, state.currentPhase()))));
+                    objectiveLines(player, def, state, state.currentPhase(), false), state.key().asString(),
+                    Optional.empty())));
         }
         QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProjectLogSyncS2CPacket(entries));
     }
@@ -1044,6 +1288,16 @@ public final class ProjectManager {
         return retained;
     }
 
+    /**
+     * True when an owed phase reward's project is only unloaded because an optional mod it needs is
+     * missing. That is not a failed delivery and must not use up the retry allowance: the debt waits for
+     * the mod, and is paid once when it returns (1.6.6).
+     */
+    static boolean waitsForOptionalMod(PendingReward reward) {
+        return reward.kind() == PendingReward.Kind.PROJECT_PHASE && reward.projectId() != null
+                && UnavailableContent.contains(UnavailableContent.Kind.PROJECT, reward.projectId());
+    }
+
     private static ProjectRewardDistributor.DeliveryOutcome deliverOne(MinecraftServer server, ServerLevel level,
                                                                        ServerPlayer player, PendingReward reward) {
         if (reward.kind() == PendingReward.Kind.BANKED) {
@@ -1055,6 +1309,9 @@ public final class ProjectManager {
             return ProjectRewardDistributor.DeliveryOutcome.DELIVERED;
         }
         ProjectDefinition def = ProjectRegistry.get(reward.projectId()).orElse(null);
+        if (def == null && waitsForOptionalMod(reward)) {
+            return ProjectRewardDistributor.DeliveryOutcome.DEFERRED;
+        }
         if (def == null || reward.phase() < 0 || reward.phase() >= def.phaseCount()
                 || reward.rewardIndex() < 0
                 || reward.rewardIndex() >= def.phase(reward.phase()).rewards().size()) {
@@ -1126,7 +1383,12 @@ public final class ProjectManager {
         return keys.size();
     }
 
-    /** Force-advances every active instance of {@code projectId} by one phase (testing). */
+    /**
+     * Force-advances every non-terminal instance of {@code projectId} by one phase, paying nothing. Kept
+     * for tests and for the explicit {@code advance <id> all} bulk form; the command refuses a bare id that
+     * matches more than one instance (1.6.6). Uses {@link #adminSkipPhase}, so the next phase's baselines
+     * are taken and a finished project is marked complete without a payout.
+     */
     public static int adminAdvance(MinecraftServer server, ResourceLocation projectId) {
         ProjectDefinition def = ProjectRegistry.get(projectId).orElse(null);
         if (def == null) {
@@ -1138,16 +1400,9 @@ public final class ProjectManager {
             if (!state.projectId().equals(projectId) || state.status().isTerminal()) {
                 continue;
             }
-            int next = state.currentPhase() + 1;
-            if (next < def.phaseCount()) {
-                state.enterPhase(next, def.phase(next).objectives().size());
-            } else {
-                state.setStatus(ProjectStatus.COMPLETED);
-            }
+            ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
+            adminSkipPhase(server, level != null ? level : server.overworld(), data, state, def, false);
             advanced++;
-        }
-        if (advanced > 0) {
-            data.setDirty();
         }
         return advanced;
     }
@@ -1169,48 +1424,182 @@ public final class ProjectManager {
         ProjectSavedData data = ProjectSavedData.get(server);
         boolean dirty = false;
         for (ProjectState state : data.allInstances()) {
-            if (state.status().isTerminal()) {
-                continue;
-            }
-            ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
-            ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
-            boolean unavailable = !projectsEnabled || state.status() != ProjectStatus.ACTIVE || isScopeStale(state)
-                    || def == null || !def.enabled() || level == null || state.currentPhase() < 0
-                    || state.currentPhase() >= def.phaseCount();
-            if (!unavailable) {
-                unavailable = def.phase(state.currentPhase()).objectives().stream()
-                        .anyMatch(objective -> !objective.isAvailable(level, state));
-            }
-            state.sampleClock(server.overworld().getGameTime(), unavailable);
-            data.setDirty();
-            if (unavailable) { continue; }
-            if (checkProjectFailure(server, level, data, state, def)) {
-                dirty = true;
-                continue;
-            }
-            ProjectPhase phase = def.phase(state.currentPhase());
-            boolean changed = false;
-            for (int i = 0; i < phase.objectives().size(); i++) {
-                if (phase.objectives().get(i) instanceof PollingProjectObjective polling
-                        && polling.poll(server, level, def, state, state.progress(i))) {
-                    changed = true;
-                }
-            }
-            if (changed || phaseSatisfied(state, phase)) {
-                int previousPhase = state.currentPhase();
-                ProjectStatus previousStatus = state.status();
-                boolean distributed = state.isPhaseDistributed(previousPhase);
-                checkPhaseAdvance(server, level, data, state, def, null, null);
-                dirty |= changed || previousPhase != state.currentPhase() || previousStatus != state.status()
-                        || distributed != state.isPhaseDistributed(previousPhase);
-            }
+            dirty |= pollOne(server, data, state, projectsEnabled);
         }
         if (dirty) {
             data.setDirty();
             for (ServerPlayer online : server.getPlayerList().getPlayers()) {
                 syncProjects(online);
             }
+            ProjectMenuSessions.refreshAll(server);
         }
+    }
+
+    /**
+     * One instance's share of the sweep: exactly what {@link #pollProjects} does for it, and what an
+     * operator's {@code recheck} runs for one instance on demand. Returns true when anything a player can
+     * see changed. It reads current state and settles a phase that is genuinely satisfied through the
+     * normal path; it never resets a baseline, moves an item or pays anything out of turn.
+     */
+    public static boolean pollOne(MinecraftServer server, ProjectSavedData data, ProjectState state,
+                                  boolean projectsEnabled) {
+        boolean dirty = false;
+        if (state.status().isTerminal()) {
+            if (projectsEnabled && !state.deferredFollowUps().isEmpty()) {
+                dirty = retryDeferredFollowUps(server, data, state);
+            }
+            return dirty;
+        }
+        if (state.freezeAnchorRadius(fallbackRadius())) {
+            // Saved before 1.6.6: freeze the radius it was actually being tested against.
+            dirty = true;
+        }
+        ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
+        ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
+        boolean unavailable = !projectsEnabled || state.status() != ProjectStatus.ACTIVE || isScopeStale(state)
+                || def == null || !def.enabled() || level == null || state.currentPhase() < 0
+                || state.currentPhase() >= def.phaseCount();
+        if (!unavailable) {
+            // Readings a phase could not take at its boundary are retried before anything else, so a
+            // pending baseline resolves the moment its source can be read.
+            dirty |= ProjectPhases.resolvePending(server, level, def, state);
+            var objectives = def.phase(state.currentPhase()).objectives();
+            for (int i = 0; i < objectives.size() && !unavailable; i++) {
+                ProjectObjective objective = objectives.get(i);
+                unavailable = !objective.isAvailable(level, state)
+                        || (objective instanceof PollingProjectObjective polling
+                                && polling.isPending(state, state.progress(i)));
+            }
+        }
+        state.sampleClock(server.overworld().getGameTime(), unavailable);
+        data.setDirty();
+        if (unavailable) {
+            return dirty;
+        }
+        if (checkProjectFailure(server, level, data, state, def)) {
+            return true;
+        }
+        ProjectPhase phase = def.phase(state.currentPhase());
+        boolean changed = false;
+        for (int i = 0; i < phase.objectives().size(); i++) {
+            if (phase.objectives().get(i) instanceof PollingProjectObjective polling
+                    && polling.poll(server, level, def, state, state.progress(i))) {
+                changed = true;
+            }
+        }
+        if (changed || phaseSatisfied(state, phase)) {
+            int previousPhase = state.currentPhase();
+            ProjectStatus previousStatus = state.status();
+            boolean distributed = state.isPhaseDistributed(previousPhase);
+            checkPhaseAdvance(server, level, data, state, def, null, null);
+            dirty |= changed || previousPhase != state.currentPhase() || previousStatus != state.status()
+                    || distributed != state.isPhaseDistributed(previousPhase);
+        }
+        return dirty;
+    }
+
+    /**
+     * Operator repair: moves one instance past its current phase (1.6.6). A skip is not proof the work
+     * happened, so by default ({@code normalRewards == false}) the phase is marked settled without paying
+     * anything, awarding reputation or posting a completion; with {@code normalRewards} the phase settles
+     * through exactly the path a finished phase takes, guarded by the same one-shot distribution flag, so
+     * repeating a skip can never pay twice. Earlier-earned and queued rewards are untouched either way.
+     * The next phase is entered through {@link ProjectPhases}, so its baselines are taken as usual; a
+     * follow-up is seeded as it would be on completion, because that is story, not payment.
+     */
+    public static void adminSkipPhase(MinecraftServer server, ServerLevel level, ProjectSavedData data,
+                                      ProjectState state, ProjectDefinition def, boolean normalRewards) {
+        int current = state.currentPhase();
+        if (state.tryMarkPhaseDistributed(current) && normalRewards) {
+            ProjectRewardDistributor.distribute(server, level, data, state, def, current);
+            ProjectReputation.apply(server, level, state, def, def.reputation().phaseOutcome(), "phase", current);
+            MinecraftForge.EVENT_BUS.post(new ProjectEvent.PhaseAdvanced(def, state, current));
+            broadcastToast(server, state, def, current);
+        }
+        int next = current + 1;
+        if (next < def.phaseCount()) {
+            ProjectPhases.enter(server, level, def, state, next);
+        } else {
+            state.setStatus(ProjectStatus.COMPLETED);
+            if (normalRewards) {
+                ProjectReputation.apply(server, level, state, def, def.reputation().completeOutcome(), "complete", -1);
+                completeProject(server, def, state);
+            }
+            def.followUp().ifPresent(target -> seedFollowUp(server, level, data, state, target));
+        }
+        state.bumpRevision();
+        data.setDirty();
+        server.getPlayerList().getPlayers().forEach(ProjectManager::syncProjects);
+        ProjectMenuSessions.refreshAll(server);
+    }
+
+    /**
+     * Seeds follow-ups this finished project earned while their optional mod was missing, now that they
+     * load. Returns true when anything was seeded.
+     */
+    private static boolean retryDeferredFollowUps(MinecraftServer server, ProjectSavedData data, ProjectState state) {
+        boolean seeded = false;
+        ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
+        for (ResourceLocation target : List.copyOf(state.deferredFollowUps())) {
+            if (ProjectRegistry.get(target).isPresent()) {
+                seedFollowUp(server, level != null ? level : server.overworld(), data, state, target);
+                seeded = true;
+            }
+        }
+        return seeded;
+    }
+
+    /** Players may ask where a project's work counts from this far from its anchor, outside its roll. */
+    static final int BUILD_AREA_REQUEST_DISTANCE = 256;
+
+    /**
+     * Answers "show me the build area" for one instance (1.6.6): the geometry {@link #inScopeAt} tests
+     * for the current phase's positional work, the village's name and dimension, and what counts there.
+     * Only a participant or a player near the project is answered, so a request cannot be used to find
+     * other people's villages.
+     */
+    public static void sendBuildArea(ServerPlayer player, String instanceKey) {
+        MinecraftServer server = player.getServer();
+        if (!enabled() || server == null) {
+            return;
+        }
+        ProjectState state = ProjectSavedData.get(server).getInstance(instanceKey).orElse(null);
+        if (state == null || state.status().isTerminal()) {
+            return;
+        }
+        ProjectDefinition def = ProjectRegistry.get(state.projectId()).orElse(null);
+        ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
+        if (def == null || level == null || state.currentPhase() < 0 || state.currentPhase() >= def.phaseCount()) {
+            return;
+        }
+        boolean near = player.level() == level && state.anchorPos().distSqr(player.blockPosition())
+                <= (long) BUILD_AREA_REQUEST_DISTANCE * BUILD_AREA_REQUEST_DISTANCE;
+        if (!state.participants().contains(player.getUUID()) && !near) {
+            return;
+        }
+        int margin = currentPhaseMargin(def, state);
+        ScopeGeometry geometry = geometry(level, state, margin);
+        Component village = (state.villageId().isPresent()
+                ? McaCompat.villageName(level, state.villageId().getAsInt()) : Optional.<String>empty())
+                .<Component>map(Component::literal)
+                .orElseGet(() -> Component.translatable("mcaquests.project.help.this_village"));
+        String key = switch (geometry.shape()) {
+            case VILLAGE_BOX -> "mcaquests.project.buildarea.summary";
+            case VILLAGE_APPROXIMATE -> "mcaquests.project.buildarea.summary_approximate";
+            case ANCHOR_RADIUS -> "mcaquests.project.buildarea.summary_anchor";
+        };
+        Component summary = Component.translatable(key, village, Component.literal(state.anchorDimension().toString()),
+                margin, geometry.anchor().getX(), geometry.anchor().getZ(), geometry.radius());
+        List<Component> materials = new ArrayList<>();
+        for (ProjectObjective objective : def.phase(state.currentPhase()).objectives()) {
+            if (objective instanceof ProjectPlaceBlockObjective place) {
+                materials.add(Component.translatable("mcaquests.project.buildarea.place", place.target().describe()));
+            } else if (objective instanceof ProjectKillObjective kill) {
+                materials.add(Component.translatable("mcaquests.project.buildarea.kill", kill.target().describe()));
+            }
+        }
+        QuestNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new ProjectScopeS2CPacket(def.displayTitle(), summary, geometry, materials));
     }
 
     public static List<ProjectState> activeInstances(MinecraftServer server) {
@@ -1230,10 +1619,15 @@ public final class ProjectManager {
         List<Component> out = new ArrayList<>();
         ProjectDefinition def = ProjectRegistry.get(projectId).orElse(null);
         if (def == null) {
-            out.add(Component.literal("Unknown project '" + projectId + "'."));
+            out.add(UnavailableContent.get(UnavailableContent.Kind.PROJECT, projectId)
+                    .map(missing -> Component.literal("Project '" + projectId + "' is not loaded: "
+                            + missing.why().describe() + ". It is never offered on this installation."))
+                    .orElseGet(() -> Component.literal("Unknown project '" + projectId + "'.")));
             return out;
         }
         out.add(Component.literal("Project " + projectId + " [" + def.scopeType().lower() + "]"));
+        IntegrationRequirements.dependencies(def).forEach(integration -> out.add(line("needs "
+                + integration.displayName(), IntegrationRequirements.unavailable(def).isEmpty())));
         boolean eligible = isEligibleSponsor(def, villager);
         out.add(line("sponsor match", eligible));
         if (!(player.level() instanceof ServerLevel level)) {

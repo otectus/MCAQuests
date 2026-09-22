@@ -71,6 +71,10 @@ public final class TownsteadBinding {
 
     private enum Kind { CLASS, VIRTUAL, STATIC, CONSTRUCTOR }
 
+    /** First-parameter names for {@link Member#taking}; JDK and Minecraft types only. */
+    private static final String STRING = "java.lang.String";
+    private static final String LIVING_ENTITY = "net.minecraft.world.entity.LivingEntity";
+
     /**
      * One thing MCA: Quests needs from Townstead, named relative to {@link #PACKAGE}.
      * Identity-compared, so {@link TownsteadHandles} refers to members by constant rather than by a
@@ -86,9 +90,21 @@ public final class TownsteadBinding {
         @Nullable
         private final TownsteadCapability capability;
         private final boolean optional;
+        /**
+         * The binary name of the first parameter's type, for a method Townstead overloads under the
+         * same name and arity. Only ever a JDK or Minecraft type, compared by name, so it links nothing.
+         */
+        @Nullable
+        private final String firstParameter;
 
         private Member(Kind kind, String ownerRelative, String name, Class<?> returnType, int arity,
                        @Nullable TownsteadCapability capability, boolean optional) {
+            this(kind, ownerRelative, name, returnType, arity, capability, optional, null);
+        }
+
+        private Member(Kind kind, String ownerRelative, String name, Class<?> returnType, int arity,
+                       @Nullable TownsteadCapability capability, boolean optional,
+                       @Nullable String firstParameter) {
             this.kind = kind;
             this.ownerRelative = ownerRelative;
             this.name = name;
@@ -96,6 +112,12 @@ public final class TownsteadBinding {
             this.arity = arity;
             this.capability = capability;
             this.optional = optional;
+            this.firstParameter = firstParameter;
+        }
+
+        /** This member, bound only to the overload whose first parameter is {@code typeName}. */
+        private Member taking(String typeName) {
+            return new Member(kind, ownerRelative, name, returnType, arity, capability, optional, typeName);
         }
 
         /** The capability this member belongs to, or {@code null} for a core facade member. */
@@ -122,7 +144,8 @@ public final class TownsteadBinding {
             return switch (kind) {
                 case CLASS -> ownerRelative;
                 case CONSTRUCTOR -> ownerRelative + "#<init>/" + arity;
-                default -> ownerRelative + "#" + name + "/" + arity;
+                default -> ownerRelative + "#" + name + "/" + arity
+                        + (firstParameter == null ? "" : "(" + firstParameter + ", ...)");
             };
         }
 
@@ -176,9 +199,12 @@ public final class TownsteadBinding {
     // ---------------------------------------------------------------------------------------------
     // The manifest — every Townstead class and member MCA: Quests reads.
     //
-    // Verified member-by-member against townstead-0.7.6+1.20.1.jar. Every entry is unique by
-    // (owner, name, arity, staticness) in that jar, so none of them needs a parameter type to
-    // disambiguate — which is what keeps MCA's relocated types out of our constant pool.
+    // Verified member-by-member against townstead-0.7.6+1.20.1.jar. Nearly every entry is unique by
+    // (owner, name, arity, staticness) in that jar, so it needs no parameter type to disambiguate —
+    // which is what keeps MCA's relocated types out of our constant pool. The exceptions are
+    // ProfessionProgressions.spec (String or ProfessionXpType) and the LearnedSkills methods
+    // (LivingEntity or UUID); those name their first parameter with taking(...), always a JDK or
+    // Minecraft type. Until 1.6.6 they did not, and getMethods() order decided which overload bound.
     //
     // Mutations (needs, profession XP, skills, reactions) are deliberately absent: they are declared
     // in a later milestone, so a capability whose members do not exist yet cannot report as bound.
@@ -198,6 +224,7 @@ public final class TownsteadBinding {
     private static final String O_SPIRIT_TOTALS = "spirit.SpiritTotals";
     private static final String O_SPIRIT_READOUT = "spirit.SpiritReadout";
     private static final String O_SPIRIT_REGISTRY = "spirit.SpiritRegistry";
+    private static final String O_SPIRIT_INDEX = "spirit.BuildingSpiritIndex";
 
     private static final TownsteadCapability CAP_VILLAGER = TownsteadCapability.READ_VILLAGER;
     private static final TownsteadCapability CAP_PROFESSION = TownsteadCapability.READ_PROFESSION;
@@ -337,6 +364,14 @@ public final class TownsteadBinding {
     public static final Member SR_PRIMARY = get(O_SPIRIT_READOUT, "primarySpiritId", Object.class, CAP_SPIRIT);
     public static final Member SR_SECONDARY = get(O_SPIRIT_READOUT, "secondarySpiritId", Object.class, CAP_SPIRIT);
     public static final Member SPIRIT_CONTAINS = statik(O_SPIRIT_REGISTRY, "contains", boolean.class, 1, CAP_SPIRIT);
+    /**
+     * {@code BuildingSpiritIndex.contributionsFor(String)}: the spirit points one completed building of a
+     * type adds to its village, as loaded from Townstead's {@code extended_buildings} data (1.6.6). Only
+     * used to tell a player which buildings raise the spirit a project asks for, so it is best-effort:
+     * without it the help falls back to generic wording and nothing else changes.
+     */
+    public static final Member SPIRIT_SOURCES_FOR =
+            optionalStatik(O_SPIRIT_INDEX, "contributionsFor", Object.class, 1, CAP_SPIRIT);
 
     // ---------------------------------------------------------------------------------------------
     // Mutations. Every one of these was read off townstead-0.7.6+1.20.1.jar and is unique by
@@ -390,7 +425,8 @@ public final class TownsteadBinding {
     public static final Member XP_LAST_TIER_UP = virtual(O_PROFESSION_XP, "lastTierUpTick", long.class, 0, CAP_AWARD_XP);
     public static final Member XP_DAY = virtual(O_PROFESSION_XP, "xpDay", long.class, 0, CAP_AWARD_XP);
     public static final Member XP_TODAY = virtual(O_PROFESSION_XP, "xpToday", int.class, 0, CAP_AWARD_XP);
-    public static final Member PROGRESSIONS_SPEC = statik(O_PROGRESSIONS, "spec", Object.class, 1, CAP_AWARD_XP);
+    public static final Member PROGRESSIONS_SPEC = statik(O_PROGRESSIONS, "spec", Object.class, 1, CAP_AWARD_XP)
+            .taking(STRING);
     public static final Member SPEC_DAILY_CAP = virtual(O_PROGRESSION_SPEC, "dailyXpCap", int.class, 0, CAP_AWARD_XP);
     public static final Member SPEC_MAX_XP = virtual(O_PROGRESSION_SPEC, "maxXp", int.class, 0, CAP_AWARD_XP);
     public static final Member SPEC_TIER_FOR_XP = virtual(O_PROGRESSION_SPEC, "tierForXp", int.class, 1, CAP_AWARD_XP);
@@ -403,12 +439,18 @@ public final class TownsteadBinding {
     public static final Member XP_TYPE_ID = virtual(O_XP_TYPE, "id", Object.class, 0, CAP_AWARD_XP);
 
     // MUTATE_SKILLS. These overloads take a LivingEntity or a UUID, so this is the one part of the
-    // mutation surface with no MCA type anywhere near it.
-    public static final Member SKILLS_LEARNED = statik(O_LEARNED_SKILLS, "learned", Object.class, 1, CAP_SKILLS);
-    public static final Member SKILLS_HAS = statik(O_LEARNED_SKILLS, "has", boolean.class, 2, CAP_SKILLS);
-    public static final Member SKILLS_LEARN = statik(O_LEARNED_SKILLS, "learn", Object.class, 2, CAP_SKILLS);
-    public static final Member SKILLS_FORCE_LEARN = statik(O_LEARNED_SKILLS, "forceLearn", Object.class, 2, CAP_SKILLS);
-    public static final Member SKILLS_FORGET = statik(O_LEARNED_SKILLS, "forget", Object.class, 2, CAP_SKILLS);
+    // mutation surface with no MCA type anywhere near it. Callers pass the villager entity, so each
+    // binds the LivingEntity overload by name.
+    public static final Member SKILLS_LEARNED = statik(O_LEARNED_SKILLS, "learned", Object.class, 1, CAP_SKILLS)
+            .taking(LIVING_ENTITY);
+    public static final Member SKILLS_HAS = statik(O_LEARNED_SKILLS, "has", boolean.class, 2, CAP_SKILLS)
+            .taking(LIVING_ENTITY);
+    public static final Member SKILLS_LEARN = statik(O_LEARNED_SKILLS, "learn", Object.class, 2, CAP_SKILLS)
+            .taking(LIVING_ENTITY);
+    public static final Member SKILLS_FORCE_LEARN = statik(O_LEARNED_SKILLS, "forceLearn", Object.class, 2, CAP_SKILLS)
+            .taking(LIVING_ENTITY);
+    public static final Member SKILLS_FORGET = statik(O_LEARNED_SKILLS, "forget", Object.class, 2, CAP_SKILLS)
+            .taking(LIVING_ENTITY);
     public static final Member SKILL_RESULT_OK = virtual(O_SKILL_RESULT, "ok", boolean.class, 0, CAP_SKILLS);
     public static final Member SKILL_RESULT_ERROR = virtual(O_SKILL_RESULT, "error", Object.class, 0, CAP_SKILLS);
     public static final Member FORGET_RESULT_OK = virtual(O_FORGET_RESULT, "ok", boolean.class, 0, CAP_SKILLS);
@@ -434,7 +476,8 @@ public final class TownsteadBinding {
     private static final TownsteadCapability CAP_PROFESSION_SPEC = TownsteadCapability.READ_PROFESSION_SPEC;
     private static final TownsteadCapability CAP_SKILL_REGISTRY = TownsteadCapability.READ_SKILL_REGISTRY;
 
-    public static final Member TRACK_SPEC = statik(O_PROGRESSIONS, "spec", Object.class, 1, CAP_PROFESSION_SPEC);
+    public static final Member TRACK_SPEC = statik(O_PROGRESSIONS, "spec", Object.class, 1, CAP_PROFESSION_SPEC)
+            .taking(STRING);
     public static final Member TRACK_MAX_XP = virtual(O_PROGRESSION_SPEC, "maxXp", int.class, 0, CAP_PROFESSION_SPEC);
     public static final Member TRACK_MAX_TIER = virtual(O_PROGRESSION_SPEC, "maxTier", int.class, 0, CAP_PROFESSION_SPEC);
     public static final Member TRACK_TIER_FOR_XP = virtual(O_PROGRESSION_SPEC, "tierForXp", int.class, 1, CAP_PROFESSION_SPEC);
@@ -473,6 +516,7 @@ public final class TownsteadBinding {
             G_DISPLAY_MODE, G_VARIANTS, GV_ID, GV_DISPLAY_NAME, GV_WEIGHT, GV_TYPE,
             SPIRIT_TOTALS_FOR, SPIRIT_READOUT_FOR, SPIRIT_TIER_FOR, ST_PER_SPIRIT, ST_TOTAL,
             ST_CONTRIBUTING, SR_CLASSIFICATION, SR_TIER_INDEX, SR_PRIMARY, SR_SECONDARY, SPIRIT_CONTAINS,
+            SPIRIT_SOURCES_FOR,
             VILLAGERS_GET, STATE_NEEDS, NEEDS_SET_HUNGER, NEEDS_SET_SATURATION, NEEDS_SET_THIRST,
             NEEDS_SET_QUENCHED, NEEDS_SET_FATIGUE, NEEDS_RESTORE_ENERGY,
             STATE_PROFESSION_MEMORY, MEMORY_PROFESSION_XP, MEMORY_SET_PROFESSION_XP, XP_NEW, XP_XP,
@@ -712,26 +756,53 @@ public final class TownsteadBinding {
     }
 
     /**
-     * Finds a method by name, arity and staticness — <b>never by parameter type</b>, which would mean
-     * naming MCA's relocated classes and reintroducing the linkage this whole layer exists to avoid.
-     * Every member in the manifest is unique under that key in Townstead 0.7.6.
+     * Finds a method by name, arity and staticness — <b>never by a Townstead or MCA parameter
+     * type</b>, which would mean naming MCA's relocated classes and reintroducing the linkage this
+     * whole layer exists to avoid. A member Townstead overloads under that key names its first
+     * parameter's JDK or Minecraft type ({@link Member#taking}), compared by name.
      */
     @Nullable
     private static MethodHandle bindMethod(MethodHandles.Lookup lookup, Method[] candidates, Member member) {
+        Method chosen = select(candidates, member.name, member.arity, member.kind == Kind.STATIC,
+                member.firstParameter);
+        if (chosen == null) {
+            return null;
+        }
+        try {
+            chosen.setAccessible(true);
+            return lookup.unreflect(chosen).asType(member.erasedType());
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /**
+     * The one method matching name, arity, staticness and, when given, the first parameter's type
+     * name; {@code null} when none does <b>or more than one does</b>. {@code getMethods()} returns
+     * methods in no particular order, so binding the first of several overloads would pick one at
+     * random per JVM — and an erased handle to the wrong one fails every call with a cast error that
+     * reads as "no data". Refusing to guess turns that into a named binding failure instead.
+     */
+    @Nullable
+    static Method select(Method[] candidates, String name, int arity, boolean isStatic,
+                         @Nullable String firstParameter) {
+        Method found = null;
         for (Method candidate : candidates) {
-            if (!candidate.getName().equals(member.name)
-                    || candidate.getParameterCount() != member.arity
-                    || Modifier.isStatic(candidate.getModifiers()) != (member.kind == Kind.STATIC)) {
+            if (!candidate.getName().equals(name)
+                    || candidate.getParameterCount() != arity
+                    || Modifier.isStatic(candidate.getModifiers()) != isStatic) {
                 continue;
             }
-            try {
-                candidate.setAccessible(true);
-                return lookup.unreflect(candidate).asType(member.erasedType());
-            } catch (Throwable t) {
+            if (firstParameter != null
+                    && (arity == 0 || !candidate.getParameterTypes()[0].getName().equals(firstParameter))) {
+                continue;
+            }
+            if (found != null) {
                 return null;
             }
+            found = candidate;
         }
-        return null;
+        return found;
     }
 
 

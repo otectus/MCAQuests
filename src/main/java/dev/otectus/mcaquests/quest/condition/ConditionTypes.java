@@ -53,6 +53,7 @@ import dev.otectus.mcaquests.quest.condition.leaf.TimeCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.VillageMemberCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.VillageReputationCondition;
 import dev.otectus.mcaquests.quest.condition.leaf.WeatherCondition;
+import dev.otectus.mcaquests.quest.condition.leaf.KingdomStandingCondition;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.LinkedHashMap;
@@ -187,6 +188,9 @@ public final class ConditionTypes {
     // installed, and an unknown provider id answers "not present" rather than failing the load.
     public static final QuestConditionType<CompatCapabilityCondition> COMPAT_CAPABILITY =
             register("compat_capability", CompatCapabilityCondition.CODEC);
+
+    public static final QuestConditionType<KingdomStandingCondition> KINGDOM_STANDING =
+            register(new ResourceLocation("ultima_kingdoms", "standing"), KingdomStandingCondition.CODEC);
 
     // 1.6.0 -- MCA Capitals. Registered unconditionally like every other optional-mod condition; each
     // one reads through the Capitals bridge, which answers "no capital here" when the mod is absent,

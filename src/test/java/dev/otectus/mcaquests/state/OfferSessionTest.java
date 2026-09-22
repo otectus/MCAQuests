@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,6 +87,20 @@ class OfferSessionTest {
     @DisplayName("a set that was never drawn is stale")
     void freshSessionIsStale() {
         assertTrue(new OfferSession(VILLAGER).isStale(0L, REFRESH, GENERATION));
+    }
+
+    @Test
+    void commissionScopeSurvivesSaveAndOrdinaryScopeDoesNotMatchIt() {
+        OfferSession session = new OfferSession(VILLAGER);
+        Set<ResourceLocation> allowed = Set.of(ONE, THREE);
+        session.redraw(List.of(slot(ONE)), 1000L, GENERATION, 42L, allowed);
+
+        OfferSession restored = OfferSession.load(session.save());
+        assertEquals(allowed, restored.restrictedQuestIds().orElseThrow());
+        assertTrue(restored.scopeMatches(allowed));
+        assertFalse(restored.scopeMatches(null));
+        assertTrue(restored.allowsInCurrentScope(ONE));
+        assertFalse(restored.allowsInCurrentScope(TWO));
     }
 
     @Test

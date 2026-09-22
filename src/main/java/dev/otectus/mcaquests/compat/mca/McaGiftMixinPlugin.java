@@ -72,6 +72,9 @@ public final class McaGiftMixinPlugin implements IMixinConfigPlugin {
      */
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (isDialogueMixin(mixinClassName)) {
+            return shouldApplyDialogue(targetClassName);
+        }
         boolean present = mcaPresent();
         McaGiftHookProbe.mcaPresent(present);
         if (!present) {
@@ -132,6 +135,15 @@ public final class McaGiftMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName,
                           IMixinInfo mixinInfo) {
+        if (isDialogueMixin(mixinClassName)) {
+            MethodNode interactAt = findInteractAt(targetClass);
+            if (interactAt != null && invokesHandler(targetClass, interactAt, dialogueHandlerOwner())) {
+                McaDialogueHookProbe.applied(targetClassName);
+            } else {
+                McaDialogueHookProbe.failed(targetClassName, "injected call not present after apply");
+            }
+            return;
+        }
         MethodNode handle = findHandle(targetClass);
         if (handle != null && invokesHandler(targetClass, handle)) {
             McaGiftHookProbe.applied(targetClassName);
@@ -168,10 +180,13 @@ public final class McaGiftMixinPlugin implements IMixinConfigPlugin {
      * Anything else means the {@code @At} matched nothing.
      */
     static boolean invokesHandler(ClassNode target, MethodNode method) {
+        return invokesHandler(target, method, handlerOwner());
+    }
+
+    static boolean invokesHandler(ClassNode target, MethodNode method, String handler) {
         if (method.instructions == null) {
             return false;
         }
-        String handler = handlerOwner();
         for (AbstractInsnNode insn : method.instructions) {
             if (!(insn instanceof MethodInsnNode call)) {
                 continue;
@@ -179,7 +194,7 @@ public final class McaGiftMixinPlugin implements IMixinConfigPlugin {
             if (insn.getOpcode() == Opcodes.INVOKESTATIC && handler.equals(call.owner)) {
                 return true;
             }
-            if (call.name != null && call.name.startsWith(CALLBACK_PREFIX)
+            if (call.name != null && isOurCallback(call.name)
                     && (target.name == null || target.name.equals(call.owner))) {
                 return true;
             }
@@ -196,11 +211,79 @@ public final class McaGiftMixinPlugin implements IMixinConfigPlugin {
     private static final String CALLBACK_PREFIX = "mcaquests$";
 
     /**
+     * True for a method name that is one of this mod's merged callbacks. Mixin merges an injector
+     * handler under a decorated name — {@code handler$zza000$mcaquests$dialogueOpened} — so the prefix
+     * can sit after Mixin's own. 1.6.6's production check found the undecorated test alone reporting
+     * a hook that had applied, and was demonstrably firing, as broken.
+     */
+    static boolean isOurCallback(String name) {
+        return name.startsWith(CALLBACK_PREFIX) || name.contains("$" + CALLBACK_PREFIX);
+    }
+
+    /**
      * The handler's internal name, built from the class rather than written out — a literal would be a
      * second copy of a name only the compiler should be maintaining.
      */
     static String handlerOwner() {
         return McaGiftHookEvents.class.getName().replace('.', '/');
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // The dialogue hook (1.6.6): same four roots, a different MCA class and method.
+    // ---------------------------------------------------------------------------------------------
+
+    /** The method MCA sends its dialogue screen from, and the exact shape it must have. */
+    private static final String INTERACT_AT_METHOD = "interactAt";
+    private static final String INTERACT_AT_DESCRIPTOR = "(Lnet/minecraft/world/entity/player/Player;"
+            + "Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/InteractionHand;)"
+            + "Lnet/minecraft/world/InteractionResult;";
+
+    /** The dialogue variants are named for the class they target; the gift variants are not. */
+    static boolean isDialogueMixin(String mixinClassName) {
+        String simple = mixinClassName.substring(mixinClassName.lastIndexOf('.') + 1);
+        return simple.startsWith("EntityCommandHandler");
+    }
+
+    private boolean shouldApplyDialogue(String targetClassName) {
+        if (!mcaPresent()) {
+            McaDialogueHookProbe.skipped(targetClassName, "MCA is not installed");
+            return false;
+        }
+        ClassNode target;
+        try {
+            target = classNodeOf(targetClassName);
+        } catch (Throwable t) {
+            McaDialogueHookProbe.skipped(targetClassName, "not present in this MCA build");
+            return false;
+        }
+        if (target == null) {
+            McaDialogueHookProbe.skipped(targetClassName, "not present in this MCA build");
+            return false;
+        }
+        if (findInteractAt(target) == null) {
+            McaDialogueHookProbe.failed(targetClassName,
+                    INTERACT_AT_METHOD + " is absent or has a different signature");
+            return false;
+        }
+        return true;
+    }
+
+    /** The {@code interactAt} with exactly the descriptor the dialogue hook needs, or null. */
+    @Nullable
+    static MethodNode findInteractAt(ClassNode target) {
+        if (target.methods == null) {
+            return null;
+        }
+        for (MethodNode method : target.methods) {
+            if (INTERACT_AT_METHOD.equals(method.name) && INTERACT_AT_DESCRIPTOR.equals(method.desc)) {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    static String dialogueHandlerOwner() {
+        return McaDialogueHookEvents.class.getName().replace('.', '/');
     }
 
     /** Whether Forge has a mod file for MCA at all. Any throw reads as "no". */
