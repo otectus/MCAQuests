@@ -4,7 +4,7 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.6] - 2026-09-22
+## [1.7.0] - 2026-09-22
 
 Adoption of **MCA: Reputation 0.6.0**. Standing was already delegated to that mod when it is
 installed; what is new is that a village can now say *what you are known for*, and a quest can ask.
@@ -144,7 +144,7 @@ itself from the same rules that grant its credit, and one instance can be repair
   defence projects use `32` (MCA's own player-in-village margin), and **Show build area** draws it.
 - A village-less (anchor) project was created with its definition's `fallback_radius`, but every credit
   check used the global `defaultScopeFallbackRadius`. The radius is now frozen on the instance when it
-  starts; an instance from before 1.6.6 keeps the global value it was actually tested against.
+  starts; an instance from before 1.7.0 keeps the global value it was actually tested against.
 - **Village ids are numbered per dimension, but project keys were not**, so a Nether village 3 and an
   Overworld village 3 shared one key, and a Nether sponsor's donations landed in the Overworld village's
   project. Non-Overworld village and profession identities are now dimension-qualified
@@ -289,10 +289,10 @@ itself from the same rules that grant its credit, and one instance can be repair
   load error under `strictJsonValidation`, and otherwise skips the quest at load with a warning. See
   DATAPACK.md.
 - `project_place_block` and `project_kill_entity`: optional **`border_margin`** (0–64, default `0`).
-- `townstead_spirit_project`: optional **`baseline`**, `"phase"` (default, the pre-1.6.6 rule with its
+- `townstead_spirit_project`: optional **`baseline`**, `"phase"` (default, the pre-1.7.0 rule with its
   timing fixed) or `"project"` — growth since the project began, from a reading every new instance takes
   when it starts.
-- `townstead_workforce_project`: optional **`profession_policy`**, `"listed"` (default, the pre-1.6.6 rule)
+- `townstead_workforce_project`: optional **`profession_policy`**, `"listed"` (default, the pre-1.7.0 rule)
   or `"any_progressive"`.
 
 ### Added — config
@@ -316,7 +316,7 @@ itself from the same rules that grant its credit, and one instance can be repair
   and placement feedback `mcaquests.project.place.{outside,already_counted,limit,dimension,not_this_phase,phase_later,phase_done}`.
 - Buttons and tooltips: `mcaquests.button.project.{details,hide_details,build_area}`,
   `mcaquests.tooltip.project.{details,build_area}`.
-- `mcaquests.reward.record_incident`, which 1.6.6's MCA: Reputation work referenced without defining.
+- `mcaquests.reward.record_incident`, which 1.7.0's MCA: Reputation work referenced without defining.
 
 ### Changed — bundled content
 
@@ -343,13 +343,13 @@ itself from the same rules that grant its credit, and one instance can be repair
 
 ### Migration
 
-- **Saved project instances:** a pre-1.6.6 instance outside the Overworld is re-keyed with its dimension
+- **Saved project instances:** a pre-1.7.0 instance outside the Overworld is re-keyed with its dimension
   on load, and every owed reward naming its old key follows it, instance snapshot included. Nothing is
   merged; a key already taken leaves the instance as it was, with a warning. An instance without a frozen
   anchor radius gets the global radius it was being tested against on its first sweep.
-- **Spirit objectives in instances from before 1.6.6** have no project-start reading, so a `"project"`
+- **Spirit objectives in instances from before 1.7.0** have no project-start reading, so a `"project"`
   objective in one measures from its phase, as it did when the instance was started, and keeps its old
-  number where 1.6.6 changed it (Known Far and Wide phase 3: +5), recorded in `BundledProjectMigrations`.
+  number where 1.7.0 changed it (Known Far and Wide phase 3: +5), recorded in `BundledProjectMigrations`.
   No starting value is invented; `instance ... rebaseline` sets one explicitly. A phase entered by an
   older version that had not yet taken its reading takes it on its first sweep, labelled as such.
 - **Records whose definition is now excluded** keep every field; nothing is deleted to empty a registry.
@@ -363,7 +363,7 @@ itself from the same rules that grant its credit, and one instance can be repair
   Quests logged one startup ERROR ("present but reported an incompatible API version") and fell back
   to its own built-in standing store. Standing, tiers, titles and incidents silently stopped
   delegating. The gate is now 2, so the integration actually runs here; this affected every NeoForge
-  build since MCA: Reputation 0.4.1 first shipped for 1.21.1, not just 1.6.6.
+  build since MCA: Reputation 0.4.1 first shipped for 1.21.1, not just 1.7.0.
 - **The per-villager opinion path is no longer reflective.** The 1.21.1 sibling had no opinion API
   when this line was first ported, so `CanonicalReputationBackend` read an opinion by name through
   `Method` handles. MCA: Reputation 1.21.1 carries `getVillagerOpinion` and `VillagerOpinion`, Quests
@@ -424,7 +424,7 @@ itself from the same rules that grant its credit, and one instance can be repair
   `McaQuestsApi.notifyVillagerConversation` is unchanged and now shares the dialogue hook's validation and
   de-duplication.
 - **Saves:** `ProjectState` gained `anchor_radius`, `revision`, `extra` and `deferred_follow_ups`, all
-  written only when set, so an untouched pre-1.6.6 instance keeps its shape until something changes it;
+  written only when set, so an untouched pre-1.7.0 instance keeps its shape until something changes it;
   see *Migration*.
 - **MCA binding:** new optional members `Village.getBox`, `Building.isComplete`,
   `BuildingTypes.getInstance` / `getBuildingType` / `getBuildingTypes` and `BuildingType.getGroups`,

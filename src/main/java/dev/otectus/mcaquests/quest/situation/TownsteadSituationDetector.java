@@ -14,6 +14,7 @@ import dev.otectus.mcaquests.compat.TownsteadRootView;
 import dev.otectus.mcaquests.compat.TownsteadSpiritView;
 import dev.otectus.mcaquests.compat.TownsteadVillageBuilding;
 import dev.otectus.mcaquests.compat.TownsteadVillagerView;
+import dev.otectus.mcaquests.quest.situation.state.TownsteadSignalKeys;
 import dev.otectus.mcaquests.quest.situation.state.TownsteadSignalStateSavedData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -22,6 +23,7 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
 
 /**
  * Turns Townstead village state into situation signals (Townstead spec §7.3).
@@ -110,8 +112,8 @@ public final class TownsteadSituationDetector {
         TownsteadCounters.villageScanned(System.nanoTime() - startedAt);
     }
 
-    /** True when some loaded definition actually consumes this signal. */
-    private static boolean wants(SituationSignalType type) {
+    /** True when some loaded definition actually consumes this signal. Shared with the event path. */
+    public static boolean wants(SituationSignalType type) {
         return SituationRegistry.all().stream()
                 .filter(SituationDefinition::enabled)
                 .anyMatch(def -> def.trigger().signalType() == type);
@@ -198,7 +200,7 @@ public final class TownsteadSituationDetector {
                                TownsteadSignalStateSavedData state, String need, int suffering,
                                int observed, double worst, int needMax) {
         double fraction = (double) suffering / observed;
-        String key = villageId + "|need|" + need;
+        String key = TownsteadSignalKeys.village(level, villageId) + "|need|" + need;
         boolean wasInCrisis = state.lastReading(key, 0) == 1;
 
         double hysteresis = McaQuestsConfig.COMMON.townsteadNeedCrisisHysteresis.get() / 100.0D;
@@ -235,20 +237,21 @@ public final class TownsteadSituationDetector {
         if (view == null) {
             return;
         }
-        String tierKey = villageId + "|spirit";
+        String village = TownsteadSignalKeys.village(level, villageId);
+        String tierKey = village + "|spirit";
         int previous = state.lastReading(tierKey, view.tier());
         boolean roseATier = state.observeIncrease(tierKey, view.tier());
 
         // An identity change matters even without a tier: a village that has become known for its docks
         // rather than its fields is news whether or not the number went up.
-        String identityKey = villageId + "|spirit_id";
+        String identityKey = village + "|spirit_id";
         boolean changedIdentity = state.observeChanged(identityKey, view.primaryId().hashCode());
 
         // The classification is a separate axis again -- settlement, a single name, blend, mixed -- and
         // it is the one a "what kind of place is this" situation is really about. Observed as a label
         // rather than a hash so the signal can say what it changed from.
         String previousClassification =
-                state.observeLabel(villageId + "|spirit_class", view.classification()).orElse(null);
+                state.observeLabel(village + "|spirit_class", view.classification()).orElse(null);
 
         if (roseATier || changedIdentity || previousClassification != null) {
             SituationManager.onSignal(server, TriggerSignal.townsteadSpirit(level, villageId,
@@ -266,19 +269,36 @@ public final class TownsteadSituationDetector {
         }
         // One number for the whole village -- every building family and its tier folded together -- so a
         // village of any size costs one stored reading rather than one per building.
-        int signature = 0;
+        int signature = registerSignature(buildings);
         TownsteadVillageBuilding newest = buildings.get(0);
         for (TownsteadVillageBuilding building : buildings) {
-            signature = signature * 31 + building.family().hashCode() + building.level();
             if (building.id() > newest.id()) {
                 newest = building; // MCA hands out rising ids, so the highest is the most recent
             }
         }
-        if (state.observeChanged(villageId + "|buildings", signature)) {
+        if (state.observeChanged(TownsteadSignalKeys.village(level, villageId) + "|buildings", signature)) {
             SituationManager.onSignal(server, TriggerSignal.townsteadBuilding(level, villageId,
                     newest.family(), newest.level()));
             TownsteadCounters.signalFired();
         }
+    }
+
+    /**
+     * The register folded into one reading. Package-visible because the event path recomputes it
+     * from the same register, so an event and a scan agree on what "unchanged" means.
+     */
+    static int registerSignature(List<TownsteadVillageBuilding> buildings) {
+        int signature = 0;
+        for (TownsteadVillageBuilding building : buildings) {
+            signature = signature * 31 + building.family().hashCode() + building.level();
+        }
+        return signature;
+    }
+
+    /** The register signature for one village, or empty when the register could not be read. */
+    public static OptionalInt currentRegisterSignature(ServerLevel level, int villageId) {
+        List<TownsteadVillageBuilding> buildings = new TownsteadEvaluation().buildingsIn(level, villageId);
+        return buildings.isEmpty() ? OptionalInt.empty() : OptionalInt.of(registerSignature(buildings));
     }
 
     // ------------------------------------------------------------------------------ transitions
@@ -307,7 +327,8 @@ public final class TownsteadSituationDetector {
             if (value.isEmpty()) {
                 continue; // a profile with no seasons simply has no season transitions
             }
-            String key = "calendar|" + calendar.profileId() + '|' + period.id() + '|' + villageId;
+            String key = TownsteadSignalKeys.calendar(calendar.profileId(), period.id(),
+                    level.dimension().location(), villageId);
             state.observeLabel(key, value).ifPresent(previous -> {
                 SituationManager.onSignal(server, TriggerSignal.townsteadCalendarTransition(
                         level, villageId, period.id(), previous, value));
@@ -403,8 +424,8 @@ public final class TownsteadSituationDetector {
                 adrift++;
             }
         }
-        String holdKey = villageId + "|schedule_hold";
-        String firedKey = villageId + "|schedule_fired";
+        String holdKey = TownsteadSignalKeys.village(level, villageId) + "|schedule_hold";
+        String firedKey = TownsteadSignalKeys.village(level, villageId) + "|schedule_fired";
         if (observed < DISRUPTION_MINIMUM_OBSERVED) {
             state.observeChanged(holdKey, 0);
             return;

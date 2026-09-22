@@ -204,7 +204,7 @@ public final class TownsteadBinding {
     // which is what keeps MCA's relocated types out of our constant pool. The exceptions are
     // ProfessionProgressions.spec (String or ProfessionXpType) and the LearnedSkills methods
     // (LivingEntity or UUID); those name their first parameter with taking(...), always a JDK or
-    // Minecraft type. Until 1.6.6 they did not, and getMethods() order decided which overload bound.
+    // Minecraft type. Until 1.7.0 they did not, and getMethods() order decided which overload bound.
     //
     // Mutations (needs, profession XP, skills, reactions) are deliberately absent: they are declared
     // in a later milestone, so a capability whose members do not exist yet cannot report as bound.
@@ -366,7 +366,7 @@ public final class TownsteadBinding {
     public static final Member SPIRIT_CONTAINS = statik(O_SPIRIT_REGISTRY, "contains", boolean.class, 1, CAP_SPIRIT);
     /**
      * {@code BuildingSpiritIndex.contributionsFor(String)}: the spirit points one completed building of a
-     * type adds to its village, as loaded from Townstead's {@code extended_buildings} data (1.6.6). Only
+     * type adds to its village, as loaded from Townstead's {@code extended_buildings} data (1.7.0). Only
      * used to tell a player which buildings raise the spirit a project asks for, so it is best-effort:
      * without it the help falls back to generic wording and nothing else changes.
      */

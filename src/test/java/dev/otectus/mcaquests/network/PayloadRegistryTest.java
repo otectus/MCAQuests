@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Spec §14.5: all 24 payload ids are the ones §14.2 names (plus the two build-area payloads added in
- * 1.6.6), all 24 are unique, all 24 are registered in the right direction, and the protocol is 18.
+ * 1.7.0), all 24 are unique, all 24 are registered in the right direction, and the protocol is 18.
  *
  * <p>None of that can be asserted by calling {@code QuestNetwork.onRegisterPayloads} with a recording
  * double, because {@code RegisterPayloadHandlersEvent} and {@code PayloadRegistrar} are final and
@@ -135,9 +135,9 @@ class PayloadRegistryTest {
     // ---------------------------------------------------------------- ids
 
     @Test
-    @DisplayName("all 24 payloads carry the ids spec §14.2 and 1.6.6 give them")
+    @DisplayName("all 24 payloads carry the ids spec §14.2 and 1.7.0 give them")
     void everyPayloadHasItsSpecifiedId() {
-        assertEquals(24, allPayloads().size(), "spec §14.2 lists 22 payloads and 1.6.6 adds two");
+        assertEquals(24, allPayloads().size(), "spec §14.2 lists 22 payloads and 1.7.0 adds two");
         for (String simpleName : allPayloads()) {
             String expected = C2S.containsKey(simpleName) ? C2S.get(simpleName) : S2C.get(simpleName);
             assertEquals(ResourceLocation.fromNamespaceAndPath("mcaquests", expected),
@@ -230,7 +230,7 @@ class PayloadRegistryTest {
         try {
             Field field = QuestNetwork.class.getDeclaredField("PROTOCOL_VERSION");
             field.setAccessible(true);
-            // 18 since 1.6.6: two new build-area payloads, and project cards, objective lines and
+            // 18 since 1.7.0: two new build-area payloads, and project cards, objective lines and
             // log entries that grew fields a protocol-17 client would decode as the next value.
             assertEquals("18", field.get(null), "the NeoForge protocol is 18");
         } catch (ReflectiveOperationException e) {

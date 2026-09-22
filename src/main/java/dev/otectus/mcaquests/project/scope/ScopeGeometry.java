@@ -9,7 +9,7 @@ import java.util.Optional;
 
 /**
  * Where a project's positional work counts, as one value shared by server credit, operator diagnostics
- * and the client's build-area outline (1.6.6).
+ * and the client's build-area outline (1.7.0).
  *
  * <p>Before this existed the three disagreed. Credit asked MCA whether a block was inside the village
  * with a margin of zero — the box spanned by the village's registered buildings and nothing more — while

@@ -7,7 +7,7 @@ import java.util.Optional;
 /**
  * What became of one {@link ReputationAward}, in Minecraft and Java types only.
  *
- * <p>From 1.6.6 the canonical backend delivers an award through MCA: Reputation's
+ * <p>From 1.7.0 the canonical backend delivers an award through MCA: Reputation's
  * {@code deliver(IncidentDelivery)} rather than its plain {@code record(...)}, and a delivery answers
  * with a <em>typed</em> outcome instead of a boolean. This record is that answer translated into types
  * the always-loaded side of the bridge may name.

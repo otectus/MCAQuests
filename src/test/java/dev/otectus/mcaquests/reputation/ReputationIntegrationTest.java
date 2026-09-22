@@ -319,7 +319,7 @@ class ReputationIntegrationTest {
     }
 
     /**
-     * §29.1 again, for the 1.6.6 additions: the plain translation types the conditions and rewards
+     * §29.1 again, for the 1.7.0 additions: the plain translation types the conditions and rewards
      * carry must be nameable without MCA: Reputation installed.
      *
      * <p>{@code ReputationProfileQuery}, {@code ReputationProfileMatch}, {@code ReputationFeatures}
@@ -360,7 +360,7 @@ class ReputationIntegrationTest {
     }
 
     /**
-     * 1.6.6 keeps the two event translations and deliberately adds no third one.
+     * 1.7.0 keeps the two event translations and deliberately adds no third one.
      *
      * <p>Reputation 0.6.0 publishes {@code ReputationProfileChangedEvent}, and Quests has no consumer
      * for it: every profile-dependent condition re-queries during the eligibility pass it is evaluated

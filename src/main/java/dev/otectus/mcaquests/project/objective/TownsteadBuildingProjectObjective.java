@@ -41,7 +41,7 @@ import java.util.Set;
  * stands when the phase opens counts at once, and one registered later counts on the next sweep
  * ({@code compat.townstead.projectPollIntervalTicks}).
  *
- * <p>Since 1.6.6:
+ * <p>Since 1.7.0:
  * <ul>
  *   <li>Only buildings MCA considers <b>complete</b> count — the same buildings Townstead's village
  *       spirit counts, so the two objectives of a phase can no longer disagree about one inn. A

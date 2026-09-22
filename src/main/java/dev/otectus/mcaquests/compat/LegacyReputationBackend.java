@@ -265,7 +265,7 @@ public final class LegacyReputationBackend implements ReputationBackend {
     }
 
     /**
-     * The typed answer this store can honestly give (1.6.6).
+     * The typed answer this store can honestly give (1.7.0).
      *
      * <p>A stated, non-zero delta really is applied, so that is {@code APPLIED} with the resulting
      * score. Everything else — a deed with no number, a named social profile, a resolution — has no

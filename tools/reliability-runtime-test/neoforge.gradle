@@ -1,4 +1,4 @@
-// Explicit disposable runtime test mod for the 1.6.6 reliability update, separate from every
+// Explicit disposable runtime test mod for the 1.7.0 reliability update, separate from every
 // published MCA: Quests artifact. Built only with -PreliabilityRuntimeFixture=true. NeoForge runs on
 // Mojang names in production, so unlike the Forge fixture this jar needs no reobfuscation.
 sourceSets {

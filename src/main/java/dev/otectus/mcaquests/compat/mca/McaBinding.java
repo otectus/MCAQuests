@@ -298,7 +298,7 @@ public final class McaBinding {
     public static final Member BUILDING_GET_SIZE = virtual(C_BUILDING, "getSize", int.class, 0);
     public static final Member BUILDING_GET_CENTER = virtual(C_BUILDING, "getCenter", Object.class, 0);
 
-    // Build-area geometry and building completeness (1.6.6). All optional: each only sharpens what a
+    // Build-area geometry and building completeness (1.7.0). All optional: each only sharpens what a
     // player is shown, and every caller has an honest fallback when a future MCA drops one.
     /**
      * {@code Village.getBox()}: the box spanned by the village's registered buildings, as MCA's own

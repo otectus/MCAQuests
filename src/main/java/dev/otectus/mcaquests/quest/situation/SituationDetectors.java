@@ -11,7 +11,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
@@ -68,9 +70,22 @@ public final class SituationDetectors {
         if (!McaQuestsConfig.COMMON.enableSituations.get()) {
             return;
         }
-        Set<String> scanned = new HashSet<>();
-        int budget = McaQuestsConfig.COMMON.townsteadMaxVillagesPerPass.get();
         long rotation = server.overworld().getGameTime();
+        for (VillagePlace place : villagesNearPlayers(server)) {
+            scanVillage(server, place.level(), place.villageId());
+            TownsteadSituationDetector.scanVillage(server, place.level(), place.villageId(), rotation);
+        }
+    }
+
+    /**
+     * The villages one sweep would visit: the nearest to each online player, each once, capped by
+     * {@code townsteadMaxVillagesPerPass}. The Townstead event path uses the same list for the
+     * signals it emits per village, so an event never reaches further than a scan would.
+     */
+    public static List<VillagePlace> villagesNearPlayers(MinecraftServer server) {
+        Set<String> scanned = new HashSet<>();
+        List<VillagePlace> out = new ArrayList<>();
+        int budget = McaQuestsConfig.COMMON.townsteadMaxVillagesPerPass.get();
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (scanned.size() >= budget) {
                 break; // bounded per pass; the players not reached this time are reached the next
@@ -82,10 +97,10 @@ public final class SituationDetectors {
             }
             String key = level.dimension().location() + "#" + villageId.getAsInt();
             if (scanned.add(key)) {
-                scanVillage(server, level, villageId.getAsInt());
-                TownsteadSituationDetector.scanVillage(server, level, villageId.getAsInt(), rotation);
+                out.add(new VillagePlace(level, villageId.getAsInt()));
             }
         }
+        return out;
     }
 
     private static void scanVillage(MinecraftServer server, ServerLevel level, int villageId) {

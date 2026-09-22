@@ -142,6 +142,99 @@ mcaProbeVersions.eachWithIndex { version, i ->
 ext.mcaProbeExtraJars = (project.findProperty('mcaProbeJars') ?: '')
         .toString().split(';').collect { it.trim() }.findAll { !it.isEmpty() }
 
+// ---------------------------------------------------------------------------------------------
+// Townstead API v1: a pinned source build of the frozen public API package (see the dependency
+// block below for why). Everything here is compile-time plumbing; nothing it produces is shipped.
+// ---------------------------------------------------------------------------------------------
+ext.townsteadApiMode = (project.findProperty('townsteadApi') ?: 'typed').toString()
+def townsteadApiPackageDir = 'com/aetherianartificer/townstead/api/v1'
+def townsteadApiFetchDir = file("${projectDir}/.gradle/townstead-api/${townstead_api_commit}")
+def townsteadApiSourceRoot = project.findProperty('townsteadApiSources')
+        ? file("${project.findProperty('townsteadApiSources')}/src/main/java")
+        : new File(townsteadApiFetchDir, 'src')
+if (project.hasProperty('townsteadApiSources')
+        && !new File(townsteadApiSourceRoot, "${townsteadApiPackageDir}/TownsteadApiV1.java").isFile()) {
+    throw new GradleException("-PtownsteadApiSources=${project.findProperty('townsteadApiSources')} has no " +
+            "src/main/java/${townsteadApiPackageDir}/TownsteadApiV1.java; point it at a Townstead checkout that ships api.v1.")
+}
+
+// Downloads the pinned commit's source archive and keeps only the api/v1 package. Runs once per
+// pinned commit; the extracted tree lives under .gradle/, which survives `clean`.
+tasks.register('fetchTownsteadApiSources') {
+    group = 'build setup'
+    description = "Fetches Townstead's api/v1 sources at commit ${townstead_api_commit}."
+    def marker = new File(townsteadApiFetchDir, 'commit.txt')
+    onlyIf { !project.hasProperty('townsteadApiSources') && townsteadApiMode == 'typed' }
+    outputs.dir(townsteadApiFetchDir)
+    outputs.upToDateWhen { marker.isFile() && marker.text.trim() == townstead_api_commit }
+    doLast {
+        def archive = new File(townsteadApiFetchDir, 'source.tar.gz')
+        def url = "${townstead_api_repo}/archive/${townstead_api_commit}.tar.gz"
+        townsteadApiFetchDir.mkdirs()
+        try {
+            new URL(url).withInputStream { input -> archive.withOutputStream { it << input } }
+        } catch (IOException e) {
+            throw new GradleException("Could not download Townstead's API sources from ${url}: ${e.message}. " +
+                    "Retry with network access, pass -PtownsteadApiSources=<checkout>, or build an explicitly " +
+                    "reflective-only jar with -PtownsteadApi=reflective-only.", e)
+        }
+        def target = new File(townsteadApiFetchDir, 'src')
+        project.delete(target)
+        project.copy {
+            from(project.tarTree(project.resources.gzip(archive))) {
+                include "*/src/main/java/${townsteadApiPackageDir}/**"
+                eachFile { details ->
+                    // <repo>-<sha>/src/main/java/com/... -> com/...
+                    details.path = details.path.substring(details.path.indexOf('/src/main/java/') + '/src/main/java/'.length())
+                }
+                includeEmptyDirs = false
+            }
+            into target
+        }
+        if (!new File(target, "${townsteadApiPackageDir}/TownsteadApiV1.java").isFile()) {
+            throw new GradleException("The archive for ${townstead_api_commit} has no ${townsteadApiPackageDir}/TownsteadApiV1.java; " +
+                    "townstead_api_commit in gradle.properties must name a Townstead revision that ships api.v1.")
+        }
+        archive.delete()
+        marker.text = townstead_api_commit
+    }
+}
+
+// The API package compiles as its own source set against Minecraft and NeoForge, so member names in
+// its signatures line up exactly with this project's. Its output is compile-only for main and test and
+// never enters the mod jar.
+sourceSets {
+    townsteadApi {
+        java {
+            srcDir townsteadApiSourceRoot
+            include "${townsteadApiPackageDir}/**"
+        }
+    }
+}
+neoForge {
+    addModdingDependenciesTo(sourceSets.townsteadApi)
+}
+tasks.named('compileTownsteadApiJava', JavaCompile).configure {
+    dependsOn 'fetchTownsteadApiSources'
+    options.compilerArgs += ['-proc:none', '-Xlint:none']
+}
+
+// The unit-test JVM boots FML, which loads Minecraft and this mod in its game layer. A bare class
+// directory on the test classpath would be loaded by the application class loader instead, and the
+// API's Minecraft types would then fail to link against the game layer's copies. Marked as a game
+// library, the jar is placed beside the mod. Test scope only; never shipped.
+def townsteadApiTestJar = tasks.register('townsteadApiTestJar', Jar) {
+    group = 'verification'
+    description = 'The compiled Townstead api/v1 package as a game-layer library for the unit-test JVM.'
+    from sourceSets.townsteadApi.output
+    archiveBaseName = 'townstead-api-test'
+    archiveVersion = townstead_api_commit.take(12)
+    destinationDirectory = layout.buildDirectory.dir('townstead-api')
+    manifest {
+        attributes('FMLModType': 'GAMELIBRARY', 'Townstead-Api-Commit': townstead_api_commit)
+    }
+}
+
 configurations {
     // Keep MCA off the unit-test runtime. Gradle's testRuntimeOnly extends runtimeOnly, so the dev-run
     // MCA jar would otherwise land on testRuntimeClasspath -- and the unit suite is precisely where
@@ -195,6 +288,37 @@ dependencies {
                 throw new GradleException("Refusing to package: Reputation compat was skipped")
             }
         }
+    }
+
+    // Townstead public API v1 -- OPTIONAL typed adapter, compile-only, never bundled.
+    //
+    // Townstead 0.8 ships a frozen, versioned integration surface, com.aetherianartificer.townstead.api.v1,
+    // which names no MCA type. compat/townstead/v1 is compiled against it and is the only package that
+    // may name it (NoTownsteadStaticLinkTest). The API is not published to any Maven, so the build
+    // fetches the package at the commit pinned in gradle.properties (townstead_api_commit) and compiles
+    // it as the townsteadApi source set above. Townstead supplies the classes at runtime and
+    // TownsteadCompat only loads the adapter after it has confirmed they exist.
+    //
+    //   -PtownsteadApiSources=<dir>   compile the API from a local Townstead checkout instead of the
+    //                                 pinned download (the directory that contains src/main/java)
+    //   -PtownsteadApi=reflective-only build without the typed adapter. The artifact is then named
+    //                                 mcaquests-<version>-reflective-only.jar and binds Townstead 0.8+
+    //                                 as DISABLED rather than by reflection; never a release.
+    switch (townsteadApiMode) {
+        case 'typed':
+            compileOnly sourceSets.townsteadApi.output
+            testCompileOnly sourceSets.townsteadApi.output
+            testRuntimeOnly files(townsteadApiTestJar)
+            break
+        case 'reflective-only':
+            logger.warn("Townstead API: -PtownsteadApi=reflective-only -- the typed Townstead adapter is " +
+                    "left out of this build. The jar is named mcaquests-${version}-reflective-only.jar and " +
+                    "must not be released.")
+            sourceSets.main.java.exclude 'dev/otectus/mcaquests/compat/townstead/v1/**'
+            sourceSets.test.java.exclude 'dev/otectus/mcaquests/compat/townstead/v1/**'
+            break
+        default:
+            throw new GradleException("Unknown -PtownsteadApi=${townsteadApiMode}; use 'typed' (default) or 'reflective-only'.")
     }
 
     // Unit tests for the non-MCA quest engine (spec section 33).
@@ -279,6 +403,8 @@ test {
     // The MDG unitTest runner's working dir is build/minecraft-junit; the repo-introspection tests
     // (pack parsing, locale parity, classfile scans) resolve paths through this property.
     systemProperty 'mcaquests.projectRoot', project.projectDir.absolutePath
+    // What NoTownsteadStaticLinkTest checks the compiled adapter against: typed or reflective-only.
+    systemProperty 'mcaquests.townstead.api', townsteadApiMode
     // The MCA jars travel as paths, not a classpath: McaBindingProbeTest opens each in its own
     // URLClassLoader, so the binding manifest is verified against real MCA without MCA ever being
     // linked into the test JVM. They come from the mcaProbe* configurations, one per version, so that
@@ -538,6 +664,9 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 tasks.named('jar', Jar).configure {
+    if (townsteadApiMode == 'reflective-only') {
+        archiveClassifier = 'reflective-only'
+    }
     manifest {
         attributes([
                 'Specification-Title'     : mod_id,
@@ -545,9 +674,47 @@ tasks.named('jar', Jar).configure {
                 'Specification-Version'   : '1',
                 'Implementation-Title'    : project.name,
                 'Implementation-Version'  : project.jar.archiveVersion,
-                'Implementation-Vendor'   : mod_authors
+                'Implementation-Vendor'   : mod_authors,
+                'MCAQuests-Townstead-Api' : townsteadApiMode == 'typed' ? "typed:${townstead_api_commit}" : 'reflective-only'
         ])
     }
+}
+
+// The Townstead typed adapter is a build-time optional: it is compiled only when the pinned API is
+// available. A release must carry it, so a typed build whose adapter went missing is rejected here
+// rather than quietly shipping as a reflective-only jar under a release name. A deliberately
+// reflective-only build is recognisable by its classifier and by its manifest, and is accepted as such.
+def verifyTownsteadAdapter = { File archive, String mode ->
+    def adapterClasses = ['dev/otectus/mcaquests/compat/townstead/v1/ApiTownsteadBridge.class',
+                          'dev/otectus/mcaquests/compat/townstead/v1/ApiTownsteadEvents.class']
+    new java.util.zip.ZipFile(archive).withCloseable { zip ->
+        def manifestEntry = zip.getEntry('META-INF/MANIFEST.MF')
+        if (manifestEntry == null) throw new GradleException("${archive.name}: no manifest")
+        def manifest = new java.util.jar.Manifest(zip.getInputStream(manifestEntry))
+        String declared = manifest.mainAttributes.getValue('MCAQuests-Townstead-Api') ?: ''
+        boolean present = adapterClasses.every { zip.getEntry(it) != null }
+        boolean anyPresent = adapterClasses.any { zip.getEntry(it) != null }
+        if (mode == 'typed') {
+            if (!present) {
+                throw new GradleException("${archive.name}: the Townstead typed adapter (compat/townstead/v1) is missing " +
+                        "from a typed build. Do not install this jar; check the compileTownsteadApiJava task output.")
+            }
+            if (!declared.startsWith('typed:')) {
+                throw new GradleException("${archive.name}: manifest MCAQuests-Townstead-Api is '${declared}', expected 'typed:<commit>'")
+            }
+            if (archive.name.contains('-reflective-only')) {
+                throw new GradleException("${archive.name}: a typed build must not carry the reflective-only classifier")
+            }
+        } else {
+            if (anyPresent) {
+                throw new GradleException("${archive.name}: a reflective-only build must not contain the typed adapter")
+            }
+            if (declared != 'reflective-only' || !archive.name.contains('-reflective-only')) {
+                throw new GradleException("${archive.name}: a reflective-only build must be named and declared as such")
+            }
+        }
+    }
+    logger.lifecycle("${archive.name}: Townstead binding verified (${mode}).")
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -602,6 +769,7 @@ tasks.register('jarSmokeCheck') {
     inputs.file(builtJar)
     doLast {
         verifyNeoQuestArchive(builtJar.get().asFile)
+        verifyTownsteadAdapter(builtJar.get().asFile, townsteadApiMode)
     }
 }
 

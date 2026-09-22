@@ -93,7 +93,7 @@ class NoMcaMixinLinkTest {
         }
     }
 
-    /** The class MCA opens its dialogue from, relative to whichever root is live (1.6.6 hook). */
+    /** The class MCA opens its dialogue from, relative to whichever root is live (1.7.0 hook). */
     private static final String DIALOGUE_RELATIVE = "entity.interaction.EntityCommandHandler";
 
     @Test

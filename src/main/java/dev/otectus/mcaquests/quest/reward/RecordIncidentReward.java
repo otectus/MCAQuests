@@ -33,7 +33,7 @@ import java.util.Optional;
  * lets the datapack decide what it is worth. Supplying one overrides it, clamped by that definition's
  * {@code max_override_abs}.
  *
- * <p><b>That default actually works from 1.6.6.</b> The reward read its optional delta and then passed
+ * <p><b>That default actually works from 1.7.0.</b> The reward read its optional delta and then passed
  * {@code delta.orElse(0)} into the award, which is an explicit zero override — so an author who named
  * only a deed got a deed worth nothing, and the {@code default_delta} in the incident definition was
  * unreachable through this reward. The omitted case is now carried as omitted the whole way down.

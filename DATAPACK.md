@@ -293,7 +293,7 @@ dimension change, villager/chunk unload, and dedicated-server restart. They neve
 | `mcaquests:find_missing_relative` | `relative` (villager, req. — `family` mode), `biome` (biome target, optional), `structure` (structure target, optional), `min_distance` (0–4096, def 96), `discover_radius` (1–64, def 24), `spawn_distance` (1–64, def 12) | Search the wilds for a relative of the giver who has gone **missing**, and find them. MCA's `missing` means *in the family tree, not deceased, and no entity anywhere in the world* — so there is nobody to walk up to. This objective **materialises** them: once the player is inside the named `biome`/`structure` and at least `min_distance` from the giver, the relative appears `spawn_distance` blocks away with their real identity (same UUID, name, gender, profession — MCA's family tree keeps every link) and is highlighted. **Materialising is not finding them** — the objective completes the same way it does for a relative who was already in the world: only once the player is within `discover_radius` of them. If `spawn_distance` is greater than `discover_radius`, a load-time validator warning fires, since the player must walk toward the relative before the objective can complete. Never spawns twice, and never spawns a relative who is merely unloaded: an alive villager on any village's resident roll is skipped. Gate the quest on `related_villager_status <relation> missing`. Once found they are an ordinary villager, so later chain stages can `escort_entity` or `deliver_to_villager` them through the usual `"mode": "family"` path — and `missing` flips to false, so a `once` search quest stops being re-offered. **Finding someone is permanent:** abandoning or failing the quest drops the quest, never the villager. |
 | `mcaquests:reach_location` | `location` (anchor, req.), `radius` (1–64, def 6), `min_journey` (0–512, optional) | The **player** travels to a location anchor; arrival sticks complete. Border-aware like `escort_entity`: a `home_village`/`nearest_village` anchor completes anywhere **inside the village border**; other anchors use a horizontal (Y-ignored) distance within `radius`. (Distinct from `enter_structure`, which keys off a named structure.) `min_journey` works exactly as it does for `escort_entity`, measured on the **player**: a quest whose destination the player is already standing in is not offered, and arrival is not credited until they have genuinely left and come back. |
 
-#### `talk_to_profession` at a destination (`at_location_of`, 1.6.6)
+#### `talk_to_profession` at a destination (`at_location_of`, 1.7.0)
 
 "Find the next village and speak to whoever keeps *their* maps" is two objectives, and without a link the
 second was satisfied by the giver's own cartographer. `at_location_of` names the index of a sibling
@@ -313,7 +313,7 @@ and nothing counts. An index that does not name a location objective is a load e
 ]
 ```
 
-**What counts as talking (1.6.6).** A conversation is MCA opening its dialogue for the player, observed on
+**What counts as talking (1.7.0).** A conversation is MCA opening its dialogue for the player, observed on
 the server. MCA decides which clicks open it — an ordinary right-click does, with or without most items
 in hand; a sneak-click opens trading and is not a conversation; the editor book, needle, comb and
 potions are not conversations either. An add-on such as MCA: Conversations can also report one through
@@ -846,7 +846,7 @@ MCA: Quests ships built-in quest and bounty content for these mods, mounted as d
 
 A pack author can override or disable a quest by creating a datapack with an identical resource path. For example, to shadow `mcaquests:compat/iceandfire/dragon_seeker_trial` (which conventionally matches its quest id), create a datapack at `data/mcaquests/mcaquests/quests/compat/iceandfire/dragon_seeker_trial.json` — the merge resolves the override by resource path (which conventionally matches the quest id), so you can shadow a built-in quest completely or copy it and vary one field. An owner's datapack wins over the mounted compat pack at the same path.
 
-### Content that needs an optional mod is not loaded without it (1.6.6)
+### Content that needs an optional mod is not loaded without it (1.7.0)
 
 A quest, project or situation that **needs** Townstead or MCA Capitals is not loaded on an installation
 that does not have that mod — or has it without the capability the definition reads. It is not hidden
@@ -1489,13 +1489,13 @@ the project's pool, not a single player's inventory or kill count. **Quest objec
 | `mcaquests:project_place_block` | `block` or `tag`, `count`, `border_margin` (def `0`, max `64`) | Blocks placed inside the scope during this phase, one credit per block position. |
 | `mcaquests:project_talk_to_profession` | `profession` (resource location), `count` | Talk to that many **distinct** villagers of a profession: a resident of the project's village counts wherever you meet them, anyone else inside the village. |
 | `mcaquests:townstead_building_project` | `building_type` (required), `minimum_level` (def `1`), `count` (def `1`) | *(optional [Townstead](TOWNSTEAD.md))* The village has that many buildings of the family at the tier. **Polled**, not banked: it reads the village's real building registry, so it is satisfied by whoever raises the dock, and it un-satisfies if the dock is lost. |
-| `mcaquests:townstead_spirit_project` | `spirit` (optional), `points_delta` **or** `target_tier`, `baseline` (`phase` default, or `project`) | *(optional Townstead)* The village's Townstead spirit has grown — by so many points, or up to a tier outright. `points_delta` is measured from a reading taken **when the phase opens** (`baseline: "phase"`) or **when the project began** (`baseline: "project"`, 1.6.6), so spirit the village already had does not count. |
-| `mcaquests:townstead_workforce_project` | `professions` (list, required), `minimum_tier` (def `1`), `count` (def `1`), `profession_policy` (`listed` default, or `any_progressive`) | *(optional Townstead)* That many residents of the village reach **Townstead profession tier** `minimum_tier` — Townstead's work tier, not the vanilla trading level. `listed` counts only the trades named; `any_progressive` (1.6.6) counts any trade whose Townstead track reaches the tier, and the list becomes an example. |
-| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed` (def `1`), `minimum_fraction` (0–1), `hunger_min`, `energy_min`, `hold_ticks` | *(optional Townstead)* Enough of the village has been fed and rested for long enough. `minimum_observed` stops a one-resident village trivially satisfying a fraction. |
+| `mcaquests:townstead_spirit_project` | `spirit` (optional), `points_delta` **or** `target_tier`, `baseline` (`phase` default, or `project`) | *(optional Townstead)* The village's Townstead spirit has grown — by so many points, or up to a tier outright. `points_delta` is measured from a reading taken **when the phase opens** (`baseline: "phase"`) or **when the project began** (`baseline: "project"`, 1.7.0), so spirit the village already had does not count. |
+| `mcaquests:townstead_workforce_project` | `professions` (list, required), `minimum_tier` (def `1`), `count` (def `1`), `profession_policy` (`listed` default, or `any_progressive`) | *(optional Townstead)* That many residents of the village reach **Townstead profession tier** `minimum_tier` — Townstead's work tier, not the vanilla trading level. `listed` counts only the trades named; `any_progressive` (1.7.0) counts any trade whose Townstead track reaches the tier, and the list becomes an example. |
+| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed` (def `3`), `minimum_fraction` (0–1), `hunger_min`, `energy_min`, `hold_ticks`, `last_known_max_age_days` (def `0`) | *(optional Townstead)* Enough of the village has been fed and rested for long enough. `minimum_observed` stops a one-resident village trivially satisfying a fraction. `last_known_max_age_days` (Townstead 0.8+) additionally counts a fresh-enough last-known record of an unloaded resident; `0` (default) counts only loaded residents. |
 
-The four `townstead_*` project objectives are **polled** rather than contributed to: they read village state on the project sweep instead of banking a player's donation. A project that uses one in **any** phase is Townstead content, and since 1.6.6 it is **not loaded at all** without Townstead — see [Content that needs an optional mod](#content-that-needs-an-optional-mod-is-not-loaded-without-it-166). See **[TOWNSTEAD.md](TOWNSTEAD.md)**.
+The four `townstead_*` project objectives are **polled** rather than contributed to: they read village state on the project sweep instead of banking a player's donation. A project that uses one in **any** phase is Townstead content, and since 1.7.0 it is **not loaded at all** without Townstead — see [Content that needs an optional mod](#content-that-needs-an-optional-mod-is-not-loaded-without-it-170). See **[TOWNSTEAD.md](TOWNSTEAD.md)**.
 
-**Where positional work counts (`border_margin`, 1.6.6).** A village-bound project tests a placement or a
+**Where positional work counts (`border_margin`, 1.7.0).** A village-bound project tests a placement or a
 kill against MCA's own village border: the box spanned by the village's **registered buildings**. With
 the default margin of `0` that box is all there is, and a defensive wall or a road around the village
 lies outside it by construction. `border_margin` widens it by that many blocks for that one objective —
@@ -1907,7 +1907,8 @@ Gated by the `allowFtbqProgressRewards` config option (on by default) — when d
 ## Townstead integration (optional)
 
 *(1.4.0; requires the optional [Townstead](https://www.curseforge.com/minecraft/mc-mods/townstead) mod,
-version range `[0.7.5,0.8)` and verified against **0.7.6** — see [TOWNSTEAD.md](TOWNSTEAD.md) for the
+version range `[0.7.5,0.9)`, reflective binding verified against **0.7.6** and a typed `api.v1`
+binding verified against a locally built 0.8.0 test jar — see [TOWNSTEAD.md](TOWNSTEAD.md) for the
 full guide, including the bundled quests, projects and situations, the capability model, and what
 happens to a save when Townstead is removed.)*
 
@@ -1983,7 +1984,7 @@ village-wide when it does not.
 | `mcaquests:townstead_profession_progress` | `target`, `profession` (optional), `xp_delta` **or** `target_xp` **or** `target_tier`, `require_current_profession` (bool, def `true`) | Advance a trade. Leave `profession` out to mean *whatever they practise*, frozen at accept. |
 | `mcaquests:townstead_building_registered` | `building_type` (required), `minimum_level`, `count`, `minimum_size`, `require_new_or_upgraded` (bool, def `true`) | Get something built. |
 | `mcaquests:townstead_spirit_progress` | `spirit` (optional), `points_delta` **or** `target_tier` | Grow a village's character. |
-| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `energy_min`, `require_not_collapsed`, `hold_ticks` | Keep a whole village well. |
+| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `energy_min`, `require_not_collapsed`, `hold_ticks`, `last_known_max_age_days` (def `0`) | Keep a whole village well. `last_known_max_age_days` (Townstead 0.8+) additionally counts a fresh-enough last-known record of an unloaded resident; `0` (default) counts only loaded residents. |
 
 **Baselines are frozen once, when the quest is accepted**, and stored with the quest. That is what makes
 "raise their hunger by 40" mean *forty from where they were when you took the job* rather than forty
@@ -2096,11 +2097,11 @@ Fields:
 - `max_tier` (optional): Maximum tier.
 - `basis` (optional): A single basis string or a list, case-insensitive. Values: `involved` (directly involved), `witnessed` (saw it happen), `hearsay` (heard from someone else), `none` (no knowledge yet). Matches only opinions resting on one of these bases.
 
-Without MCA: Reputation, or without a build of MCA: Reputation that includes the per-villager opinion API, the condition is never met — answering "yes" to a question nobody can answer would have villagers reacting to things they never witnessed. (**PORT:** as of 1.6.6 this condition is live on the NeoForge line: MCA: Reputation's 1.21.1 builds carry the opinion API, Quests compiles against it directly, and it is gated on the `opinionEnabled` capability rather than on a reflective probe.)
+Without MCA: Reputation, or without a build of MCA: Reputation that includes the per-villager opinion API, the condition is never met — answering "yes" to a question nobody can answer would have villagers reacting to things they never witnessed. (**PORT:** as of 1.7.0 this condition is live on the NeoForge line: MCA: Reputation's 1.21.1 builds carry the opinion API, Quests compiles against it directly, and it is gated on the `opinionEnabled` capability rather than on a reflective probe.)
 
 #### `profile` — how well known, and known for what
 
-*(1.6.6; needs MCA: Reputation **0.6.0** or later)*
+*(1.7.0; needs MCA: Reputation **0.6.0** or later)*
 
 A village's **public profile** of a player is two separate things: **recognition**, how widely they are known here, and **facets**, what they are known *for*. Neither is liking — an infamous murderer can be as recognised as a revered hero, so `recognition` asks "have they heard of you", not "do they approve of you". For approval use `mcaquests:reputation_tier` (the village's view) or `mcareputation:villager_opinion` (this villager's view).
 
@@ -2138,9 +2139,9 @@ Sample pack `08_ledger_of_standing` ships both halves of the intended shape: `a_
 | `mcareputation:record_incident` | `incident` (resource location, **required**), `delta` (int, optional), `visibility` (string, optional), `tags` (list, optional), `incident_profile` (resource location, optional) | Writes a second, differently-named deed alongside the quest's own completion outcome. |
 | `mcareputation:resolve_incident` | `incident` (resource location, optional), `status` (list, optional), `tags` (list, optional), `resolution` (string, default `atoned`) | Marks a past deed apologised for, atoned for, forgiven or disproven. The selector must narrow something. |
 
-`record_incident`'s `delta` is **optional and stays optional**: omit it and the deed is worth whatever its incident definition says (from 1.6.6 — earlier builds sent an explicit `0`), write `0` and the deed is recorded while standing does not move, which is how a deed contributes profile evidence without a number attached.
+`record_incident`'s `delta` is **optional and stays optional**: omit it and the deed is worth whatever its incident definition says (from 1.7.0 — earlier builds sent an explicit `0`), write `0` and the deed is recorded while standing does not move, which is how a deed contributes profile evidence without a number attached.
 
-`incident_profile` (1.6.6) names which authored **social profile** a deed's evidence is read under. It is accepted wherever an outcome object is authored: each outcome of a quest's `reputation` block (`complete` / `fail` / `abandon`), each outcome of a project's `reputation` block (`on_phase_complete` / `on_project_complete` / `on_fail`), and the `record_incident` reward. A situation's `outcomes` block takes a bare integer and has no profile field; record the evidence from a follow-up quest's `record_incident` reward instead.
+`incident_profile` (1.7.0) names which authored **social profile** a deed's evidence is read under. It is accepted wherever an outcome object is authored: each outcome of a quest's `reputation` block (`complete` / `fail` / `abandon`), each outcome of a project's `reputation` block (`on_phase_complete` / `on_project_complete` / `on_fail`), and the `record_incident` reward. A situation's `outcomes` block takes a bare integer and has no profile field; record the evidence from a follow-up quest's `record_incident` reward instead.
 
 ```json
 "reputation": {

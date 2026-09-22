@@ -213,7 +213,7 @@ public final class McaGiftMixinPlugin implements IMixinConfigPlugin {
     /**
      * True for a method name that is one of this mod's merged callbacks. Mixin merges an injector
      * handler under a decorated name — {@code handler$zza000$mcaquests$dialogueOpened} — so the prefix
-     * can sit after Mixin's own. 1.6.6's production check found the undecorated test alone reporting
+     * can sit after Mixin's own. 1.7.0's production check found the undecorated test alone reporting
      * a hook that had applied, and was demonstrably firing, as broken.
      */
     static boolean isOurCallback(String name) {
@@ -229,7 +229,7 @@ public final class McaGiftMixinPlugin implements IMixinConfigPlugin {
     }
 
     // ---------------------------------------------------------------------------------------------
-    // The dialogue hook (1.6.6): same four roots, a different MCA class and method.
+    // The dialogue hook (1.7.0): same four roots, a different MCA class and method.
     // ---------------------------------------------------------------------------------------------
 
     /** The method MCA sends its dialogue screen from, and the exact shape it must have. */

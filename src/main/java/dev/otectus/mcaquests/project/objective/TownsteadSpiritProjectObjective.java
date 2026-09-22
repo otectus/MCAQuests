@@ -44,9 +44,9 @@ import java.util.TreeMap;
  *
  * <h2>Measured from where</h2>
  * <ul>
- *   <li>{@code "baseline": "phase"} (the default, and the only rule before 1.6.6): growth since this
+ *   <li>{@code "baseline": "phase"} (the default, and the only rule before 1.7.0): growth since this
  *       phase became current.</li>
- *   <li>{@code "baseline": "project"} (1.6.6): growth since the project began. For a phase whose
+ *   <li>{@code "baseline": "project"} (1.7.0): growth since the project began. For a phase whose
  *       building <em>is</em> the spirit source — an inn is the only Tourism source — this is the rule
  *       that matches what players do: build the inn as soon as they can, often during the donation
  *       phase before it. Measured from the phase, that inn landed in the baseline and the phase asked
@@ -55,7 +55,7 @@ import java.util.TreeMap;
  *
  * <p><b>Readings are taken at boundaries, never on a convenient poll.</b> The phase reading is captured
  * when the phase opens ({@link #onPhaseEntered}) and the project reading when the instance begins
- * ({@code ProjectPhases.begin}). Before 1.6.6 the phase reading was taken on the first poll after the
+ * ({@code ProjectPhases.begin}). Before 1.7.0 the phase reading was taken on the first poll after the
  * phase opened, so spirit earned in between was folded into the baseline and asked for again. When a
  * reading cannot be taken the objective records that it is pending and the phase pauses until it can;
  * absence of data is never read as zero.
@@ -64,7 +64,7 @@ import java.util.TreeMap;
  * credited progress. Credited progress is a high-water mark: spirit falls when a building is lost, and a
  * village is never walked backwards.
  *
- * <p>An instance from before 1.6.6 has no project-start reading. Its {@code "project"} objectives
+ * <p>An instance from before 1.7.0 has no project-start reading. Its {@code "project"} objectives
  * measure from their phase, as they did when it was started, with the number they had then
  * ({@link BundledProjectMigrations}); nothing reconstructs a reading nobody took.
  */
@@ -95,7 +95,7 @@ public record TownsteadSpiritProjectObjective(Optional<String> spirit, OptionalI
     /** An operator's explicit baseline, which outranks every other. */
     public static final String K_BASELINE_OVERRIDE = "townstead_spirit_baseline_operator";
 
-    /** Pre-1.6.6 JSON shape, measured from the phase. */
+    /** Pre-1.7.0 JSON shape, measured from the phase. */
     public TownsteadSpiritProjectObjective(Optional<String> spirit, OptionalInt pointsDelta, OptionalInt targetTier) {
         this(spirit, pointsDelta, targetTier, Baseline.PHASE);
     }
@@ -281,7 +281,7 @@ public record TownsteadSpiritProjectObjective(Optional<String> spirit, OptionalI
             reached = view.tier();
         } else {
             if (baseline == Baseline.PROJECT && isLegacyInstance(state) && !progress.extra().getBoolean(K_LEGACY)) {
-                // A phase already under way when 1.6.6 arrived: keep the rule it was started under.
+                // A phase already under way when 1.7.0 arrived: keep the rule it was started under.
                 int index = definition.phase(state.currentPhase()).objectives().indexOf(this);
                 markLegacy(definition, state, Math.max(0, index), progress);
             }

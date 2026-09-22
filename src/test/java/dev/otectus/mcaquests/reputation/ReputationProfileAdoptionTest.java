@@ -213,7 +213,7 @@ class ReputationProfileAdoptionTest {
         assertTrue(result.appliedProfile().isEmpty());
     }
 
-    /** The interface default keeps every pre-1.6.6 backend, add-ons included, behaving as before. */
+    /** The interface default keeps every pre-1.7.0 backend, add-ons included, behaving as before. */
     @Test
     @DisplayName("the default deliver() reports what award() did")
     void defaultDeliveryFollowsAward() {

@@ -52,7 +52,7 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
- * Disposable runtime test mod for the 1.6.6 reliability update. Never shipped.
+ * Disposable runtime test mod for the 1.7.0 reliability update. Never shipped.
  *
  * <p>Runs once, a few seconds after a dedicated server starts, against the real MCA and whatever
  * companion mods are installed, and writes one line per check to {@code mcaqrt-results.txt}:
@@ -135,7 +135,7 @@ public final class ReliabilityRuntimeFixture {
                 "townstead:cook")) {
             record("track " + trade + " = " + TownsteadBridge.Holder.get().professionTrack(trade));
         }
-        // Which overload the pre-1.6.6 binder (first name/arity match in getMethods() order) took here.
+        // Which overload the pre-1.7.0 binder (first name/arity match in getMethods() order) took here.
         String[][] overloaded = {
                 {"villager.ProfessionProgressions", "spec", "1"},
                 {"profession.skill.LearnedSkills", "learned", "1"},
@@ -149,13 +149,13 @@ public final class ReliabilityRuntimeFixture {
                         ReliabilityRuntimeFixture.class.getClassLoader());
                 for (java.lang.reflect.Method method : owner.getMethods()) {
                     if (method.getName().equals(member[1]) && method.getParameterCount() == Integer.parseInt(member[2])) {
-                        record("pre-1.6.6 binding of " + member[0] + "#" + member[1] + " took ("
+                        record("pre-1.7.0 binding of " + member[0] + "#" + member[1] + " took ("
                                 + method.getParameterTypes()[0].getName() + ", ...)");
                         break;
                     }
                 }
             } catch (Throwable t) {
-                record("pre-1.6.6 binding of " + member[0] + "#" + member[1] + ": " + t);
+                record("pre-1.7.0 binding of " + member[0] + "#" + member[1] + ": " + t);
             }
         }
     }

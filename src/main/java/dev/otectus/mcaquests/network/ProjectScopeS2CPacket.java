@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Server to client: where a project's positional work counts, as the geometry the server itself tests
- * (1.6.6). {@code summary} is the line the client prints — project, village, dimension, allowance and
+ * (1.7.0). {@code summary} is the line the client prints — project, village, dimension, allowance and
  * whether the outline is exact — and {@code materials} what counts there.
  */
 public record ProjectScopeS2CPacket(Component title, Component summary, ScopeGeometry geometry,

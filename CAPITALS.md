@@ -4,7 +4,7 @@
 
 MCA: Quests does not compile against Capitals and reaches it through reflection only. Everything it learns about a capital is reported as **capabilities** rather than as a single yes-or-no, so one method rename in a Capitals point release disables exactly the feature that read it — the title rewards stop being granted, and the villager offices simply go unmatched rather than breaking any quest.
 
-Everything here is **optional in both directions**. Without Capitals the types still register, so your datapacks parse identically, and nothing else about MCA: Quests changes. The bundled content is not mounted at all (the `capitals_court` pack), and since 1.6.6 any definition that needs Capitals — from a datapack as much as from this jar, including one that needs it only for a reward or a later project phase — is left out of the registries rather than loaded and withheld; see the [optional-mod section of DATAPACK.md](DATAPACK.md#content-that-needs-an-optional-mod-is-not-loaded-without-it-166).
+Everything here is **optional in both directions**. Without Capitals the types still register, so your datapacks parse identically, and nothing else about MCA: Quests changes. The bundled content is not mounted at all (the `capitals_court` pack), and since 1.7.0 any definition that needs Capitals — from a datapack as much as from this jar, including one that needs it only for a reward or a later project phase — is left out of the registries rather than loaded and withheld; see the [optional-mod section of DATAPACK.md](DATAPACK.md#content-that-needs-an-optional-mod-is-not-loaded-without-it-170).
 
 ---
 

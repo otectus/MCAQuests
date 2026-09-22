@@ -17,7 +17,7 @@ import java.util.UUID;
 
 /**
  * Which villager's project menu each player last received, so progress made elsewhere reaches a menu
- * that is already open (1.6.6).
+ * that is already open (1.7.0).
  *
  * <p>Before this a project screen only changed when its own player contributed. Walls laid by a friend,
  * a building registered, a phase advanced by the periodic sweep or an operator repair all left an open

@@ -28,7 +28,7 @@ import java.util.OptionalInt;
  * Talk to (interact with) MCA villagers of a given profession (spec section 14). MCA-specific; the
  * profession is read via {@code McaCompat} in the event handler.
  *
- * <p>{@code at_location_of} (1.6.6, optional) ties the conversation to the place another objective of
+ * <p>{@code at_location_of} (1.7.0, optional) ties the conversation to the place another objective of
  * the same quest leads to — "find the next village and speak to whoever keeps <em>their</em> maps":
  *
  * <pre>{@code
@@ -58,7 +58,7 @@ public record TalkToProfessionObjective(ResourceLocation profession, int count, 
                     .forGetter(TalkToProfessionObjective::atLocationOf)
     ).apply(instance, TalkToProfessionObjective::new));
 
-    /** The pre-1.6.6 shape: anywhere. */
+    /** The pre-1.7.0 shape: anywhere. */
     public TalkToProfessionObjective(ResourceLocation profession, int count) {
         this(profession, count, Optional.empty());
     }

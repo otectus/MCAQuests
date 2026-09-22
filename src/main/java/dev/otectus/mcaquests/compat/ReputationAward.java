@@ -23,7 +23,7 @@ import java.util.UUID;
  *
  * <h2>An omitted delta is not a zero</h2>
  *
- * <p>{@link #delta} is an {@link OptionalInt} from 1.6.6, because the two states a plain {@code int}
+ * <p>{@link #delta} is an {@link OptionalInt} from 1.7.0, because the two states a plain {@code int}
  * conflated mean opposite things to MCA: Reputation. <b>Empty</b> means "this deed is worth whatever
  * its incident definition says", which is what a pack author naming only an incident asked for.
  * <b>Present and zero</b> means "record the deed, move no standing" — a real instruction, and the one

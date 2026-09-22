@@ -200,7 +200,7 @@ public final class QuestReputation {
     }
 
     /**
-     * The same write, with the ledger's typed answer (1.6.6).
+     * The same write, with the ledger's typed answer (1.7.0).
      *
      * <p>{@link #award} keeps its "resulting score" shape, because almost every call site wants only
      * that. A caller that has to tell an already-settled operation from a refusal it may retry asks

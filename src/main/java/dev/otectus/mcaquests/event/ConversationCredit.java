@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The single place a conversation with an MCA villager becomes quest and project credit (1.6.6).
+ * The single place a conversation with an MCA villager becomes quest and project credit (1.7.0).
  *
  * <p>Three routes report conversations, and one real conversation can arrive through more than one:
  * <ol>
@@ -35,7 +35,9 @@ import java.util.UUID;
 public final class ConversationCredit {
 
     public enum Source {
-        MCA_DIALOGUE, API, INTERACT_EVENT
+        MCA_DIALOGUE, API, INTERACT_EVENT,
+        /** Townstead 0.8's own dialogue, reported through its API v1 {@code DialogueOpenedEvent} (1.7.0). */
+        TOWNSTEAD_DIALOGUE
     }
 
     private record Recent(UUID villager, long tick) {

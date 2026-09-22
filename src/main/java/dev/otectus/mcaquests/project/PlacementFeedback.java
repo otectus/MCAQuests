@@ -11,7 +11,7 @@ import java.util.UUID;
 
 /**
  * Why a block a player just placed did not count for a project, told to that player once, on the action
- * bar (1.6.6).
+ * bar (1.7.0).
  *
  * <p>Only a placement that <em>could</em> have counted is explained — the material is one a project asks
  * for — so building a house next to a wall project says nothing. The most actionable reason wins when a

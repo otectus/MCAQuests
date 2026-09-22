@@ -4,7 +4,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Where one project objective stands, in the four states the recovery brief asked to keep apart plus
- * done (1.6.6). Every state has a glyph and a word, so it never depends on colour alone.
+ * done (1.7.0). Every state has a glyph and a word, so it never depends on colour alone.
  *
  * <ul>
  *   <li>{@link #IN_PROGRESS}: legitimately not yet satisfied; the help says what to do next.</li>

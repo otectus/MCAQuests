@@ -150,7 +150,7 @@ public final class McaQuestsCommand {
                                         .executes(McaQuestsCommand::projectAdvance)
                                         .then(Commands.literal("all")
                                                 .executes(ctx -> projectBulk(ctx, ProjectRecovery.Operation.BULK_SKIP)))))
-                        // 1.6.6: one instance at a time. Read-only at level 2; every change is a preview
+                        // 1.7.0: one instance at a time. Read-only at level 2; every change is a preview
                         // that issues a token, applied by `confirm` at level 3.
                         .then(Commands.literal("instances")
                                 .requires(src -> src.hasPermission(2))
@@ -571,7 +571,7 @@ public final class McaQuestsCommand {
     }
 
     /**
-     * The pre-1.6.6 bare form. It still works when exactly one instance matches — that one is the only
+     * The pre-1.7.0 bare form. It still works when exactly one instance matches — that one is the only
      * reading of the request — and refuses otherwise, listing the instances, rather than silently resetting
      * every village running the project. {@code reset <id> all} is the explicit, confirmed bulk form.
      */
@@ -902,7 +902,7 @@ public final class McaQuestsCommand {
     }
 
     /**
-     * What the last reload deliberately did not load because an optional mod it needs is missing (1.6.6).
+     * What the last reload deliberately did not load because an optional mod it needs is missing (1.7.0).
      * Informational: this is the supported state of an installation without that mod, not an error.
      */
     private static void reportUnavailableContent(CommandContext<CommandSourceStack> ctx) {
@@ -1028,7 +1028,7 @@ public final class McaQuestsCommand {
     private static int debugMca(CommandContext<CommandSourceStack> ctx) {
         String report = "MCA binding: " + McaBinding.describe();
         ctx.getSource().sendSuccess(() -> Component.literal(report), false);
-        // 1.6.6: how conversations reach talk objectives on this installation.
+        // 1.7.0: how conversations reach talk objectives on this installation.
         String conversations = "Conversation signal: " + (ConversationCredit.dialogueHookActive()
                 ? "MCA dialogue hook" + (dev.otectus.mcaquests.compat.mca.McaDialogueHookProbe.wasObserved()
                         ? " (seen working)" : " (applied, not yet seen)")

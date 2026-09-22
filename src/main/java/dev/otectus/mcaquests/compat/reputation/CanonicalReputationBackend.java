@@ -198,7 +198,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
     /**
      * The highest tier ever reached here <b>on the ladder that was asked about</b>.
      *
-     * <p>Until 1.6.6 this ignored {@code ladder} and returned the snapshot's own high-water field,
+     * <p>Until 1.7.0 this ignored {@code ladder} and returned the snapshot's own high-water field,
      * which is the mark on Reputation's default ladder. A caller asking about a pack's custom ladder
      * therefore got an answer from a different ladder — usually a plausible-looking tier id that the
      * requested ladder does not even name, which a tier gate then reads as "never ranked". MCA:
@@ -229,7 +229,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
     }
 
     /**
-     * The one write path, through MCA: Reputation's typed delivery (1.6.6).
+     * The one write path, through MCA: Reputation's typed delivery (1.7.0).
      *
      * <p>Three defects in the 1.6.5 translation are fixed here together, because they are one
      * transaction:
@@ -475,7 +475,7 @@ public final class CanonicalReputationBackend implements ReputationBackend {
     }
 
     /**
-     * Resolves the incident a selector names, bound to an exact record and settled once (1.6.6).
+     * Resolves the incident a selector names, bound to an exact record and settled once (1.7.0).
      *
      * <p>Two changes from 1.6.5. The {@code dedupeKey} parameter is now actually used: with
      * {@code resolveBound} the discovered incident id is settled <em>under that key</em>, so a replay

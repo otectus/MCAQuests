@@ -22,7 +22,7 @@ public record ProjectKillObjective(EntityTarget target, int count, int borderMar
     /** The widest allowance a definition may ask for: MCA's own villager margin is 48. */
     public static final int MAX_BORDER_MARGIN = 64;
 
-    /** The pre-1.6.6 shape: no allowance beyond the village's building box. */
+    /** The pre-1.7.0 shape: no allowance beyond the village's building box. */
     public ProjectKillObjective(EntityTarget target, int count) {
         this(target, count, 0);
     }
@@ -30,7 +30,7 @@ public record ProjectKillObjective(EntityTarget target, int count, int borderMar
     public static final MapCodec<ProjectKillObjective> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityTarget.MAP_CODEC.forGetter(ProjectKillObjective::target),
             StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ProjectKillObjective::count),
-            // How far outside the village's registered buildings this work still counts (1.6.6).
+            // How far outside the village's registered buildings this work still counts (1.7.0).
             StrictCodecs.strictOptional(Codec.intRange(0, MAX_BORDER_MARGIN), "border_margin", 0)
                     .forGetter(ProjectKillObjective::borderMargin)
     ).apply(instance, ProjectKillObjective::new));

@@ -274,7 +274,7 @@ public final class ProjectSavedData extends SavedData {
     }
 
     /**
-     * One-time migration for pre-1.6.6 saves: an instance saved outside the Overworld under a bare
+     * One-time migration for pre-1.7.0 saves: an instance saved outside the Overworld under a bare
      * {@code v:<id>} / {@code p:<id>:…} identity is re-keyed with its dimension, and every owed reward
      * naming the old key follows it. Overworld instances never change. Nothing is ever merged: when the
      * qualified key is somehow taken already, the instance keeps its old key and a warning says so.

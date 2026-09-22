@@ -33,7 +33,7 @@ public final class ReputationBridge {
      * a different number. Gating on 1 here meant {@code isCanonical()} rejected every NeoForge
      * Reputation ever published: the integration logged one ERROR at startup and silently fell back
      * to the built-in store. Nothing about the surface this build is written against changed with
-     * 1.6.6; the constant was simply wrong for this loader from the first port.
+     * 1.7.0; the constant was simply wrong for this loader from the first port.
      */
     public static final int REQUIRED_API_VERSION = 2;
 

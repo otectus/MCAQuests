@@ -37,7 +37,7 @@ public final class ReputationDedupe {
     }
 
     /**
-     * One quest copy's resolution of one past deed (1.6.6).
+     * One quest copy's resolution of one past deed (1.7.0).
      *
      * <p>This is the operation identity the canonical backend binds an incident to: the selector finds
      * the deed, and this key settles <em>that</em> deed once. The quest <em>instance</em> is in the key

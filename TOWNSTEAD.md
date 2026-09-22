@@ -18,9 +18,13 @@ MCA: Quests changes.
 
 ## Install
 
-1. Install **MCA Reborn**, **MCA: Quests**, and **Townstead** (`[0.7.5,0.8)`; verified against
-   **0.7.6**). Townstead requires **Patchouli** — if the game will not start, check that first, it is
-   the most common cause and has nothing to do with this integration.
+1. Install **MCA Reborn**, **MCA: Quests**, and **Townstead**. The declared range is
+   `[0.7.5,0.9)`. The only *released* 1.20.1 Townstead at the time of writing is **0.7.6**, which
+   needs MCA in the older `forge.net.mca` layout and **Patchouli** — if the game will not start,
+   check that first, it is the most common cause and has nothing to do with this integration.
+   Townstead 0.8, which ships the public `api.v1` this integration also targets, exists only on an
+   unreleased upstream branch: it needs MCA 7.7.1-alpha.3 or newer and drops the Patchouli
+   requirement.
 2. Start the server. That is all — no configuration is needed.
 
 Confirm it took with `/mcaquests compat townstead status`. You want to see all fifteen capabilities.
@@ -29,10 +33,50 @@ Confirm it took with `/mcaquests compat townstead status`. You want to see all f
 
 ## How it works
 
-MCA: Quests never compiles against Townstead. Every member is looked up by name at runtime, and what
-bound is reported as **capabilities** rather than as a single yes-or-no. That matters in practice: if a
-Townstead update moves one internal method, only the feature that needed it stops working, and only the
-quests that declared it suspend.
+MCA: Quests binds Townstead one of two ways, chosen once at startup from what the installed
+Townstead ships.
+
+**Typed, through Townstead's public API.** Townstead 0.8 and later ship a frozen, versioned
+integration surface, `com.aetherianartificer.townstead.api.v1`. It names no MCA type anywhere, so
+compiling against it can never link this mod to one MCA package layout. When that API is present
+*and* this build carries the compiled-in typed adapter, the typed bridge binds and every capability
+below reports bound. If the API is present but this build has no adapter (a `reflective-only`
+build), or the installed Townstead speaks an API generation the adapter was not written for, or the
+typed bridge's own start-up throws, the integration is **disabled** with the reason and stops
+there — it is never handed to the reflective binding instead, because that binding was written
+against 0.7.x internals and would bypass the API's write policy.
+
+**Reflective, for Townstead 0.7.x.** When the installed Townstead ships no `api.v1` at all, every
+member is looked up by name at runtime, and what bound is reported as **capabilities** rather than
+as a single yes-or-no. If a Townstead update moves one internal method, only the feature that needed
+it stops working, and only the quests that declared it suspend.
+
+`/mcaquests compat townstead status` prints a "Bound through: …" line saying which path is live —
+`reflective`, `api-v1`, or `disabled: <reason>` — and the typed path reports its variant as
+`api-v1-r<revision>`.
+
+On the typed path, every write this mod makes is attributed to the source `mcaquests:quests`, which
+a server can refuse per-source in Townstead's own `<world>/serverconfig/townstead-server.toml`
+(`[api] deniedWriteSources = ["mcaquests"]`); a refused write comes back as a failed reward, never a
+silent success. The numbers a mutation reports — requested, applied, before, after — mean the same
+thing on both paths, on the axis the caller spoke in: a fatigue mutation reports fatigue even though
+Townstead's own API only speaks energy.
+
+**Events, on the typed path only.** Townstead's own events replace the matching scans the moment
+they happen: a villager's collapse, a profession tier rise, a life-stage crossing, a village's spirit
+tier or identity change, a building established or upgraded, and a calendar day rollover. A villager's
+recovery is never a signal by itself — it only re-arms the collapse, so the next one is news again —
+and a villager's death is never a signal either, only forgetting that villager's baselines so they are
+not compared against again. Each signal is checked against the same persisted baselines the polling
+scan uses, so an event and a scan seeing the same moment — in either order, or the same event
+delivered twice — produce exactly one signal; when no baseline exists yet, the event's own
+before/after decides what changed. Events honour the same gates the scan does (situations on,
+Townstead content on, the bridge bound with the capability the signal needs, a loaded definition that
+wants it) and are filed under the villager's MCA home village exactly as the scan files residents, so
+a villager with no home village produces no signal either way. A calendar rollover only reaches the
+villages a scan would have visited that pass (nearest to each online player, capped by
+`maxVillagesPerPass` under `[compat.townstead]`). The scans keep running regardless — for need crises
+and schedule streaks, which have no event, and as the safety net for everything else.
 
 | Capability | What it unlocks |
 |---|---|
@@ -201,8 +245,21 @@ content hides rather than misleads.
 | `mcaquests:townstead_profession_progress` | `target`, `profession`, one of `xp_delta` / `target_xp` / `target_tier`, `require_current_profession` | Advance a trade |
 | `mcaquests:townstead_building_registered` | `building_type` (required), `minimum_level`, `count`, `minimum_size`, `require_new_or_upgraded` | Get something built |
 | `mcaquests:townstead_spirit_progress` | `spirit`, one of `points_delta` / `target_tier` | Grow a village's character |
-| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `thirst_min`, `energy_min`, `require_not_collapsed`, `minimum_loaded_fraction`, `hold_ticks` | Keep a village well |
+| `mcaquests:townstead_healthy_residents` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `thirst_min`, `energy_min`, `require_not_collapsed`, `minimum_loaded_fraction`, `hold_ticks`, `last_known_max_age_days` | Keep a village well |
 | `mcaquests:townstead_schedule_streak` | `target`, `activity`, `required_shifts` (required), `minimum_coverage`, `require_on_schedule`, `reset_on_miss` | Work whole shifts, across days |
+
+### `last_known_max_age_days` — counting who isn't standing in front of you
+
+Default `0`, off. `minimum_observed` and `minimum_fraction` above can only be judged against
+**loaded** residents, because only a loaded villager can be read live. When set, Townstead 0.8's
+resident register additionally lets a record of an *unloaded* resident stand in, provided it is
+alive, filed under the village being judged, and no older than the given number of world days — a
+reading is as old as the register says, since needs do not advance while a villager is unloaded, so a
+record from ten days ago is evidence about ten days ago, not today. This widens how many residents
+the check has an opinion about; it never relaxes `minimum_loaded_fraction`, which stays measured
+against residents seen live, and at most 256 records are consulted per poll. Townstead 0.7.x keeps no
+such register, so on 0.7.x the field changes nothing. The same field, with the same rule, is on
+`townstead_resident_wellbeing_project` below.
 
 ### `townstead_schedule_streak` — whole shifts, not one long stare
 
@@ -268,7 +325,7 @@ event, it is a condition that becomes true quietly, usually with nobody nearby.
 | `mcaquests:townstead_building_project` | `building_type` (required), `minimum_level`, `count` | The village has the buildings |
 | `mcaquests:townstead_spirit_project` | `spirit`, `points_delta`, `target_tier`, `baseline` (`phase` or `project`) | The village has grown into something |
 | `mcaquests:townstead_workforce_project` | `professions` (required), `minimum_tier`, `count`, `profession_policy` (`listed` or `any_progressive`) | Enough people can do the job |
-| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `thirst_min`, `energy_min`, `require_not_collapsed`, `minimum_loaded_fraction`, `hold_ticks` | The village has been well for a while |
+| `mcaquests:townstead_resident_wellbeing_project` | `minimum_observed`, `minimum_fraction`, `hunger_min`, `thirst_min`, `energy_min`, `require_not_collapsed`, `minimum_loaded_fraction`, `hold_ticks`, `last_known_max_age_days` | The village has been well for a while |
 
 **`townstead_workforce_project` counts Townstead profession tiers, and only trades that can get there.**
 The tier is Townstead's own work tier — Novice (1), Apprentice (2), Journeyman (3), Expert (4), Master (5)
@@ -276,11 +333,11 @@ The tier is Townstead's own work tier — Novice (1), Apprentice (2), Journeyman
 *Professions → Leveling Up*). It is not the vanilla trading level and not the player's experience. A
 resident is counted when they live in the project's village, their trade has a Townstead track whose
 maximum reaches `minimum_tier`, and they have reached it. Which trades are eligible is
-`profession_policy` (1.6.6):
+`profession_policy` (1.7.0):
 
-- `listed` (the default): only the `professions` named. Every pack written before 1.6.6 behaves exactly
+- `listed` (the default): only the `professions` named. Every pack written before 1.7.0 behaves exactly
   as it did. (The 1.4.1 notes described this list as "the baseline, not the whole answer"; the code never
-  did that, and 1.6.6 makes the broader behaviour an explicit choice rather than changing anyone's list.)
+  did that, and 1.7.0 makes the broader behaviour an explicit choice rather than changing anyone's list.)
 - `any_progressive`: any trade whose track reaches the tier; the list becomes an example. The bundled
   **A Working Village** and **The Apprentices' Guild** use it, so a village of cooks is not told to go and
   find farmers. A fisherman still does not count: Townstead gives that trade no progression.
@@ -291,11 +348,11 @@ that high, and the count is a high-water mark: a resident who walks out of range
 qualified. Jobs are assigned in MCA's Blueprint screen under *Professions*; the trade's workstation must be
 in the village.
 
-**`townstead_spirit_project` measures growth from a reading taken at a boundary (1.6.6).** Spirit is the
+**`townstead_spirit_project` measures growth from a reading taken at a boundary (1.7.0).** Spirit is the
 character a Townstead village gets from its **completed** buildings — in Townstead 0.7.6 an inn gives
 *Tourism* +2 and *Commercial* +5, a music store *Commercial* +5 and *Scholar* +2. With `points_delta`,
 `baseline: "phase"` (the default) measures from the moment the phase opened and `baseline: "project"`
-from the moment the project began. Before 1.6.6 the phase reading was taken on the first project sweep
+from the moment the project began. Before 1.7.0 the phase reading was taken on the first project sweep
 *after* the phase opened, so spirit earned in between became part of the starting value and was asked for
 a second time; it is now taken as the phase opens. When the village cannot be read at that moment the
 reading is recorded as pending and the phase pauses — deadline included — until it can be taken; missing
@@ -307,13 +364,13 @@ backwards if a building is later lost. MCA: Quests names these values by Townste
 the project began, phase 3 a music store and Commercial +10 since the project began (the inn's 5 and the
 music store's 5). An inn built while the welcome fund was still being collected therefore counts for both
 phases, as players expected; before, it fell into the phase-2 starting value and the phase silently asked
-for a second inn. A project already under way when 1.6.6 arrived keeps the rule it was started under
+for a second inn. A project already under way when 1.7.0 arrived keeps the rule it was started under
 (phase-2 Tourism +2 and phase-3 Commercial +5, each from its phase) — no starting value is invented for
 it — and an operator can set one with `/mcaquests project instance <id> <n> rebaseline`.
 
-**`townstead_building_project` counts complete, registered buildings (1.6.6).** It reads MCA's building
+**`townstead_building_project` counts complete, registered buildings (1.7.0).** It reads MCA's building
 registry, so a building must be registered with MCA — stand inside it and add it in MCA's Blueprint
-screen — and, since 1.6.6, **complete**: a registered inn that is missing a bed no longer counts, the same
+screen — and, since 1.7.0, **complete**: a registered inn that is missing a bed no longer counts, the same
 rule Townstead's spirit uses, and the card says "registered but incomplete" and lists MCA's requirements
 for the type (in MCA 7.7.36: an inn needs four beds, a jukebox and a smoker). A building that already stood
 when the phase opened counts at once; one registered later counts on the next sweep. A village that cannot
@@ -323,6 +380,11 @@ be read leaves the count where it was instead of dropping it to zero.
 `minimum_observed` alone was not enough: in a village of forty, seeing three contented residents is
 evidence about three people, not about the village. The hold now waits until that share of MCA's resident
 roll is actually observable.
+
+**`last_known_max_age_days` works exactly as it does on `townstead_healthy_residents`**, described
+under Objectives above — default `0`, off; when set it lets a fresh-enough, alive, correctly-filed
+last-known record from Townstead 0.8's resident register stand in for an unloaded resident, without
+touching `minimum_loaded_fraction`.
 
 **A phase finished by watching the world records no contributions**, because nobody handed anything
 over. The `contributors` and `top_contributor` reward targets therefore have nobody to pay on such a
@@ -401,6 +463,15 @@ The gap is `needCrisisHysteresis`.
 **Nothing is replayed after a restart**, and a first sighting is never news: installing this on an
 existing world will not open a situation for every villager in it.
 
+**On Townstead 0.8, `townstead_collapse`, `townstead_profession_tier`, `townstead_spirit` and
+`townstead_building` are event-fed**: Townstead's own event reports the transition the moment it
+happens instead of waiting for the next poll, deduplicated against the same baseline a scan would
+use. `townstead_need` stays scan-driven by design on every version: Townstead's `api.v1` does post a
+`VillagerCrisisEvent` and a `VillageNeedsBandChangedEvent`, but neither carries this trigger's
+configured-threshold, hysteresis-gated, village-fraction crisis semantics, so nothing here consumes
+them. The scans themselves keep running throughout — as the only mechanism for `townstead_need`, and
+as the safety net for the event-fed ones.
+
 ---
 
 ### Transition triggers (1.4.1)
@@ -437,6 +508,13 @@ existing world does not greet the player with a backlog of seasons that already 
 a restart, a chunk reload nor a `/reload` replays one. Changing calendar profile seeds a fresh baseline
 rather than synthesising a season change out of two incomparable calendars.
 
+**On Townstead 0.8, `townstead_calendar_transition` and `townstead_life_transition` are event-fed**,
+the same way the situation triggers above are — Townstead's day-rollover and life-stage events report
+the crossing immediately, deduplicated against the same baseline a scan would use.
+`townstead_schedule_disruption` has no matching Townstead event and is scan-only on every version. The
+scans keep running throughout, both as the mechanism for `townstead_schedule_disruption` and as the
+safety net for the event-fed ones.
+
 Two more triggers are **not** Townstead at all and work on a plain MCA install:
 
 | `type` | Fields | Fires when |
@@ -468,7 +546,7 @@ A quest you accepted while Townstead was installed **does not fail**. It:
 Suspension is decided fresh every pass rather than written into the save, so recovery needs no
 migration and nothing can go stale.
 
-**Since 1.6.6 Townstead content is not loaded at all without Townstead.** Every quest, project and
+**Since 1.7.0 Townstead content is not loaded at all without Townstead.** Every quest, project and
 situation that needs Townstead — in any phase, including a project whose first phase is only a donation —
 is left out of the registries, so nothing offers it. A quest or project already under way keeps its
 record: it stays in the log, paused and named ("needs Townstead"), its clock stops, rewards it owes wait
@@ -486,7 +564,7 @@ All at permission level 2, all read-only.
 
 | Command | What it tells you |
 |---|---|
-| `/mcaquests compat townstead status` | Townstead's version, which MCA layout it was built against, how many capabilities bound, which did not, and the feature toggles. With `debugBindingLogs` on it also reports the performance counters |
+| `/mcaquests compat townstead status` | Townstead's detected version and variant (`api-v1-r<revision>` on the typed path, the MCA root it was built against on the reflective path), which path is bound ("Bound through: …"), how many capabilities bound, which did not, and the feature toggles. With `debugBindingLogs` on it also reports the performance counters |
 | `/mcaquests compat townstead probe` | Checks each capability by **actually using it** against a nearby villager — "bound" and "returns something" are not the same thing |
 | `/mcaquests compat townstead snapshot` | The nearby villager's state, printed as quest-author paths you can paste into a condition |
 
@@ -496,13 +574,36 @@ All at permission level 2, all read-only.
 
 | Situation | Result |
 |---|---|
-| Townstead absent | Types register and packs parse, but every definition that needs Townstead is left out of the registries (1.6.6) — one INFO line per kind says how many. No Townstead class is loaded |
+| Townstead absent | Types register and packs parse, but every definition that needs Townstead is left out of the registries (1.7.0) — one INFO line per kind says how many. No Townstead class is loaded |
 | Townstead present, all capabilities bound | Everything in this document works |
 | Townstead present, some capabilities missing | One WARN naming them. Content declaring those capabilities is ineligible; everything else works. `status` lists what is missing |
 | Townstead installed but unbindable | One WARN, the integration disables itself, the server keeps running |
 | Townstead removed from an existing world | Active quests suspend as described above. The world loads normally |
 | Townstead restored | Suspended quests resume against their **original** baselines. Nothing is duplicated and nothing is re-announced |
 | `enabled = false` | As "absent", except one INFO at startup saying so |
+
+---
+
+## Building against the Townstead API
+
+Townstead publishes no Maven artifact for `api.v1`, so the build fetches its sources at a pinned
+commit (`townstead_api_commit` in `gradle.properties`) into `.gradle/townstead-api/<commit>/` and
+compiles them itself (the `buildTownsteadApiJar` task), producing
+`build/townstead-api/townstead-api-<version>-v1.jar`. Nothing from that jar is shipped; Townstead
+supplies the real classes at runtime.
+
+Three `-P` properties change how that compile happens:
+
+| Property | Effect |
+|---|---|
+| `-PtownsteadApiJar=<jar>` | Compile against an explicit API jar instead of fetching source. Validated: it must contain `api/v1/TownsteadApiV1.class` and nothing outside `api/v1`. |
+| `-PtownsteadApiSources=<checkout>` | Compile the API from a local Townstead checkout instead of downloading it. |
+| `-PtownsteadApi=reflective-only` | Build without the typed adapter at all. The artifact is named `mcaquests-<version>-reflective-only.jar` and binds every Townstead the way releases before this one did. |
+
+`verifyReobfJar` guards the result: a `typed` build must carry the compiled adapter classes, declare
+`MCAQuests-Townstead-Api: typed:<commit>` in its manifest, and its jar name must not contain
+`-reflective-only`; a `reflective-only` build must not carry the adapter classes, and its jar must be
+both named and declared `reflective-only`.
 
 ---
 
@@ -520,6 +621,7 @@ makes an in-development GameTest against an MCA villager impossible. Run them be
 | 7.7.x | absent | ☐ | ☐ | As above |
 | matched | 0.7.5 | ☐ | ☐ | `status` reports `FULL` |
 | matched | 0.7.6 | ☐ | ☐ | `status` reports `FULL` |
+| matched | 0.8 (api.v1) | ☐ | ☐ | `status` reports `FULL`, "Bound through" says `api-v1` |
 | matched | removed after a save | ☐ | ☐ | World loads; active quests suspend; abandonable |
 | matched | restored | ☐ | ☐ | Original baselines resume; nothing duplicated |
 | mismatched MCA/Townstead | — | ☐ | ☐ | A clear loader or binding message, **not** a crash and **not** a misleading `FULL` |
@@ -535,10 +637,19 @@ makes an in-development GameTest against an MCA villager impossible. Run them be
 7. ☐ A registered building completes a building objective; a lookalike pile of blocks does not.
 8. ☐ Spirit delta, tier and identity-change objectives all complete.
 9. ☐ `townstead_healthy_residents` refuses to complete on fewer than `minimum_observed` loaded villagers.
-10. ☐ Collapse, tier, building and spirit signals each fire once, and do **not** replay after a restart.
+10. ☐ Collapse, tier, building and spirit signals each fire once — whichever of the event and the scan
+    notices first — and do **not** replay after a restart.
 11. ☐ Inventory delivery is exact-once; a full villager refuses the hand-over and the player keeps the goods.
 12. ☐ An active quest survives Townstead being removed, suspends, and resumes its original baseline when restored.
 13. ☐ Completion still succeeds when a reaction dispatch throws.
+
+Part of scenarios 1, 5 and 6 need no client at all: `./gradlew townsteadRuntimeTestJar -PtownsteadRuntimeFixture=true`
+builds a disposable fixture mod that spawns an MCA villager on a dedicated server, reads its state
+(scenario 1), then awards profession XP past any daily cap and confirms the award lands capped and a
+further award that day is refused (the daily-cap half of scenario 5 — the day-boundary tier-up still
+needs a real clock and a client), and learns then forgets a known skill twice each to confirm both
+are idempotent (scenario 6). Outcomes are written to `townstead-fixture-results.txt`. Run the built
+jar on a dedicated server alongside MCA and Townstead with `-Dmcaquests.townstead.fixture=true`.
 
 **Performance** — on a dedicated server with 100+ villagers, `debugBindingLogs` on, check
 `status`: average scan under 1 ms, no scan above 5 ms, and cache hits clearly outnumbering reads.
@@ -563,12 +674,12 @@ Townstead is there (`/mcaquests validate` lists how many).
 **How do I train villagers for A Working Village?** It asks for residents of *that* village at
 **Townstead profession tier 2** (Apprentice) — Townstead's work tier, not vanilla trading. Residents earn
 it by working their trade; any trade with a Townstead track that reaches tier 2 counts. Open the project
-card and press **Details** to see who was counted and why. Before 1.6.6, a binding defect in MCA: Quests
+card and press **Details** to see who was counted and why. Before 1.7.0, a binding defect in MCA: Quests
 could make every trade read as having no track on some server starts, so no resident was ever counted;
 that is fixed.
 
 **What are the "welcoming points" in Known Far and Wide?** Townstead's **Tourism** spirit. A completed,
-registered inn gives +2. Since 1.6.6 it is measured from when the project began, so the inn you built for
+registered inn gives +2. Since 1.7.0 it is measured from when the project began, so the inn you built for
 the project counts.
 
 **Why does my Townstead quest say "On hold"?** Townstead is not installed, or the specific capability

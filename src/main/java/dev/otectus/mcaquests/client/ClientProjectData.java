@@ -39,7 +39,7 @@ public final class ClientProjectData {
 
     /**
      * {@code incoming}, except that a card older than one already cached for the same live instance is
-     * replaced by the cached one (1.6.6): a menu computed before a change must not undo the change on
+     * replaced by the cached one (1.7.0): a menu computed before a change must not undo the change on
      * screen. Cards for offers carry no instance and always pass.
      */
     public static List<ProjectCard> newestOf(UUID villager, List<ProjectCard> incoming) {

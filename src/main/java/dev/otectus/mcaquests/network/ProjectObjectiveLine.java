@@ -10,7 +10,7 @@ import java.util.List;
  * One shared objective row for a project card/log entry: the objective text, the shared current/target,
  * and this player's own contribution so far (spec 0.4.0).
  *
- * <p>Since 1.6.6 a row also carries its {@link ProjectObjectiveStatus} — so a paused, blocked or
+ * <p>Since 1.7.0 a row also carries its {@link ProjectObjectiveStatus} — so a paused, blocked or
  * not-yet-observed objective says so in words and a glyph rather than looking stuck — and the expanded
  * help the objective builds from the same predicates that grant credit: what counts, where, the next
  * useful action, and why it is blocked.

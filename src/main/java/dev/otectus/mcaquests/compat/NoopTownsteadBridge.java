@@ -41,6 +41,11 @@ final class NoopTownsteadBridge implements TownsteadBridge {
     }
 
     @Override
+    public String bindingPath() {
+        return "none";
+    }
+
+    @Override
     public Optional<String> variant() {
         return Optional.empty();
     }

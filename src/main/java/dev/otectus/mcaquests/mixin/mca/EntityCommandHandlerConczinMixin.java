@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Observes MCA opening its dialogue, for the {@code net.conczin.mca} package root (1.6.6).
+ * Observes MCA opening its dialogue, for the {@code net.conczin.mca} package root (1.7.0).
  *
  * <p>One of four variants, exactly like the Gift hook: {@code McaGiftMixinPlugin} applies the one whose
  * root this MCA ships and skips the rest. {@code EntityCommandHandler.interactAt} is where MCA sends a

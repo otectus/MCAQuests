@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client to server: "show me where this project's work counts" (1.6.6). Names a project instance by
+ * Client to server: "show me where this project's work counts" (1.7.0). Names a project instance by
  * key; the server re-resolves it and answers only a player who is part of it or standing in it.
  */
 public record ProjectScopeRequestC2SPacket(String instanceKey) implements CustomPacketPayload {

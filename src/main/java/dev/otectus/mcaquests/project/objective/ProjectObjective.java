@@ -34,7 +34,7 @@ public interface ProjectObjective {
 
     /**
      * The target for one instance's progress. The same as {@link #required()} except where an instance
-     * carries its own, frozen by a migration (1.6.6): a project already under way when a bundled
+     * carries its own, frozen by a migration (1.7.0): a project already under way when a bundled
      * definition's number changed keeps the number it was started with.
      */
     default int requiredFor(SharedObjectiveProgress progress) {
@@ -52,7 +52,7 @@ public interface ProjectObjective {
 
     /**
      * Expanded help for one objective of one instance: what counts, where, the next useful action and
-     * why it is blocked, built from the same predicates that grant credit (1.6.6). Shown behind the
+     * why it is blocked, built from the same predicates that grant credit (1.7.0). Shown behind the
      * objective's help toggle, never in the one-line summary. Empty when there is nothing to add.
      */
     default java.util.List<Component> explain(ProjectObjectiveContext context) {

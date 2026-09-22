@@ -5,7 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.otectus.mcaquests.compat.TownsteadBridge;
 import dev.otectus.mcaquests.compat.TownsteadCapability;
-import dev.otectus.mcaquests.compat.TownsteadEvaluation;
+import dev.otectus.mcaquests.quest.objective.TownsteadResidentEvidence;
 import dev.otectus.mcaquests.data.StrictCodecs;
 import dev.otectus.mcaquests.project.ProjectDefinition;
 import dev.otectus.mcaquests.project.state.ProjectState;
@@ -17,7 +17,6 @@ import net.minecraft.util.ExtraCodecs;
 
 import dev.otectus.mcaquests.compat.McaCompat;
 import dev.otectus.mcaquests.compat.TownsteadNeedsView;
-import dev.otectus.mcaquests.compat.TownsteadVillagerView;
 import net.minecraft.world.entity.Entity;
 
 import java.util.List;
@@ -29,19 +28,39 @@ import java.util.OptionalInt;
  *
  * <pre>{@code
  * { "type": "mcaquests:townstead_resident_wellbeing_project",
- *   "minimum_observed": 5, "minimum_fraction": 0.8, "hunger_min": 60, "hold_ticks": 6000 }
+ *   "minimum_observed": 5, "minimum_fraction": 0.8, "hunger_min": 60, "hold_ticks": 6000,
+ *   "last_known_max_age_days": 0 }
  * }</pre>
  *
  * <p>The hold runs in project time, not player time: it accrues once per sweep however many players
  * are online, so a busy server does not finish this five times faster than a quiet one.
+ *
+ * <p>{@code last_known_max_age_days} works as on the personal objective: off by default, and when
+ * set it adds Townstead's fresh-enough last-known record of each unloaded resident to what the
+ * village is judged on, without touching the loaded-fraction gate. See
+ * {@link TownsteadResidentEvidence}.
  */
 public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, double minimumFraction,
                                                          OptionalInt hungerMin, OptionalInt thirstMin,
                                                          OptionalInt energyMin,
                                                          boolean requireNotCollapsed,
                                                          double minimumLoadedFraction,
-                                                         int holdTicks)
+                                                         int holdTicks,
+                                                         int lastKnownMaxAgeDays)
         implements TownsteadProjectObjective {
+
+    /**
+     * The shape this objective had before {@code last_known_max_age_days} (1.7.0), kept so an add-on
+     * that builds one in code still compiles. No last-known age means what it always meant: only loaded
+     * residents are judged.
+     */
+    public TownsteadResidentWellbeingProjectObjective(int minimumObserved, double minimumFraction,
+                                                      OptionalInt hungerMin, OptionalInt thirstMin,
+                                                      OptionalInt energyMin, boolean requireNotCollapsed,
+                                                      double minimumLoadedFraction, int holdTicks) {
+        this(minimumObserved, minimumFraction, hungerMin, thirstMin, energyMin, requireNotCollapsed,
+                minimumLoadedFraction, holdTicks, 0);
+    }
 
     private static final String K_HELD = "townstead_held_ticks";
 
@@ -66,10 +85,12 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
                                     DEFAULT_LOADED_FRACTION)
                             .forGetter(TownsteadResidentWellbeingProjectObjective::minimumLoadedFraction),
                     StrictCodecs.strictOptional(ExtraCodecs.POSITIVE_INT, "hold_ticks", 1200)
-                            .forGetter(TownsteadResidentWellbeingProjectObjective::holdTicks)
-            ).apply(instance, (observed, fraction, hunger, thirst, energy, collapsed, loaded, hold) ->
+                            .forGetter(TownsteadResidentWellbeingProjectObjective::holdTicks),
+                    StrictCodecs.strictOptional(ExtraCodecs.NON_NEGATIVE_INT, "last_known_max_age_days", 0)
+                            .forGetter(TownsteadResidentWellbeingProjectObjective::lastKnownMaxAgeDays)
+            ).apply(instance, (observed, fraction, hunger, thirst, energy, collapsed, loaded, hold, lastKnown) ->
                     new TownsteadResidentWellbeingProjectObjective(observed, fraction, unbox(hunger),
-                            unbox(thirst), unbox(energy), collapsed, loaded, hold)));
+                            unbox(thirst), unbox(energy), collapsed, loaded, hold, lastKnown)));
 
     private static Optional<Integer> box(OptionalInt value) {
         return value.isPresent() ? Optional.of(value.getAsInt()) : Optional.empty();
@@ -102,22 +123,21 @@ public record TownsteadResidentWellbeingProjectObjective(int minimumObserved, do
         if (village.isEmpty() || !bridge.has(TownsteadCapability.READ_NEEDS)) {
             return false;
         }
-        TownsteadEvaluation evaluation = new TownsteadEvaluation();
-        int observed = 0;
-        int well = 0;
         List<Entity> residents = McaCompat.loadedVillageResidents(level, village.getAsInt());
         if (!enoughOfTheVillageIsLoaded(level, village.getAsInt(), residents.size())) {
             // An unloaded population is not a well one. The hold waits rather than banking a phase on
-            // the handful of residents who happened to be in render distance.
+            // the handful of residents who happened to be in render distance. Last-known records never
+            // relax this gate; they only widen what is judged once it is passed.
             return reset(progress);
         }
-        for (Entity resident : residents) {
-            TownsteadVillagerView view = evaluation.villager(resident).orElse(null);
-            if (view == null) {
-                continue;
-            }
-            observed++;
-            if (isWell(view.needs())) {
+        java.util.Set<java.util.UUID> roll = lastKnownMaxAgeDays > 0
+                ? McaCompat.villageResidentUuids(level, village.getAsInt()) : java.util.Set.of();
+        TownsteadResidentEvidence.Readings readings = TownsteadResidentEvidence.readings(level, village.getAsInt(),
+                residents, roll, lastKnownMaxAgeDays);
+        int observed = readings.size();
+        int well = 0;
+        for (TownsteadNeedsView needs : readings.needs()) {
+            if (isWell(needs)) {
                 well++;
             }
         }

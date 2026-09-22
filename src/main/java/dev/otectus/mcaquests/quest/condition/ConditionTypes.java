@@ -95,7 +95,7 @@ public final class ConditionTypes {
 
     /**
      * {@code mcareputation:profile} — the player's public profile: how widely they are known in this
-     * village, and what they are known for (MCA: Reputation 0.6.0, 1.6.6).
+     * village, and what they are known for (MCA: Reputation 0.6.0, 1.7.0).
      *
      * <p>Registered unconditionally for the same reason the two above are. The difference is that its
      * degradation is <b>authored</b> rather than fixed: an installation that cannot answer the

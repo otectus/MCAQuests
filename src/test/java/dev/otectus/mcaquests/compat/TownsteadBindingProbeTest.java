@@ -87,7 +87,7 @@ class TownsteadBindingProbeTest {
 
             // ProfessionProgressions.spec is overloaded (String, ProfessionXpType). Bound to the enum
             // overload, a String lookup failed its cast and every track read as "no progression" --
-            // which is what production servers did before 1.6.6. The farmer is a built-in track.
+            // which is what production servers did before 1.7.0. The farmer is a built-in track.
             Object spec = resolution.handle(TownsteadBinding.TRACK_SPEC).invoke((Object) "farmer");
             assertNotNull(spec, "ProfessionProgressions.spec(String) did not answer for the farmer");
             int maxXp = (int) resolution.handle(TownsteadBinding.TRACK_MAX_XP).invoke(spec);

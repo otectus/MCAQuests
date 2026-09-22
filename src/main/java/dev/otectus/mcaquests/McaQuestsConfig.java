@@ -853,7 +853,7 @@ public final class McaQuestsConfig {
                     .define("showSituationToast", true);
             showBuildAreaSeconds = b.comment(
                     "How long a project's build area stays outlined after you press Show build area on its",
-                    "card, in seconds (1.6.6). The outline is the area the server actually counts placements",
+                    "card, in seconds (1.7.0). The outline is the area the server actually counts placements",
                     "and kills in. 0 turns the outline off; the area is still described in chat.")
                     .defineInRange("showBuildAreaSeconds", 60, 0, 600);
 

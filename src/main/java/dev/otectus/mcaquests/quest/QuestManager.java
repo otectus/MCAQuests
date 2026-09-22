@@ -932,7 +932,7 @@ public final class QuestManager {
                 active.dimension(), active.villageId(), def.id(),
                 // This copy of the quest, so a reward whose effect must land once per acceptance —
                 // and again on the next acceptance of a repeatable quest — has an identity to key on
-                // (1.6.6). Minted here rather than read through instanceIfPresent(): this runs inside
+                // (1.7.0). Minted here rather than read through instanceIfPresent(): this runs inside
                 // the turn-in, which is already writing the quest state, and a key that fell back to
                 // "no instance" would make two runs of a repeatable quest look like one operation.
                 java.util.Optional.of(active.instance()));

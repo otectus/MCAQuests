@@ -10,7 +10,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  */
 public final class QuestNetwork {
 
-    // Bumped to 18 — the 1.6.6 reliability update. ProjectObjectiveLine carries a status and expanded
+    // Bumped to 18 — the 1.7.0 reliability update. ProjectObjectiveLine carries a status and expanded
     // help, ProjectCard names its live instance, revision and whether it has a build area,
     // ProjectLogEntry names its instance and why it is paused, and ProjectScopeRequestC2SPacket /
     // ProjectScopeS2CPacket are new. A protocol-17 client would decode each of those as the old shape,
@@ -135,7 +135,7 @@ public final class QuestNetwork {
         registrar.playToServer(QuestDeliverC2SPacket.TYPE,
                 QuestDeliverC2SPacket.STREAM_CODEC, QuestDeliverC2SPacket::handle);
 
-        // v1.6.6 — a project's build area.
+        // v1.7.0 — a project's build area.
         registrar.playToServer(ProjectScopeRequestC2SPacket.TYPE,
                 ProjectScopeRequestC2SPacket.STREAM_CODEC, ProjectScopeRequestC2SPacket::handle);
         registrar.playToClient(ProjectScopeS2CPacket.TYPE, ProjectScopeS2CPacket.STREAM_CODEC,
