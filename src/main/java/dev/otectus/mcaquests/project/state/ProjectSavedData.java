@@ -279,6 +279,27 @@ public final class ProjectSavedData extends SavedData {
      * naming the old key follows it. Overworld instances never change. Nothing is ever merged: when the
      * qualified key is somehow taken already, the instance keeps its old key and a warning says so.
      */
+    /**
+     * Moves one instance to another identity (1.7.0: an operator rebinding an instance whose village is
+     * gone), carrying every owed reward that names it. Empty, with nothing changed, when the new key is
+     * already taken: two instances are never merged.
+     */
+    public java.util.Optional<ProjectState> rebind(ProjectState state, String newIdentity, java.util.OptionalInt village,
+                                                    net.minecraft.core.BlockPos anchor) {
+        ProjectState moved = state.rebound(newIdentity, village, anchor);
+        String oldKey = state.key().asString();
+        String newKey = moved.key().asString();
+        if (!oldKey.equals(newKey) && instances.containsKey(newKey)) {
+            return java.util.Optional.empty();
+        }
+        instances.remove(oldKey);
+        instances.put(newKey, moved);
+        pending.replaceAll((player, owed) -> new ArrayList<>(owed.stream()
+                .map(reward -> reward.rekeyed(oldKey, newKey, newIdentity)).toList()));
+        setDirty();
+        return java.util.Optional.of(moved);
+    }
+
     void qualifyLegacyDimensionKeys() {
         List<ProjectState> moved = new ArrayList<>();
         for (ProjectState state : new ArrayList<>(instances.values())) {

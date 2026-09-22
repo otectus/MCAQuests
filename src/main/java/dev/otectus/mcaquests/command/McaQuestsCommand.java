@@ -127,6 +127,45 @@ public final class McaQuestsCommand {
                                 .executes(McaQuestsCommand::debugOffers)
                                 .then(Commands.literal("reroll")
                                         .executes(McaQuestsCommand::debugOffersReroll))))
+                .then(Commands.literal("quest")
+                        .requires(src -> src.hasPermission(3))
+                        .then(Commands.literal("rebase")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("id", ResourceLocationArgument.id())
+                                                .executes(ctx -> {
+                                                    ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+                                                    QuestManager.previewRebase(target, ResourceLocationArgument.getId(ctx, "id"))
+                                                            .forEach(line -> ctx.getSource().sendSuccess(() -> line, false));
+                                                    return 1;
+                                                })
+                                                .then(Commands.literal("confirm")
+                                                        .executes(ctx -> {
+                                                            ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+                                                            Component result = QuestManager.applyRebase(target,
+                                                                    ResourceLocationArgument.getId(ctx, "id"));
+                                                            ctx.getSource().sendSuccess(() -> result, true);
+                                                            return 1;
+                                                        }))))))
+                .then(Commands.literal("rewards")
+                        .then(Commands.literal("held")
+                                .requires(src -> src.hasPermission(2))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(McaQuestsCommand::rewardsHeld)))
+                        .then(Commands.literal("retry")
+                                .requires(src -> src.hasPermission(3))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("n", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                                                .executes(McaQuestsCommand::rewardsRetry))))
+                        .then(Commands.literal("dismiss")
+                                .requires(src -> src.hasPermission(3))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("n", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                                                .executes(McaQuestsCommand::rewardsDismiss)))))
+                .then(Commands.literal("escort")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("release")
+                                .then(Commands.argument("targets", EntityArgument.entities())
+                                        .executes(McaQuestsCommand::escortRelease))))
                 .then(Commands.literal("project")
                         .then(Commands.literal("list")
                                 .requires(src -> src.hasPermission(2))
@@ -172,6 +211,15 @@ public final class McaQuestsCommand {
                                                 .then(Commands.literal("reset")
                                                         .requires(src -> src.hasPermission(3))
                                                         .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.RESET, -1, 0)))
+                                                .then(Commands.literal("rebase")
+                                                        .requires(src -> src.hasPermission(3))
+                                                        .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.REBASE, -1, 0)))
+                                                .then(Commands.literal("rebind")
+                                                        .requires(src -> src.hasPermission(3))
+                                                        .then(Commands.literal("anchor")
+                                                                .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.REBIND_ANCHOR, -1, 0)))
+                                                        .then(Commands.literal("village")
+                                                                .executes(ctx -> projectPreview(ctx, ProjectRecovery.Operation.REBIND_VILLAGE, -1, 0))))
                                                 .then(Commands.literal("rebaseline")
                                                         .requires(src -> src.hasPermission(3))
                                                         .then(Commands.argument("objective", IntegerArgumentType.integer(0))
@@ -1025,6 +1073,72 @@ public final class McaQuestsCommand {
      * repackaged mid-version-line before, and the difference between "bound to forge.net.mca.",
      * "bound to net.conczin.mca." and "no root matched" explains most MCA-shaped reports outright.
      */
+    /** Lists the quest rewards a player is owed because they threw during a turn-in (1.7.0). */
+    private static int rewardsHeld(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        java.util.List<dev.otectus.mcaquests.state.HeldQuestReward> held = QuestCapabilities.get(target)
+                .map(dev.otectus.mcaquests.state.PlayerQuestData::heldRewards).orElse(java.util.List.of());
+        if (held.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal(target.getScoreboardName()
+                    + " is owed no held quest rewards."), false);
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(target.getScoreboardName() + " is owed "
+                + held.size() + " held quest reward(s):"), false);
+        for (int i = 0; i < held.size(); i++) {
+            dev.otectus.mcaquests.state.HeldQuestReward entry = held.get(i);
+            int number = i + 1;
+            ctx.getSource().sendSuccess(() -> Component.literal("  #" + number + " " + entry.questId()
+                    + " reward #" + (entry.rewardIndex() + 1) + " (" + entry.rewardType() + "), failed at "
+                    + entry.gameTime() + ": " + entry.error()), false);
+        }
+        return held.size();
+    }
+
+    /** Pays one held reward again, if its definition is unchanged since it failed (1.7.0). */
+    private static int rewardsRetry(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        int index = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "n") - 1;
+        Component result = QuestManager.retryHeldReward(target, index);
+        ctx.getSource().sendSuccess(() -> result, true);
+        return 1;
+    }
+
+    /** Drops one held reward without paying it (1.7.0). */
+    private static int rewardsDismiss(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        int index = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "n") - 1;
+        java.util.Optional<dev.otectus.mcaquests.state.HeldQuestReward> removed = QuestCapabilities.get(target)
+                .flatMap(data -> data.removeHeldReward(index));
+        ctx.getSource().sendSuccess(() -> Component.literal(removed
+                .map(entry -> "Dismissed held reward #" + (index + 1) + " (" + entry.questId() + ") of "
+                        + target.getScoreboardName() + ". Nothing was paid.")
+                .orElse("No held reward #" + (index + 1) + " for " + target.getScoreboardName() + ".")), true);
+        return removed.isPresent() ? 1 : 0;
+    }
+
+    /**
+     * Frees escortees a quest left frozen (1.7.0). Every selected MCA villager gets its AI and
+     * vulnerability back — the values a hold recorded, or moving and vulnerable when none was recorded —
+     * stops being led, and loses its lease. The recovery for a villager held by a quest from before 1.7.0,
+     * when holds were not saved and a restart could orphan one.
+     */
+    private static int escortRelease(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        int released = 0;
+        for (Entity entity : EntityArgument.getEntities(ctx, "targets")) {
+            if (!McaCompat.isMcaVillager(entity)) {
+                continue;
+            }
+            McaCompat.releaseVillagerHold(entity);
+            McaCompat.stopVillagerLeading(entity);
+            released++;
+        }
+        int count = released;
+        ctx.getSource().sendSuccess(() -> Component.literal("Released " + count
+                + " villager(s) from escort holds: AI and vulnerability restored, leading stopped."), true);
+        return count;
+    }
+
     private static int debugMca(CommandContext<CommandSourceStack> ctx) {
         String report = "MCA binding: " + McaBinding.describe();
         ctx.getSource().sendSuccess(() -> Component.literal(report), false);

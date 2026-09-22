@@ -29,8 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Spec §14.5: all 24 payload ids are the ones §14.2 names (plus the two build-area payloads added in
- * 1.7.0), all 24 are unique, all 24 are registered in the right direction, and the protocol is 18.
+ * Spec §14.5: all 25 payload ids are the ones §14.2 names (plus the two build-area payloads and the
+ * reload refresh added in 1.7.0), all 25 are unique, all 25 are registered in the right direction, and
+ * the protocol is 18.
  *
  * <p>None of that can be asserted by calling {@code QuestNetwork.onRegisterPayloads} with a recording
  * double, because {@code RegisterPayloadHandlersEvent} and {@code PayloadRegistrar} are final and
@@ -83,6 +84,7 @@ class PayloadRegistryTest {
         S2C.put("HighlightTargetsS2CPacket", "highlight_targets");
         S2C.put("QuestGuidanceS2CPacket", "quest_guidance");
         S2C.put("ProjectScopeS2CPacket", "project_scope");
+        S2C.put("QuestMenusStaleS2CPacket", "quest_menus_stale");
     }
 
     private static List<String> allPayloads() {
@@ -135,9 +137,9 @@ class PayloadRegistryTest {
     // ---------------------------------------------------------------- ids
 
     @Test
-    @DisplayName("all 24 payloads carry the ids spec §14.2 and 1.7.0 give them")
+    @DisplayName("all 25 payloads carry the ids spec §14.2 and 1.7.0 give them")
     void everyPayloadHasItsSpecifiedId() {
-        assertEquals(24, allPayloads().size(), "spec §14.2 lists 22 payloads and 1.7.0 adds two");
+        assertEquals(25, allPayloads().size(), "spec §14.2 lists 22 payloads and 1.7.0 adds three");
         for (String simpleName : allPayloads()) {
             String expected = C2S.containsKey(simpleName) ? C2S.get(simpleName) : S2C.get(simpleName);
             assertEquals(ResourceLocation.fromNamespaceAndPath("mcaquests", expected),
@@ -155,7 +157,7 @@ class PayloadRegistryTest {
             String id = type(simpleName).id().toString();
             assertTrue(seen.add(id), "duplicate payload id " + id + " (at " + simpleName + ")");
         }
-        assertEquals(24, seen.size());
+        assertEquals(25, seen.size());
     }
 
     // ---------------------------------------------------------------- direction
@@ -216,7 +218,7 @@ class PayloadRegistryTest {
                     CLIENT_HANDLERS + " has no static handler taking " + simpleName);
         }
         assertEquals(S2C.size(), handled.size(),
-                "the client bridge must handle the 13 S2C payloads and nothing else");
+                "the client bridge must handle the 14 S2C payloads and nothing else");
     }
 
     // ---------------------------------------------------------------- protocol and registration
@@ -230,7 +232,7 @@ class PayloadRegistryTest {
         try {
             Field field = QuestNetwork.class.getDeclaredField("PROTOCOL_VERSION");
             field.setAccessible(true);
-            // 18 since 1.7.0: two new build-area payloads, and project cards, objective lines and
+            // 18 since 1.7.0: two new build-area payloads, a reload refresh, and project cards, objective lines and
             // log entries that grew fields a protocol-17 client would decode as the next value.
             assertEquals("18", field.get(null), "the NeoForge protocol is 18");
         } catch (ReflectiveOperationException e) {
@@ -239,7 +241,7 @@ class PayloadRegistryTest {
     }
 
     @Test
-    @DisplayName("QuestNetwork registers 11 payloads to the server and 13 to the client")
+    @DisplayName("QuestNetwork registers 11 payloads to the server and 14 to the client")
     void registrationCountsMatchTheDirections() {
         String source = questNetworkSource();
         assertEquals(C2S.size(), countOf(source, "playToServer("),

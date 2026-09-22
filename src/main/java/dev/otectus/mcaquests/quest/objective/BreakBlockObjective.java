@@ -14,9 +14,13 @@ import net.minecraft.server.level.ServerLevel;
 import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** Break a number of matching blocks (spec sections 14, 19). Only player breaks are credited. */
+/**
+ * Break a number of matching blocks (spec sections 14, 19). Only player breaks are credited, and since
+ * 1.7.0 never a block the player placed themselves while the objective was active.
+ */
 public record BreakBlockObjective(BlockTarget target, int count,
                                   Optional<SourceHint> source) implements QuestObjective {
 
@@ -90,5 +94,52 @@ public record BreakBlockObjective(BlockTarget target, int count,
 
     public boolean matches(BlockState state) {
         return target.matches(state);
+    }
+
+    /** How many self-placed positions are remembered; older ones are forgotten first. */
+    static final int PLACED_MEMORY = 512;
+    private static final String KEY_PLACED = "placed_by_player";
+
+    /**
+     * Remembers that the player placed a block this objective would count (1.7.0), so breaking it again
+     * is not progress. Without this, placing and breaking one block repeatedly advanced both a
+     * {@code place_block} and a {@code break_block} objective.
+     */
+    public static void rememberPlaced(ObjectiveProgress progress, BlockPos pos) {
+        long[] placed = progress.extra().getLongArray(KEY_PLACED);
+        long key = pos.asLong();
+        for (long entry : placed) {
+            if (entry == key) {
+                return;
+            }
+        }
+        int keep = Math.min(placed.length, PLACED_MEMORY - 1);
+        long[] next = new long[keep + 1];
+        System.arraycopy(placed, placed.length - keep, next, 0, keep);
+        next[keep] = key;
+        progress.extra().putLongArray(KEY_PLACED, next);
+    }
+
+    /**
+     * Whether a broken block was one the player placed while this objective was active, forgetting it
+     * either way: the position is free to count again once something else stands there.
+     */
+    public static boolean consumePlaced(ObjectiveProgress progress, BlockPos pos) {
+        long[] placed = progress.extra().getLongArray(KEY_PLACED);
+        long key = pos.asLong();
+        for (int i = 0; i < placed.length; i++) {
+            if (placed[i] == key) {
+                long[] next = new long[placed.length - 1];
+                System.arraycopy(placed, 0, next, 0, i);
+                System.arraycopy(placed, i + 1, next, i, placed.length - i - 1);
+                if (next.length == 0) {
+                    progress.extra().remove(KEY_PLACED);
+                } else {
+                    progress.extra().putLongArray(KEY_PLACED, next);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }

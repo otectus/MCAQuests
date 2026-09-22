@@ -13,7 +13,8 @@ public final class QuestNetwork {
     // Bumped to 18 — the 1.7.0 reliability update. ProjectObjectiveLine carries a status and expanded
     // help, ProjectCard names its live instance, revision and whether it has a build area,
     // ProjectLogEntry names its instance and why it is paused, and ProjectScopeRequestC2SPacket /
-    // ProjectScopeS2CPacket are new. A protocol-17 client would decode each of those as the old shape,
+    // ProjectScopeS2CPacket and QuestMenusStaleS2CPacket (a /reload refreshes an open Quests menu) are
+    // new. A protocol-17 client would decode each of those as the old shape,
     // so client and server must match.
     // (17 was item delivery. QuestDeliverC2SPacket is new, CardObjective carries what has been
     // handed over, what the player is carrying, whether this villager may take it and why not,
@@ -140,5 +141,9 @@ public final class QuestNetwork {
                 ProjectScopeRequestC2SPacket.STREAM_CODEC, ProjectScopeRequestC2SPacket::handle);
         registrar.playToClient(ProjectScopeS2CPacket.TYPE, ProjectScopeS2CPacket.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandlers.handleProjectScope(payload, context));
+
+        // v1.7.0 — a /reload refreshes an open Quests menu.
+        registrar.playToClient(QuestMenusStaleS2CPacket.TYPE, QuestMenusStaleS2CPacket.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandlers.handleQuestMenusStale(payload, context));
     }
 }

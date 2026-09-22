@@ -124,6 +124,7 @@ public final class QuestProgressEvents {
             // Before the log is synced, so a quest whose giver died while this player was offline is
             // already gone from it rather than appearing for a moment and then vanishing.
             reconcileDeadGivers(player);
+            SituationManager.reconcileFailedCopies(player);
             if (player.getServer() != null) {
                 QuestCapabilities.get(player).ifPresent(data -> {
                     for (SituationInstance instance : SituationManager.openInstances(player.getServer())) {
@@ -669,7 +670,9 @@ public final class QuestProgressEvents {
         if (event.getPlayer() instanceof ServerPlayer player) {
             forActiveObjectives(player, BreakBlockObjective.class,
                     (objective, progress) -> {
-                        if (objective.matches(event.getState())) {
+                        // A block the player placed during the objective is not progress (1.7.0).
+                        if (objective.matches(event.getState())
+                                && !BreakBlockObjective.consumePlaced(progress, event.getPos())) {
                             progress.add(1);
                         }
                     });
@@ -870,7 +873,13 @@ public final class QuestProgressEvents {
         QuestCapabilities.get(player).ifPresent(data -> {
             MinecraftServer server = player.getServer();
             long now = player.level().getGameTime();
+            dev.otectus.mcaquests.state.ContentOutageData ledger =
+                    dev.otectus.mcaquests.state.ContentOutageData.current().orElse(null);
             for (ActiveQuest active : data.active()) {
+                // Time the definition was missing, whether or not this player was online to notice it
+                // (1.7.0). A situation's copies follow its shared clock instead, which the ledger feeds.
+                boolean ledgerTracks = ledger != null && active.situationInstance().isEmpty()
+                        && creditOutage(ledger, active, now);
                 if (server != null && active.situationInstance().isPresent()) {
                     SituationSavedData situations = SituationSavedData.get(server);
                     SituationInstance instance = situations.getInstance(active.situationInstance().get())
@@ -895,13 +904,29 @@ public final class QuestProgressEvents {
                     // A quest whose definition is quarantined, or whose compat pack is not mounted, is
                     // exactly as unplayable as one whose objective reports unavailable — so its clock
                     // must freeze too, or removing a mod for a week would expire every quest that
-                    // needed it (1.5.4).
-                    if (QuestManager.compatSuspensionSubject(active.questId()).isPresent()) {
+                    // needed it (1.5.4). The outage ledger credits that above when it is tracking the
+                    // definition; this second-by-second accrual is the fallback for one it never saw.
+                    if (!ledgerTracks && QuestManager.compatSuspensionSubject(active.questId()).isPresent()) {
                         active.addSuspendedTicks(POLL_INTERVAL_TICKS);
                     }
                 });
             }
         });
+    }
+
+    /**
+     * Credits the time since this quest was last accounted during which its definition was missing, and
+     * says whether the ledger is tracking it as missing now. A quest seen for the first time starts
+     * accounting from now.
+     */
+    static boolean creditOutage(dev.otectus.mcaquests.state.ContentOutageData ledger, ActiveQuest active, long now) {
+        String key = dev.otectus.mcaquests.state.ContentOutageData.questKey(active.questId());
+        long from = active.outageAccountedUntil();
+        if (from >= 0L && now > from) {
+            active.addSuspendedTicks(ledger.overlap(key, from, now));
+        }
+        active.setOutageAccountedUntil(now);
+        return ledger.covers(key);
     }
 
     private static void checkFailureTriggers(ServerPlayer player) {
@@ -1047,10 +1072,20 @@ public final class QuestProgressEvents {
             BlockState placed = event.getPlacedBlock();
             BlockPos pos = event.getPos();
             ServerLevel level = (ServerLevel) player.level();
+            // One credit per position (1.7.0): re-placing a block where one already counted does not count
+            // again. Positions are only recorded while the objective still needs them, so the set is
+            // bounded by the objective's own count.
             forActiveObjectives(player, PlaceBlockObjective.class,
                     (objective, progress) -> {
-                        if (objective.matches(placed)) {
+                        if (objective.matches(placed) && progress.count() < objective.count()
+                                && progress.addVisited(pos)) {
                             progress.add(1);
+                        }
+                    });
+            forActiveObjectives(player, BreakBlockObjective.class,
+                    (objective, progress) -> {
+                        if (objective.matches(placed) && progress.count() < objective.count()) {
+                            BreakBlockObjective.rememberPlaced(progress, pos);
                         }
                     });
             forActiveObjectives(player, BuildNearLocationObjective.class,
@@ -1294,8 +1329,9 @@ public final class QuestProgressEvents {
                     // Resolve template values so progress is tracked against this copy's concrete objectives.
                     ServerLevel level = (ServerLevel) player.level();
                     QuestDefinition def = active.resolve(base);
-                    if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
-                        return;
+                    if (CapitalsQuestRequirements.unavailableReason(def).isPresent()
+                            || dev.otectus.mcaquests.quest.QuestDrift.drifted(active, def)) {
+                        return; // drifted: paused until an operator accepts the new definition (1.7.0)
                     }
                     List<QuestObjective> objectives = def.objectives();
                     for (int i = 0; i < objectives.size(); i++) {

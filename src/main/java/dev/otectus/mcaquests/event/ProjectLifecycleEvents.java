@@ -46,10 +46,20 @@ public final class ProjectLifecycleEvents {
      * survives leaving a world, so anything keyed on game time has to be dropped here or the next
      * world inherits it.
      */
+    /**
+     * Opens this world's outage ledger and records which definitions loaded (1.7.0). After the initial
+     * datapack load and before anyone can join, so the first poll already has the answer.
+     */
+    @SubscribeEvent
+    public static void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
+        dev.otectus.mcaquests.state.ContentOutageData.attach(event.getServer());
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
+        dev.otectus.mcaquests.state.ContentOutageData.detach();
         ProjectManager.clearSessionState();
-        // Escort holds are session-scoped too: the entities they name are about to stop existing here.
-        EscortHoldRegistry.clear();
+        // Escort leases are saved with the world (1.7.0); stop tracking this one without forgetting them.
+        EscortHoldRegistry.detach();
     }
 }

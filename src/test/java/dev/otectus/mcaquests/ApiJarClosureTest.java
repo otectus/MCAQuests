@@ -1,0 +1,163 @@
+package dev.otectus.mcaquests;
+
+import dev.otectus.mcaquests.support.TestBootstrap;
+import dev.otectus.mcaquests.support.TestPaths;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * The compile-only API jar compiles on its own (1.7.0).
+ *
+ * <p>Until 1.7.0 {@code apiExports} listed the classes add-ons name and nothing they lead to, so the jar
+ * shipped {@code QuestCondition} without the {@code QuestContext} its only method takes: an add-on that
+ * implemented a condition against the published jar could not compile. This walks every public and
+ * protected signature of every exported class — constructors, methods, fields, supertypes and generic
+ * arguments — and fails on any {@code dev.otectus.mcaquests} type the jar would not carry.
+ */
+class ApiJarClosureTest {
+
+    static {
+        TestBootstrap.ensureBootstrapped();
+    }
+
+    private static final String PREFIX = "dev.otectus.mcaquests.";
+
+    /** The exported top-level classes: everything under api/, plus build.gradle's apiReadModel. */
+    private static Set<String> exported() throws IOException {
+        Set<String> out = new TreeSet<>();
+        Path classes = TestPaths.of("build", "classes", "java", "main");
+        Path api = classes.resolve("dev/otectus/mcaquests/api");
+        try (Stream<Path> walk = Files.walk(api)) {
+            walk.filter(p -> p.toString().endsWith(".class"))
+                    .map(p -> classes.relativize(p).toString().replace('\\', '/'))
+                    .map(p -> p.substring(0, p.length() - ".class".length()).replace('/', '.'))
+                    .map(ApiJarClosureTest::topLevel)
+                    .forEach(out::add);
+        }
+        String build = Files.readString(TestPaths.of("build.gradle"));
+        Matcher block = Pattern.compile("def apiReadModel = \\[(.*?)\\n]", Pattern.DOTALL).matcher(build);
+        assertTrue(block.find(), "build.gradle has no apiReadModel list");
+        Matcher entry = Pattern.compile("'([^']+)'").matcher(block.group(1));
+        while (entry.find()) {
+            out.add(entry.group(1).replace('/', '.'));
+        }
+        return out;
+    }
+
+    private static String topLevel(String name) {
+        int dollar = name.indexOf('$');
+        return dollar < 0 ? name : name.substring(0, dollar);
+    }
+
+    @Test
+    @DisplayName("every type an exported signature names is exported too")
+    void exportedSignaturesAreClosed() throws Exception {
+        Set<String> exported = exported();
+        Set<String> missing = new TreeSet<>();
+        ClassLoader loader = getClass().getClassLoader();
+        List<Class<?>> toScan = new ArrayList<>();
+        for (String name : exported) {
+            toScan.add(Class.forName(name, false, loader));
+        }
+        Set<Class<?>> seen = new HashSet<>();
+        while (!toScan.isEmpty()) {
+            Class<?> type = toScan.remove(toScan.size() - 1);
+            if (!seen.add(type) || !visible(type.getModifiers()) && type.getEnclosingClass() != null) {
+                continue;
+            }
+            Set<Type> named = new HashSet<>();
+            named.add(type.getGenericSuperclass());
+            named.addAll(List.of(type.getGenericInterfaces()));
+            for (TypeVariable<?> variable : type.getTypeParameters()) {
+                named.addAll(List.of(variable.getBounds()));
+            }
+            for (Constructor<?> constructor : type.getDeclaredConstructors()) {
+                if (visible(constructor.getModifiers())) {
+                    named.addAll(List.of(constructor.getGenericParameterTypes()));
+                }
+            }
+            for (Method method : type.getDeclaredMethods()) {
+                if (visible(method.getModifiers()) && !method.isSynthetic()) {
+                    named.add(method.getGenericReturnType());
+                    named.addAll(List.of(method.getGenericParameterTypes()));
+                }
+            }
+            for (Field field : type.getDeclaredFields()) {
+                if (visible(field.getModifiers()) && !field.isSynthetic()) {
+                    named.add(field.getGenericType());
+                }
+            }
+            for (Class<?> nested : type.getDeclaredClasses()) {
+                if (visible(nested.getModifiers())) {
+                    toScan.add(nested);
+                }
+            }
+            Set<Class<?>> classes = new HashSet<>();
+            named.forEach(t -> collect(t, classes, new HashSet<>()));
+            for (Class<?> referenced : classes) {
+                String name = referenced.getName();
+                if (name.startsWith(PREFIX) && !exported.contains(topLevel(name))) {
+                    missing.add(topLevel(name) + "  (named by " + type.getName() + ")");
+                }
+            }
+        }
+        assertEquals(new TreeSet<>(), missing,
+                "exported signatures name types the api jar would not carry; add them to apiReadModel");
+    }
+
+    private static boolean visible(int modifiers) {
+        return Modifier.isPublic(modifiers) || Modifier.isProtected(modifiers);
+    }
+
+    private static void collect(Type type, Set<Class<?>> out, Set<Type> visiting) {
+        if (type == null || !visiting.add(type)) {
+            return;
+        }
+        if (type instanceof Class<?> c) {
+            out.add(c.isArray() ? c.getComponentType() : c);
+        } else if (type instanceof ParameterizedType parameterized) {
+            collect(parameterized.getRawType(), out, visiting);
+            collect(parameterized.getOwnerType(), out, visiting);
+            for (Type argument : parameterized.getActualTypeArguments()) {
+                collect(argument, out, visiting);
+            }
+        } else if (type instanceof GenericArrayType array) {
+            collect(array.getGenericComponentType(), out, visiting);
+        } else if (type instanceof WildcardType wildcard) {
+            for (Type bound : wildcard.getUpperBounds()) {
+                collect(bound, out, visiting);
+            }
+            for (Type bound : wildcard.getLowerBounds()) {
+                collect(bound, out, visiting);
+            }
+        } else if (type instanceof TypeVariable<?> variable) {
+            for (Type bound : variable.getBounds()) {
+                collect(bound, out, visiting);
+            }
+        }
+    }
+}

@@ -38,6 +38,10 @@ public final class ProjectState {
     private OptionalLong startDayTime = OptionalLong.empty();
     private long suspendedTicks;
     private long lastClockSample = Long.MIN_VALUE;
+    /** How far missing-definition outages have been credited from {@code ContentOutageData} (1.7.0); -1 before. */
+    private long outageAccountedUntil = -1L;
+    /** Fingerprints of the current phase's objectives as it opened (1.7.0; see {@code ProjectDrift}). */
+    private java.util.List<String> phaseFingerprints = java.util.List.of();
     private long retryAt = Long.MAX_VALUE;
 
     private int currentPhase;
@@ -171,6 +175,27 @@ public final class ProjectState {
         lastClockSample = now;
     }
 
+    /**
+     * Credits the time since the last sweep during which this project's definition was missing, whoever
+     * was online (1.7.0), and says whether the ledger is tracking it as missing now. The sweep runs only
+     * while someone is online, so an outage nobody saw would otherwise run the deadline down.
+     */
+    public boolean creditOutage(dev.otectus.mcaquests.state.ContentOutageData ledger, long now) {
+        String key = dev.otectus.mcaquests.state.ContentOutageData.projectKey(projectId);
+        if (outageAccountedUntil >= 0L && now > outageAccountedUntil) {
+            long credit = ledger.overlap(key, outageAccountedUntil, now);
+            suspendedTicks = suspendedTicks > Long.MAX_VALUE - credit ? Long.MAX_VALUE : suspendedTicks + credit;
+        }
+        outageAccountedUntil = now;
+        return ledger.covers(key);
+    }
+
+    public java.util.List<String> phaseFingerprints() { return phaseFingerprints; }
+
+    public void setPhaseFingerprints(java.util.List<String> fingerprints) {
+        this.phaseFingerprints = java.util.List.copyOf(fingerprints);
+    }
+
     public void allowRetryAt(long gameTime) { retryAt = gameTime; }
 
     public boolean canRetry(long now) {
@@ -240,6 +265,22 @@ public final class ProjectState {
         CompoundTag copy = save();
         copy.putString("identity", newIdentity);
         return load(copy);
+    }
+
+    /**
+     * A copy of this instance bound to another place (1.7.0): the operator's repair for an instance whose
+     * MCA village was deleted or merged. {@code village} empty makes it anchor-bound at {@code anchor};
+     * present, it belongs to that village. Progress, sponsors, ledgers and owed rewards are carried over.
+     */
+    public ProjectState rebound(String newIdentity, OptionalInt village, BlockPos anchor) {
+        CompoundTag copy = save();
+        copy.putString("identity", newIdentity);
+        copy.remove("village_id");
+        village.ifPresent(id -> copy.putInt("village_id", id));
+        copy.putLong("anchor", anchor.asLong());
+        ProjectState moved = load(copy);
+        moved.bumpRevision();
+        return moved;
     }
 
     public Set<UUID> sponsors() {
@@ -327,6 +368,12 @@ public final class ProjectState {
         startDayTime.ifPresent(value -> tag.putLong("start_day", value));
         if (suspendedTicks != 0L) { tag.putLong("suspended_ticks", suspendedTicks); }
         if (lastClockSample != Long.MIN_VALUE) { tag.putLong("clock_sample", lastClockSample); }
+        if (outageAccountedUntil >= 0L) { tag.putLong("outage_accounted", outageAccountedUntil); }
+        if (!phaseFingerprints.isEmpty()) {
+            ListTag fingerprints = new ListTag();
+            phaseFingerprints.forEach(fp -> fingerprints.add(net.minecraft.nbt.StringTag.valueOf(fp)));
+            tag.put("phase_fp", fingerprints);
+        }
         if (retryAt != Long.MAX_VALUE) { tag.putLong("retry_at", retryAt); }
         tag.putInt("phase", currentPhase);
         tag.putString("status", status.lower());
@@ -385,6 +432,13 @@ public final class ProjectState {
         if (tag.contains("start_day")) { state.startDayTime = OptionalLong.of(tag.getLong("start_day")); }
         state.suspendedTicks = Math.max(0L, tag.getLong("suspended_ticks"));
         if (tag.contains("clock_sample")) { state.lastClockSample = tag.getLong("clock_sample"); }
+        if (tag.contains("outage_accounted")) { state.outageAccountedUntil = tag.getLong("outage_accounted"); }
+        ListTag phaseFp = tag.getList("phase_fp", Tag.TAG_STRING);
+        java.util.List<String> fingerprints = new java.util.ArrayList<>(phaseFp.size());
+        for (int i = 0; i < phaseFp.size(); i++) {
+            fingerprints.add(phaseFp.getString(i));
+        }
+        state.phaseFingerprints = java.util.List.copyOf(fingerprints);
         if (tag.contains("retry_at")) { state.retryAt = tag.getLong("retry_at"); }
         state.phaseRewardsDistributed.or(BitSet.valueOf(tag.getByteArray("distributed")));
         ListTag sponsorList = tag.getList("sponsors", Tag.TAG_STRING);

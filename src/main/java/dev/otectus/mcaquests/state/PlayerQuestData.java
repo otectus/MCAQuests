@@ -138,6 +138,25 @@ public final class PlayerQuestData implements INBTSerializable<CompoundTag> {
         }
     }
 
+    /** Rewards that threw during a turn-in, held for an operator (1.7.0). Oldest first. */
+    private final java.util.List<HeldQuestReward> heldRewards = new java.util.ArrayList<>();
+
+    public java.util.List<HeldQuestReward> heldRewards() {
+        return java.util.Collections.unmodifiableList(heldRewards);
+    }
+
+    public void holdReward(HeldQuestReward held) {
+        heldRewards.add(held);
+        while (heldRewards.size() > HeldQuestReward.MAX_PER_PLAYER) {
+            heldRewards.remove(0);
+        }
+    }
+
+    public java.util.Optional<HeldQuestReward> removeHeldReward(int index) {
+        return index >= 0 && index < heldRewards.size()
+                ? java.util.Optional.of(heldRewards.remove(index)) : java.util.Optional.empty();
+    }
+
     public void copyFrom(PlayerQuestData other) {
         // Player cloning must not share mutable objective/offer state with the dead entity.
         load(other.save());
@@ -185,6 +204,11 @@ public final class PlayerQuestData implements INBTSerializable<CompoundTag> {
         tag.put("stats", stats.save());
         tag.put("offers", offers.save());
         if (!pendingItems.isEmpty()) { tag.put("pending_items", pendingItems.save()); }
+        if (!heldRewards.isEmpty()) {
+            ListTag held = new ListTag();
+            heldRewards.forEach(entry -> held.add(entry.save()));
+            tag.put("held_rewards", held);
+        }
         // Written only when something is tracked, so a save that never used the feature is byte-for-byte
         // what it was — the same discipline ActiveQuest applies to its own optional fields.
         if (tracked != null) {
@@ -212,6 +236,11 @@ public final class PlayerQuestData implements INBTSerializable<CompoundTag> {
         stats.load(tag.getCompound("stats")); // absent on pre-1.0.0 saves -> empty
         offers.load(tag.getCompound("offers")); // absent on pre-1.4.3 saves -> empty, so offers redraw
         pendingItems.load(tag.getCompound("pending_items"));
+        heldRewards.clear();
+        ListTag held = tag.getList("held_rewards", Tag.TAG_COMPOUND); // absent before 1.7.0 -> none held
+        for (int i = 0; i < held.size(); i++) {
+            HeldQuestReward.load(held.getCompound(i)).ifPresent(heldRewards::add);
+        }
         // Absent on pre-1.5.0 saves -> nothing tracked, and the next quest accepted picks itself up.
         tracked = TrackedQuest.load(tag.getCompound("tracked")).orElse(null);
     }

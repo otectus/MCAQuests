@@ -82,6 +82,17 @@ public final class QuestClientHandlers {
         }
     }
 
+    /**
+     * Asks for a fresh copy of the Quests menu this client has open, if any (1.7.0): the server reloaded
+     * its catalogue, and the offers on screen may name quests that no longer exist.
+     */
+    public static void refreshOpenQuestMenu() {
+        if (net.minecraft.client.Minecraft.getInstance().screen instanceof QuestMenuScreen menu) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                    new dev.otectus.mcaquests.network.OpenQuestMenuC2SPacket(menu.villagerUuid()));
+        }
+    }
+
     public static void showReadyToast(Component questTitle) {
         Minecraft minecraft = Minecraft.getInstance();
         if (McaQuestsConfig.CLIENT.showQuestToasts.get()) {

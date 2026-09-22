@@ -634,6 +634,20 @@ public final class McaHandles {
     }
 
     /**
+     * Whether MCA has a village with this id (1.7.0): {@code TRUE} or {@code FALSE} when its village
+     * manager answered, {@code null} when it could not be asked. {@link #village} folds "not there" and
+     * "could not ask" into one null, which a caller deciding that a village is gone must not do.
+     */
+    public static Boolean villageKnown(ServerLevel level, int villageId) {
+        Object manager = villageManager(level);
+        if (manager == null || H_MANAGER_BY_ID == null) {
+            return null;
+        }
+        Object answer = ref(H_MANAGER_BY_ID, manager, villageId);
+        return answer instanceof Optional<?> optional ? optional.isPresent() : null;
+    }
+
+    /**
      * Every building MCA has registered for a village, as opaque handles. MCA owns the building
      * registry and Townstead only contributes type ids to it, so "how many docks does this village
      * have" is an MCA question whose answer is cross-referenced against Townstead's ids -- not a

@@ -44,6 +44,20 @@ public final class CompatLifecycleEvents {
         // Reload listeners can consult an old definition during preparation. Clear once more after
         // every loader has applied; a login's sync is harmless and does not rebind third-party classes.
         TownsteadBridge.Holder.get().invalidateDataCaches();
+        if (event.getPlayer() == null) {
+            // A /reload can load or drop definitions; the outage ledger records which (1.7.0).
+            net.minecraft.server.MinecraftServer server = event.getPlayerList().getServer();
+            dev.otectus.mcaquests.state.ContentOutageData.sampleNow(server);
+            // And every open view built from the old catalogue is refreshed, not left to go stale until
+            // it is closed: project menus, the log and tracker, and any open Quests menu (1.7.0).
+            dev.otectus.mcaquests.project.ProjectMenuSessions.refreshAll(server);
+            for (net.minecraft.server.level.ServerPlayer player : event.getPlayerList().getPlayers()) {
+                dev.otectus.mcaquests.quest.QuestManager.syncLog(player);
+                dev.otectus.mcaquests.project.ProjectManager.syncProjects(player);
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                        dev.otectus.mcaquests.network.QuestMenusStaleS2CPacket.INSTANCE);
+            }
+        }
     }
 
     @SubscribeEvent

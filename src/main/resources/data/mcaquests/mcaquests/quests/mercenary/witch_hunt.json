@@ -41,7 +41,10 @@
     {
       "type": "mcaquests:kill_entity",
       "entity": "minecraft:witch",
-      "count": 3
+      "count": 3,
+      "source": {
+        "structure": "minecraft:swamp_hut"
+      }
     }
   ],
   "rewards": [

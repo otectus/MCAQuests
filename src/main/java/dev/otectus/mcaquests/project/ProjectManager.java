@@ -202,6 +202,11 @@ public final class ProjectManager {
             return;
         }
 
+        if (ProjectDrift.drifted(state, def)) {
+            // The phase changed under it: nothing is taken until an operator accepts the new phase (1.7.0).
+            sendProjectMenu(player, villager);
+            return;
+        }
         int defaultCap = McaQuestsConfig.COMMON.defaultPerPlayerContributionCap.get();
         boolean contributed = false;
         var phase = def.phase(state.currentPhase());
@@ -358,6 +363,8 @@ public final class ProjectManager {
         ServerLevel level = state != null && server != null
                 ? server.getLevel(dimensionKey(state.anchorDimension()))
                 : player.level() instanceof ServerLevel own ? own : null;
+        boolean villageGone = state != null && server != null && villageGone(server, state);
+        boolean drifted = state != null && state.currentPhase() == phaseIdx && ProjectDrift.drifted(state, def);
         for (int i = 0; i < phase.objectives().size(); i++) {
             ProjectObjective objective = phase.objectives().get(i);
             boolean live = state != null && i < state.progressCount() && state.currentPhase() == phaseIdx;
@@ -375,6 +382,21 @@ public final class ProjectManager {
                 status = objective.isSatisfied(progress) ? ProjectObjectiveStatus.SATISFIED
                         : ProjectObjectiveStatus.IN_PROGRESS;
                 details = List.of();
+            }
+            if (drifted && status != ProjectObjectiveStatus.SATISFIED) {
+                status = ProjectObjectiveStatus.BLOCKED;
+                List<Component> withReason = new ArrayList<>();
+                withReason.add(Component.translatable("mcaquests.project.help.definition_changed"));
+                withReason.addAll(details);
+                details = withReason;
+            } else if (villageGone && status != ProjectObjectiveStatus.SATISFIED) {
+                // The village this instance belongs to is gone, so nothing can count until an operator
+                // rebinds it (1.7.0). Say so rather than describe an area that no longer exists.
+                status = ProjectObjectiveStatus.BLOCKED;
+                List<Component> withReason = new ArrayList<>();
+                withReason.add(Component.translatable("mcaquests.project.help.village_gone"));
+                withReason.addAll(details);
+                details = withReason;
             }
             lines.add(new ProjectObjectiveLine(objective.describe(), objective.current(progress),
                     objective.requiredFor(progress), progress.contributionOf(player.getUUID()), status, details));
@@ -840,6 +862,11 @@ public final class ProjectManager {
                         state.currentPhase(), def.phaseCount());
                 continue;
             }
+            if (ProjectDrift.drifted(state, def)) {
+                debugLog("project '{}' phase {} changed since it opened; paused until rebased",
+                        state.projectId(), state.currentPhase());
+                continue;
+            }
             ProjectPhase phase = def.phase(state.currentPhase());
             if (phase.objectives().stream().noneMatch(ProjectObjective::isEventDriven)) {
                 continue;
@@ -917,6 +944,21 @@ public final class ProjectManager {
      * in the save. Reverting the pack's {@code scope} brings it back exactly as it was. Admins can still
      * see it via {@code /mcaquests project} and clear it with {@code adminReset}.
      */
+    /**
+     * True when this instance belongs to a village MCA no longer has — deleted, or merged into another
+     * (1.7.0). Its area is gone, so nothing can count; the instance is paused, clock included, until an
+     * operator rebinds it ({@code /mcaquests project instance ... rebind}). A village MCA could not be
+     * asked about is never taken to be gone.
+     */
+    public static boolean villageGone(MinecraftServer server, ProjectState state) {
+        if (server == null || state.villageId().isEmpty()) {
+            return false;
+        }
+        ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
+        return level != null && McaCompat.villageKnown(level, state.villageId().getAsInt())
+                .map(exists -> !exists).orElse(false);
+    }
+
     public static boolean isScopeStale(ProjectState state) {
         return ProjectRegistry.get(state.projectId())
                 .map(def -> def.scopeType() != state.scope())
@@ -1173,7 +1215,11 @@ public final class ProjectManager {
                     state.projectId(), def.displayTitle(), sponsorLogLabel(player, state),
                     scopeLabel(def), phaseLabel(def, state.currentPhase()),
                     objectiveLines(player, def, state, state.currentPhase(), false), state.key().asString(),
-                    Optional.empty())));
+                    villageGone(player.getServer(), state)
+                            ? Optional.of(Component.translatable("mcaquests.project.paused.village_gone"))
+                            : ProjectDrift.drifted(state, def)
+                            ? Optional.of(Component.translatable("mcaquests.project.paused.definition_changed"))
+                            : Optional.empty())));
         }
         PacketDistributor.sendToPlayer(player, new ProjectLogSyncS2CPacket(entries));
     }
@@ -1458,7 +1504,8 @@ public final class ProjectManager {
         ServerLevel level = server.getLevel(dimensionKey(state.anchorDimension()));
         boolean unavailable = !projectsEnabled || state.status() != ProjectStatus.ACTIVE || isScopeStale(state)
                 || def == null || !def.enabled() || level == null || state.currentPhase() < 0
-                || state.currentPhase() >= def.phaseCount();
+                || state.currentPhase() >= def.phaseCount() || villageGone(server, state)
+                || ProjectDrift.drifted(state, def);
         if (!unavailable) {
             // Readings a phase could not take at its boundary are retried before anything else, so a
             // pending baseline resolves the moment its source can be read.
@@ -1471,7 +1518,12 @@ public final class ProjectManager {
                                 && polling.isPending(state, state.progress(i)));
             }
         }
-        state.sampleClock(server.overworld().getGameTime(), unavailable);
+        long clockNow = server.overworld().getGameTime();
+        // A missing definition the outage ledger tracks is credited from it, including time no sweep ran
+        // because nobody was online (1.7.0); the sweep's own sample must not count that time twice.
+        boolean ledgerTracks = dev.otectus.mcaquests.state.ContentOutageData.current()
+                .map(ledger -> state.creditOutage(ledger, clockNow)).orElse(false);
+        state.sampleClock(clockNow, unavailable && !(def == null && ledgerTracks));
         data.setDirty();
         if (unavailable) {
             return dirty;

@@ -41,6 +41,15 @@ public final class SituationSavedData extends SavedData {
     private final Map<String, Long> cooldownUntil = new LinkedHashMap<>();
     /** Village id -> earliest game time <em>any</em> situation may open there (global anti-spam). */
     private final Map<Integer, Long> globalCooldownUntil = new LinkedHashMap<>();
+    /**
+     * Situations that ended in failure, and when (1.7.0). A failure fails the copies of participants who
+     * are online; one who was offline finds their copy reconciled the same way at their next login, rather
+     * than keeping a job for a situation that no longer exists. Kept for {@link #FAILED_RETENTION_TICKS}.
+     */
+    private final Map<UUID, Long> failedAt = new LinkedHashMap<>();
+
+    /** Twenty in-game days: long enough for a returning player, short enough to bound. */
+    public static final long FAILED_RETENTION_TICKS = 20L * 24000L;
 
     public SituationSavedData() {
     }
@@ -111,6 +120,18 @@ public final class SituationSavedData extends SavedData {
         return villageId + "|" + defId;
     }
 
+    /** Records that a situation ended in failure, dropping failures older than the retention. */
+    public void recordFailure(UUID instanceId, long gameTime) {
+        failedAt.put(instanceId, gameTime);
+        failedAt.values().removeIf(when -> gameTime - when > FAILED_RETENTION_TICKS);
+        setDirty();
+    }
+
+    /** Whether this situation is known to have ended in failure. */
+    public boolean failed(UUID instanceId) {
+        return failedAt.containsKey(instanceId);
+    }
+
     public long cooldownUntil(int villageId, ResourceLocation defId) {
         return cooldownUntil.getOrDefault(cooldownKey(villageId, defId), Long.MIN_VALUE);
     }
@@ -147,6 +168,12 @@ public final class SituationSavedData extends SavedData {
         CompoundTag globalCooldowns = new CompoundTag();
         globalCooldownUntil.forEach((villageId, until) -> globalCooldowns.putLong(Integer.toString(villageId), until));
         tag.put("global_cooldowns", globalCooldowns);
+
+        if (!failedAt.isEmpty()) {
+            CompoundTag failed = new CompoundTag();
+            failedAt.forEach((id, when) -> failed.putLong(id.toString(), when));
+            tag.put("failed", failed);
+        }
         return tag;
     }
 
@@ -162,6 +189,14 @@ public final class SituationSavedData extends SavedData {
                 data.unreadableInstances.add(entry.copy());
                 dev.otectus.mcaquests.McaQuests.LOGGER.warn(
                         "[MCA: Quests] preserving unreadable situation for recovery", failure);
+            }
+        }
+        CompoundTag failed = tag.getCompound("failed"); // absent before 1.7.0 -> nothing recorded
+        for (String key : failed.getAllKeys()) {
+            try {
+                data.failedAt.put(UUID.fromString(key), failed.getLong(key));
+            } catch (IllegalArgumentException ignored) {
+                // skip malformed instance key
             }
         }
         CompoundTag cooldowns = tag.getCompound("cooldowns");

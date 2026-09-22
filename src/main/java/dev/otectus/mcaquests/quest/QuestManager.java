@@ -65,6 +65,7 @@ import dev.otectus.mcaquests.quest.escort.EscortHoldRegistry;
 import dev.otectus.mcaquests.quest.turnin.GiverPresence;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.OfferSession;
+import dev.otectus.mcaquests.state.HeldQuestReward;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import dev.otectus.mcaquests.state.QuestHistory;
@@ -675,6 +676,8 @@ public final class QuestManager {
         active.addSituationSuspendedTicks(situationPausedTicks);
         freezeRandomizedRewards(player, accepted, active);
         bindVillagerTargets(player, villager, accepted, active);
+        // What this copy was accepted against, so a later datapack edit cannot reinterpret its progress.
+        QuestDrift.capture(active, accepted);
         data.add(active);
         // Follow what you just took on, unless you are already following something. A quest you accept
         // is almost always the one you mean to do next, and a marker that has to be switched on by
@@ -942,19 +945,136 @@ public final class QuestManager {
      * Runs one reward's grant with its failures contained. The objective items are already consumed and
      * {@code rewardClaimed} is already set by the time rewards run, so a reward that throws — an add-on's,
      * most plausibly — used to strand the quest claimed but un-completable. The rest are still paid.
+     *
+     * <p>Since 1.7.0 the failed reward is also <b>held</b> on the player ({@link HeldQuestReward}) rather
+     * than lost, so an operator can pay it once the cause is fixed ({@code /mcaquests rewards retry}). It
+     * is never retried automatically: a reward that threw may already have paid part of itself.
      */
-    private static void grantSafely(ServerPlayer player, QuestReward reward, QuestDefinition def, Runnable grant) {
+    private static void grantSafely(ServerPlayer player, QuestReward reward, QuestDefinition def,
+                                    ActiveQuest active, int rewardIndex, OptionalInt frozen, Runnable grant) {
         try {
             grant.run();
         } catch (Throwable t) {
             McaQuests.LOGGER.error("[MCA: Quests] reward {} of '{}' threw; continuing with the rest",
                     rewardName(reward), def.id(), t);
+            QuestCapabilities.get(player).ifPresent(data -> data.holdReward(new HeldQuestReward(def.id(),
+                    Optional.ofNullable(active.instance()), rewardIndex, rewardName(reward),
+                    DefinitionFingerprint.of(dev.otectus.mcaquests.quest.reward.RewardTypes.CODEC, reward).orElse(""),
+                    frozen, player.level().getGameTime(), String.valueOf(t))));
             // The quest has already been claimed and its delivery items consumed, so the player would
             // otherwise see a turn-in that quietly paid less than it promised. Name the reward: only an
             // admin can fix an add-on's broken grant, and only if someone tells them.
             player.sendSystemMessage(Component.translatable("mcaquests.reward.failed",
                     Component.literal(rewardName(reward))));
         }
+    }
+
+    /**
+     * What accepting the current definition would do to each drifted copy of a player's quest (1.7.0).
+     * Read-only. Progress is kept by position, so the lines say which count lands on which objective.
+     */
+    public static List<Component> previewRebase(ServerPlayer player, ResourceLocation questId) {
+        List<Component> out = new ArrayList<>();
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        QuestDefinition base = QuestDefinitions.resolve(questId).orElse(null);
+        if (data == null || base == null) {
+            out.add(Component.literal("Nothing to rebase: " + player.getScoreboardName() + " has no loaded quest '"
+                    + questId + "'."));
+            return out;
+        }
+        for (ActiveQuest active : data.active()) {
+            if (!active.questId().equals(questId)) {
+                continue;
+            }
+            QuestDefinition def = active.resolve(base);
+            boolean drifted = QuestDrift.drifted(active, def);
+            out.add(Component.literal(questId + " from " + active.villagerUuid() + ": "
+                    + (drifted ? "DRIFTED — accepted with " + active.objectiveFingerprints().size()
+                    + " objective(s), the definition now has " + def.objectives().size()
+                    : "matches its definition; nothing to do")));
+            if (!drifted) {
+                continue;
+            }
+            for (int i = 0; i < def.objectives().size(); i++) {
+                out.add(Component.literal("  [" + i + "] progress " + active.progress(i).count() + " -> ")
+                        .append(def.objectives().get(i).describe()));
+            }
+        }
+        if (out.isEmpty()) {
+            out.add(Component.literal(player.getScoreboardName() + " holds no copy of '" + questId + "'."));
+        } else {
+            out.add(Component.literal("Back up the world first. To accept the current definition, keeping each "
+                    + "count at its position: /mcaquests quest rebase " + player.getScoreboardName() + " "
+                    + questId + " confirm"));
+        }
+        return out;
+    }
+
+    /** Accepts the current definition for every drifted copy of the quest (1.7.0). */
+    public static Component applyRebase(ServerPlayer player, ResourceLocation questId) {
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        QuestDefinition base = QuestDefinitions.resolve(questId).orElse(null);
+        if (data == null || base == null) {
+            return Component.literal("Nothing was changed: no loaded quest '" + questId + "'.");
+        }
+        int rebased = 0;
+        for (ActiveQuest active : data.active()) {
+            if (active.questId().equals(questId)) {
+                QuestDefinition def = active.resolve(base);
+                if (QuestDrift.drifted(active, def)) {
+                    QuestDrift.capture(active, def);
+                    rebased++;
+                }
+            }
+        }
+        if (rebased > 0) {
+            McaQuests.LOGGER.info("[MCA: Quests] rebased {} copy(ies) of '{}' for {} onto the current definition",
+                    rebased, questId, player.getScoreboardName());
+            syncLog(player);
+        }
+        return Component.literal("Rebased " + rebased + " copy(ies) of '" + questId + "' for "
+                + player.getScoreboardName() + ".");
+    }
+
+    /**
+     * Pays one held reward again from the current definition (1.7.0), if that reward is still the one
+     * that failed. Returns an operator-facing line saying what happened; the entry is removed only when the
+     * grant ran without throwing.
+     */
+    public static Component retryHeldReward(ServerPlayer player, int heldIndex) {
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null || heldIndex < 0 || heldIndex >= data.heldRewards().size()) {
+            return Component.literal("No held reward #" + (heldIndex + 1) + " for " + player.getScoreboardName() + ".");
+        }
+        HeldQuestReward held = data.heldRewards().get(heldIndex);
+        QuestDefinition def = QuestDefinitions.resolve(held.questId()).orElse(null);
+        if (def == null || held.rewardIndex() >= def.rewards().size()) {
+            return Component.literal("Refused: quest '" + held.questId() + "' or its reward #"
+                    + (held.rewardIndex() + 1) + " is not loaded. Nothing was paid.");
+        }
+        QuestReward reward = def.rewards().get(held.rewardIndex());
+        String now = DefinitionFingerprint.of(dev.otectus.mcaquests.quest.reward.RewardTypes.CODEC, reward).orElse("");
+        if (held.fingerprint().isEmpty() || !held.fingerprint().equals(now)) {
+            return Component.literal("Refused: reward #" + (held.rewardIndex() + 1) + " of '" + held.questId()
+                    + "' has changed since it failed, or cannot be compared. Nothing was paid; dismiss it instead.");
+        }
+        try {
+            if (reward instanceof CurrencyReward currency && held.frozen().isPresent()) {
+                currency.grantAmount(player, held.frozen().getAsInt());
+            } else if (reward instanceof ItemPoolReward pool && held.frozen().isPresent()) {
+                pool.grantChoice(player, pool.clamp(held.frozen().getAsInt()));
+            } else {
+                reward.grant(player, null);
+            }
+        } catch (Throwable t) {
+            McaQuests.LOGGER.error("[MCA: Quests] retried reward {} of '{}' threw again", held.rewardType(),
+                    held.questId(), t);
+            return Component.literal("Reward #" + (held.rewardIndex() + 1) + " of '" + held.questId()
+                    + "' threw again (" + t + "). It stays held.");
+        }
+        data.removeHeldReward(heldIndex);
+        return Component.literal("Paid reward #" + (held.rewardIndex() + 1) + " (" + held.rewardType() + ") of '"
+                + held.questId() + "' to " + player.getScoreboardName() + ".");
     }
 
     /** A reward's registered type id, or its class name when even asking for the id throws. */
@@ -1025,7 +1145,8 @@ public final class QuestManager {
                 // guarded by the rewardClaimed flag above, so a retried turn-in packet pays nothing twice.
                 OptionalInt frozenAmount = active.frozenReward(i);
                 if (frozenAmount.isPresent()) {
-                    grantSafely(player, reward, def, () -> currency.grantAmount(player, frozenAmount.getAsInt()));
+                    grantSafely(player, reward, def, active, i, frozenAmount,
+                            () -> currency.grantAmount(player, frozenAmount.getAsInt()));
                     continue;
                 }
             }
@@ -1035,14 +1156,17 @@ public final class QuestManager {
                 OptionalInt frozenChoice = active.frozenReward(i);
                 int choice = pool.clamp(frozenChoice.isPresent() ? frozenChoice.getAsInt()
                         : pool.pick(player.getRandom()));
-                grantSafely(player, reward, def, () -> pool.grantChoice(player, choice));
+                grantSafely(player, reward, def, active, i, OptionalInt.of(choice), () -> pool.grantChoice(player, choice));
                 continue;
             }
-            grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
+            grantSafely(player, reward, def, active, i, OptionalInt.empty(),
+                    () -> reward.grant(player, grantVillager, context));
         }
-        for (QuestReward reward : def.rewards()) {
+        for (int i = 0; i < rewards.size(); i++) {
+            QuestReward reward = rewards.get(i);
             if (reward instanceof HeartsReward) {
-                grantSafely(player, reward, def, () -> reward.grant(player, grantVillager, context));
+                grantSafely(player, reward, def, active, i, OptionalInt.empty(),
+                        () -> reward.grant(player, grantVillager, context));
             }
         }
         grantQuestReputation(player, grantVillager, def, active, "complete");
@@ -1488,6 +1612,10 @@ public final class QuestManager {
      */
     public static Optional<Component> suspensionReason(ServerPlayer player, QuestDefinition def,
                                                        ActiveQuest active) {
+        // A datapack edit that moved this quest's objectives would reinterpret its progress (1.7.0).
+        if (active != null && QuestDrift.drifted(active, def)) {
+            return Optional.of(Component.translatable("mcaquests.quest.suspended.definition_changed"));
+        }
         Optional<Component> capitals = CapitalsQuestRequirements.unavailableReason(def);
         if (capitals.isPresent()) {
             return capitals;

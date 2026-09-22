@@ -51,6 +51,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Pure-logic tests for the quest engine (no game launch / MCA needed) — spec section 33. */
 class QuestLogicTest {
 
+    static {
+        // Some cases build a QuestDefinition, whose codecs reach the registries. Bootstrapping here keeps
+        // the class independent of which test the worker happened to run first.
+        dev.otectus.mcaquests.support.TestBootstrap.ensureBootstrapped();
+    }
+
     @Test
     void repeatRuleDefaults() {
         assertEquals(RepeatRule.RepeatType.COOLDOWN, RepeatRule.DEFAULT.type());
