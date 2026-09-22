@@ -123,6 +123,7 @@ public final class QuestProgressEvents {
             // Before the log is synced, so a quest whose giver died while this player was offline is
             // already gone from it rather than appearing for a moment and then vanishing.
             reconcileDeadGivers(player);
+            SituationManager.reconcileFailedCopies(player);
             if (player.getServer() != null) {
                 QuestCapabilities.get(player).ifPresent(data -> {
                     for (SituationInstance instance : SituationManager.openInstances(player.getServer())) {

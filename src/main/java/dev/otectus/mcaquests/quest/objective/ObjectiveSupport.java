@@ -176,19 +176,39 @@ public final class ObjectiveSupport {
         if (bound == null || level.getEntity(bound) != null) {
             return Optional.empty();
         }
+        // The name comes from the giver's family tree, so it needs the giver loaded; it is remembered the
+        // first time it is read, so the clue does not vanish as the player walks away from the giver
+        // (1.7.0). The home comes from MCA's village rolls and needs nobody loaded.
         Entity giver = level.getEntity(active.villagerUuid());
-        if (giver == null) {
-            return Optional.empty();
+        Optional<String> name = giver == null ? Optional.empty() : McaCompat.getRelativeDisplayName(giver, bound);
+        if (name.isPresent()) {
+            progress.extra().putString(K_WHEREABOUTS_NAME, name.get());
+        } else if (progress.extra().contains(K_WHEREABOUTS_NAME)) {
+            name = Optional.of(progress.extra().getString(K_WHEREABOUTS_NAME));
         }
-        Optional<String> name = McaCompat.getRelativeDisplayName(giver, bound);
         if (name.isEmpty()) {
             return Optional.empty();
         }
-        return McaCompat.getRelativeHome(level, bound)
-                .filter(home -> home.dimension().equals(level.dimension()))
-                .map(home -> GuidanceTarget.ofPos(home.pos(), level, GuidanceKind.VILLAGE,
-                        Component.literal(name.get()), LAST_KNOWN_ARRIVE_RADIUS, true).asLastKnown());
+        Optional<net.minecraft.core.BlockPos> home = McaCompat.getRelativeHome(level, bound)
+                .filter(found -> found.dimension().equals(level.dimension()))
+                .map(found -> found.pos());
+        if (home.isPresent()) {
+            progress.extra().putLong(K_WHEREABOUTS_POS, home.get().asLong());
+            progress.extra().putString(K_WHEREABOUTS_DIM, level.dimension().location().toString());
+        } else if (progress.extra().contains(K_WHEREABOUTS_POS)
+                && level.dimension().location().toString().equals(progress.extra().getString(K_WHEREABOUTS_DIM))) {
+            // MCA could not place them this pass; where they were last placed is still the best clue.
+            home = Optional.of(net.minecraft.core.BlockPos.of(progress.extra().getLong(K_WHEREABOUTS_POS)));
+        }
+        String label = name.get();
+        return home.map(pos -> GuidanceTarget.ofPos(pos, level, GuidanceKind.VILLAGE,
+                Component.literal(label), LAST_KNOWN_ARRIVE_RADIUS, true).asLastKnown());
     }
+
+    /** Progress keys for the remembered clue (1.7.0). */
+    static final String K_WHEREABOUTS_NAME = "whereabouts_name";
+    static final String K_WHEREABOUTS_POS = "whereabouts_pos";
+    static final String K_WHEREABOUTS_DIM = "whereabouts_dim";
 
     /** How close counts as "you have reached the village they were last known to live in". */
     private static final int LAST_KNOWN_ARRIVE_RADIUS = 24;
