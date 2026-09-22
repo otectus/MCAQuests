@@ -38,11 +38,13 @@ import java.util.Set;
  *
  * <h2>Severity</h2>
  *
- * <p>Findings are <b>errors under {@code strictJsonValidation} and warnings otherwise</b>, decided by the
- * loader that calls this. That is deliberate for one release: the check is new and it rejects third-party
- * content that has always loaded, so an author gets a loud, specific, actionable line rather than a server
- * that will not start. The bundled pack is held to the strict standard at build time by
- * {@code BuiltinFamilyGateTest}, because a player cannot fix a broken built-in.
+ * <p>Findings are <b>errors</b>. From 1.4.3 to 1.6.5 they were errors only under
+ * {@code strictJsonValidation} and warnings otherwise, a grace period for third-party content that had
+ * always loaded; DATAPACK.md promised the promotion, and 1.7.0 makes it. Under strict validation a finding
+ * fails the reload, as every other error does. Otherwise the offending definition is <b>skipped at
+ * load</b> with an error naming the objective, the relation and the gate to add — never offered, rather
+ * than offered for a relative who may not exist. The bundled pack is held to the strict standard at build
+ * time by {@code BuiltinFamilyGateTest}, because a player cannot fix a broken built-in.
  */
 public final class TargetGateValidator {
 
@@ -91,6 +93,43 @@ public final class TargetGateValidator {
             check("Quest '" + quest.id() + "'", quest.objectives(), quest.effectiveConditions(),
                     errors, warnings);
         }
+    }
+
+    /**
+     * The loader's entry point since 1.7.0: every finding is an error, and outside strict validation a
+     * quest with one is removed from {@code quests} so it is never offered.
+     */
+    public static void enforce(Map<net.minecraft.resources.ResourceLocation, QuestDefinition> quests,
+                               List<String> errors, List<String> warnings, boolean strict) {
+        quests.values().removeIf(quest -> {
+            List<String> found = new java.util.ArrayList<>();
+            check("Quest '" + quest.id() + "'", quest.objectives(), quest.effectiveConditions(), found, warnings);
+            return report(found, errors, strict);
+        });
+    }
+
+    /** As {@link #enforce} for situation offers. */
+    public static void enforceSituations(Map<net.minecraft.resources.ResourceLocation, SituationDefinition> situations,
+                                         List<String> errors, List<String> warnings, boolean strict) {
+        situations.values().removeIf(situation -> {
+            List<String> found = new java.util.ArrayList<>();
+            check("Situation '" + situation.id() + "'", situation.offer().objectives(),
+                    situation.offer().conditions(), found, warnings);
+            return report(found, errors, strict);
+        });
+    }
+
+    /** Appends one definition's findings and says whether it must be skipped. */
+    private static boolean report(List<String> found, List<String> errors, boolean strict) {
+        if (found.isEmpty()) {
+            return false;
+        }
+        if (strict) {
+            errors.addAll(found);
+            return false;
+        }
+        found.forEach(line -> errors.add(line + " The definition is skipped at load."));
+        return true;
     }
 
     /**

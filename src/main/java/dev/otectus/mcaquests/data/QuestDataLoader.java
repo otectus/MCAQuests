@@ -22,8 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Datapack reload listener that loads quest JSON from {@code data/<ns>/mcaquests/quests/**.json}
@@ -35,8 +33,6 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
 
     private static final Gson GSON = new GsonBuilder().create();
     private static final String DIRECTORY = "mcaquests/quests";
-    /** A resource id inside a codec error message. Bounded to the characters ids may contain. */
-    private static final Pattern RESOURCE_ID = Pattern.compile("([a-z0-9_.-]+):[a-z0-9_./-]+");
 
     public QuestDataLoader() {
         super(GSON, DIRECTORY);
@@ -58,20 +54,25 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         Map<ResourceLocation, ResourceLocation> fileOf = new LinkedHashMap<>();
+        Map<String, Integer> absentMods = new java.util.TreeMap<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            // The message is captured as well as logged: a quest that could not be parsed is
+            // The message is captured before it is reported: a quest that could not be parsed is
             // quarantined under the namespace its error blamed, which is what lets the quest log tell
             // a player "this needs content from X" instead of "unknown quest". See QuestRegistry.
             String[] failure = new String[1];
             Optional<QuestDefinition> parsed = StrictCodecs.parse(QuestDefinition.CODEC,
-                    JsonOps.INSTANCE, entry.getValue(), message -> {
-                        failure[0] = message;
-                        recordError(errors, strict, "Quest '" + fileId + "': " + message);
-                    });
+                    JsonOps.INSTANCE, entry.getValue(), message -> failure[0] = message);
             if (parsed.isEmpty()) {
-                String namespace = offendingNamespace(failure[0]);
+                // Content for an optional mod that is not installed is excluded, not malformed (1.7.0);
+                // anything else that failed to parse is an error, as it always was.
+                boolean absentMod = OptionalModNamespaces.excludedForAbsentMod(failure[0], absentMods);
+                if (!absentMod && failure[0] != null) {
+                    recordError(errors, strict, "Quest '" + fileId + "': " + failure[0]);
+                }
+                String namespace = absentMod ? OptionalModNamespaces.absentOptionalNamespace(failure[0])
+                        : offendingNamespace(failure[0]);
                 quarantined.put(fileId, namespace);
                 // Datapacks may declare an id different from the resource path. Active saves refer
                 // to that declared id, so retain both names for suspension diagnostics.
@@ -111,13 +112,9 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         FailureValidator.validate(loaded, errors);
         ObjectiveValidator.validate(loaded, errors, warnings);
         AgeEligibilityValidator.validate(loaded, warnings);
-        // New in 1.4.3, and deliberately lenient for one release: it rejects third-party content that has
-        // always loaded, so outside strict mode the author gets a loud line rather than a dead server.
-        if (strict) {
-            TargetGateValidator.validate(loaded, errors, warnings);
-        } else {
-            TargetGateValidator.validate(loaded, warnings, warnings);
-        }
+        // An error since 1.7.0 (a warning outside strict mode from 1.4.3): outside strict mode the quest
+        // is skipped at load rather than offered for a relative who may not exist.
+        TargetGateValidator.enforce(loaded, errors, warnings, strict);
         errors.subList(alreadyLogged, errors.size())
                 .forEach(e -> McaQuests.LOGGER.error("[MCA: Quests] {}", e));
         if (strict && !errors.isEmpty()) {
@@ -127,6 +124,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         loaded.keySet().forEach(quarantined::remove);
         excluded.keySet().forEach(quarantined::remove);
         unavailable.publish();
+        OptionalModNamespaces.report("quest", absentMods);
         QuestRegistry.replaceAll(loaded, errors, warnings, quarantined);
         warnings.forEach(w -> McaQuests.LOGGER.warn("[MCA: Quests] {}", w));
         McaQuests.LOGGER.info("Loaded {} MCA quest(s) with {} error(s), {} warning(s).",
@@ -139,15 +137,12 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
      *
      * <p>A regex over an error string is a heuristic and is treated as one: it is bounded (the two
      * character classes are exactly what a {@code ResourceLocation} allows, so it cannot run away over
-     * a long message), it is only ever used to word a diagnostic, and finding nothing is a normal
-     * outcome that yields the empty string rather than a guess.
+     * a long message), it words a diagnostic and decides only whether a known optional mod's content
+     * is excluded rather than an error, and finding nothing is a normal outcome that yields the empty
+     * string rather than a guess.
      */
     private static String offendingNamespace(String message) {
-        if (message == null) {
-            return "";
-        }
-        Matcher matcher = RESOURCE_ID.matcher(message);
-        return matcher.find() ? matcher.group(1) : "";
+        return OptionalModNamespaces.namespaceIn(message);
     }
 
     private static Optional<ResourceLocation> declaredId(JsonElement json) {

@@ -53,9 +53,18 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
         List<String> warnings = new ArrayList<>();
         Map<ResourceLocation, ResourceLocation> fileOf = new LinkedHashMap<>();
 
+        Map<String, Integer> absentMods = new java.util.TreeMap<>();
         for (Map.Entry<ResourceLocation, JsonElement> entry : files.entrySet()) {
             ResourceLocation fileId = entry.getKey();
-            dev.otectus.mcaquests.data.StrictCodecs.parse(SituationDefinition.CODEC, JsonOps.INSTANCE, entry.getValue(), message -> recordError(errors, strict, "Situation '" + fileId + "': " + message))
+            String[] failure = new String[1];
+            java.util.Optional<SituationDefinition> parsed = dev.otectus.mcaquests.data.StrictCodecs.parse(SituationDefinition.CODEC,
+                    JsonOps.INSTANCE, entry.getValue(), message -> failure[0] = message);
+            // Content for an optional mod that is not installed is excluded, not malformed (1.7.0).
+            if (parsed.isEmpty() && failure[0] != null
+                    && !dev.otectus.mcaquests.data.OptionalModNamespaces.excludedForAbsentMod(failure[0], absentMods)) {
+                recordError(errors, strict, "Situation '" + fileId + "': " + failure[0]);
+            }
+            parsed
                     .ifPresent(def -> {
                         if (loaded.containsKey(def.id())) {
                             recordError(errors, strict, "Duplicate situation id '" + def.id() + "' (from " + fileId + ")");
@@ -78,9 +87,10 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
 
         // The first cross-reference validation situations have ever had. Until 1.4.3 a situation offer
         // was parsed and nothing else, which is how two of the shipped ones carried a family target with
-        // no gate at all for several releases.
+        // no gate at all for several releases. An error since 1.7.0: outside strict mode the situation is
+        // skipped at load.
         int alreadyLogged = errors.size();
-        TargetGateValidator.validateSituations(loaded.values(), strict ? errors : warnings, warnings);
+        TargetGateValidator.enforceSituations(loaded, errors, warnings, strict);
         errors.subList(alreadyLogged, errors.size())
                 .forEach(e -> McaQuests.LOGGER.error("[MCA: Quests] {}", e));
 
@@ -89,6 +99,7 @@ public final class SituationDataLoader extends SimpleJsonResourceReloadListener 
         }
 
         unavailable.publish();
+        dev.otectus.mcaquests.data.OptionalModNamespaces.report("situation", absentMods);
         SituationRegistry.replaceAll(loaded, errors, warnings);
         warnings.forEach(w -> McaQuests.LOGGER.warn("[MCA: Quests] {}", w));
         McaQuests.LOGGER.info("Loaded {} MCA situation(s) with {} error(s), {} warning(s).",
