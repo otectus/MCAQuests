@@ -18,6 +18,15 @@ the game said what "train three villagers to level 2" meant — which, on some s
 done at all — or how to recover one stuck project without touching every other village's. Each cause is fixed where it starts, every project objective now explains
 itself from the same rules that grant its credit, and one instance can be repaired on its own.
 
+1.6.6 was never released; everything it contained is part of this entry, and protocol and save changes
+are stated against **1.6.5**, the last shipped build. On top of it, 1.7.0 finishes what an audit of the
+documentation against the code found incomplete. On Forge, MCA: Quests is now a full provider for
+**Ultima Kingdoms** — kingdom-aware quests, faction standing, institutional commissions, completion
+receipts and map points — under the same optional-mod contract as Townstead and MCA Capitals. Townstead
+0.8's public API is bound through a typed bridge (#1). Escort holds, time paused by a missing mod,
+positional progress and rewards that failed to pay now survive restarts, outages and datapack edits, and
+the compile-only API jar compiles on its own.
+
 ### Fixed — the reputation translation layer
 
 - **An omitted delta is no longer an explicit zero.** `ReputationAward` carried a plain `int`, so
@@ -51,7 +60,8 @@ itself from the same rules that grant its credit, and one instance can be repair
   credited from Forge's `EntityInteract` event. MCA 7.6.x on Forge and MCA 7.7.36 on NeoForge open their
   dialogue from `interactAt` and answer `SUCCESS`, and a client that gets a consuming answer there never
   sends the second packet `EntityInteract` is fired for — so an ordinary conversation never reached the
-  hook, and only MCA: Conversations' API report ever credited one. This is why *The Missing Mile* did not
+  hook, and nothing else reported one: no MCA: Conversations build calls
+  `McaQuestsApi.notifyVillagerConversation`. This is why *The Missing Mile* did not
   count the cartographer and *Library Restoration* did not count its librarians. MCA 7.7.0/7.7.1 on Forge
   moved the dialogue into `mobInteract`, so the symptom depended on the MCA build.
 - The hook fired on **sneak**-clicks instead — which open MCA's trading screen — so a trade counted as a
@@ -160,6 +170,184 @@ itself from the same rules that grant its credit, and one instance can be repair
   alike.
 - `mcaquests:record_incident` rewards (MCA: Reputation) showed their raw translation key on reward lines:
   `mcaquests.reward.record_incident` was missing from both locales.
+
+### Fixed — escort holds across restarts
+
+- **A villager held for a staged escort no longer stays frozen after a restart.** A hold sets `NoAI` and
+  invulnerability on the escortee, and both persist with the entity, but the record of who held it lived
+  only in memory: a restart mid-escort left the villager motionless and invulnerable for good, and a
+  release set both flags to `false` whatever they had been before. Holds are now leases saved with the
+  world (`data/mcaquests_escort_holds.dat`), and the flags a hold overwrote are written on the villager
+  itself (`mcaquests_escort_hold` in its persistent data) and restored on release, so a villager another
+  mod had frozen stays frozen.
+- A held villager with no lease, or whose owner is online with no active quest still bound to it, is
+  released the next time it loads; an owner who is offline keeps the hold until they return. Leases are
+  loaded before the first entity joins a level — villagers in the spawn chunks can join before the server
+  reports it has started — and written after the world's final save.
+- A villager frozen by a hold from before 1.7.0 carries neither marker nor lease: `/mcaquests escort
+  release <targets>` (level 2) frees it. When a still-active quest re-asserts a hold on a villager that is
+  already both motionless and invulnerable, that is taken to be the old hold, and releasing it unfreezes it.
+
+### Fixed — time lost while a mod was missing
+
+- **A quest, project or situation paused because its mod was removed no longer runs out its deadline
+  while nobody is online.** Paused time was banked only while the owner — for a project, any participant —
+  was online to be polled, so removing Townstead overnight expired the work at the next login, contrary to
+  the optional-dependency contract. A world-level ledger (`data/mcaquests_content_outages.dat`) now records
+  when each definition this world has loaded was missing. It is sampled at server start and on every
+  `/reload`, the only times mods and datapacks change, and quest, project and situation clocks credit their
+  overlap with it the next time they run. The per-poll accrual remains for other kinds of pause and for a
+  definition the ledger has never seen.
+- A record from before 1.7.0 starts accounting at the upgrade; outages before it cannot be reconstructed.
+  The ledger keeps at most 16 closed intervals per definition and merges the oldest two when it has to,
+  which can over-credit an old outage slightly and never under-credits one.
+
+### Fixed — progress that could be farmed, or lost
+
+- **`place_block` credits each position once, and `break_block` does not count blocks the player placed
+  while the objective was open.** One block placed and broken over and over used to advance both. Projects
+  already worked this way. The placed-block memory is kept in the objective's progress and bounded (512
+  positions).
+- **A quest reward that throws at turn-in is held instead of lost.** The quest still completes and the
+  other rewards still pay. The failed one is recorded on the player (`held_rewards`, at most 64) with the
+  quest, instance, reward index, its frozen amount, a fingerprint of the reward as authored and the error.
+  `/mcaquests rewards held <player>` (level 2) lists them; `/mcaquests rewards retry <player> <n>` and
+  `... dismiss <player> <n>` (level 3) pay or drop one, and a retry is refused when the reward's definition
+  has changed since. `mcaquests.reward.failed` now tells the player an admin can restore it.
+
+### Fixed — records that outlive their village or their definition
+
+- **A project whose MCA village was deleted or merged no longer stalls without a word.** The sweep asks MCA
+  whether the village still exists — three-valued, so an MCA that cannot be read is never taken for a
+  deleted village — and pauses an instance whose village is gone, clock included. Its objectives show as
+  blocked, and the log, the tracker, Details and `project instance … info` give the reason.
+  `/mcaquests project instance <id> <n> rebind anchor|village` (level 3, preview and confirm) moves it to its
+  anchor, or to the MCA village now at the anchor, with its progress and owed rewards; it never merges into
+  another instance.
+- **A datapack edit no longer reinterprets saved progress.** Progress is saved by position, so inserting,
+  removing or reordering objectives handed one objective's count to another. Accepted quests and open
+  project phases now remember a fingerprint of each objective as it was accepted or opened (SHA-256 of
+  canonical, key-sorted JSON). An edit that is not a pure append pauses the record with the reason
+  *definition changed* — clock frozen, progress untouched — until the edit is reverted or an operator
+  accepts it with `/mcaquests quest rebase <player> <id> [confirm]` or
+  `/mcaquests project instance <id> <n> rebase` (both level 3). Appending objectives is still not drift.
+  A record from before 1.7.0 takes its fingerprints from the first definition it meets.
+- An owed project reward whose reward row was edited after it was earned is held for an operator —
+  `/mcaquests project pending <player>` lists it — instead of paying the new row.
+
+### Fixed — views that went stale
+
+- **The quest you follow is always on the HUD.** The tracker drew the first `questTrackerMaxEntries` quests
+  in acceptance order, so the followed one could be left off; it is now always drawn, with a "+N more" line
+  (`mcaquests.hud.more`) for the rest.
+- **The whereabouts clue survives the giver's chunk unloading.** The last-known name and home shown for a
+  bound target were read live from the giver and vanished when its chunk unloaded; they are now remembered
+  on the objective.
+- **`/reload` refreshes what is open.** Logs and trackers are re-synced, open project menus refreshed, and a
+  client with a villager's Quests menu open asks for a fresh one (new `QuestMenusStaleS2CPacket`), so offers
+  naming quests the reload removed are not left on screen.
+- The quest log rebuilt itself on every heartbeat sync, because it compared list identity; it now rebuilds
+  only when its content changes.
+
+### Fixed — shared situations for offline participants
+
+- A participant who was offline when a shared situation failed now has their copy failed at their next
+  login — the outcome the online participants got. Failed situations are remembered for 20 in-game days
+  for this (`failed` in the situation save).
+
+### Added — Ultima Kingdoms provider (Forge)
+
+These are Forge-only: Ultima Kingdoms has no NeoForge build. Everything is resolved by reflection behind
+`KingdomIntegration`, so no Ultima type is linked.
+
+- **Kingdom-aware quests.** A quest may declare `kingdom_lifecycle`: a `gate` (an Ultima gate by name, or
+  inline — `subject`, `include`/`exclude` kingdoms, `when_unknown`, a `standing` range), a `mode`
+  (`offer_only`, the default, `bound_at_accept`, `live` or `fail_on_change`, the last with a required
+  `failure_reason`), an optional `civic_building` binding (`target` giver or player; `recovery` `wait`,
+  `rebind_same_family` or `fail_with_reason`) and a `binding_subject`. The accepted binding is kept on the
+  quest. `assets/mcaquests/schemas/kingdom_lifecycle.schema.json` describes the field. See DATAPACK.md.
+- **Faction standing.** The condition `ultima_kingdoms:standing` and the reward
+  `ultima_kingdoms:faction_standing` are registered here. Faction rewards are written through Ultima's
+  durability fence with a stable receipt id per reward before objective items are consumed, and turn-in
+  waits rather than completing without them.
+- **Institutional commissions.** `institutional_commission: true` marks a definition only Ultima's
+  institution service may issue. It is left out of ordinary menus, opened through
+  `McaQuestsApi.openInstitutionalCommissionMenu(player, giver, questIds, binding)` with an opaque contract
+  UUID, requires the `mcaquests:institutional_service_available` condition, and reaches its contract
+  through a completion receipt. Refusals and pauses are translated (`mcaquests.commission.*`).
+- **Scoped commission menus.** `McaQuestsApi.openCommissionMenu(player, giver, questIds)` opens the native
+  offer screen drawing only from up to 32 listed quests. It bypasses no gate, cooldown or capacity.
+- **External map points.** `McaQuestsApi.publishExternalMapPoints(player, owner, points)` and
+  `api.ExternalMapPoint` let a server-side service publish up to 128 points per player and owner, drawn on
+  Map Atlases beside quest markers (`ExternalMapPointsS2CPacket`). An empty list clears them.
+- **Two failure reasons:** `QuestFailedEvent.Reason.KINGDOM_CHANGED` (`fail_on_change`) and
+  `CIVIC_BUILDING_LOST` (a civic building lost under `fail_with_reason`), with
+  `mcaquests.message.kingdom_context_changed`.
+- **Kingdom content follows the optional-dependency contract.** Without Ultima, or without the capability a
+  definition reads, the loader leaves out a definition with a faction-standing reward, a `kingdom_lifecycle`
+  other than an offer-only inline gate that allows unknown players and asks nothing about standing, a
+  kingdom-standing or institutional condition that is not negated, or `institutional_commission`. Before, a
+  faction reward refused turn-in for ever and gates were re-checked on every offer. `KingdomIntegration`
+  resolves Ultima's service methods once per server rather than on every call.
+
+### Added — completion receipts for add-ons
+
+- `McaQuestsApi.readCompletionReceipts(player, consumerId, limit)`,
+  `acknowledgeCompletionReceipt(player, consumerId, providerEpoch, receiptId)` and
+  `completionReceiptStatus(player)`, with the `api.QuestCompletionReceipt` record and the optional
+  `QuestCompletionReceiptReadyEvent`, give an add-on durable, replayable evidence that one accepted quest
+  instance completed. Reading subscribes the consumer on a lease that polling renews. A receipt is captured
+  only while a consumer is subscribed, freezes the consumers subscribed at that moment, and becomes visible
+  only after the player's own file has been saved and read back containing it, through a new accessor mixin
+  on `PlayerList#save`. An acknowledgement is confirmed the same way.
+- A subscribed outbox that cannot take another receipt refuses the completion with a message
+  (`mcaquests.message.completion_receipts_unavailable`) instead of dropping evidence a consumer has not
+  acknowledged. It is bounded: 256 receipts, 512 acknowledgement tombstones, 32 consumers; a fully
+  acknowledged receipt can retire after seven days. With no subscriber nothing is captured, so a plain
+  install never accumulates an outbox.
+- On both loaders. On NeoForge a receipt's kingdom, civic-building and institutional components are always
+  empty, since they come from Ultima Kingdoms.
+
+### Added — Townstead API v1 (#1)
+
+A typed binding for Townstead's public API alongside the existing reflective one, with the events and
+fields it makes possible. Contributed by AetherianArtificer (#1); reviewed and repaired before merge.
+
+- **A typed bridge over Townstead's frozen `com.aetherianartificer.townstead.api.v1`**
+  (`compat/townstead/v1/ApiTownsteadBridge`), used automatically when Townstead ships that package and
+  this build carries the compiled-in adapter. It names no MCA type. `TownsteadCompat` chooses the binding
+  at startup: no `api.v1` binds reflectively as before; `api.v1` with the adapter binds the typed bridge;
+  `api.v1` without the adapter (a `reflective-only` build) or a typed start-up failure binds a
+  `DisabledTownsteadBridge` with its reason — never falling back to reflection, which was written against
+  0.7.x internals and would bypass the API's write policy. A typed bridge whose start-up throws has its
+  partly registered subscriptions closed first. An unsupported API generation keeps the typed bridge
+  installed, reporting `DISABLED`, no capabilities and a `"disabled: …"` binding path.
+- **Ten Townstead events are subscribed** (`compat/townstead/v1/ApiTownsteadEvents`): villager collapse,
+  recovery and death, profession tier changes, life-stage crossings, village spirit changes, buildings
+  established or upgraded, calendar rollovers, and dialogue opened. Seven become a situation signal the
+  moment they happen (`quest/situation/TownsteadEventSignals`): collapse, tier change, life-stage crossing,
+  spirit change, building established, building upgraded and calendar rollover. Recovery only lowers the
+  collapse edge; death only forgets the dead villager's baselines. Each signal is deduplicated against the
+  baselines the polling scan already keeps (`TownsteadSignalStateSavedData`), so an event and a scan seeing
+  the same moment, in either order, produce one signal. Events honour the scan's gates, are filed under the
+  villager's MCA home village, and a day rollover reaches only the villages a scan would have visited
+  (`maxVillagesPerPass`). `townstead_need` and schedule disruption have no matching event and stay
+  scan-driven; the scans keep running as the safety net.
+- **Townstead's own dialogue credits talk objectives.** `DialogueOpenedEvent` goes through
+  `ConversationCredit` like MCA's dialogue hook, with the same validation and de-duplication.
+- **`last_known_max_age_days`** (non-negative, default `0`, off) on `mcaquests:townstead_healthy_residents`
+  and `mcaquests:townstead_resident_wellbeing_project`. When set, Townstead 0.8's resident register lets a
+  last-known record of an *unloaded* resident count toward `minimum_observed`/`minimum_fraction` — alive,
+  filed under the village being judged, and no older than that many world days. Live readings take
+  precedence, `minimum_loaded_fraction` still counts loaded residents only, and at most 256 records are
+  consulted per poll. On 0.7.x the field changes nothing.
+- **Village-scoped Townstead signal baselines carry the dimension** for a non-Overworld village
+  (`TownsteadSignalKeys`), so village 3 of the Overworld and village 3 of the Nether no longer share one.
+  Overworld keys are unchanged, so nothing is re-announced on upgrade.
+- `/mcaquests compat townstead status` gained a "Bound through: …" line
+  (`mcaquests.command.townstead.status.binding`): `reflective`, `api-v1`, `disabled: <reason>`, or `none`
+  when Townstead is installed but switched off in config. `mcaquests.command.townstead.status.detected`
+  now names the bridge's variant (`api-v1-r<revision>` on the typed path) instead of an MCA package layout.
 
 ### Added — typed delivery and capability negotiation
 
@@ -295,6 +483,36 @@ itself from the same rules that grant its credit, and one instance can be repair
   when it starts.
 - `townstead_workforce_project`: optional **`profession_policy`**, `"listed"` (default, the pre-1.7.0 rule)
   or `"any_progressive"`.
+- `townstead_healthy_residents` and `townstead_resident_wellbeing_project`: optional
+  **`last_known_max_age_days`** (see *Added — Townstead API v1*).
+- Quests (Forge, Ultima Kingdoms): optional **`kingdom_lifecycle`** and **`institutional_commission`** (see
+  *Added — Ultima Kingdoms provider*).
+
+### Changed — datapack loading
+
+- **A family target without a gate is now an error.** A quest whose target needs a findable relative and
+  that has no `related_villager_status` gate on that relation was a warning outside `strictJsonValidation`
+  from 1.4.3 to 1.6.5, as DATAPACK.md said it would not stay. Under strict validation it still fails the
+  reload; otherwise the definition is now **skipped at load** with an error naming the objective, the
+  relation and the gate to add. The bundled pack already passes.
+- **A file that names another mod's content is excluded, not reported, when that mod is absent.** A
+  definition using a type, item or entity from `townstead`, `mcacapitals`, `ultima_kingdoms`,
+  `mcareputation`, `mcaconversations`, `ftbquests`, `iceandfire` or `bountiful` — `ultima_kingdoms:kingdom`,
+  say — cannot even be parsed without that mod. It is now left out like any other optional-mod content,
+  strict mode included, with one INFO line per kind at load naming the absent mods. Every id in the parse error is checked, not
+  only the first. Any other unknown namespace still fails, since a typo and an absent mod look the same.
+- **`format_version` is read.** It was documented from the first release and read by nothing. Every quest,
+  project and situation file is checked before parsing: absent or `1` loads as always; a newer version is
+  refused with an error saying the file was written for a newer MCA: Quests, and the definition is not
+  loaded.
+- A quest that pays nothing on completion — no rewards, no template rewards, no reputation outcome — gets a
+  load warning.
+
+### Changed — bundled content (1.7.0 audit)
+
+- *Witch Hunt* guides toward a swamp hut, and *Last Banner Home* toward a pillager outpost (pillagers) and a
+  woodland mansion (vindicators) — `source` hints on their kill objectives, as the other structure-bound
+  quests already had.
 
 ### Added — config
 
@@ -318,6 +536,20 @@ itself from the same rules that grant its credit, and one instance can be repair
 - Buttons and tooltips: `mcaquests.button.project.{details,hide_details,build_area}`,
   `mcaquests.tooltip.project.{details,build_area}`.
 - `mcaquests.reward.record_incident`, which 1.7.0's MCA: Reputation work referenced without defining.
+- Reliability: `mcaquests.hud.more`, `mcaquests.quest.suspended.definition_changed`,
+  `mcaquests.project.paused.{village_gone,definition_changed}` and
+  `mcaquests.project.help.{village_gone,definition_changed}`.
+- Receipts: `mcaquests.message.completion_receipts_unavailable`.
+- Townstead: `mcaquests.command.townstead.status.binding`.
+- Ultima Kingdoms (Forge): `mcaquests.condition.kingdom_standing`,
+  `mcaquests.condition.institutional_service_available`, `mcaquests.reward.faction_standing`,
+  `mcaquests.reward.faction_standing_unavailable`, `mcaquests.message.kingdom_context_changed`, and the
+  commission messages `mcaquests.commission.{accept_failed,unverified_save,terms_unavailable,
+  issuer_unavailable,make_room,receipts_unavailable,payment_failed,cancel_failed,not_authorized,
+  service_unavailable}` and `mcaquests.commission.suspended.{terms_changed,issuer,ownership}`. These are
+  in both locales on Forge only.
+- Reworded: `mcaquests.reward.failed` (an admin can now restore the reward) and
+  `mcaquests.command.townstead.status.detected` (names the bridge variant).
 
 ### Changed — bundled content
 
@@ -334,6 +566,16 @@ itself from the same rules that grant its credit, and one instance can be repair
 - Objective wording: the workforce objective reads "Have 3 residents reach Townstead profession tier 2
   (Apprentice)", spirit objectives name Townstead's metric and whether growth is measured from the phase or
   the project, and a destination-bound talk objective says "there".
+
+### Added — recovery commands
+
+- `/mcaquests escort release <targets>` (level 2): frees escortees a quest left frozen.
+- `/mcaquests rewards held <player>` (level 2), `/mcaquests rewards retry <player> <n>` and
+  `/mcaquests rewards dismiss <player> <n>` (level 3): quest rewards that threw at turn-in.
+- `/mcaquests quest rebase <player> <id>` (level 3) previews, and `... <id> confirm` accepts, a quest
+  definition edited after acceptance.
+- `/mcaquests project instance <id> <n> rebase` and `... rebind anchor|village` (level 3) preview a repair
+  and issue a token for `/mcaquests project confirm <token>`, like the other instance repairs.
 
 ### Changed — commands
 
@@ -354,6 +596,17 @@ itself from the same rules that grant its credit, and one instance can be repair
   No starting value is invented; `instance ... rebaseline` sets one explicitly. A phase entered by an
   older version that had not yet taken its reading takes it on its first sweep, labelled as such.
 - **Records whose definition is now excluded** keep every field; nothing is deleted to empty a registry.
+- **Escort holds from before 1.7.0** were never saved, so a villager frozen by one has no lease and no
+  marker. It is not released automatically — nothing records whether it was frozen on purpose — and
+  `/mcaquests escort release` frees it.
+- **The outage ledger** starts empty and records from the first 1.7.0 start; time a definition was missing
+  before that is not credited.
+- **Objective fingerprints** are taken the first time an existing quest or open phase is checked, from the
+  definition loaded then.
+- **New saved data**, every field optional and written only when used: `mcaquests_escort_holds` and
+  `mcaquests_content_outages` (world); `held_rewards` and `completion_receipts` (player); `objective_fp`,
+  `outage_accounted` and the whereabouts memory (quest); `phase_fp` (project instance); `failed` (situations);
+  `mcaquests_escort_hold` (entity). A 1.6.5 jar reading a 1.7.0 world ignores all of them.
 
 ### Compatibility
 
@@ -374,10 +627,36 @@ itself from the same rules that grant its credit, and one instance can be repair
   `ReputationProfileMatch` and `ReputationFeatures`; `QuestReputation.deliver(...)`,
   `matchesProfile(...)` and `supportsFeature(...)`; `ReputationDedupe.incidentResolution(...)`;
   `ReputationAward.deltaOrZero()` and `isNoOp()`.
-- **Network protocol 16 → 17.** `ProjectObjectiveLine` carries a state and expanded help,
-  `ProjectCard` names its live instance, revision and whether it has a build area, `ProjectLogEntry` names
-  its instance and why it is paused, and `ProjectScopeRequestC2SPacket` / `ProjectScopeS2CPacket` are new.
-  A 1.6.5 client would decode each of these as the old shape, so client and server must match.
+- **Network protocol 16 → 18** (NeoForge 17 → 18). `ProjectObjectiveLine` carries a state and expanded
+  help, `ProjectCard` names its live instance, revision and whether it has a build area, `ProjectLogEntry`
+  names its instance and why it is paused, and `ProjectScopeRequestC2SPacket`, `ProjectScopeS2CPacket` and
+  `QuestMenusStaleS2CPacket` are new, as is `ExternalMapPointsS2CPacket` on Forge. A 1.6.5 client would
+  decode each of these as the old shape, so client and server must match. 17 is skipped on Forge because two
+  unreleased builds used it for different packets — the 1.6.6 test builds and Ultima Kingdoms' private R3
+  provider — and a mismatched pair would pass the handshake and then fail to decode.
+- **A new common vanilla mixin: `PlayerListAccessor`**, an `@Invoker` for `PlayerList#save`, used only to
+  save the one player whose completion receipt is being confirmed. It is the first common class in
+  `mcaquests.mixins.json`, which now has a `mixins` section beside `client`. It adds a method and injects
+  nothing, so it cannot conflict with another mod's injection into `save`.
+- **Add-ons (Forge): `QuestFailedEvent.Reason` gained `KINGDOM_CHANGED` and `CIVIC_BUILDING_LOST`.** An
+  exhaustive `switch` over it no longer compiles; add a `default` branch. NeoForge's enum is unchanged.
+- **New API:** the completion-receipt methods, `QuestCompletionReceipt` and
+  `QuestCompletionReceiptReadyEvent` (both loaders); `openCommissionMenu`,
+  `openInstitutionalCommissionMenu`, `renewInstitutionalCompletionConsumer`, `publishExternalMapPoints` and
+  `ExternalMapPoint` (Forge). `QuestDefinition` gained trailing `kingdomLifecycle` and
+  `institutionalCommission` components and keeps its previous constructors. `TownsteadBridge` gained four
+  default methods — `lastKnownResident`, `bindingPath`, `onBound` and `onUnbound` — so an implementation
+  compiles unchanged. The two Townstead healthy-resident objective records gained a trailing
+  `lastKnownMaxAgeDays` and keep their previous constructors.
+- **The API jar now compiles on its own.** It shipped `QuestCondition` without the `QuestContext` its only
+  method takes, among other types its public signatures name, so an add-on implementing a condition could
+  not compile against it. It now carries every type an exported signature reaches, transitively — 95 more
+  read-model classes on Forge, 89 on NeoForge — and `ApiJarClosureTest` fails the build when one is
+  missing. They are still a read model, not a stability promise, and must never be shipped by a consumer.
+- **`mods.toml`:** Townstead's range is `[0.7.5,0.9)` (was `[0.7.5,0.8)`), stating what was verified; 0.9
+  has not been seen. On Forge, Ultima Kingdoms is a new **optional** dependency, `[0.1,)`, ordering `NONE`,
+  because Ultima loads after Quests to register its own condition and `AFTER` would be a cycle. Ultima
+  Kingdoms' own range for MCA: Quests must include 1.7.0 (`[1.6.5,1.8)` in its current source).
 - **New mixins: four variants of an observe-only hook on MCA's `EntityCommandHandler.interactAt`**, one per
   MCA package root, in `mcaquests.mca.mixins.json` (`required: false`, plugin-gated like the Gift hook,
   which picks the variant whose root is present and verifies the exact descriptor). It injects at `RETURN`,
@@ -393,6 +672,12 @@ itself from the same rules that grant its credit, and one instance can be repair
   `points_delta` objective easier than before, never harder; `project_talk_to_profession` counts a
   resident of the project's village wherever they are, which matches more often; the default
   `border_margin` of `0` keeps every existing placement and kill objective exactly as strict as it was.
+  From the 1.7.0 audit: a family target without its `related_villager_status` gate now skips the quest at
+  load; a file naming content from an absent optional mod is excluded instead of reported; a
+  `format_version` above `1` is refused; `place_block` no longer counts a re-placed position and
+  `break_block` no longer counts the player's own blocks; and an objective edit that is not a pure append
+  pauses work already accepted until it is rebased (see *Changed — datapack loading* and *Fixed — records
+  that outlive their village or their definition*).
 - **Add-ons: source-compatible additions.** `ProjectObjective` gained defaulted `requiredFor`, `explain`
   and `status`; `PollingProjectObjective` gained defaulted `onPhaseEntered`, `isPending` and
   `resolvePending`; `TownsteadBridge` gained a defaulted `spiritContributions`. New: the
@@ -418,17 +703,47 @@ itself from the same rules that grant its credit, and one instance can be repair
   profession tracks and skills*).
 - Neither Townstead nor MCA Capitals became a dependency; both stay optional in `mods.toml`.
 
+### Build
+
+- **Townstead's `api.v1` is compiled from source at a pinned commit** (`townstead_api_repo` and
+  `townstead_api_commit` in `gradle.properties`), since no Maven publishes it. The pin is Townstead's
+  `0.8-alpha-2` head `aaa558a0`, whose 108 `api.v1` classes are signature-identical to a Townstead 0.8.0
+  jar built from it. `-PtownsteadApiJar=<jar>`, `-PtownsteadApiSources=<checkout>` and
+  `-PtownsteadApi=reflective-only` (a jar without the typed adapter, named `-reflective-only`) override it.
+- `verifyReobfJar` also runs `verifyTownsteadAdapter`: a `typed` jar must carry the adapter and declare
+  `MCAQuests-Townstead-Api: typed:<commit>` in its manifest; a `reflective-only` jar must do neither.
+- The API jar's contents are `apiReadModel` in `build.gradle`: the classes add-ons name directly, then
+  every class their signatures reach.
+- `mca_probe_versions` adds MCA 7.7.1-beta.1 and 7.7.1-beta.2; both resolve to `forge.net.conczin.mca`.
+
 ### Documentation
 
-- DATAPACK.md: a section on content that needs an optional mod and is not loaded without it, what counts
-  as talking to a villager, `at_location_of`, `border_margin`, the spirit `baseline`, `profession_policy`,
-  and the new project commands; the old claim that Townstead projects "sit at zero" without Townstead is
-  gone.
+- DATAPACK.md: a section on content that needs an optional mod and is not loaded without it (now also
+  Ultima Kingdoms, and files naming an absent mod's own content), what counts as talking to a villager,
+  `at_location_of`, `border_margin`, the spirit `baseline`, `profession_policy`, the project commands
+  including `rebase` and `rebind`; `format_version`, the `place_block`/`break_block` rules, the family-gate
+  promotion; a new *Editing content that is in use* section with the recovery commands; and a new *Ultima
+  Kingdoms (Forge)* section (`kingdom_lifecycle`, standing, faction rewards, commissions). The old claim
+  that Townstead projects "sit at zero" without Townstead is gone.
 - TOWNSTEAD.md: Townstead profession tiers and how residents earn them, spirit baselines and Tourism, the
-  inn's registration and completeness, Known Far and Wide's rules, removal behaviour for projects, and FAQ
-  entries for *A Working Village* and the "welcoming points".
-- README.md, CONFIG.md (`client.showBuildAreaSeconds`), CAPITALS.md and CLAUDE.md (four mixin configs, the
-  runtime fixture).
+  inn's registration and completeness, Known Far and Wide's rules, removal behaviour for projects, FAQ
+  entries for *A Working Village* and the "welcoming points"; the API v1 binding (#1), 0.7.7's two builds,
+  and what 1.7.0 verified.
+- CONFIG.md: `client.showBuildAreaSeconds`; a `[projects]` section and the two project tracker keys, until
+  now documented only in DATAPACK.md; the followed quest past `questTrackerMaxEntries`.
+- README.md: bundled counts corrected to what a plain install loads (189 quests, 10 projects, 11
+  situations) and what Townstead and Capitals add; requirement rows for MCA: Reputation, Ultima Kingdoms,
+  JourneyMap, Xaero's Minimap and Map Atlases; the MCA: Conversations wording (it never credited talk
+  objectives); the Townstead row.
+- MAPATLASES.md: the verified build (`1.20-6.0.20`) and points published by other mods. CURSEFORGE.md:
+  counts, the Townstead range, MCA: Conversations, MCA: Reputation and Ultima Kingdoms. FTBQUESTS.md: a stale
+  protocol number. CAPITALS.md.
+- CLAUDE.md: the mixin configs (a common accessor in `mcaquests.mixins.json`), Ultima Kingdoms and the
+  Townstead v1 adapter, current line references, the fixtures. MODMAP.md regenerated.
+- `docs/audit/STABILIZATION.md`: the 1.7.0 verification record — commands, probes, runtime rows, client
+  runs, Ultima acceptance, findings and what is still manual.
+- Removed `docs/DATAPACK.md`, `docs/TOWNSTEAD.md`, `docs/BOUNTIFUL.md`, `docs/FTBQUESTS.md` and
+  `docs/ICEANDFIRE.md`: stale or identical copies of the root files, which are the only ones kept current.
 
 ### Tests
 
@@ -450,8 +765,28 @@ itself from the same rules that grant its credit, and one instance can be repair
   farmer's track to have a ceiling and at least two tiers.
 - A disposable production-server fixture (`tools/reliability-runtime-test/`, never shipped) drives real
   MCA villagers with a fake player through the same calls the network handler makes, and checks content
-  exclusion, placement area, instance-targeted repair and the profession tracks Townstead reports; see the
-  release notes for the runs. It is what found the binding defect above.
+  exclusion, placement area, instance-targeted repair and the profession tracks Townstead reports. It is
+  what found the binding defect above. For 1.7.0 it also checks place/break farming, a reward that throws
+  during a real turn-in, a project whose village does not exist, a completion receipt through the real
+  player-file save, and `/reload`; its restart row carries escort holds, a reordered project phase and a
+  Townstead outage across three boots of one world. That row found that escort leases were written empty
+  at shutdown (the registry was cleared on `ServerStoppingEvent`, before the final save), fixed before
+  release. `tools/townstead-runtime-test/` (#1) exercises whichever Townstead bridge binds. The rows and
+  their results are recorded in `docs/audit/STABILIZATION.md`.
+- New for 1.7.0: `OptionalModNamespacesTest`, `FormatVersionTest`, `EscortHoldLeaseTest`,
+  `ContentOutageLedgerTest`, `PersonalPlacementMemoryTest`, `HeldQuestRewardTest`,
+  `DefinitionFingerprintTest`, `VillageGoneRecoveryTest`, `HudTrackedRowTest`, `SituationFailureRecordTest`,
+  `ApiJarClosureTest`, `ConfigDocumentedTest` (every config key has a CONFIG.md row),
+  `CompletionReceiptOutboxTest`, `CompletionReceiptDurabilitySourceTest` and
+  `ReputationProfileAdoptionTest`; the
+  Townstead API v1 tests `ApiTownsteadBridgeTest`, `ApiTownsteadEventsTest`, `TownsteadCompatSelectionTest`,
+  `TownsteadEventSignalsTest` and `TownsteadResidentEvidenceTest` with `FakeTownstead`/`FakeTownsteadApi`;
+  and on Forge the Ultima tests `KingdomLifecycleCodecTest`, `KingdomLifecyclePolicyTest`,
+  `KingdomBindingPersistenceTest`, `FactionRewardBatchTest`, `FactionStandingRewardIdentityTest`,
+  `InstitutionalCommissionBridgeTest`, `InstitutionalCommissionPersistenceTest`,
+  `PublicServiceReflectionTest`, `NoUltimaStaticLinkTest`, `ExternalAtlasPointsTest` and
+  `ExternalMapPointsPacketTest`. `IntegrationRequirementsTest` gained the Ultima rows and
+  `TargetGateValidatorTest` the promotion; `QuestLogicTest` no longer depends on test order.
 
 ## [1.6.5] - 2026-09-15
 

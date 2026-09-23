@@ -83,6 +83,15 @@ the button just failing to do anything.
 
 ---
 
+### Points from other mods (Forge, 1.7.0)
+
+A server-side mod can publish its own points onto the atlas through
+`McaQuestsApi.publishExternalMapPoints` — Ultima Kingdoms uses it for its sites and routes. They are drawn
+alongside quest destinations in the same style (a site like a structure destination, a route like a
+location), honouring `approximate` and `last known`, but they are kept apart from quest markers: a quest
+changing never removes them, and only the publishing mod's next snapshot (at most 128 points) or leaving
+the world clears them. Nothing is published unless such a mod is installed.
+
 ## Coverage, dimensions and slices
 
 A destination is only ever drawn where the atlas already has a map for it — this integration never
@@ -137,7 +146,8 @@ are actually available, and the last failure recorded, if any.
 
 ## Version support
 
-The rendering hooks are checked against one exact, verified release build. If a different Map Atlases
+The rendering hooks are checked against one exact, verified release build: **Map Atlases `1.20-6.0.20`**
+for Forge 1.20.1 (with Moonlight Library 1.20-2.16.35 in the verification runs). If a different Map Atlases
 build is installed, this integration disables itself with a log line and a reason visible through
 `/mcaquestsclient waypoints status` — JourneyMap, Xaero's Minimap, the HUD tracker and the in-world
 marker are entirely unaffected. Broader version support is a matter of testing further releases, not a

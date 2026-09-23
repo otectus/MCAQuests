@@ -1,3 +1,174 @@
+# 1.7.0 verification — 2026-09-22
+
+This section records what was run for 1.7.0 on the Forge 1.20.1 project (`MCAQuests`) and the NeoForge
+1.21.1 port (`1.21.1 Ports/MCAQuests_1.21.1`). It replaces the manual lists of the 2026-09-06 report
+below for everything it covers; the checks still left to a person are listed at the end. Commands use
+`/home/otectus/Projects/.mcmod-tools/gradlew-quiet.sh <project> <task>`; on Forge every Gradle call also
+passed `-Dnet.minecraftforge.gradle.check.certs=false`, because ForgeGradle's certificate check hung once.
+
+## Build and unit tests
+
+| Loader | Task | Result |
+|---|---|---|
+| Forge | `build` | PASS — 1,480 tests, 0 failed, 16 skipped. `verifyReobfJar`: metadata, isolated classes, Java 17, 2,710 SRG member references, Townstead binding `typed`. `verifyApiJar`: 195 classes, no resources. |
+| NeoForge | `build` | PASS — 1,518 tests, 0 failed, 19 skipped. `jarSmokeCheck`: 952 isolated classes, Java 21, Townstead binding `typed`. `verifyApiJar`: 105 exports, no resources. |
+
+| Artifact | SHA-256 |
+|---|---|
+| Forge `build/libs/mcaquests-1.7.0.jar` | `fc5446896818682e01d2f643f9698d03cc59b04397d08848691e318ca2ad304f` |
+| Forge `build/libs/mcaquests-1.7.0-api.jar` | `0605bec460db332ecbdb08e8bb8a01835c85d77e7a95ccc78268b031f726a60b` |
+| NeoForge `build/libs/mcaquests-1.7.0.jar` | `29f4ec50d9630bcb9e88a4dd67decd33308de33a71a42da63e414e63f0eb11ea` |
+| NeoForge `build/libs/mcaquests-1.7.0-api.jar` | `0577ae87938120c508346a274d33e35255d51a054084e272ec308de4fae28293` |
+
+`ApiJarClosureTest` was also checked against a deliberate break: removing `QuestContext` from
+`apiReadModel` fails it, naming `QuestDefinition` and `WeightBonus` as the signatures that reach it.
+
+## Binding probes against real jars
+
+| Loader | Probe | Jar(s) | Result |
+|---|---|---|---|
+| Forge | `McaBindingProbeTest` (in `test`) | MCA 7.6.20, 7.7.0-beta.2, 7.7.1-alpha.2, 7.7.1-beta.1, 7.7.1-beta.2 | All resolve: `forge.net.mca` for the first two, `forge.net.conczin.mca` for the three 7.7.1 builds |
+| Forge | `javap` of the two MCA hook targets | MCA 7.7.1-beta.2 | `VillagerCommandHandler.handle(ServerPlayer,String)Z` and `EntityCommandHandler.interactAt(Player,Vec3,InteractionHand)InteractionResult` keep the exact descriptors the plugin requires |
+| Forge | `townsteadProbeTest` | Townstead 0.7.6; 0.7.7 legacy (MCA 7.6.20); 0.7.7 modern (`-PmcaDevVersion=7.7.1-beta.2+1.20.1`) | PASS, 4 tests, 0 skipped: bound, 15 capabilities; roots `forge.net.mca`, `forge.net.mca`, `forge.net.conczin.mca` |
+| Forge | `townsteadProbeTest` | Townstead 0.8.0 built from `0.8-alpha-2` head `aaa558a0` | Reflective manifest unresolved: `villager.ProfessionXpType#values/0` and `#id/0` (0.8 removed the enum). Expected — with `api.v1` present only the typed bridge binds. Its 108 `api.v1` classes are `javap -public -s` identical to the pinned API jar the adapter compiles against |
+| Forge | `capitalsProbeTest` | MCA Capitals 1.3.5, 1.3.6, 1.3.7 | PASS each, 9 capabilities |
+| Forge | `mapProbeTest -PrequireMapJars=true` | JourneyMap 1.20.1-6.0.5, Xaero's Minimap 26.5.0 | PASS, 3 tests |
+| Forge | `iceAndFireProbeTest` | Ice & Fire 2.1.13-beta-5, Ice & Fire CE 1.2.9 | PASS, 2 tests |
+| Forge | `bountifulProbeTest` | Bountiful 6.0.4 | PASS, 5 tests |
+| Forge | `mapAtlasesProbeTest` | Map Atlases 1.20-6.0.20, Moonlight 1.20-2.16.35 | PASS |
+| NeoForge | `townsteadProbeTest` | Townstead 0.7.6, 0.7.7 (NeoForge) | PASS each, 15 capabilities, root `net.conczin.mca` |
+| NeoForge | `capitalsProbeTest` | MCA Capitals 1.3.5 (NeoForge) | PASS, 9 capabilities |
+| NeoForge | `mapAtlasesProbeTest` | Map Atlases 1.21-6.7.3, Moonlight 1.21.1-3.6.3 | PASS |
+| NeoForge | `mapProbeTest -PrequireMapJars=true` | JourneyMap 1.21.1-6.0.9, Xaero's Minimap 26.5.0 (downloaded from Modrinth) | PASS, 3 tests |
+| NeoForge | `bountifulProbeTest` | Bountiful 8.0.0-beta.2 (downloaded from Modrinth) | PASS, 8 tests |
+| NeoForge | `iceAndFireProbeTest` | — | Not run: no Ice & Fire CE 1.21.1 jar is obtainable without CurseForge API access |
+
+## Production dedicated servers
+
+The reliability fixture (`tools/reliability-runtime-test/`, built with `reliabilityRuntimeTestJar
+-PreliabilityRuntimeFixture=true`, never shipped) drives real MCA villagers with a fake player through the
+calls the network handler makes, 100 ticks after start:
+
+- **TALK** — two conversations credited once each (quest and project), a sneak-click and a repeat not.
+- **PLACE** — project placement inside the area counts, 40 blocks out does not, a re-placed spot once.
+- **REPAIR** — an instance-targeted repair moves only its instance and refuses a reused token.
+- **FARM** — personal `place_block` counts a position once and `break_block` ignores the player's own
+  blocks: expected place 1, 1, 2 and break 0, 0, 1.
+- **HELD** — a reward that throws during a real `QuestManager.turnIn`: the quest completes, the other
+  reward pays, the failed one is held, survives a save, fails its retry and is dismissed.
+- **GONE** — `McaCompat.villageKnown` on real MCA answers `Optional[false]` for village 424242, the instance
+  is detected, and `rebind anchor` moves it with its progress.
+- **RECEIPT** — a subscribed completion is captured, fenced through `PlayerList#save` and the reread
+  player file, delivered once with one ready event, acknowledged and drained.
+- **RELOAD** — `/reload` completes, the null-player datapack sync fires, the registry size is unchanged
+  and the outage ledger stays attached.
+
+Forge rows ran Forge 47.4.23 with Architectury 9.2.14; NeoForge rows ran NeoForge 21.1.250 with MCA
+7.7.36-beta.3. Every row below passed all eight scenarios:
+
+| Loader | Row | Mods beside MCA: Quests | Loaded quests / projects / situations (fixture adds 5 / 3 / 0) |
+|---|---|---|---|
+| Forge | base | MCA 7.6.26 | 194 / 13 / 11 |
+| Forge | mca771b2 | MCA 7.7.1-beta.2 | 194 / 13 / 11 |
+| Forge | townstead-076 | MCA 7.6.26, Townstead 0.7.6, Patchouli 85 | 267 / 24 / 25 |
+| Forge | townstead-077-legacy | MCA 7.6.26, Townstead 0.7.7 legacy, Patchouli 85 | 267 / 24 / 25 |
+| Forge | townstead-077-modern | MCA 7.7.1-beta.2, Townstead 0.7.7 modern, Patchouli 85 | 267 / 24 / 25 |
+| Forge | townstead-080 | MCA 7.7.1-beta.2, Townstead 0.8.0 (test build, see *Findings*) | 267 / 24 / 25 |
+| Forge | capitals | MCA 7.7.1-beta.2, Capitals 1.3.7 | 202 / 13 / 13 |
+| Forge | both | MCA 7.7.1-beta.2, Townstead 0.7.7 modern, Patchouli 85, Capitals 1.3.7 | 275 / 24 / 27 |
+| Forge | conversations | MCA 7.6.26, MCA: Conversations 1.8.0 | 194 / 13 / 11 |
+| NeoForge | base | — | 194 / 13 / 11 |
+| NeoForge | townstead-076, ts-076 | Townstead 0.7.6, Patchouli 93 | 267 / 24 / 25 |
+| NeoForge | townstead-077, ts-077 | Townstead 0.7.7, Patchouli 93 | 267 / 24 / 25 |
+| NeoForge | capitals | Capitals 1.3.5 | 202 / 13 / 13 |
+| NeoForge | both | Townstead 0.7.7, Patchouli 93, Capitals 1.3.5 | 275 / 24 / 27 |
+| NeoForge | conversations | MCA: Conversations 1.8.0 | 194 / 13 / 11 |
+
+**Townstead bridge fixture** (`tools/townstead-runtime-test/`, #1, ported to NeoForge for 1.7.0) shared
+the Townstead boots with `-Dmcaquests.rt.haltAt=800`:
+
+| Loader | Townstead | Binding | Result |
+|---|---|---|---|
+| Forge | 0.7.6, 0.7.7 legacy | reflective, `forge.net.mca` | `FULL` 15/15; villager read; hunger −10 and fatigue→3 applied; farmer +25 XP, a +100,000 request capped to 215 (tier 1→2), a further +25 refused `DAILY_CAP`; unknown skill `FEATURE_GATED`; no known skill in the registry |
+| Forge | 0.7.7 modern | reflective, `forge.net.conczin.mca` | As above |
+| Forge | 0.8.0 test build | `api-v1`, variant `api-v1-r4` | `FULL` 15/15; event feed subscribed; hunger and fatigue applied, thirst `FEATURE_GATED` (gated off in that build); the same XP results; a known skill (`townstead:scribe/long_ledger`) learned, re-learned as `NO_CHANGE`, forgotten, re-forgotten as `NO_CHANGE`; unknown skill `INVALID_VALUE` |
+| NeoForge | 0.7.6, 0.7.7 | reflective, `net.conczin.mca` | As the Forge 0.7.x rows |
+
+On every build the "energy → 0" push applied but the villager was not collapsed 400 ticks later, and the
+fixture saw no collapse event; that is recorded, not asserted.
+
+**Restart row** — three boots of one world (`-Dmcaquests.rt.phase=restart1..3`), MCA 7.6.26 on Forge and
+7.7.36 on NeoForge, identical results on both after the fix under *Findings*:
+
+| Boot | Mods | Result |
+|---|---|---|
+| 1 | Townstead 0.7.6 | Four MCA villagers: V and W held for an owner who never logs in (W was already `NoAI` from "another mod"), X held then queued for release, Y frozen the pre-1.7.0 way (no marker, no lease). `rt_drift` opened with fingerprints and progress [2,0]. Townstead content loaded, not covered by the outage ledger. PASS |
+| 2 | Townstead removed; a world datapack reorders `rt_drift`'s objectives | ESCORT-RESTART PASS: V and W still held with leases, X released on load, Y untouched. DRIFT PASS: the reordered phase is detected and a stone-brick and a brick placement credit nothing. OUTAGE-OPEN PASS: Townstead quests and projects excluded, the ledger covering them |
+| 3 | Townstead restored | OUTAGE PASS: the outage closed; a quest accepted in boot 1 is credited exactly 100 ticks, boot 2's length, by `QuestProgressEvents.creditOutage`. ESCORT-RELEASE PASS: V moving and vulnerable, W back to `NoAI` but vulnerable, Y freed by `/mcaquests escort release`. REBASE PASS: the phase is accepted, counts stay [2,0], and a brick then credits objective 1 |
+
+## Production clients
+
+`client_smoke.py` (a scratch launcher) started the installed CurseForge Forge 47.4.23 and NeoForge
+21.1.250 clients with MCA: Quests 1.7.0 and MCA (plus Architectury on Forge), quick-played a copy of a
+fixture world, and stopped the client 45 seconds after the player joined. Both clients bound MCA, loaded
+their content, passed the network handshake, joined the integrated server and saved on stop. The only
+ERROR in either log is the narrator's missing `libflite`, from this machine.
+
+## Ultima Kingdoms acceptance (Forge)
+
+Ultima's `tools/test/integration_runtime.py`, run from a scratch copy whose `build/libs` Ultima jar differs
+from Ultima's own only in `mods.toml`'s MCA: Quests range, widened to `[1.6.5,1.8)` as Ultima's
+`gradle.properties` now says (the installed Ultima jar still declares `[1.6.5,1.7)` and refuses 1.7.0):
+
+| Phase | Mods | Result |
+|---|---|---|
+| `civic-loop` | MCA: Quests 1.7.0, MCA: Conversations 1.8.0, MCA 7.6.26, Architectury, Townstead 0.7.6, FireSticks, Patchouli | PASS, and PASS after restart |
+| `r2` | MCA: Quests 1.7.0, the R2 provider `mcacrime-0.7.5.jar` (`e851ed0c…`), MCA 7.6.26, Architectury, Townstead 0.7.6, Patchouli | PASS, and PASS after restart: native payment receipt, honor and hospitality knowledge |
+| `r4-service` | Recruits 1.15.2, MCA, Architectury, MCA: Quests 1.7.0, MCA Crime, GeckoLib, Townstead, Patchouli | PASS: real scoped delivery and reward, voluntary obligation, invalid scope and duplicate denied |
+| `r3` | as `r4-service` | PASS through `r3`, `r3-restart`, `r3-absent`, `r3-reinstalled` and `r3-future` |
+
+## Findings
+
+1. **Escort leases were written empty at shutdown (fixed before release).** `EscortHoldRegistry.detach()`
+   ran on `ServerStoppingEvent`, which fires before the final world save, so the lease file was saved empty
+   and the next boot released every held villager as an orphan. The restart row caught it. The registry is
+   now detached on `ServerStoppedEvent`, and `attach()` is idempotent per server and runs on the first
+   entity join, so a spawn-chunk villager is never judged against an empty registry. Both loaders.
+2. **Townstead 0.8 (`0.8-alpha-2`, unreleased) cannot start a Forge dedicated server.**
+   `client.catalog.CatalogDataLoader.apply` calls `RequirementNameResolver.invalidate()`, a class that
+   imports `net.minecraft.client.Minecraft`, during the server's datapack load. The 0.8.0 test build used
+   above wraps that one call; the typed-bridge results come from it. Upstream.
+3. **Townstead 0.8's NeoForge build requires MCA 7.7.37**, newer than any published NeoForge MCA
+   (7.7.36-beta.3), so no NeoForge 0.8 row could run. Upstream.
+4. **MCA: Conversations 1.8.0 declares its optional Townstead dependency as `[0.7.5,0.8)`**, so Forge will
+   refuse Conversations beside Townstead 0.8. Conversations' manifest, not this mod's.
+5. **The current MCACrime build (`mcacrime-0.7.5.jar`, `a294180d…`) fails Ultima's R2 check** "unreported
+   local theft does not become institutional knowledge"; the R2 provider build of the same version passes.
+   MCACrime and Ultima, not this mod.
+6. **Ultima Kingdoms' installed jar refuses MCA: Quests 1.7.0** until it is rebuilt with the widened range,
+   so the Ultima CurseForge instance was left on 1.6.6.
+
+## Still manual
+
+- Client UI at GUI scales 1–4: the followed quest past the tracker limit with its "+N more" line, project
+  Details and **Show build area**, an open Quests menu refreshing on `/reload`, and `pt_br`.
+- Map Atlases drawing external points from Ultima, and the atlas integration generally, in a real client.
+- MCA's Gift gesture delivering to a quest with a real player (DELIVERY-01).
+- A real player's login crediting an outage on an accepted quest end to end (the restart row calls the
+  crediting method directly).
+- The Townstead checklist items that need a client or a day boundary (TOWNSTEAD.md scenarios 5, 7–13).
+- NeoForge: Townstead 0.8 through `api.v1` at runtime, Ice & Fire CE, and a 1.20.1 world upgraded end to end.
+
+## Installed
+
+`installMod -PmodsDir=…` copied each verified jar, and the 1.6.6 jar it replaced was moved to the session
+scratchpad (`replaced-jars/`), not deleted:
+
+| Instance | Loader | Jar | SHA-256 |
+|---|---|---|---|
+| Towns & Dragons (1) | Forge 47.4.23 | `mcaquests-1.7.0.jar` | `fc544689…ad304f` |
+| NeoForge Testing Grounds | NeoForge 21.1.250 | `mcaquests-1.7.0.jar` | `29f4ec50…eb11ea` |
+
 # Stabilization and refinement — 2026-09-06
 
 This report covers the implemented pass in the Forge 1.20.1 project and the separately built

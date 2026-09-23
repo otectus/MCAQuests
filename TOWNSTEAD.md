@@ -22,9 +22,10 @@ MCA: Quests changes.
    `[0.7.5,0.9)`. The only *released* 1.20.1 Townstead at the time of writing is **0.7.6**, which
    needs MCA in the older `forge.net.mca` layout and **Patchouli** — if the game will not start,
    check that first, it is the most common cause and has nothing to do with this integration.
-   Townstead 0.8, which ships the public `api.v1` this integration also targets, exists only on an
-   unreleased upstream branch: it needs MCA 7.7.1-alpha.3 or newer and drops the Patchouli
-   requirement.
+   Townstead 0.7.7, not yet released either, comes as two builds: a legacy one for the
+   `forge.net.mca` layout and a modern one for MCA 7.7.1's `forge.net.conczin.mca`. Townstead 0.8,
+   which ships the public `api.v1` this integration also targets, exists only on an unreleased
+   upstream branch: it needs MCA 7.7.1-alpha.3 or newer and drops the Patchouli requirement.
 2. Start the server. That is all — no configuration is needed.
 
 Confirm it took with `/mcaquests compat townstead status`. You want to see all fifteen capabilities.
@@ -642,6 +643,19 @@ makes an in-development GameTest against an MCA villager impossible. Run them be
 11. ☐ Inventory delivery is exact-once; a full villager refuses the hand-over and the player keeps the goods.
 12. ☐ An active quest survives Townstead being removed, suspends, and resumes its original baseline when restored.
 13. ☐ Completion still succeeds when a reaction dispatch throws.
+
+**What 1.7.0 verified.** On production Forge dedicated servers the Townstead fixture reported `FULL`,
+15 of 15 capabilities, against Townstead 0.7.6 and 0.7.7 legacy (MCA 7.6.26) and 0.7.7 modern (MCA
+7.7.1-beta.2), all through the reflective binding, and against a Townstead 0.8.0 built from the pinned
+`api.v1` commit through `api-v1` (variant `api-v1-r4`). That 0.8.0 build needed a one-line local guard:
+the unreleased alpha loads a client-only class during the server's datapack load and cannot start a
+dedicated server as published. On every build it covered scenario 1 and the
+daily-cap half of scenario 5; scenario 6 on 0.8, the only build whose registry had a known skill to
+learn. The reliability fixture's restart row covered the content half of scenario 12 — Townstead removed,
+its content excluded and the outage recorded, then restored and credited — without a real player.
+NeoForge rows ran 0.7.6 and 0.7.7. The runs and their exact output are in
+[docs/audit/STABILIZATION.md](docs/audit/STABILIZATION.md). The client column and the remaining scenarios
+still need a person.
 
 Part of scenarios 1, 5 and 6 need no client at all: `./gradlew townsteadRuntimeTestJar -PtownsteadRuntimeFixture=true`
 builds a disposable fixture mod that spawns an MCA villager on a dedicated server, reads its state
