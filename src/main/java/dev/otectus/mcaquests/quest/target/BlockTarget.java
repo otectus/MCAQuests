@@ -42,36 +42,41 @@ public record BlockTarget(Optional<Block> block, Optional<TagKey<Block>> tag) {
      *   <li><b>It never leaves loaded chunks.</b> A block in an unloaded chunk cannot be walked to
      *       any sooner for having been found, and reading one would drag chunks into memory for a
      *       marker.</li>
-     *   <li><b>Its only caller throttles it.</b> {@code LocateCache} runs this once and remembers,
-     *       retrying a miss no more often than {@code guidanceSearchIntervalTicks}.</li>
+     *   <li><b>It is throttled and spread out.</b> Guidance runs it through {@link #locateAsync} on the
+     *       server-wide search queue, a slice per step (1.7.0), and {@code LocateCache} remembers the
+     *       answer, retrying a miss no more often than {@code guidanceSearchIntervalTicks}.</li>
      * </ul>
      *
      * <p>Vertical reach is deliberately much shorter than horizontal: the things worth pointing at are
      * on the surface near the player, and a tall box mostly buys stone.
      */
     public Optional<BlockPos> locate(ServerLevel level, BlockPos from, int radius) {
-        int vertical = Math.max(4, radius / 4);
+        return scan(from, radius).advance(Integer.MAX_VALUE, probe(level));
+    }
+
+    /**
+     * The same search as {@link #locate}, run on the server-wide search queue a slice at a time (1.7.0)
+     * instead of in one call on the player's guidance pass. Guidance uses this through
+     * {@code LocateCache.resolveAsync}.
+     */
+    public java.util.concurrent.CompletableFuture<Optional<BlockPos>> locateAsync(ServerLevel level, BlockPos from,
+                                                                                  int radius) {
+        return dev.otectus.mcaquests.quest.guidance.StructureSearches.requestBlock(level, this, from, radius,
+                () -> scan(from, radius), probe(level));
+    }
+
+    /** Rings out to {@code radius}, each column a quarter of that up and down (at least four). */
+    private static BlockRingScan scan(BlockPos from, int radius) {
+        return new BlockRingScan(from, radius, Math.max(4, radius / 4));
+    }
+
+    /** Only loaded blocks are read: a search never generates or loads a chunk. */
+    private BlockRingScan.Probe probe(ServerLevel level) {
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        for (int ring = 0; ring <= radius; ring++) {
-            for (int dx = -ring; dx <= ring; dx++) {
-                for (int dz = -ring; dz <= ring; dz++) {
-                    // Only the shell of each ring; the inside was covered by a smaller ring already.
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
-                        continue;
-                    }
-                    for (int dy = -vertical; dy <= vertical; dy++) {
-                        cursor.set(from.getX() + dx, from.getY() + dy, from.getZ() + dz);
-                        if (!level.isLoaded(cursor)) {
-                            continue;
-                        }
-                        if (matches(level.getBlockState(cursor))) {
-                            return Optional.of(cursor.immutable());
-                        }
-                    }
-                }
-            }
-        }
-        return Optional.empty();
+        return (x, y, z) -> {
+            cursor.set(x, y, z);
+            return level.isLoaded(cursor) && matches(level.getBlockState(cursor));
+        };
     }
 
     public Component describe() {

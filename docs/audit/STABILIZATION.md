@@ -10,14 +10,14 @@ passed `-Dnet.minecraftforge.gradle.check.certs=false`, because ForgeGradle's ce
 
 | Loader | Task | Result |
 |---|---|---|
-| Forge | `build` | PASS — 1,480 tests, 0 failed, 16 skipped. `verifyReobfJar`: metadata, isolated classes, Java 17, 2,710 SRG member references, Townstead binding `typed`. `verifyApiJar`: 195 classes, no resources. |
-| NeoForge | `build` | PASS — 1,518 tests, 0 failed, 19 skipped. `jarSmokeCheck`: 952 isolated classes, Java 21, Townstead binding `typed`. `verifyApiJar`: 105 exports, no resources. |
+| Forge | `build` | PASS — 1,486 tests, 0 failed, 16 skipped. `verifyReobfJar`: metadata, isolated classes, Java 17, 2,728 SRG member references, Townstead binding `typed`. `verifyApiJar`: 195 classes, no resources. |
+| NeoForge | `build` | PASS — 1,524 tests, 0 failed, 19 skipped. `jarSmokeCheck`: 960 isolated classes, Java 21, Townstead binding `typed`. `verifyApiJar`: 105 exports, no resources. |
 
 | Artifact | SHA-256 |
 |---|---|
-| Forge `build/libs/mcaquests-1.7.0.jar` | `fc5446896818682e01d2f643f9698d03cc59b04397d08848691e318ca2ad304f` |
+| Forge `build/libs/mcaquests-1.7.0.jar` | `db2a9eef699dda7c49c47b2ee9a1388e4f02eb6fe338cb003fedebe1967f36d9` |
 | Forge `build/libs/mcaquests-1.7.0-api.jar` | `0605bec460db332ecbdb08e8bb8a01835c85d77e7a95ccc78268b031f726a60b` |
-| NeoForge `build/libs/mcaquests-1.7.0.jar` | `29f4ec50d9630bcb9e88a4dd67decd33308de33a71a42da63e414e63f0eb11ea` |
+| NeoForge `build/libs/mcaquests-1.7.0.jar` | `207ee88c30948e427d7c3faaebe2b0b2ef0152d05817abfc858994723c900923` |
 | NeoForge `build/libs/mcaquests-1.7.0-api.jar` | `0577ae87938120c508346a274d33e35255d51a054084e272ec308de4fae28293` |
 
 `ApiJarClosureTest` was also checked against a deliberate break: removing `QuestContext` from
@@ -64,7 +64,9 @@ calls the network handler makes, 100 ticks after start:
   and the outage ledger stays attached.
 
 Forge rows ran Forge 47.4.23 with Architectury 9.2.14; NeoForge rows ran NeoForge 21.1.250 with MCA
-7.7.36-beta.3. Every row below passed all eight scenarios:
+7.7.36-beta.3. Every row below passed all eight scenarios. The rows ran before the guidance change under
+*Findings* 7; after it, the base row was run again on each loader with the final jars and passed all
+eight plus GUIDANCE:
 
 | Loader | Row | Mods beside MCA: Quests | Loaded quests / projects / situations (fixture adds 5 / 3 / 0) |
 |---|---|---|---|
@@ -105,6 +107,25 @@ fixture saw no collapse event; that is recorded, not asserted.
 | 1 | Townstead 0.7.6 | Four MCA villagers: V and W held for an owner who never logs in (W was already `NoAI` from "another mod"), X held then queued for release, Y frozen the pre-1.7.0 way (no marker, no lease). `rt_drift` opened with fingerprints and progress [2,0]. Townstead content loaded, not covered by the outage ledger. PASS |
 | 2 | Townstead removed; a world datapack reorders `rt_drift`'s objectives | ESCORT-RESTART PASS: V and W still held with leases, X released on load, Y untouched. DRIFT PASS: the reordered phase is detected and a stone-brick and a brick placement credit nothing. OUTAGE-OPEN PASS: Townstead quests and projects excluded, the ledger covering them |
 | 3 | Townstead restored | OUTAGE PASS: the outage closed; a quest accepted in boot 1 is credited exactly 100 ticks, boot 2's length, by `QuestProgressEvents.creditOutage`. ESCORT-RELEASE PASS: V moving and vulnerable, W back to `NoAI` but vulnerable, Y freed by `/mcaquests escort release`. REBASE PASS: the phase is accepted, counts stay [2,0], and a brick then credits objective 1 |
+
+## Guidance cost (F17)
+
+The fixture's GUIDANCE scenario gives one fake player ten bundled quests whose objectives name a place
+or a villager (and, as further players, the same ten again and the eight base-install quests with a block
+`source` hint) and times twenty `GuidanceService.snapshot` walks each — right after acceptance, and again
+280 ticks later. It ran on a normal world with structures (`build/rt/guidance-row.sh`), MCA 7.6.26:
+
+| Build | First walk (cold JVM) | Settled | New player's first walk (warm) | Block-source quests |
+|---|---|---|---|---|
+| Before | 167 ms | max 0.7–1.2 ms | 139 ms | first 22 ms, then up to 13.9 ms, average 3.5 ms |
+| After (Forge) | 11.5 ms | max 0.9 ms | 0.5 ms | warm player: first 0.4 ms, max 0.4 ms |
+| After (NeoForge) | 24.5 ms | max 1.7 ms | 1.0 ms | warm player: first 0.8 ms, max 1.1 ms |
+
+The 139–167 ms walk was one synchronous biome search (`adventurer_trailblazer`'s `visit_biome`) under the
+per-pass budget; the block-source cost was one 48-block scan per pass. Both now run on the server-wide
+search queue (see *Fixed — guidance hitches* in the CHANGELOG), which is why a warm walk stays under
+2 ms. The first walk down a code path still pays for class loading and JIT, so the scenario reports it
+without judging it. The scenario also passes on the flat worlds of each loader's final base row.
 
 ## Production clients
 
@@ -147,6 +168,7 @@ from Ultima's own only in `mods.toml`'s MCA: Quests range, widened to `[1.6.5,1.
    MCACrime and Ultima, not this mod.
 6. **Ultima Kingdoms' installed jar refuses MCA: Quests 1.7.0** until it is rebuilt with the widened range,
    so the Ultima CurseForge instance was left on 1.6.6.
+7. **Guidance could stall the server for 140–170 ms** (F17, fixed before release): see *Guidance cost*.
 
 ## Still manual
 
@@ -166,8 +188,8 @@ scratchpad (`replaced-jars/`), not deleted:
 
 | Instance | Loader | Jar | SHA-256 |
 |---|---|---|---|
-| Towns & Dragons (1) | Forge 47.4.23 | `mcaquests-1.7.0.jar` | `fc544689…ad304f` |
-| NeoForge Testing Grounds | NeoForge 21.1.250 | `mcaquests-1.7.0.jar` | `29f4ec50…eb11ea` |
+| Towns & Dragons (1) | Forge 47.4.23 | `mcaquests-1.7.0.jar` | `db2a9eef…7f36d9` |
+| NeoForge Testing Grounds | NeoForge 21.1.250 | `mcaquests-1.7.0.jar` | `207ee88c…900923` |
 
 # Stabilization and refinement — 2026-09-06
 

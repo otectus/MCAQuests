@@ -155,8 +155,8 @@ public record FindMissingRelativeObjective(VillagerTarget relative, Optional<Bio
             return area;
         }
         return biome.flatMap(target -> dev.otectus.mcaquests.quest.guidance.LocateCache
-                .resolve(progress, "searchBiome", level,
-                        () -> target.locate(level, player.blockPosition(), SEARCH_BLOCKS))
+                .resolveAsync(progress, "searchBiome", level,
+                        () -> target.locateAsync(level, player.blockPosition(), SEARCH_BLOCKS))
                 .map(pos -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(pos, level, dev.otectus.mcaquests.quest.guidance.GuidanceKind.BIOME,
                         target.describe(), discoverRadius, true)));
     }

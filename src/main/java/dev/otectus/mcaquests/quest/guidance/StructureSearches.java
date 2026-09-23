@@ -6,6 +6,7 @@ import dev.otectus.mcaquests.quest.target.StructureTarget;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
+import net.minecraft.core.QuartPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkResult;
@@ -15,6 +16,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -38,14 +42,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Resumable structure navigation. World objects are inspected only on the server thread; the
  * worker uses ServerChunkCache's explicit off-thread request path, never vanilla's blocking locate.
  * Searches share a bounded cache and one outstanding chunk request across the entire server.
+ *
+ * <p>Biome searches share the same lifecycle since 1.7.0 ({@link #requestBiome}). One used to run in a
+ * single call on the player's guidance pass and cost 140–170 ms on a real world; now it walks
+ * {@link BiomeSpiral} a bounded number of samples per step under this queue's per-tick budget. Block
+ * searches ({@link #requestBlock}) do the same with a resumable ring scan.
  */
 @EventBusSubscriber(modid = McaQuests.MOD_ID)
 public final class StructureSearches {
@@ -65,6 +77,10 @@ public final class StructureSearches {
     // An area answer is only as good as the region it was scanned for, and its miss is a real answer:
     // hit and miss expire on the same short timer.
     private final SearchQueue<AreaKey, List<BoundingBox>> areaQueue = new SearchQueue<>(64, 200, 200, 200);
+    // A biome answer holds as long as a structure's: biomes do not move. A miss is retried sooner.
+    private final SearchQueue<BiomeKey, BlockPos> biomeQueue = new SearchQueue<>(64, 200, 6000, 200);
+    // A block can be harvested, so a hit is only trusted briefly; guidance re-checks it every pass anyway.
+    private final SearchQueue<BlockKey, BlockPos> blockQueue = new SearchQueue<>(64, 200, 200, 200);
     private final ExecutorService worker = Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "MCA Quests structure requests");
         thread.setDaemon(true);
@@ -82,6 +98,19 @@ public final class StructureSearches {
     // for by a set of structures, not by a quest's navigation target.
     private record AreaKey(ServerLevel level, ResourceLocation token, int regionX, int regionZ, int radius) { }
     private record AreaCandidate(List<Holder<Structure>> structures, ChunkPos pos, double distSqr) { }
+    // Shared within 128 blocks, like structure searches. The target is compared by value (a record).
+    private record BiomeKey(ServerLevel level, Object target, int regionX, int regionZ, int radius) { }
+    // A block search is local, so it is shared only within one chunk section of the origin.
+    private record BlockKey(ServerLevel level, Object target, int sectionX, int sectionY, int sectionZ, int radius) { }
+
+    /** Block reads per queue step: a few tenths of a millisecond. */
+    private static final int BLOCK_PROBES_PER_STEP = 4096;
+
+    /** Noise samples per queue step: about a tenth of a millisecond, so eight steps stay under the budget. */
+    private static final int BIOME_SAMPLES_PER_STEP = 256;
+    /** Vanilla's /locate biome uses 8; guidance wants a direction, not the first block (see BiomeTarget). */
+    private static final int BIOME_HORIZONTAL_STEP = 32;
+    private static final int BIOME_VERTICAL_STEP = 64;
 
     private StructureSearches() { }
 
@@ -123,6 +152,42 @@ public final class StructureSearches {
                 () -> searches.new AreaScan(level, structures, origin, radius));
     }
 
+    /**
+     * The nearest position within {@code blockRadius} of {@code from} whose biome {@code matches}, found
+     * over as many ticks as the queue's budget needs — the same position vanilla's
+     * {@code findClosestBiome3d} would answer with the same steps. {@code target} identifies the search
+     * so nearby requests for it share one walk.
+     */
+    public static CompletableFuture<Optional<BlockPos>> requestBiome(ServerLevel level, Object target,
+                                                                     Predicate<Holder<Biome>> matches,
+                                                                     BlockPos from, int blockRadius) {
+        if (!level.getServer().isSameThread()) {
+            throw new IllegalStateException("Biome guidance must be requested on the server thread");
+        }
+        StructureSearches searches = SERVERS.computeIfAbsent(level.getServer(), ignored -> new StructureSearches());
+        int radius = Math.max(64, blockRadius);
+        BiomeKey key = new BiomeKey(level, target, from.getX() >> 7, from.getZ() >> 7, radius);
+        BlockPos origin = from.immutable();
+        return searches.biomeQueue.request(key, searches.ticks, () -> new BiomeSearch(level, matches, origin, radius));
+    }
+
+    /**
+     * The nearest loaded block {@code probe} accepts, scanning {@code scan} over as many ticks as the
+     * queue's budget needs (1.7.0). {@code target} identifies the search so requests from the same chunk
+     * section share one scan.
+     */
+    public static CompletableFuture<Optional<BlockPos>> requestBlock(ServerLevel level, Object target, BlockPos from,
+                                                                     int radius,
+                                                                     java.util.function.Supplier<dev.otectus.mcaquests.quest.target.BlockRingScan> scan,
+                                                                     dev.otectus.mcaquests.quest.target.BlockRingScan.Probe probe) {
+        if (!level.getServer().isSameThread()) {
+            throw new IllegalStateException("Block guidance must be requested on the server thread");
+        }
+        StructureSearches searches = SERVERS.computeIfAbsent(level.getServer(), ignored -> new StructureSearches());
+        BlockKey key = new BlockKey(level, target, from.getX() >> 4, from.getY() >> 4, from.getZ() >> 4, radius);
+        return searches.blockQueue.request(key, searches.ticks, () -> new BlockSearch(scan.get(), probe));
+    }
+
     private static int searchRadius() {
         try {
             return McaQuestsConfig.COMMON.guidanceStructureSearchRadius.get();
@@ -138,6 +203,8 @@ public final class StructureSearches {
             if (searches.outstandingChunk.isDone()) searches.releaseTicket();
             searches.queue.tick(++searches.ticks, 8, 2_000_000L);
             searches.areaQueue.tick(searches.ticks, 4, 1_000_000L);
+            searches.biomeQueue.tick(searches.ticks, 8, 1_000_000L);
+            searches.blockQueue.tick(searches.ticks, 8, 1_000_000L);
         }
     }
 
@@ -147,6 +214,8 @@ public final class StructureSearches {
         if (searches != null) {
             searches.queue.clear();
             searches.areaQueue.clear();
+            searches.biomeQueue.clear();
+            searches.blockQueue.clear();
             searches.releaseTicket();
             searches.worker.shutdownNow();
         }
@@ -167,6 +236,8 @@ public final class StructureSearches {
         if (searches != null) {
             searches.queue.clear();
             searches.areaQueue.clear();
+            searches.biomeQueue.clear();
+            searches.blockQueue.clear();
             searches.releaseTicket();
         }
         // An already submitted vanilla chunk task belongs to the chunk system. Do not cancel it
@@ -191,6 +262,50 @@ public final class StructureSearches {
             case 2 -> new ChunkPos(radius, radius - (index - side * 2));
             default -> new ChunkPos(radius - (index - side * 3), -radius);
         };
+    }
+
+    /** A block search, a slice of the ring scan per step, reading only loaded blocks on the server thread. */
+    private record BlockSearch(dev.otectus.mcaquests.quest.target.BlockRingScan scan,
+                               dev.otectus.mcaquests.quest.target.BlockRingScan.Probe probe)
+            implements SearchQueue.Task<BlockPos> {
+        @Override
+        public SearchQueue.Step<BlockPos> step() {
+            Optional<BlockPos> found = scan.advance(BLOCK_PROBES_PER_STEP, probe);
+            if (found.isPresent() || scan.exhausted()) {
+                return SearchQueue.Step.finished(found);
+            }
+            return SearchQueue.Step.pending();
+        }
+    }
+
+    /** A biome search, a slice of the spiral per step. The biome source is sampled on the server thread. */
+    private static final class BiomeSearch implements SearchQueue.Task<BlockPos> {
+        private final BiomeSource source;
+        private final Climate.Sampler sampler;
+        private final Set<Holder<Biome>> wanted;
+        private final BiomeSpiral spiral;
+
+        BiomeSearch(ServerLevel level, Predicate<Holder<Biome>> matches, BlockPos from, int radius) {
+            this.source = level.getChunkSource().getGenerator().getBiomeSource();
+            this.sampler = level.getChunkSource().randomState().sampler();
+            // As vanilla does first: a biome this world can never generate is answered at once.
+            this.wanted = source.possibleBiomes().stream().filter(matches).collect(Collectors.toUnmodifiableSet());
+            this.spiral = new BiomeSpiral(from, radius, BIOME_HORIZONTAL_STEP, BIOME_VERTICAL_STEP,
+                    level.getMinBuildHeight(), level.getMaxBuildHeight());
+        }
+
+        @Override
+        public SearchQueue.Step<BlockPos> step() {
+            if (wanted.isEmpty()) {
+                return SearchQueue.Step.finished(Optional.empty());
+            }
+            Optional<BlockPos> found = spiral.advance(BIOME_SAMPLES_PER_STEP, (x, y, z) -> wanted.contains(
+                    source.getNoiseBiome(QuartPos.fromBlock(x), QuartPos.fromBlock(y), QuartPos.fromBlock(z), sampler)));
+            if (found.isPresent() || spiral.exhausted()) {
+                return SearchQueue.Step.finished(found);
+            }
+            return SearchQueue.Step.pending();
+        }
     }
 
     private final class Search implements SearchQueue.Task<BlockPos> {

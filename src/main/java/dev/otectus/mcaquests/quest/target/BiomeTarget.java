@@ -70,11 +70,22 @@ public record BiomeTarget(Optional<ResourceLocation> biome, Optional<TagKey<Biom
     }
 
     /**
-     * The nearest position in this biome to {@code from}, or empty.
+     * The nearest position in this biome to {@code from}, found on the server-wide search queue a slice
+     * at a time (1.7.0) — the answer {@link #locate} would give, without its cost landing on one tick.
+     * Guidance uses this through {@code LocateCache.resolveAsync}.
+     */
+    public java.util.concurrent.CompletableFuture<Optional<BlockPos>> locateAsync(ServerLevel level, BlockPos from,
+                                                                                  int blockRadius) {
+        return dev.otectus.mcaquests.quest.guidance.StructureSearches.requestBiome(level, this, this::matches, from,
+                blockRadius);
+    }
+
+    /**
+     * The nearest position in this biome to {@code from}, or empty, in one call.
      *
      * <p>Vanilla's {@code /locatebiome} search, and as costly as {@code StructureTarget.locate} for
-     * the same reason — it samples the biome source outward in rings. Throttled by its only caller,
-     * {@code LocateCache}, never here.
+     * the same reason — it samples the biome source outward in rings; the runtime fixture measured
+     * 140–170 ms for one on a real world. Guidance no longer calls it: see {@link #locateAsync}.
      *
      * <p>The {@code step} is 32 rather than vanilla's 8: a quest wants "there is warm ocean that
      * way", not the exact first block of it, and the coarser stride cuts the sample count roughly

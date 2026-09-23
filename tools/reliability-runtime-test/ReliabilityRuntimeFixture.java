@@ -117,6 +117,9 @@ public final class ReliabilityRuntimeFixture {
     private int receiptEvents;
     private boolean reloadSynced;
     private int questsBeforeReload = -1;
+    private FakePlayer guidancePlayer;
+    private FakePlayer secondGuidancePlayer;
+    private final List<String> guidanceTimings = new ArrayList<>();
 
     public ReliabilityRuntimeFixture() {
         if (!Boolean.getBoolean("mcaquests.rt.fixture")) {
@@ -183,12 +186,17 @@ public final class ReliabilityRuntimeFixture {
                         held(server);
                         villageGone(server);
                         receipt(server);
+                        guidanceSetup(server);
+                        guidanceMeasure(server, "first");
                         startReload(server);
                     }
                 }
                 finish = !"single".equals(phase);
+            } else if (ticks == 380 && "single".equals(phase)) {
+                guidanceMeasure(server, "settled");
             } else if (ticks == 400) {
                 finishReload();
+                guidanceVerdict();
                 finish = true;
             }
         } catch (Throwable t) {
@@ -593,6 +601,122 @@ public final class ReliabilityRuntimeFixture {
         record("RELOAD " + (reloadSynced && QuestRegistry.size() == questsBeforeReload && ledger ? "PASS" : "FAIL")
                 + " synced=" + reloadSynced + " quests=" + QuestRegistry.size() + "/" + questsBeforeReload
                 + " ledger=" + ledger + " expected: the reload completes, re-syncs and keeps the outage ledger");
+    }
+
+    // ------------------------------------------------------------------ guidance cost (1.7.0, F17)
+
+    /** One player holding up to ten bundled quests whose objectives name a place or a villager. */
+    private void guidanceSetup(MinecraftServer server) {
+        guidancePlayer = guidancePlayer(server, "7a7a7a7a-0000-4000-8000-00000000901d", "RTGuide", false);
+    }
+
+    private FakePlayer guidancePlayer(MinecraftServer server, String id, String name, boolean blockSources) {
+        ServerLevel level = server.overworld();
+        BlockPos spawn = level.getSharedSpawnPos();
+        FakePlayer player = FakePlayerFactory.get(level, new GameProfile(UUID.fromString(id), name));
+        player.moveTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, 0, 0);
+        Villager giver = spawnCartographer(level, spawn.offset(3, 0, 3), "mca:male_villager");
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (giver == null || data == null) {
+            record("GUIDANCE SKIPPED: no MCA villager or no quest data");
+            return null;
+        }
+        java.util.regex.Pattern guided = java.util.regex.Pattern.compile(
+                "Kill|Break|Reach|EnterStructure|Deliver|TalkToProfession|FindMissingRelative|Escort|VisitBiome");
+        List<dev.otectus.mcaquests.quest.QuestDefinition> picked = QuestRegistry.all().stream()
+                .filter(def -> def.template().isEmpty() && !def.id().getNamespace().equals("mcaqrt"))
+                .filter(def -> blockSources
+                        ? def.objectives().stream().anyMatch(o -> o.toString().contains("SourceHint[")
+                                && (o.toString().contains("block=Optional[") || o.toString().contains("blockTag=Optional[")))
+                        : def.objectives().stream().anyMatch(o -> guided.matcher(o.getClass().getSimpleName()).find()))
+                .sorted(java.util.Comparator.comparing(def -> def.id().toString()))
+                .limit(10).toList();
+        for (dev.otectus.mcaquests.quest.QuestDefinition def : picked) {
+            data.add(ActiveQuest.create(def.id(), giver.getUUID(), Component.literal("giver"),
+                    ResourceLocation.fromNamespaceAndPath("minecraft", "cartographer"), level.dimension().location(), level.getGameTime(),
+                    def.objectives().size(), null));
+        }
+        record(name + " holds " + picked.size() + " quests: " + picked.stream().map(def -> def.id().getPath()).toList());
+        return player;
+    }
+
+    /** Twenty guidance walks for the first player, timed one by one; a fresh second player once warm. */
+    private void guidanceMeasure(MinecraftServer server, String label) {
+        if (guidancePlayer == null) {
+            return;
+        }
+        measureWalks(server, guidancePlayer, label);
+        if ("settled".equals(label)) {
+            secondGuidancePlayer = guidancePlayer(server, "7a7a7a7a-0000-4000-8000-00000000902d", "RTGuide2", false);
+            if (secondGuidancePlayer != null) {
+                measureWalks(server, secondGuidancePlayer, "second-player");
+            }
+            FakePlayer blocks = guidancePlayer(server, "7a7a7a7a-0000-4000-8000-00000000903d", "RTGuide3", true);
+            if (blocks != null) {
+                measureWalks(server, blocks, "block-sources-first");
+            }
+            FakePlayer blocksWarm = guidancePlayer(server, "7a7a7a7a-0000-4000-8000-00000000904d", "RTGuide4", true);
+            if (blocksWarm != null) {
+                measureWalks(server, blocksWarm, "block-sources");
+            }
+        }
+    }
+
+    private void measureWalks(MinecraftServer server, FakePlayer player, String label) {
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (data == null) {
+            return;
+        }
+        ServerLevel level = server.overworld();
+        long max = 0L;
+        long total = 0L;
+        long first = 0L;
+        long restMax = 0L;
+        int errors = 0;
+        for (int i = 0; i < 20; i++) {
+            long started = System.nanoTime();
+            try {
+                dev.otectus.mcaquests.quest.guidance.GuidanceService.snapshot(player, level, data);
+            } catch (Throwable t) {
+                errors++;
+                if (errors == 1) {
+                    record("guidance walk threw: " + t);
+                }
+            }
+            long elapsed = System.nanoTime() - started;
+            max = Math.max(max, elapsed);
+            total += elapsed;
+            if (i == 0) {
+                first = elapsed;
+            } else {
+                restMax = Math.max(restMax, elapsed);
+            }
+        }
+        guidanceTimings.add(label + " max=" + (max / 1000) + "us avg=" + (total / 20 / 1000) + "us errors=" + errors);
+        record("guidance " + label + ": 20 walks, first " + (first / 1000) + " us, max of the other 19 "
+                + (restMax / 1000) + " us, average " + (total / 20 / 1000) + " us, errors " + errors);
+    }
+
+    /**
+     * Every warm group must stay under 2 ms a walk: the first player once settled, a second player from
+     * their very first walk, and a second player holding the bundled block-source quests. The first walk
+     * down each code path also pays for JIT and class loading, so those groups are reported, not judged.
+     */
+    private void guidanceVerdict() {
+        if (guidancePlayer == null || guidanceTimings.size() < 2) {
+            return;
+        }
+        boolean pass = true;
+        for (String group : guidanceTimings) {
+            if (group.startsWith("first") || group.startsWith("block-sources-first")) {
+                continue;
+            }
+            long maxMicros = Long.parseLong(group.replaceAll(".*max=(\\d+)us.*", "$1"));
+            pass &= group.endsWith("errors=0") && maxMicros < 2000;
+        }
+        record("GUIDANCE " + (pass ? "PASS" : "FAIL") + " " + String.join("; ", guidanceTimings)
+                + " expected: every warm guidance walk — settled, a new player's first, block sources — under 2 ms,"
+                + " the threshold above which the plan called for bounding guidance work server-wide");
     }
 
     // ------------------------------------------------------------------ restart row (1.7.0)
