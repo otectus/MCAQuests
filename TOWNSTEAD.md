@@ -19,12 +19,11 @@ MCA: Quests changes.
 ## Install
 
 1. Install **MCA Reborn**, **MCA: Quests**, and **Townstead**. The declared range is
-   `[0.7.5,0.9)`. The only *released* 1.20.1 Townstead at the time of writing is **0.7.6**, which
-   needs MCA in the older `forge.net.mca` layout and **Patchouli** — if the game will not start,
-   check that first, it is the most common cause and has nothing to do with this integration.
-   Townstead 0.8, which ships the public `api.v1` this integration also targets, exists only on an
-   unreleased upstream branch: it needs MCA 7.7.1-alpha.3 or newer and drops the Patchouli
-   requirement.
+   `[0.7.5,0.9)`. Townstead 0.7.6 for NeoForge 1.21.1 needs **Patchouli** — if the game will not
+   start, check that first, it is the most common cause and has nothing to do with this integration.
+   0.7.7 is not released yet. Townstead 0.8, which ships the public `api.v1` this integration also
+   targets, exists only on an unreleased upstream branch, and its NeoForge build needs an MCA newer
+   than any published one (7.7.37; the latest on Modrinth is 7.7.36).
 2. Start the server. That is all — no configuration is needed.
 
 Confirm it took with `/mcaquests compat townstead status`. You want to see all fifteen capabilities.
@@ -642,6 +641,14 @@ makes an in-development GameTest against an MCA villager impossible. Run them be
 11. ☐ Inventory delivery is exact-once; a full villager refuses the hand-over and the player keeps the goods.
 12. ☐ An active quest survives Townstead being removed, suspends, and resumes its original baseline when restored.
 13. ☐ Completion still succeeds when a reaction dispatch throws.
+
+**What 1.7.0 verified.** On production NeoForge 1.21.1 dedicated servers (MCA 7.7.36) the Townstead
+fixture reported `FULL`, 15 of 15 capabilities, through the reflective binding against Townstead 0.7.6
+and 0.7.7, covering scenario 1 and the daily-cap half of scenario 5; neither build's registry had a known
+skill, so scenario 6 was not reached. The typed `api.v1` binding is compiled against the pinned API and
+unit-tested, but has not run here, because no Townstead 0.8 NeoForge build can load on a published MCA.
+The reliability fixture's restart row covered the content half of scenario 12 without a real player.
+The runs are in [docs/audit/STABILIZATION.md](docs/audit/STABILIZATION.md).
 
 Part of scenarios 1, 5 and 6 need no client at all: `./gradlew townsteadRuntimeTestJar -PtownsteadRuntimeFixture=true`
 builds a disposable fixture mod that spawns an MCA villager on a dedicated server, reads its state

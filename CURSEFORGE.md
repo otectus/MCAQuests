@@ -8,7 +8,7 @@ MCA: Quests adds a full RPG-style quest system to **Minecraft Comes Alive: Rebo
 
 Right-click an MCA villager, open the integrated **Quests** menu, choose an offer, complete its objectives out in the world, then return for your reward. Helping villagers can earn items, experience, currency, status effects, village reputation, titles, and most importantly, **MCA relationship hearts with the villagers you help**.
 
-With more than **260 built-in quests**, long-form quest chains, village-wide projects, dynamic situations, extensive quest tracking, and optional integrations with other major mods, MCA: Quests is designed to make MCA villages feel less like collections of NPCs and more like communities you can become part of.
+With **189 built-in quests** on a plain MCA install — **270** with Townstead and MCA Capitals — long-form quest chains, village-wide projects, dynamic situations, extensive quest tracking, and optional integrations with other major mods, MCA: Quests is designed to make MCA villages feel less like collections of NPCs and more like communities you can become part of.
 
 > **This NeoForge port requires Minecraft Comes Alive: Reborn for Minecraft 1.21.1.**<br>
 > It is an add-on and does not function without MCA Reborn.
@@ -262,19 +262,19 @@ Townstead support includes a large additional collection of quests, village proj
 
 Long-term objectives can follow actual Townstead simulation instead of using arbitrary timers. A quest asking a villager to work for a week, for example, can track completed work shifts rather than requiring the player to stand nearby watching a countdown.
 
-If Townstead is removed while one of its quests is active, the quest can **suspend instead of failing**. Its progress is preserved until the dependency becomes available again.
+If Townstead is removed while one of its quests is active, the quest can **suspend instead of failing**. Its progress is preserved, and its deadline stops — even while nobody is online — until the dependency becomes available again.
 
 ### MCA: Conversations
 
 With **MCA: Conversations** installed, quest dialogue can take place through the conversation system instead of relying only on static quest text.
 
-Conversation-driven objectives can also require the player to actually speak with the appropriate villager.
+The add-on also brings its own topic objectives and rewards. Ordinary "talk to this villager" objectives count a real conversation with or without it.
 
 Without MCA: Conversations, normal quest dialogue continues to work.
 
 ### MCA: Reputation
 
-When **MCA: Reputation** is installed, the Journal can link directly to the corresponding village standing and deed information.
+When **MCA: Reputation** is installed, it keeps the village standing your quests earn and spend, quests can ask what the village knows you for, and the Journal links directly to the corresponding village standing and deed information.
 
 Without it, MCA: Quests continues using its own built-in village reputation system.
 

@@ -138,7 +138,7 @@ are actually available, and the last failure recorded, if any.
 ## Version support
 
 The rendering hooks (`compat/mapatlases/AtlasHookManifest`) are checked against one exact, verified
-release build. If a different Map Atlases build is installed, this integration disables itself with a
+release build: **Map Atlases `1.21-6.7.3`** for NeoForge 1.21.1. If a different Map Atlases build is installed, this integration disables itself with a
 log line and a reason visible through `/mcaquestsclient waypoints status` — JourneyMap, Xaero's
 Minimap, the HUD tracker and the in-world marker are entirely unaffected. Broader version support is a
 matter of testing further releases, not a promise this document can make ahead of it.

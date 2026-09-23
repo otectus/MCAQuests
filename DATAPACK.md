@@ -66,7 +66,7 @@ To **disable the built-in quests** entirely and ship only your own, set `enableD
 
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `format_version` | int | no | `1` | Bump-safe version marker. |
+| `format_version` | int | no | `1` | The file format. Absent or `1` loads; a larger number is refused with an error saying the file was written for a newer MCA: Quests, and the definition is not loaded (1.7.0). Projects and situations are checked the same way. |
 | `id` | resource location | **yes** | — | Unique quest id, e.g. `mcaquests:farmer_wheat_request`. |
 | `enabled` | bool | no | `true` | `false` removes the quest from selection. |
 | `weight` | int (>0) | no | `1` | Relative odds of being offered (higher = more likely). |
@@ -263,8 +263,8 @@ middle, or their progress shifts onto the wrong objective. "Targets" accept **ei
 | `mcaquests:fish_item` | item target, `count` | Fish up that many. |
 | `mcaquests:use_item` | `item` (resource location), `count`, `require_success` (bool, default `false`), `source` (optional) | Use an item (right-click). `require_success:false` credits any use attempt; `require_success:true` credits only a finished use for items with a use duration (e.g., eating). Neither a **bow** nor a **crossbow** ever fires the finish event `require_success` otherwise relies on: a bow's use ends on release and a crossbow's use ends on loading, with the shot itself happening later, outside any use. Both are instead credited through the actual shot — a bow needs ammunition and a draw held long enough to loose an arrow, a crossbow (already charged) needs only ammunition. An item id that is not registered makes the quest unofferable/paused rather than failing to load. |
 | `mcaquests:kill_entity` | entity target, `count` | Player-credited kills. Credit follows the blow, the player's **tamed animal**, or — when something else lands the last hit (TNT, lava, a fall after the player struck) — vanilla's own kill credit, the same rule the death message uses. `defend_villager`, `defend_location` and the project kill objectives all read the same answer. |
-| `mcaquests:break_block` | block target, `count` | Player-broken blocks. |
-| `mcaquests:place_block` | block target, `count` | Player-placed blocks. |
+| `mcaquests:break_block` | block target, `count` | Player-broken blocks. A block the player placed while the objective was open does not count when they break it (1.7.0), so place-and-break cannot farm it. |
+| `mcaquests:place_block` | block target, `count` | Player-placed blocks. Each position counts once: breaking a counted block and placing another in the same spot does not count again (1.7.0). |
 | `mcaquests:interact_block` | exactly one of `block` or `tag`, `count`, `source` (optional) | Right-click a block. The interaction is never cancelled and its result is never changed — credited only on server-side success. A block id that is not registered makes the quest unofferable/paused rather than failing to load; a tag is strict (a tag that resolves to nothing is always unmatched). |
 | `mcaquests:visit_biome` | biome target | Enter a matching biome. |
 | `mcaquests:visit_dimension` | `dimension` (resource location) | Enter that dimension, e.g. `minecraft:the_nether`. |
@@ -382,8 +382,10 @@ a `related_villager_status` leaf on the same relation:
 "conditions": { "type": "mcaquests:related_villager_status", "relation": "sibling", "status": "same_village" }
 ```
 
-Without it the reload reports the file, the objective index, the relation and the block to add. It is a
-**warning** by default and a hard error under `strictJsonValidation`; a future release will promote it.
+Without it the reload reports the file, the objective index, the relation and the block to add. Since
+1.7.0 it is an **error**: under `strictJsonValidation` it fails the reload, and otherwise the quest is
+**skipped at load** — never offered, rather than offered for a relative who may not exist. (From 1.4.3 to
+1.6.5 it was only a warning outside strict mode.)
 
 Two things that do *not* count as a gate:
 
@@ -831,7 +833,7 @@ worse than none.
 
 ## Optional-mod compatibility
 
-Four optional mods have built-in integration with MCA: Quests: **Townstead**, **Ice & Fire**, **Bountiful**, and **MCA Capitals**. Content that uses them gates on the mod's availability via the `compat_capability` condition, and when the mod is absent the content is *paused* rather than *lost* — a player holding a quest that names absent content keeps it in their log, and it resumes when the mod returns.
+Optional mods with built-in integration include **Townstead**, **Ice & Fire**, **Bountiful**, **MCA Capitals**, **MCA: Reputation** and **FTB Quests**. Content that uses them gates on the mod's availability via the `compat_capability` condition, and when the mod is absent the content is *paused* rather than *lost* — a player holding a quest that names absent content keeps it in their log, and it resumes when the mod returns.
 
 ### Conditional compatibility packs
 
@@ -866,6 +868,13 @@ What a definition needs is **derived from its typed content**, never from its id
 **Townstead rewards are optional side effects** — one that cannot apply is skipped and the quest still
 completes — so they never make a core quest unavailable. Needs combine with AND: a definition that needs
 both mods needs both, and one that needs one never waits on the other.
+
+**A file that names another mod's own content is excluded the same way.** A definition can use a type,
+item or entity that only the other mod registers — `mcaconversations:talk_about`, an Ice & Fire item.
+Without that mod it cannot even be parsed. For the namespaces `townstead`, `mcacapitals`,
+`ultima_kingdoms`, `mcareputation`, `mcaconversations`, `ftbquests`, `iceandfire` and `bountiful` that is
+an exclusion, not an error, strict mode included (1.7.0). Any other unknown namespace still fails the file,
+because on a server without the mod a typo and an absent mod look the same.
 
 This is a supported outcome, never a validation error, including under `strictJsonValidation`; a
 malformed file still fails as before. A chain `unlocks` or `prerequisites` entry, or a project
@@ -1607,6 +1616,8 @@ Projects add a `projects` block to the common config plus two client keys (full 
 | `/mcaquests project instance <id> <n> skip [normal_rewards]` | 3 | **Preview** moving that one instance past its current phase. Without `normal_rewards` the phase is settled without payout; with it, the phase's normal rewards are paid once. Prints a token. |
 | `/mcaquests project instance <id> <n> reset` | 3 | **Preview** removing that one instance. Prints a token. |
 | `/mcaquests project instance <id> <n> rebaseline <objective> <value>` | 3 | **Preview** setting a `townstead_spirit_project` objective's starting value. Prints a token. |
+| `/mcaquests project instance <id> <n> rebase` | 3 | **Preview** accepting a current phase that a datapack edit changed; each count stays at its position and nothing is paid, reset or re-counted (1.7.0). Prints a token. |
+| `/mcaquests project instance <id> <n> rebind anchor\|village` | 3 | **Preview** moving an instance whose MCA village no longer exists to its anchor, or to the MCA village now within 64 blocks of the anchor, with its progress and owed rewards. Never merges into another instance (1.7.0). Prints a token. |
 | `/mcaquests project confirm <token>` | 3 | Apply a previewed repair. A token is single-use, belongs to whoever previewed it, expires after a minute, and is refused if the instance changed since. Logged. |
 | `/mcaquests project reset <id>` | 3 | Remove the instance of a project — only when exactly one exists; otherwise it refuses and lists them. `reset <id> all` previews removing every one. |
 | `/mcaquests project advance <id>` | 3 | Move a project past its phase without rewards — only when exactly one instance exists; `advance <id> all` previews advancing every one. |
@@ -2244,6 +2255,40 @@ The holder is **bound to one concrete villager when the quest is accepted** and 
 If the giver has no active capital, or if the office has no villager holder (it may be held by a player, or be empty), the objective is **unofferable** with reason `mcaquests.unofferable.no_capital_role` (using the role label and capital name as arguments). A quest that does not bind successfully suspends rather than failing; if Capitals is later installed or a new officeholder is appointed, the same quest picks up where it was.
 
 ---
+
+## Editing content that is in use (1.7.0)
+
+Quests, projects and situations are saved with what they need to survive a datapack edit, a missing mod or
+a restart. When something changes under a record it is paused with a reason, never quietly reinterpreted.
+
+- **Objectives reordered, inserted or removed.** Progress is saved by position. An accepted quest and an
+  open project phase remember a fingerprint of each objective as it was when accepted or opened, so an edit
+  that is not a pure append pauses the record — *definition changed*, clock frozen, progress untouched —
+  until the edit is reverted or an operator accepts it. **Appending** objectives after the existing ones is
+  fine. An owed project reward whose reward row was edited is held for an operator rather than paying the
+  new row.
+- **A mod removed.** Content that needs it is left out at load and records already under way are paused
+  (see [Content that needs an optional mod](#content-that-needs-an-optional-mod-is-not-loaded-without-it-170)).
+  The world keeps a ledger of when each definition was missing, sampled at every start and `/reload`, so a
+  deadline does not run while the content is gone — even if nobody was online.
+- **An MCA village deleted or merged.** A project bound to it is paused and says why.
+- **A reward that throws.** The quest still completes and the other rewards pay; the failed one is held on
+  the player for an operator.
+- **A staged escort interrupted by a restart.** The hold is saved with the world, and the villager's own
+  flags are restored when it is released.
+
+Operator commands:
+
+| Command | Op level | Purpose |
+|---|---|---|
+| `/mcaquests quest rebase <player> <id>` | 3 | Preview accepting the current definition of a quest the player holds whose objectives changed. |
+| `/mcaquests quest rebase <player> <id> confirm` | 3 | Accept it: the objectives are re-fingerprinted, counts stay at their positions. |
+| `/mcaquests rewards held <player>` | 2 | List quest rewards that threw at turn-in and are held. |
+| `/mcaquests rewards retry <player> <n>` | 3 | Pay held reward `n` again. Refused if its definition changed since. |
+| `/mcaquests rewards dismiss <player> <n>` | 3 | Drop held reward `n`. |
+| `/mcaquests escort release <targets>` | 2 | Free MCA villagers an escort left frozen — restoring the flags a 1.7.0 hold recorded, or setting them moving and vulnerable when none was recorded (a hold from before 1.7.0). |
+
+The project repairs `rebase` and `rebind` are in the [project commands](#commands).
 
 ## Two invariants
 

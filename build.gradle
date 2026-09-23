@@ -1076,8 +1076,15 @@ if (project.findProperty('enableMapAtlasesInDev')?.toString()?.toBoolean()) {
     }
 }
 
-// 1.6.6 reliability runtime checks: a disposable fixture mod, never part of a release artifact.
+// 1.7.0 reliability runtime checks: a disposable fixture mod, never part of a release artifact.
 //     ./gradlew reliabilityRuntimeTestJar -PreliabilityRuntimeFixture=true
 if (project.findProperty('reliabilityRuntimeFixture')?.toString()?.toBoolean()) {
     apply from: 'tools/reliability-runtime-test/neoforge.gradle'
+}
+
+// Townstead bridge runtime checks, through whichever binding the installed Townstead selects: a
+// disposable fixture mod, never part of a release artifact.
+//     ./gradlew townsteadRuntimeTestJar -PtownsteadRuntimeFixture=true
+if (project.findProperty('townsteadRuntimeFixture')?.toString()?.toBoolean()) {
+    apply from: 'tools/townstead-runtime-test/neoforge.gradle'
 }

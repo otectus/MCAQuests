@@ -136,6 +136,22 @@ modded operation; biome searches remain synchronous.
 | `strictJsonValidation` | `false` | Reject reloads containing malformed definitions instead of skipping affected resources. Invalid optional quest/project rules are errors; omitted fields keep defaults. |
 | `debugLogging` | `false` | Verbose logging for troubleshooting. |
 
+### `[projects]`
+| Option | Default | What it does |
+|---|---|---|
+| `enableVillageProjects` | `true` | Master switch for creating and advancing shared village projects — offers, contributions and phase advancement (0.4.0). It does not stop delivery of rewards already owed: a banked FTB-claim reward still pays out on login while this is off, and a pending project-phase reward is held until it is turned back on. |
+| `defaultScopeFallbackRadius` | `64` | Block radius used to find or anchor a village when MCA village data is unavailable, and the radius around a project anchor that counts for in-village contributions; a project's own `fallback_radius` overrides it. Clamp `8`–`512`. Since 1.7.0 an anchor project freezes its radius when it starts. |
+| `defaultSponsorDeathBehavior` | `PAUSE` | What happens to a project when its last sponsor dies, if it does not say: `FAIL`, `PAUSE`, `TRANSFER` or `TURN_IN_TO_VILLAGE`. |
+| `oneSponsorPerProjectPerDay` | `true` | Only one deterministically chosen villager per village offers a given project each day, so it does not flood every eligible villager. |
+| `projectOffersPerVillager` | `1` | How many community projects one villager presents at once. Clamp `0`–`5`. |
+| `projectContributeMinIntervalTicks` | `5` | Minimum ticks between accepted contributions from one player (anti-spam). Clamp `0`–`200`. |
+| `defaultPerPlayerContributionCap` | `0` | Default per-player cap on a single project objective; `0` is unlimited. |
+| `allowProjectCommandRewards` | `false` | Allows `command` rewards inside project phases (also needs `allowCommandRewards`). |
+| `maxConcurrentProjectsPerScope` | `8` | Cap on simultaneously active project instances sharing one scope identity. Applies to new projects only; one already under way is never hidden by a lowered cap. Clamp `1`–`100`. |
+
+The project tracker's two client keys, `showProjectTrackerHud` and `projectTrackerMaxEntries`, are under
+[`[client]`](#client). Datapack fields are in [DATAPACK.md](DATAPACK.md#village-projects).
+
 ### `[progression]`
 | Option | Default | What it does |
 |---|---|---|
@@ -246,7 +262,9 @@ These keys live in `config/mcaquests-client.toml`, registered as a NeoForge `CLI
 | `showQuestTargetDirection` | `true` | Add a line to the tracker saying where a quest is sending you, how far it is and which way to turn ("Nether Fortress — 412 blocks ahead-left"). **Every** active quest that can name a place gets its own line, and each follows the objective that quest is actually on, so it moves to the next step as each one lands. The world marker still stands on only one of them. Needs `showQuestTrackerHud`. |
 | `showQuestTargetCoordinates` | `true` | Append the destination's coordinates to that line, and to the quest log's — "Nether Fortress — 412 blocks ahead-left (1024, 68, -330)". Before this the mod could say how far away somewhere was and never where it was, so there was nothing to write down, type into a minimap or send to somebody else. A destination in **another dimension** shows its coordinates too: a bearing across dimensions would be a lie, but a coordinate is exactly what you want written down before you go looking for a portal. |
 | `showQuestLogDestination` | `true` | Show each quest's destination in the quest log as well as on the HUD tracker. The log listed objectives and never said where any of them were. Each row gains a button to copy the coordinates, and — where a supported minimap is installed — one to drop a waypoint you keep. |
-| `questTrackerMaxEntries` | `5` | Max quests listed in the HUD tracker. Range `1`–`15`. |
+| `questTrackerMaxEntries` | `5` | Max quests listed in the HUD tracker. Range `1`–`15`. The quest you follow is always shown, even past the limit, with a "+N more" line for the rest (1.7.0). |
+| `showProjectTrackerHud` | `true` | Show the community projects you take part in on the HUD tracker. |
+| `projectTrackerMaxEntries` | `3` | How many projects the HUD tracker shows at once. Range `1`–`10`. |
 | `questTrackerBackground` | `true` | Draw a background behind the tracker at all. |
 | `questTrackerStyle` | `PANEL` | Which background the tracker draws when `questTrackerBackground` is on (1.5.0): `PANEL` for the mod's textured, nine-sliced HUD panel, `SHADED` for a soft, borderless translucent wash that fades in from the top. Ignored when `questTrackerBackground` is `false`. Previously, `SHADED` was a flat half-transparent black box that sat inside the same footprint as `PANEL` and read as the same dark slab in most scenes, so switching styles looked like nothing happened. Now `SHADED` is a genuinely lighter gradient. |
 | `questTrackerOpacity` | `100` | Opacity of the tracker background, `0` (invisible) to `100` (as drawn); applies to both `PANEL` and `SHADED`. Text, icons and progress bars are never faded. |
