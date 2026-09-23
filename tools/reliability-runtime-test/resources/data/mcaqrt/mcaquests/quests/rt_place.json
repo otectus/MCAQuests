@@ -1,0 +1,9 @@
+{
+  "id": "mcaqrt:rt_place",
+  "giver": {},
+  "dialogue": {},
+  "objectives": [
+    { "type": "mcaquests:place_block", "block": "minecraft:cobblestone", "count": 5 }
+  ],
+  "rewards": [ { "type": "mcaquests:xp", "amount": 1 } ]
+}

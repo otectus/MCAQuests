@@ -1,0 +1,9 @@
+{
+  "id": "mcaqrt:rt_receipt",
+  "giver": {},
+  "dialogue": {},
+  "objectives": [
+    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:cartographer", "count": 1 }
+  ],
+  "rewards": [ { "type": "mcaquests:xp", "amount": 5 } ]
+}

@@ -49,6 +49,8 @@ public final class EscortHoldEvents {
         }
         Entity entity = event.getEntity();
         MinecraftServer server = entity.getServer();
+        // Leases first: a villager in the spawn chunks can join before ServerStartedEvent (1.7.0).
+        EscortHoldRegistry.attach(server);
         Optional<UUID> owner = EscortHoldRegistry.claimRelease(entity.getUUID());
         if (owner.isEmpty() && !orphaned(entity, server)) {
             return;

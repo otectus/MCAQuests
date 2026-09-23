@@ -60,21 +60,34 @@ public final class EscortHoldRegistry {
     /** The saved data backing the leases while a server runs; null in tests and between worlds. */
     private static volatile EscortHoldSavedData attached;
 
+    /** The server {@link #attached} belongs to, so attaching again for it changes nothing. */
+    private static volatile MinecraftServer attachedServer;
+
     private EscortHoldRegistry() {
     }
 
     // ------------------------------------------------------------------ lifecycle
 
-    /** Loads the leases saved with this server's world. Server start. */
+    /**
+     * Loads the leases saved with this server's world, once per server: later calls for the same server
+     * change nothing. Called at server start and before the first villager joins a level, because
+     * villagers in always-loaded chunks can join before the server reports it has started, and one judged
+     * against no leases would be released as an orphan.
+     */
     public static void attach(MinecraftServer server) {
+        if (server == null || attachedServer == server && attached != null) {
+            return;
+        }
         LEASES.clear();
         attached = null;
         attached = EscortHoldSavedData.get(server);
+        attachedServer = server;
     }
 
-    /** Stops tracking; the leases stay in the save. Server stop. */
+    /** Stops tracking; the leases stay in the save. After the server has stopped and saved its worlds. */
     public static void detach() {
         attached = null;
+        attachedServer = null;
         LEASES.clear();
     }
 
