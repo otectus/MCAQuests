@@ -59,7 +59,15 @@ public final class ProjectLifecycleEvents {
     public static void onServerStopping(ServerStoppingEvent event) {
         dev.otectus.mcaquests.state.ContentOutageData.detach();
         ProjectManager.clearSessionState();
-        // Escort leases are saved with the world (1.7.0); stop tracking this one without forgetting them.
+    }
+
+    /**
+     * Escort leases are saved with the world (1.7.0) and written from the live registry, so it is emptied
+     * only once the world is saved. {@code ServerStoppingEvent} fires before the final save: detaching
+     * there wrote every lease file empty, and a restart released every held villager.
+     */
+    @SubscribeEvent
+    public static void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
         EscortHoldRegistry.detach();
     }
 }

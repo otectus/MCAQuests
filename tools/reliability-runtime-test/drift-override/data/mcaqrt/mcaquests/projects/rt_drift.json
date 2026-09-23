@@ -1,0 +1,10 @@
+{
+  "id": "mcaqrt:rt_drift",
+  "scope": "village",
+  "sponsor": {},
+  "phases": [
+    { "key": "build", "objectives": [
+      { "type": "mcaquests:project_place_block", "block": "minecraft:stone_bricks", "count": 2 },
+      { "type": "mcaquests:project_place_block", "block": "minecraft:bricks", "count": 3 } ] }
+  ]
+}
