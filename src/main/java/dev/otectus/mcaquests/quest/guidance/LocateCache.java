@@ -33,9 +33,10 @@ import java.util.function.Supplier;
  *
  * <h2>The per-pass budget</h2>
  *
- * <p>Guidance asks every active quest for a destination. Synchronous biome and block searches
- * therefore share a per-pass budget. Structure polling is exempt: its actual work is limited by
- * the server-wide queue, and a pending search must not starve the player's other objectives.
+ * <p>Guidance asks every active quest for a destination. Synchronous searches — since
+ * 1.7.0 only an add-on objective's own, through {@link #resolve} — therefore share a per-pass budget.
+ * Structure, biome and block polling are exempt: the built-in searches run on the server-wide queue,
+ * which limits their actual work, and a pending search must not starve the player's other objectives.
  *
  * <p>{@link #beginPass(int)} therefore opens a pass with a budget of {@code guidanceSearchesPerPass}
  * synchronous searches; once it is spent, further misses answer empty and <b>record nothing</b>, so the

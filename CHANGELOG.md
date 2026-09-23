@@ -255,6 +255,20 @@ the compile-only API jar compiles on its own.
   login — the outcome the online participants got. Failed situations are remembered for 20 in-game days
   for this (`failed` in the situation save).
 
+### Fixed — guidance hitches
+
+- **Quest guidance no longer runs a whole biome or block search inside one player's pass.** A biome
+  search (`visit_biome`, a missing relative's biome, a biome `source` hint) sampled vanilla's `/locate
+  biome` spiral in one call, and a block `source` hint scanned up to a quarter of a million blocks the
+  same way; measured on a real world that was 140–170 ms and 10–20 ms, respectively, on the server
+  thread, once per player and objective. Both now run on the server-wide search queue that structure
+  guidance already used: a biome search 256 noise samples per step, a block search 4,096 positions (loaded
+  blocks only) per step, each with its own 1 ms-per-tick budget. They visit the same points in the same order, so the
+  marker lands where it did before, a few ticks later. Measured again, a player's guidance pass stays
+  under 2 ms once warm.
+- `guidanceSearchesPerPass` therefore no longer limits the built-in searches; it now caps only an add-on
+  objective's own synchronous search through `LocateCache.resolve`. See CONFIG.md.
+
 ### Added — Ultima Kingdoms provider (Forge)
 
 These are Forge-only: Ultima Kingdoms has no NeoForge build. Everything is resolved by reflection behind
@@ -648,6 +662,9 @@ fields it makes possible. Contributed by AetherianArtificer (#1); reviewed and r
   default methods — `lastKnownResident`, `bindingPath`, `onBound` and `onUnbound` — so an implementation
   compiles unchanged. The two Townstead healthy-resident objective records gained a trailing
   `lastKnownMaxAgeDays` and keep their previous constructors.
+- **Additive:** `BiomeTarget.locateAsync` and `BlockTarget.locateAsync` (the queued forms of `locate`,
+  which still answers in one call), `StructureSearches.requestBiome` / `requestBlock`, and the
+  `BlockRingScan` class.
 - **The API jar now compiles on its own.** It shipped `QuestCondition` without the `QuestContext` its only
   method takes, among other types its public signatures name, so an add-on implementing a condition could
   not compile against it. It now carries every type an exported signature reaches, transitively — 95 more
@@ -730,7 +747,8 @@ fields it makes possible. Contributed by AetherianArtificer (#1); reviewed and r
   entries for *A Working Village* and the "welcoming points"; the API v1 binding (#1), 0.7.7's two builds,
   and what 1.7.0 verified.
 - CONFIG.md: `client.showBuildAreaSeconds`; a `[projects]` section and the two project tracker keys, until
-  now documented only in DATAPACK.md; the followed quest past `questTrackerMaxEntries`.
+  now documented only in DATAPACK.md; the followed quest past `questTrackerMaxEntries`; what
+  `guidanceSearchesPerPass` limits now, and how biome and block searches run on the queue.
 - README.md: bundled counts corrected to what a plain install loads (189 quests, 10 projects, 11
   situations) and what Townstead and Capitals add; requirement rows for MCA: Reputation, Ultima Kingdoms,
   JourneyMap, Xaero's Minimap and Map Atlases; the MCA: Conversations wording (it never credited talk
@@ -768,7 +786,8 @@ fields it makes possible. Contributed by AetherianArtificer (#1); reviewed and r
   exclusion, placement area, instance-targeted repair and the profession tracks Townstead reports. It is
   what found the binding defect above. For 1.7.0 it also checks place/break farming, a reward that throws
   during a real turn-in, a project whose village does not exist, a completion receipt through the real
-  player-file save, and `/reload`; its restart row carries escort holds, a reordered project phase and a
+  player-file save, `/reload`, and the time one player's guidance pass takes (the measurement behind
+  *Fixed — guidance hitches*); its restart row carries escort holds, a reordered project phase and a
   Townstead outage across three boots of one world. That row found that escort leases were written empty
   at shutdown (the registry was cleared on `ServerStoppingEvent`, before the final save), fixed before
   release. `tools/townstead-runtime-test/` (#1) exercises whichever Townstead bridge binds. The rows and
@@ -776,7 +795,8 @@ fields it makes possible. Contributed by AetherianArtificer (#1); reviewed and r
 - New for 1.7.0: `OptionalModNamespacesTest`, `FormatVersionTest`, `EscortHoldLeaseTest`,
   `ContentOutageLedgerTest`, `PersonalPlacementMemoryTest`, `HeldQuestRewardTest`,
   `DefinitionFingerprintTest`, `VillageGoneRecoveryTest`, `HudTrackedRowTest`, `SituationFailureRecordTest`,
-  `ApiJarClosureTest`, `ConfigDocumentedTest` (every config key has a CONFIG.md row),
+  `ApiJarClosureTest`, `ConfigDocumentedTest` (every config key has a CONFIG.md row), `BiomeSpiralTest` and
+  `BlockRingScanTest` (the queued searches visit vanilla's and the old scan's points in the same order),
   `CompletionReceiptOutboxTest`, `CompletionReceiptDurabilitySourceTest` and
   `ReputationProfileAdoptionTest`; the
   Townstead API v1 tests `ApiTownsteadBridgeTest`, `ApiTownsteadEventsTest`, `TownsteadCompatSelectionTest`,

@@ -52,9 +52,9 @@ public record VisitBiomeObjective(BiomeTarget target) implements QuestObjective 
      * The nearest position in the biome, found once and then remembered.
      *
      * <p>Same reasoning and the same throttle as {@code enter_structure}: this is
-     * {@code /locatebiome}, it costs real time on the server thread, and {@code LocateCache} runs
-     * it once per objective rather than once a second. Approximate, because the search samples on a
-     * grid and answers with a nearby column rather than the biome's edge.
+     * {@code /locatebiome}, and since 1.7.0 it runs on the server-wide search queue a slice at a time
+     * rather than in one call on the player's pass; {@code LocateCache} remembers the answer. Approximate,
+     * because the search samples on a grid and answers with a nearby column rather than the biome's edge.
      */
     @Override
     public java.util.Optional<dev.otectus.mcaquests.quest.guidance.GuidanceTarget> guidance(
@@ -63,8 +63,8 @@ public record VisitBiomeObjective(BiomeTarget target) implements QuestObjective 
             return java.util.Optional.empty();
         }
         return dev.otectus.mcaquests.quest.guidance.LocateCache
-                .resolve(progress, "biome", level,
-                        () -> target.locate(level, player.blockPosition(), SEARCH_BLOCKS))
+                .resolveAsync(progress, "biome", level,
+                        () -> target.locateAsync(level, player.blockPosition(), SEARCH_BLOCKS))
                 .map(pos -> dev.otectus.mcaquests.quest.guidance.GuidanceTarget.ofPos(pos, level,
                         dev.otectus.mcaquests.quest.guidance.GuidanceKind.BIOME, target.describe(), ARRIVE_RADIUS, true));
     }

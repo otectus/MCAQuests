@@ -113,7 +113,7 @@ To pace it differently, use `heartsRewardMultiplier`: `0.5` roughly doubles the 
 | `highlightQuestTargets` | `true` | Outline, through walls, the villager the quest you are **following** currently wants you to reach — the delivery recipient, the escortee, the villager to heal/cure/protect/defend, or (once every objective is done) the villager you hand the quest back to. Sent to the quest owner only; other players never see your outlines. Through 1.4.3 this outlined a villager for *every* objective of *every* active quest, plus the giver of any quest that named nobody, for the quest's whole lifetime — see `highlightAllActiveQuests`. |
 | `highlightAllActiveQuests` | `false` | Restore the pre-1.5.0 behaviour: outline every active quest's target at once instead of only the quest you are following. The giver fallback is **not** restored — outlining somebody because they once gave you a quest carried no information. |
 | `guidanceSearchIntervalTicks` | `200` | How long before an objective retries a completed world search that found nothing. Pending structure searches are polled without this delay; successful coordinates remain saved on the objective across restarts. The shared structure cache also retains completed misses for 200 ticks. Range `20`–`24000`. |
-| `guidanceSearchesPerPass` | `1` | How many synchronous biome/block searches one player's guidance pass may run. Other objectives retry next pass. Structure searches use a separate server-wide queue with one outstanding chunk request, at most eight queue steps per tick, and a soft 2 ms processing budget. Range `1`–`8`. |
+| `guidanceSearchesPerPass` | `1` | How many synchronous searches one player's guidance pass may run. Since 1.7.0 the built-in biome and block searches no longer count against it — they run on the server-wide queue described below — so it limits only an add-on objective that searches through `LocateCache.resolve`. Other objectives retry next pass. Structure searches use a separate server-wide queue with one outstanding chunk request, at most eight queue steps per tick, and a soft 2 ms processing budget. Range `1`–`8`. |
 | `guidanceStructureSearchRadius` | `8` | Maximum random-spread structure search radius in **placement regions**, not chunks. A region spans the structure's configured spacing (27 chunks for a vanilla Nether fortress). The previous vanilla radius of 100 could examine up to 40,401 candidate regions per placement; 8 limits that to 289. Higher values reach farther but request more chunk data over time. Strongholds use their finite ring-position list instead. Range `0`–`100`. |
 | `autoTrackNewQuests` | `true` | Accepting a quest starts following it when you are not already following one, so the marker and the tracker point at it without being asked. Set `false` to choose with the pin in the quest log instead. A **server** setting, because the server decides what to point you at. |
 | `highlightUsesGlowingEffect` | `false` | Legacy highlighting mode. Applies the vanilla **Glowing status effect** to the villager itself instead of drawing a per-player outline. That effect is world state, so **every player on the server sees it** and it can appear in minimaps and shader outlines — which is why it is no longer the default. Only enable it if you want that behaviour back. |
@@ -126,7 +126,15 @@ result of `/locate`. Nearby searches for the same target share work within a 128
 dimension. The queue holds at most 128 searches/results, expires unpolled work after 200 ticks, and
 clears on server shutdown, level unload, and datapack reload. A pending marker does not stop quest
 progress. Chunk generation still consumes resources, and the soft tick budget cannot preempt a slow
-modded operation; biome searches remain synchronous.
+modded operation.
+
+Biome and block searches run on the same server-wide lifecycle since 1.7.0. A biome search walks
+vanilla's `/locate biome` spiral 256 noise samples per step and a block search scans outward from the
+player 4,096 positions per step (reading only loaded blocks), each under its own 1 ms-per-tick budget, and both answer with
+exactly the position a one-call search would have found. Measured on a real world, a single biome
+search used to take 140–170 ms and a block search 10–20 ms inside one player's guidance pass; a pass
+now stays under 2 ms once warm. A biome answer is kept like a structure's; a block answer is trusted
+only briefly and re-checked every pass, since a crop can be harvested.
 
 ### `[debug]`
 | Option | Default | What it does |
