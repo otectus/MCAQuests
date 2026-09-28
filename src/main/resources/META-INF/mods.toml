@@ -43,9 +43,14 @@ description='''${mod_description}'''
     versionRange="[7.6,8)"
     ordering="AFTER"
     side="BOTH"
+# Architectury is deliberately OPTIONAL here, as in every sibling add-on. MCA 7.6 requires it and
+# declares that itself; MCA 7.7 dropped the dependency entirely, and this mod names no Architectury
+# type (the FTB Quests bridge is compileOnly and only ever loads behind ModList). A mandatory=true edge
+# here refused to load MCA: Quests for a 7.7 user who had removed Architectury, while the other four
+# add-ons loaded fine. Kept as an optional AFTER edge only for load ordering when it is present.
 [[dependencies.${mod_id}]]
     modId="architectury"
-    mandatory=true
+    mandatory=false
     versionRange="[9.2,10)"
     ordering="AFTER"
     side="BOTH"

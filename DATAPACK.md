@@ -641,6 +641,7 @@ An extra gate on whether the quest is **offered**. A single condition object, wh
 | `mcaquests:advancement` | `advancement` (resource location) |
 | `mcaquests:player_level` | `min`, `max` |
 | `mcaquests:random_chance` | `chance` (0.0–1.0) |
+| `mcaquests:crime_status` | `wanted` (bool), `band` (`lawful` / `neutral` / `outlaw`), `jailed` (bool), `min_heat` (int ≥ 0) — all optional, at least one required, every present one must hold. Reads MCA: Crime; **never met without it** (1.7.1). |
 | `mcaquests:quest_completed` | `quest` (resource location), `scope` (`global`/`giver`, default `global`) |
 | `mcaquests:quest_not_completed` | `quest` (resource location), `scope` (`global`/`giver`, default `global`) |
 | `mcaquests:quest_failed` | `quest` (resource location), `scope` — true once that quest has failed (giver died / timed out) |

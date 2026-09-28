@@ -31,7 +31,7 @@ api/        public extension points for add-ons - changes here are source-breaki
 client/     screens, HUD, toasts, client-side mirrors of server state
 command/    /mcaquests admin and debug commands
 compat/     shared CompatProvider/CompatRegistry framework, pack/* conditional embedded datapacks, 
-            reflective adapters plus isolated typed FTB, Reputation and JourneyMap packages, and
+            reflective adapters plus isolated typed FTB, Reputation, Crime and JourneyMap packages, and
             mapatlases/ (with its own client/ subpackage) for the Map Atlases binding
 data/       datapack loaders and validators (quests, tiers, titles, situations)
 event/      Forge event handlers
@@ -50,7 +50,8 @@ Conditional embedded datapacks (e.g., `iafce_quests`, `bountiful_core`) are stor
 
 ## Key Dependencies
 - MCA Reborn - mandatory at runtime, never a compile dependency; `mca_dev_version` only picks what dev runs launch with
-- MCA: Reputation - compile-only sibling API; build `../MCAReputation` first or pass `-PmcaReputationClasses=<dir>`; optional at runtime.
+- MCA: Reputation - vendored compile-only API jar (`libs/api/mcareputation-<v>-api.jar`, pinned in `gradle/sibling-apis.properties`, checked by `verifySiblingApis` before `compileJava`); `-PmcaReputationApiPath=<jar>` or the older `-PmcaReputationClasses=<dir>` overrides it; optional at runtime.
+- MCA: Crime - vendored compile-only API jar on the same terms (`-PmcaCrimeApiPath=<jar>`); `compat/crime/` is the only importer (`NoCrimeStaticLinkTest`), reached through `compat/CrimeBridge` after a `ModList` check; optional at runtime (1.7.1).
 - FTB Quests stack - `compileOnly`, never shipped; set `enableFtbqInDev=true` to get it in dev runs
 - MCA Capitals - optional; set `enableCapitalsInDev=true` to get it in dev runs
 - Townstead - optional, `[0.7.5,0.9)`; 0.7.x binds reflectively, 0.8's `api.v1` through the typed adapter in `compat/townstead/v1/`, compiled against `api.v1` sources fetched at `townstead_api_commit` (gradle.properties)
@@ -71,3 +72,25 @@ Conditional embedded datapacks (e.g., `iafce_quests`, `bountiful_core`) are stor
 - Players are only ever shown **Reputation**. The same concept is called *standing* in places internally (state/VillageStanding.java, network/OpenStandingC2SPacket.java) - grep both words.
 - *Situation* and *incident* (client/SituationToast.java, compat/IncidentSelector.java) are internal names for the same thing; neither word reaches the player.
 - *Suspended* / *paused* both name the player-visible "Quest paused" state when a quest cannot proceed due to missing optional-mod content (CHANGELOG, config keys, quest/QuestManager.java). The state is recoverable; installing the mod brings the quest back.
+
+## Family compatibility
+
+MCA: Reputation, MCA: Quests, MCA: Crime, MCA: Conversations and MCA: Mob Compatibility are one family of
+MCA Reborn add-ons, and Ultima Kingdoms consumes their APIs. The rules below hold in every repository;
+the verified companion tuple per release is kept once, in `MCAReputation/docs/FAMILY_COMPATIBILITY.md`.
+
+- **MCA Reborn is the only mandatory dependency** (`[7.6,8)`), bound by name across its four package
+  roots. Architectury is never declared mandatory: MCA 7.7 dropped it and this code names no Architectury type.
+- **Companion ranges carry a lower bound only** (`[x.y,)`). Forge enforces an optional range whenever
+  the mod is present, and every companion binding already probes the other mod and degrades, so an
+  upper bound would only ever refuse a launch. The one exception is Townstead, which is third-party
+  and read-only for us: `[0.7.5,0.9)` by decision, so its 0.8 line (the one that adds `api.v1`) can
+  launch beside us while the binding stubs whatever it cannot resolve.
+- **Sibling APIs are consumed through vendored, hash-pinned compile-only jars** (`libs/api/`,
+  `gradle/sibling-apis.properties`, `verifySiblingApis`), never a sibling checkout's class output, so a
+  clean clone builds the integrations a release ships. Each sibling has one adapter package, loaded by
+  name after `ModList.isLoaded`, and a static-link test keeps its types out of everything else.
+- **One MCA probe fleet** in every `gradle.properties`: `7.6.20`, `7.6.26`, `7.7.0-beta.2`,
+  `7.7.1-alpha.2`, `7.7.1-beta.1`, `7.7.1-beta.2` (all `+1.20.1`), replayed by the binding probe test.
+- **MCA: Reputation's capability strings are drift-checked** by every consumer at startup, and the
+  `1.21.1 Ports/` NeoForge trees mirror every change made here.

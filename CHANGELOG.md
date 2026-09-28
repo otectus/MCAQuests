@@ -4,6 +4,43 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - unreleased
+
+The **family integration pass**: MCA: Quests now knows MCA: Crime, builds against the siblings the way
+MCA: Conversations does, and closes the last gaps in its Reputation seam.
+
+### Added
+
+- **MCA: Crime integration** (`compat/CrimeBridge`, `compat/crime/`, compiled against Crime's vendored
+  compile-only API jar and loaded by name after the presence check). Guards and archers refuse quest
+  business — offers, acceptance and turn-ins — with a player Crime records as **wanted**, and say so on
+  the card (`[compat.crime] responderRefusesWanted`; `allGiversRefuseWanted` extends it to every giver).
+  Nothing is failed or taken away. Active quests **pause while the player is jailed**
+  (`pauseWhileJailed`), the way they pause for a missing optional mod. `/mcaquests compat` lists
+  `mcacrime`. `NoCrimeStaticLinkTest` keeps every Crime reference inside `compat/crime/`.
+- **`mcaquests:crime_status` condition**: `wanted`, `band` (`lawful`/`neutral`/`outlaw`), `jailed`,
+  `min_heat` — never met without MCA: Crime.
+- **Several dialogue resolvers.** `QuestDialogueHooks.addResolver(id, resolver)` and
+  `removeResolver(id)`: an ordered chain, first non-null line wins, so a second voice provider no longer
+  displaces MCA: Conversations. `setResolver` stays as the legacy slot, asked last.
+- **Capability-string drift check.** `CanonicalReputationBackend` now compares its
+  `ReputationFeatures` literals with Reputation's `ReputationCapabilities` constants at startup and
+  logs one ERROR on drift, as MCA: Crime and MCA: Conversations already did.
+
+### Changed
+
+- **Builds against a vendored, hash-pinned MCA: Reputation API jar** (`libs/api/`,
+  `gradle/sibling-apis.properties`, `verifySiblingApis`; `-PmcaReputationApiPath` or the older
+  `-PmcaReputationClasses` overrides it) instead of `../MCAReputation/build/classes`. A clean clone
+  and CI now build the same integration a release does, and only Reputation's published surface can be
+  named — which is what let Reputation 0.6.1 export the tier and title types this mod had been
+  reaching for as internals. The `apiJar` task is reproducible (no entry timestamps, fixed entry order), so a rebuild from unchanged sources yields the same hash and consumers' pins survive it.
+- **Architectury is optional**, as in every sibling add-on: this mod names no Architectury type, and
+  the mandatory edge refused to load MCA: Quests for an MCA 7.7 user who had removed it.
+- `mcacrime` joins the optional-mod namespaces, so Crime-authored quest content on an install
+  without Crime is excluded with one INFO line rather than reported as an error.
+- The MCA probe fleet gains `7.6.26`, the family-wide list every MCA add-on now replays.
+
 ## [1.7.0] - 2026-09-22
 
 Adoption of **MCA: Reputation 0.6.0**. Standing was already delegated to that mod when it is

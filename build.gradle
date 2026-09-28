@@ -280,6 +280,48 @@ tasks.register('buildTownsteadApiJar', Zip) {
     destinationDirectory = layout.buildDirectory.dir('townstead-api')
 }
 
+// The sibling add-on APIs are vendored as compile-only jars in libs/api/ and pinned by
+// gradle/sibling-apis.properties: version, provider commit and SHA-256 for each (the pattern MCA:
+// Conversations established). Compiling against a checked-in artifact rather than a sibling checkout's
+// class output is what makes a clean clone -- or CI, which has no siblings at all -- produce the same
+// optional integrations the release did, and verifySiblingApis refuses the build the moment a jar is
+// swapped underneath it.
+ext.siblingApis = new Properties()
+file('gradle/sibling-apis.properties').withInputStream { ext.siblingApis.load(it) }
+
+// Resolves one provider's API artifact. -PmcaReputationApiPath (or the older -PmcaReputationClasses)
+// replaces the vendored jar with a jar or a class directory, for iterating against a provider working
+// tree; an override is announced and skips the hash check. Absence is never a warning: an unbuildable
+// optional integration is a broken build, not a quieter jar.
+ext.siblingApi = { String key, List<String> overrideProperties ->
+    def overrideProperty = overrideProperties.find { project.findProperty(it) }
+    if (overrideProperty) {
+        def overridden = file(project.property(overrideProperty))
+        if (!overridden.exists()) {
+            throw new GradleException("-P${overrideProperty}=${project.property(overrideProperty)} does not exist; " +
+                    "point it at a ${key} API jar or class directory, or drop the property to use " +
+                    "the vendored ${siblingApis.getProperty("${key}.jar")}.")
+        }
+        logger.lifecycle("sibling API override in effect: ${key} <- ${overridden} (SHA-256 check skipped)")
+        return [file: overridden, pinned: false]
+    }
+    def relative = siblingApis.getProperty("${key}.jar")
+    if (!relative) {
+        throw new GradleException("gradle/sibling-apis.properties has no '${key}.jar' key; " +
+                "the ${key} API artifact cannot be resolved.")
+    }
+    def jar = file(relative)
+    if (!jar.exists()) {
+        throw new GradleException("${key} API jar missing at ${jar} (manifest key '${key}.jar' in " +
+                "gradle/sibling-apis.properties). Build the provider (gradlew-quiet.sh <dir> apiJar) and copy " +
+                "build/libs/${key}-${siblingApis.getProperty("${key}.version")}-api.jar into libs/api/, " +
+                "or point -P${overrideProperties[0]} at a local jar or class directory.")
+    }
+    return [file: jar, pinned: true]
+}
+ext.mcaReputationApi = siblingApi('mcareputation', ['mcaReputationApiPath', 'mcaReputationClasses'])
+ext.mcaCrimeApi = siblingApi('mcacrime', ['mcaCrimeApiPath'])
+
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
@@ -309,24 +351,19 @@ dependencies {
     implementation fg.deobf("dev.architectury:architectury-forge:${architectury_version}")
 
 
-    // MCA: Reputation — OPTIONAL integration, compile-only. The sibling mod is not published to a
-    // Maven, so we compile against its dev-mapped class output; both mods use `official` 1.20.1
-    // mappings, so the Minecraft type names line up and reobfJar remaps our own references for
-    // production. Never bundled: the real mod supplies these classes at runtime, and everything that
-    // touches them is gated behind ReputationBridge's ModList check.
-    //
-    // Build MCA: Reputation first (`../MCAReputation: ./gradlew classes`). When it is absent the
-    // compat.reputation package cannot compile, which is why the build fails loudly here rather than
-    // silently producing an integration-less jar (spec 9.2).
-    def mcaReputationClasses = file(project.findProperty('mcaReputationClasses')
-            ?: "${projectDir}/../MCAReputation/build/classes/java/main")
-    if (mcaReputationClasses.exists()) {
-        compileOnly files(mcaReputationClasses)
-    } else {
-        throw new GradleException("MCA: Reputation compile surface missing at ${mcaReputationClasses}. " +
-                "Build the sibling (../MCAReputation: ./gradlew classes) or pass " +
-                "-PmcaReputationClasses=<compatible class directory>. The integration is optional at runtime.")
-    }
+    // MCA: Reputation — OPTIONAL integration, compile-only. Resolved from the vendored, hash-pinned API
+    // jar in libs/api/ (see gradle/sibling-apis.properties and ext.siblingApi above), not from a sibling
+    // checkout's class output: a clean clone and CI then compile the integration exactly as the release
+    // did, and the jar carries only Reputation's published surface, so an import of one of its
+    // internals is a compile error here rather than a NoClassDefFoundError in somebody's world. Both
+    // mods share `official` 1.20.1 mappings, so the Minecraft type names line up and reobfJar remaps our
+    // own references for production. Never bundled: the real mod supplies these classes at runtime,
+    // and everything that touches them is gated behind ReputationBridge's ModList check (spec 9.2).
+    compileOnly files(mcaReputationApi.file)
+
+    // MCA: Crime — OPTIONAL integration (1.7.1), compile-only, on the same vendored-API terms; gated at
+    // runtime by CrimeBridge's ModList check and never bundled.
+    compileOnly files(mcaCrimeApi.file)
 
     // Townstead public API v1 — OPTIONAL typed adapter, compile-only, never bundled.
     //
@@ -670,6 +707,56 @@ tasks.withType(JavaCompile).configureEach {
 // `NoSuchFieldError: UNKNOWN` from QuestClientSetup's keybinds, which is how 1.5.0 reached a player's
 // mods folder. Both tasks below therefore run after reobfJar and read the finished artifact, and
 // `installMod` exists so that copying it by hand -- the thing that lost that race -- is unnecessary.
+// The vendored sibling API jars must match their pinned SHA-256. A jar copied from the wrong loader's
+// build directory or edited in place is a silently wrong build otherwise: it compiles, and the mismatch
+// only surfaces as a NoSuchMethodError in someone's world.
+tasks.register('verifySiblingApis') {
+    group = 'verification'
+    description = 'Fails if a vendored sibling API jar does not match its pinned SHA-256.'
+    doLast {
+        def problems = []
+        [[key: 'mcareputation', property: 'mcaReputationApiPath', api: mcaReputationApi],
+         [key: 'mcacrime', property: 'mcaCrimeApiPath', api: mcaCrimeApi]].each { provider ->
+            if (!provider.api.pinned) {
+                logger.lifecycle("verifySiblingApis: ${provider.key} is overridden, hash not checked.")
+                return
+            }
+            def expected = siblingApis.getProperty("${provider.key}.sha256")
+            if (!expected) {
+                problems << "gradle/sibling-apis.properties has no '${provider.key}.sha256' key"
+                return
+            }
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            provider.api.file.withInputStream { stream ->
+                byte[] buffer = new byte[8192]
+                int read
+                while ((read = stream.read(buffer)) != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            def actual = digest.digest().encodeHex().toString()
+            if (!expected.equalsIgnoreCase(actual)) {
+                problems << "${provider.api.file} does not match ${provider.key}.sha256:" +
+                        System.lineSeparator() + "      expected ${expected}" +
+                        System.lineSeparator() + "      actual   ${actual}" +
+                        System.lineSeparator() + "      Refresh: rebuild the provider (gradlew-quiet.sh <dir> apiJar), copy " +
+                        "build/libs/${provider.key}-${siblingApis.getProperty("${provider.key}.version")}-api.jar " +
+                        "into libs/api/ and update version, commit and sha256 in gradle/sibling-apis.properties. " +
+                        "To compile against a working tree instead, pass -P${provider.property}=<jar or class dir>."
+            }
+        }
+        if (!problems.isEmpty()) {
+            throw new GradleException("verifySiblingApis failed:" + System.lineSeparator()
+                    + problems.collect { "  - ${it}" }.join(System.lineSeparator()))
+        }
+        logger.lifecycle('verifySiblingApis: every pinned sibling API jar matches its SHA-256.')
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn 'verifySiblingApis'
+}
+
 tasks.register('verifyReobfJar') {
     group = 'verification'
     description = 'Fails if the built jar still names Minecraft members by their official (dev-only) names.'
@@ -904,6 +991,10 @@ def apiExports = ['dev/otectus/mcaquests/api/**'] + apiReadModel.collectMany { [
 def apiRequiredEntries = apiExports.findAll { it.endsWith('.class') && !it.contains('$') }
 
 tasks.register('apiJar', Jar) {
+    // Reproducible: no entry timestamps and a fixed entry order, so a rebuild from the same sources yields
+    // the same bytes and the SHA-256 pins in consumers' gradle/sibling-apis.properties survive it.
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
     group = 'build'
     description = 'Compile-only API artifact for sibling add-ons; classes only, official mappings.'
     dependsOn 'compileJava'

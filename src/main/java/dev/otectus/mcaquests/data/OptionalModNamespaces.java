@@ -26,7 +26,7 @@ public final class OptionalModNamespaces {
 
     private static final Set<String> KNOWN = Set.of(
             "townstead", "mcacapitals", "ultima_kingdoms", "mcareputation", "mcaconversations",
-            "ftbquests", "iceandfire", "bountiful");
+            "mcacrime", "ftbquests", "iceandfire", "bountiful");
 
     /** Exactly the characters a {@code ResourceLocation} allows, so it cannot run away over a long message. */
     private static final Pattern RESOURCE_ID = Pattern.compile("([a-z0-9_.-]+):[a-z0-9_./-]+");
