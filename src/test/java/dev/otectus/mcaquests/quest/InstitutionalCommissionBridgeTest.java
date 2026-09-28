@@ -61,6 +61,28 @@ class InstitutionalCommissionBridgeTest {
                 "institutional authoring must include the legacy-provider tripwire");
     }
 
+    /**
+     * The turn-in pays a commission's rewards in order and records none of them, so a failed exact grant
+     * followed by a retry would pay every other reward twice. The surface therefore admits one payment and
+     * nothing else; a definition shaped like the one that could double-pay is refused before it is ever
+     * offered, and so before any payment.
+     */
+    @Test
+    void aCommissionWithAnyRewardBesideItsOnePaymentIsRefusedBeforeAnyPayment() {
+        String payment = "{\"type\":\"mcaquests:item\",\"item\":\"minecraft:emerald\",\"count\":6}";
+        String pool = "{\"type\":\"mcaquests:item_pool\",\"entries\":[{\"item\":\"minecraft:cobblestone\","
+                + "\"count\":64}]}";
+        String currency = "{\"type\":\"mcaquests:currency\",\"min\":4,\"max\":9}";
+        assertFalse(InstitutionalCommissionBridge.supportedDefinition(parse(
+                gate() + ",\"institutional_commission\":true,\"rewards\":[" + pool + "," + currency + ","
+                        + payment + "]")), "a pool and currency paid before the payment could be paid twice");
+        assertFalse(InstitutionalCommissionBridge.supportedDefinition(parse(
+                gate() + ",\"institutional_commission\":true,\"rewards\":[" + payment + "," + payment + "]")),
+                "a second payment is not preflighted and would re-pay the first on retry");
+        assertFalse(InstitutionalCommissionBridge.supportedDefinition(parse(
+                gate() + ",\"institutional_commission\":true,\"rewards\":[]")), "a commission must pay");
+    }
+
     @Test
     void serviceGateMustBePositiveAndMandatory() {
         var service = new InstitutionalServiceAvailableCondition();

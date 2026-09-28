@@ -41,6 +41,19 @@ MCA: Conversations does, and closes the last gaps in its Reputation seam.
   without Crime is excluded with one INFO line rather than reported as an error.
 - The MCA probe fleet gains `7.6.26`, the family-wide list every MCA add-on now replays.
 
+
+### Fixed — family audit remediation (2026-09-28)
+
+- The `mcarealtalk` objective and reward texts are gone from `en_us` and `pt_br`. Nothing has asked for
+  them since MCA: Conversations was renamed from MCA: Real Talk in its 0.4.0, and MCA: Conversations now
+  carries the text for its `talk_about` objective and `unlock_topic` reward itself, under its own keys;
+  the old keys here never reached a player.
+- Institutional commissions stay limited to exactly one reward, the fixed emerald payment:
+  `InstitutionalCommissionBridge.supportedDefinition` required that already, but its documentation said
+  "one or more". The turn-in depends on it, because it preflights and pays that one payment and records
+  nothing about any other reward, so a second reward could be paid twice on a retry after a failed
+  exact grant. A test now refuses a commission with any other reward before it is offered.
+
 ## [1.7.0] - 2026-09-22
 
 Adoption of **MCA: Reputation 0.6.0**. Standing was already delegated to that mod when it is

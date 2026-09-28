@@ -50,8 +50,16 @@ public final class InstitutionalCommissionBridge {
     }
 
     /**
-     * R2 institutional commissions are deliberately narrow: a concrete quest with one or more fixed,
-     * unenchanted emerald item rewards. This keeps native MCA reward ownership and persistence intact.
+     * R2 institutional commissions are deliberately narrow: a concrete quest with exactly one fixed,
+     * unenchanted emerald item reward. This keeps native MCA reward ownership and persistence intact.
+     *
+     * <p>Exactly one, not "one or more", and the turn-in depends on it. {@code completeQuest} preflights
+     * {@code rewards[0]} with {@code ItemRewardDelivery.canFitExactly} before consuming the delivered
+     * goods, pays it first, and on a failed exact grant resets the claim so the player can retry after
+     * making room. Nothing records which rewards a failed attempt already paid, so a second reward of
+     * any kind, before or after the payment, would be paid again on that retry. Acceptance fingerprints
+     * the definition this method approved, and completion refuses any other, so the rule holds for the
+     * life of an accepted commission. Relaxing it needs per-reward payment bookkeeping first.
      */
     public static boolean supportedDefinition(QuestDefinition definition) {
         return definition != null && definition.institutionalCommission() && !definition.isTemplate()
