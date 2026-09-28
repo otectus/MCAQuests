@@ -34,6 +34,20 @@ Reputation seam (mirrored from the Forge 1.7.1 line).
 - `mcacrime` joins the optional-mod namespaces, so Crime-authored quest content on an install
   without Crime is excluded with one INFO line rather than reported as an error.
 
+
+### Fixed — family audit remediation (2026-09-28)
+
+- **Four tags were never loaded on 1.21.1.** `mcaquests:harbor_catch`, `mcaquests:pottery_sherds`,
+  `mcaquests:common_undead` and the Ice and Fire pack's `mcaquests:iceandfire_dread` sat under the
+  1.20.1 directory names (`tags/items`, `tags/entity_types`), which 1.21 never reads, so each tag was
+  empty and "Deep Water Days", "The Relic beneath the Well", "The Dread Tide" and the "Something below
+  the Floor" situation could never advance. They now sit under `tags/item` and `tags/entity_type`, and
+  `DataDirectoryLayoutTest` fails the build if any data directory uses a pre-1.21 name.
+- The `mcarealtalk` objective and reward texts are gone from `en_us` and `pt_br` (mirrored from Forge);
+  MCA: Conversations now carries that text under its own keys.
+- `docs/PORT_PARITY.md` lists what this port deliberately leaves to the Forge line (the Ultima Kingdoms
+  integration) and how it adapts the rest.
+
 ## [1.7.0] - 2026-09-22
 
 Adoption of **MCA: Reputation 0.6.0**. Standing was already delegated to that mod when it is

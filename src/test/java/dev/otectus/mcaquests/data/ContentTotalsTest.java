@@ -93,7 +93,8 @@ class ContentTotalsTest {
     void customTagsExist() {
         List<String> problems = new ArrayList<>();
         for (String tag : List.of("worldgen/structure/trail_ruins", "worldgen/structure/ocean_ruins",
-                "items/pottery_sherds", "entity_types/common_undead")) {
+                // 1.21 tag folders are singular: a tag under items/ or entity_types/ is never loaded.
+                "item/pottery_sherds", "entity_type/common_undead")) {
             Path path = TAGS.resolve(tag + ".json");
             if (!Files.isRegularFile(path)) {
                 problems.add(tag + " does not exist");
