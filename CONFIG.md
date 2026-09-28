@@ -211,6 +211,16 @@ The project tracker's two client keys, `showProjectTrackerHud` and `projectTrack
 
 See [FTBQUESTS.md](FTBQUESTS.md) for the full task/reward/condition reference.
 
+### `[compat.crime]`
+
+Each of these is a no-op without MCA: Crime installed (1.7.1).
+
+| Option | Default | What it does |
+|---|---|---|
+| `responderRefusesWanted` | `true` | Guards and archers refuse quest business — offers, acceptance and turn-ins — with a player MCA: Crime currently records as **wanted**. The menu shows a refusal card instead of an empty board. Nothing is failed or taken away: quests already held keep running and can be handed in once the warrant is settled. |
+| `allGiversRefuseWanted` | `false` | Every giver refuses a wanted player, not only the law. |
+| `pauseWhileJailed` | `true` | Freeze every active quest's clock while the player is serving an MCA: Crime jail sentence, the way a quest pauses for a missing optional mod, so a sentence cannot expire a deadline. |
+
 ### `[compat.townstead]`
 | Option | Default | What it does |
 |---|---|---|

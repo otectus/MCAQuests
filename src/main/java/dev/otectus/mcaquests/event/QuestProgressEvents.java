@@ -875,6 +875,9 @@ public final class QuestProgressEvents {
             long now = player.level().getGameTime();
             dev.otectus.mcaquests.state.ContentOutageData ledger =
                     dev.otectus.mcaquests.state.ContentOutageData.current().orElse(null);
+            // MCA: Crime (1.7.1): a jailed player's quests are as unplayable as one whose mod is missing,
+            // so their clocks freeze for the sentence. Asked once per pass, not once per quest.
+            boolean jailed = dev.otectus.mcaquests.compat.CrimeBridge.pausesQuests(player);
             for (ActiveQuest active : data.active()) {
                 // Time the definition was missing, whether or not this player was online to notice it
                 // (1.7.0). A situation's copies follow its shared clock instead, which the ledger feeds.
@@ -897,7 +900,7 @@ public final class QuestProgressEvents {
                     }
                 }
                 QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base -> {
-                    if (QuestManager.isSuspended(player, active.resolve(base), active)) {
+                    if (jailed || QuestManager.isSuspended(player, active.resolve(base), active)) {
                         active.addSuspendedTicks(POLL_INTERVAL_TICKS);
                     }
                 }, () -> {

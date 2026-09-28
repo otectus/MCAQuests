@@ -59,6 +59,7 @@ public final class CompatRegistry {
         registry.register(new IceAndFireCompat());
         registry.register(new BountifulCompat());
         registry.register(new CapitalsCompat());
+        registry.register(new CrimeCompatProvider());
     }
 
     /** Adds a provider, replacing any earlier one with the same {@link CompatProvider#id()}. */

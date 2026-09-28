@@ -74,6 +74,43 @@ public final class CanonicalReputationBackend implements ReputationBackend {
             McaQuests.LOGGER.error("[MCA: Quests] MCA: Reputation reports API v{} but this build was "
                     + "written against v{}.", version, ReputationBridge.REQUIRED_API_VERSION);
         }
+        verifyFeatureStrings();
+    }
+
+    /**
+     * Checks the always-loaded side's copies of Reputation's capability strings still match Reputation.
+     *
+     * <p>{@link ReputationFeatures} holds plain literals because it loads with MCA: Reputation absent,
+     * and a literal cannot be checked by the compiler. This is the one class where both sides are on the
+     * classpath at once, so it is the only place the comparison can be made — and a mismatch has to be
+     * loud, because its symptom is a feature silently treated as unsupported. MCA: Crime
+     * ({@code verifyMirroredNames}) and MCA: Conversations ({@code featureStringsAgree}) make the same
+     * check; until now Quests was the one consumer that did not.
+     */
+    private static void verifyFeatureStrings() {
+        List<String> drift = new java.util.ArrayList<>();
+        compare(drift, ReputationFeatures.DELIVERY, ReputationCapabilities.FEATURE_DELIVERY);
+        compare(drift, ReputationFeatures.READ_ONLY_LOOKUP, ReputationCapabilities.FEATURE_READ_ONLY_LOOKUP);
+        compare(drift, ReputationFeatures.SPEAKER_QUERY, ReputationCapabilities.FEATURE_SPEAKER_QUERY);
+        compare(drift, ReputationFeatures.BOUND_RESOLUTION, ReputationCapabilities.FEATURE_BOUND_RESOLUTION);
+        compare(drift, ReputationFeatures.LADDER_HIGH_WATER, ReputationCapabilities.FEATURE_LADDER_HIGH_WATER);
+        compare(drift, ReputationFeatures.RECEIPTS, ReputationCapabilities.FEATURE_RECEIPTS);
+        compare(drift, ReputationFeatures.PROFILE_SNAPSHOT, ReputationCapabilities.FEATURE_PROFILE_SNAPSHOT);
+        compare(drift, ReputationFeatures.SPEAKER_PROFILE, ReputationCapabilities.FEATURE_SPEAKER_PROFILE);
+        compare(drift, ReputationFeatures.REPEAT_CREDIT, ReputationCapabilities.FEATURE_REPEAT_CREDIT);
+        compare(drift, ReputationFeatures.PROFILED_DELIVERY, ReputationCapabilities.FEATURE_PROFILED_DELIVERY);
+        compare(drift, ReputationFeatures.PROFILE_CHANGE, ReputationCapabilities.FEATURE_PROFILE_CHANGE);
+        if (!drift.isEmpty()) {
+            McaQuests.LOGGER.error("[MCA: Quests] the MCA: Reputation capability strings this build mirrors "
+                    + "have drifted: {}. The integration still runs, but the affected features are treated "
+                    + "as unsupported. This is a bug in MCA: Quests, not a misconfiguration.", drift);
+        }
+    }
+
+    private static void compare(List<String> drift, String ours, String theirs) {
+        if (!ours.equals(theirs)) {
+            drift.add("'" + ours + "' != '" + theirs + "'");
+        }
     }
 
     @Override

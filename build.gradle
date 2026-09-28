@@ -290,6 +290,29 @@ dependencies {
         }
     }
 
+    // MCA: Crime -- OPTIONAL integration (1.7.1), compile-only, on the same terms as Reputation above:
+    // the class output of the sibling's 1.21.1 port, never bundled, reached at runtime only through
+    // CrimeBridge's ModList check and a by-name adapter load (compat/crime/**, NoCrimeStaticLinkTest).
+    def mcaCrimeClasses = file(project.findProperty('mcaCrimeClasses')
+            ?: "${projectDir}/../MCACrime_1.21.1/build/classes/java/main")
+    def skipCrimeCompat = project.findProperty('skipCrimeCompat')?.toString() == 'true'
+    if (mcaCrimeClasses.exists()) {
+        compileOnly files(mcaCrimeClasses)
+    } else if (!skipCrimeCompat) {
+        throw new GradleException("MCA: Crime compile surface missing at ${mcaCrimeClasses}. " +
+                "Build the sibling port's classes (../MCACrime_1.21.1) or pass " +
+                "-PskipCrimeCompat=true for a non-shippable build.")
+    } else {
+        logger.warn("MCA: Crime compile surface skipped; excluding compat/crime/** from " +
+                "compilation and refusing to package a jar.")
+        sourceSets.main.java.exclude 'dev/otectus/mcaquests/compat/crime/**'
+        tasks.named('jar') {
+            doFirst {
+                throw new GradleException("Refusing to package: Crime compat was skipped")
+            }
+        }
+    }
+
     // Townstead public API v1 -- OPTIONAL typed adapter, compile-only, never bundled.
     //
     // Townstead 0.8 ships a frozen, versioned integration surface, com.aetherianartificer.townstead.api.v1,
@@ -955,6 +978,10 @@ def apiReadModel = [
 def apiExports = apiReadModel
 
 tasks.register('apiJar', Jar) {
+    // Reproducible: no entry timestamps and a fixed entry order, so a rebuild from the same sources yields
+    // the same bytes and the SHA-256 pins in consumers' gradle/sibling-apis.properties survive it.
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
     group = 'build'
     description = 'Builds the compile-only API artifact published to sibling add-ons.'
     dependsOn tasks.named('compileJava')

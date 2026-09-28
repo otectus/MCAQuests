@@ -236,6 +236,14 @@ public final class QuestManager {
         }
         PlayerQuestData data = dataOpt.get();
 
+        // 0) MCA: Crime (1.7.1): a guard turns a wanted player away at the door, offers and turn-ins alike,
+        //    and says so on the card rather than showing an empty board.
+        if (dev.otectus.mcaquests.compat.CrimeBridge.refusesService(player, villager)) {
+            send(player, notice, QuestMenuDataS2CPacket.cards(villagerUuid, name, profession, hearts,
+                    QuestMenuStatus.NO_QUESTS, statusCard(dev.otectus.mcaquests.compat.CrimeBridge.REFUSED_KEY)));
+            return;
+        }
+
         // 1) Active quests relevant here: given by this villager, turn-in-able here per their mode, or
         //    waiting on a delivery this villager is the recipient of.
         List<ActiveQuest> relevant = relevantActiveQuests(player, villager, data);
@@ -571,6 +579,9 @@ public final class QuestManager {
         }
         QuestDefinition def = defOpt.get();
         PlayerQuestData data = dataOpt.get();
+        if (dev.otectus.mcaquests.compat.CrimeBridge.refusesService(player, villager)) {
+            return false; // MCA: Crime (1.7.1): a crafted accept packet from a wanted player is refused too
+        }
         UUID villagerUuid = villager.getUUID();
 
         // Re-validate server-side; never trust the client's offered id. Against this villager's actual
@@ -760,6 +771,9 @@ public final class QuestManager {
         }
         PlayerQuestData data = dataOpt.get();
         QuestDefinition base = defOpt.get();
+        if (dev.otectus.mcaquests.compat.CrimeBridge.refusesService(player, villager)) {
+            return false; // MCA: Crime (1.7.1): nothing is failed or lost; the quest waits for the warrant
+        }
         // Find a completable copy of this quest that may be turned in at THIS villager (mode-aware). Each
         // copy resolves its own template values, so completion is checked against its concrete objectives.
         Optional<ActiveQuest> activeOpt = data.active().stream()
@@ -1904,6 +1918,12 @@ public final class QuestManager {
 
     /** As above, reusing a {@link OfferFilters.Pass} the caller has already built. */
     static List<QuestDefinition> eligibleOffers(OfferFilters.Pass pass) {
+        // MCA: Crime (1.7.1): the law does not do business with a wanted player. Decided before the
+        // filters rather than inside them, because it is a property of the player and the giver's
+        // office, not of any quest.
+        if (dev.otectus.mcaquests.compat.CrimeBridge.refusesService(pass.player(), pass.villager())) {
+            return List.of();
+        }
         List<QuestDefinition> filtered = QuestRegistry.all().stream()
                 .filter(def -> OfferFilters.passes(pass, def))
                 .sorted(Comparator.comparing(def -> def.id().toString()))

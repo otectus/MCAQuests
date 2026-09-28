@@ -129,6 +129,9 @@ public final class McaQuestsConfig {
         public final ModConfigSpec.BooleanValue capitalsEnableBuiltinContent;
         public final ModConfigSpec.IntValue capitalsPollIntervalTicks;
 
+        public final ModConfigSpec.BooleanValue crimeResponderRefusesWanted;
+        public final ModConfigSpec.BooleanValue crimeAllGiversRefuseWanted;
+        public final ModConfigSpec.BooleanValue crimePauseWhileJailed;
         // Townstead optional integration (Townstead spec section 11, v1.4.0).
         public final ModConfigSpec.BooleanValue townsteadEnabled;
         public final ModConfigSpec.BooleanValue townsteadContentEnabled;
@@ -572,6 +575,23 @@ public final class McaQuestsConfig {
                     "Send the known-ids packet to clients on login/reload when FTB Quests is present,",
                     "so the mcaquests condition/reward editor dropdowns can offer real quest/task ids.")
                     .define("syncFtbqEditorIds", true);
+            b.pop();
+
+            b.push("compat.crime");
+            crimeResponderRefusesWanted = b.comment(
+                    "With MCA: Crime installed, guards and archers refuse quest business -- offers, acceptance",
+                    "and turn-ins -- with a player who is currently WANTED. Nothing is failed or taken away;",
+                    "the quest waits until the warrant is settled. A no-op without MCA: Crime.")
+                    .define("responderRefusesWanted", true);
+            crimeAllGiversRefuseWanted = b.comment(
+                    "Every quest giver refuses a wanted player, not only the law. Off by default: a farmer",
+                    "who still deals with an outlaw is the more interesting village.")
+                    .define("allGiversRefuseWanted", false);
+            crimePauseWhileJailed = b.comment(
+                    "Freeze every active quest's clock while the player is serving an MCA: Crime jail",
+                    "sentence, the way a quest pauses for a missing optional mod, so a sentence cannot",
+                    "expire a deadline.")
+                    .define("pauseWhileJailed", true);
             b.pop();
 
             b.push("compat.townstead");

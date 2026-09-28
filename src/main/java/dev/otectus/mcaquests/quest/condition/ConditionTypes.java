@@ -139,6 +139,9 @@ public final class ConditionTypes {
     public static final QuestConditionType<AdvancementCondition> ADVANCEMENT = register("advancement", AdvancementCondition.CODEC);
     public static final QuestConditionType<PlayerLevelCondition> PLAYER_LEVEL = register("player_level", PlayerLevelCondition.CODEC);
     public static final QuestConditionType<RandomChanceCondition> RANDOM_CHANCE = register("random_chance", RandomChanceCondition.CODEC);
+    /** What MCA: Crime records about the player (1.7.1); never met without that mod. */
+    public static final QuestConditionType<dev.otectus.mcaquests.quest.condition.leaf.CrimeStatusCondition> CRIME_STATUS =
+            register("crime_status", dev.otectus.mcaquests.quest.condition.leaf.CrimeStatusCondition.CODEC);
     public static final QuestConditionType<QuestCompletedCondition> QUEST_COMPLETED = register("quest_completed", QuestCompletedCondition.CODEC);
     public static final QuestConditionType<QuestNotCompletedCondition> QUEST_NOT_COMPLETED = register("quest_not_completed", QuestNotCompletedCondition.CODEC);
     public static final QuestConditionType<QuestFailedCondition> QUEST_FAILED = register("quest_failed", QuestFailedCondition.CODEC);

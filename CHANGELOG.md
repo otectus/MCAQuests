@@ -4,6 +4,36 @@ All notable changes to **MCA: Quests** are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - unreleased
+
+The **family integration pass**: MCA: Quests now knows MCA: Crime and closes the last gaps in its
+Reputation seam (mirrored from the Forge 1.7.1 line).
+
+### Added
+
+- **MCA: Crime integration** (`compat/CrimeBridge`, `compat/crime/`, compiled against the sibling port's
+  class output like the Reputation adapter, and loaded by name after the presence check). Guards and archers refuse quest
+  business — offers, acceptance and turn-ins — with a player Crime records as **wanted**, and say so on
+  the card (`[compat.crime] responderRefusesWanted`; `allGiversRefuseWanted` extends it to every giver).
+  Nothing is failed or taken away. Active quests **pause while the player is jailed**
+  (`pauseWhileJailed`), the way they pause for a missing optional mod. `/mcaquests compat` lists
+  `mcacrime`. `NoCrimeStaticLinkTest` keeps every Crime reference inside `compat/crime/`.
+- **`mcaquests:crime_status` condition**: `wanted`, `band` (`lawful`/`neutral`/`outlaw`), `jailed`,
+  `min_heat` — never met without MCA: Crime.
+- **Several dialogue resolvers.** `QuestDialogueHooks.addResolver(id, resolver)` and
+  `removeResolver(id)`: an ordered chain, first non-null line wins, so a second voice provider no longer
+  displaces MCA: Conversations. `setResolver` stays as the legacy slot, asked last.
+- **Capability-string drift check.** `CanonicalReputationBackend` now compares its
+  `ReputationFeatures` literals with Reputation's `ReputationCapabilities` constants at startup and
+  logs one ERROR on drift, as MCA: Crime and MCA: Conversations already did.
+
+### Changed
+
+- The `apiJar` task is reproducible (no entry timestamps, fixed entry order), so a rebuild from unchanged
+  sources yields the same hash and the Conversations port's pin survives it.
+- `mcacrime` joins the optional-mod namespaces, so Crime-authored quest content on an install
+  without Crime is excluded with one INFO line rather than reported as an error.
+
 ## [1.7.0] - 2026-09-22
 
 Adoption of **MCA: Reputation 0.6.0**. Standing was already delegated to that mod when it is
