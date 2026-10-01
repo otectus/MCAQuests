@@ -1,9 +1,21 @@
 {
   "id": "mcaqrt:rt_place",
+  "title": {
+    "text": "RT Place"
+  },
   "giver": {},
   "dialogue": {},
   "objectives": [
-    { "type": "mcaquests:place_block", "block": "minecraft:cobblestone", "count": 5 }
+    {
+      "type": "mcaquests:place_block",
+      "block": "minecraft:cobblestone",
+      "count": 5
+    }
   ],
-  "rewards": [ { "type": "mcaquests:xp", "amount": 1 } ]
+  "rewards": [
+    {
+      "type": "mcaquests:xp",
+      "amount": 1
+    }
+  ]
 }

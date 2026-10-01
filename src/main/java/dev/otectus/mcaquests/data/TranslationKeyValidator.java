@@ -3,6 +3,7 @@ package dev.otectus.mcaquests.data;
 import dev.otectus.mcaquests.quest.QuestDefinition;
 import dev.otectus.mcaquests.quest.QuestText;
 import dev.otectus.mcaquests.quest.situation.SituationDefinition;
+import dev.otectus.mcaquests.quest.situation.SituationIds;
 import net.minecraft.locale.Language;
 
 import java.util.ArrayList;
@@ -46,22 +47,32 @@ public final class TranslationKeyValidator {
         }
         List<String> missing = new ArrayList<>();
         for (QuestDefinition quest : quests) {
-            check("Quest '" + quest.id() + "'", quest.titleOverride(), quest.dialogue(), language, missing);
+            check("Quest '" + quest.id() + "'", quest.titleOverride(), quest.titleKey(), quest.dialogue(),
+                    language, missing);
         }
         for (SituationDefinition situation : situations) {
             check("Situation '" + situation.id() + "'", situation.offer().title(),
+                    QuestDefinition.titleKeyOf(SituationIds.syntheticId(situation.id())),
                     situation.offer().dialogue(), language, missing);
         }
         return List.copyOf(missing);
     }
 
-    private static void check(String label, Optional<QuestText> title, Map<String, QuestText> dialogue,
-                              Language language, List<String> out) {
+    private static void check(String label, Optional<QuestText> title, String derivedTitleKey,
+                              Map<String, QuestText> dialogue, Language language, List<String> out) {
         // Sorted so two runs over the same content report in the same order.
         for (String key : new TreeSet<>(dialogue.keySet())) {
             report(label + " dialogue '" + key + "'", dialogue.get(key), language, out);
         }
         title.ifPresent(text -> report(label + " title", text, language, out));
+        // No title at all is the commonest way to reach a raw key (1.7.1): the quest falls back to a key
+        // derived from its id, the chat line reads "Quest complete: mcaquests.quest.<path>.title", and
+        // until now nothing pointed at the file, because there was no translate key in it to check.
+        if (title.isEmpty() && !language.has(derivedTitleKey)) {
+            out.add(label + " has no title, and the key it falls back to, '" + derivedTitleKey
+                    + "', is not defined in any loaded language file; it will render as the raw key. Add a"
+                    + " \"title\" (text or translate).");
+        }
     }
 
     private static void report(String where, QuestText text, Language language, List<String> out) {

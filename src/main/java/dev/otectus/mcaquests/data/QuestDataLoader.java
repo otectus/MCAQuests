@@ -116,6 +116,7 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
         ObjectiveValidator.validate(loaded, errors, warnings);
         AgeEligibilityValidator.validate(loaded, warnings);
         warnOnRewardless(loaded, warnings);
+        warnOnProjectOnlyRewards(loaded, warnings);
         // An error since 1.7.0 (a warning outside strict mode from 1.4.3): outside strict mode the quest
         // is skipped at load rather than offered for a relative who may not exist.
         TargetGateValidator.enforce(loaded, errors, warnings, strict);
@@ -195,6 +196,27 @@ public final class QuestDataLoader extends SimpleJsonResourceReloadListener {
             if (def.rewards().isEmpty() && !templateRewards && def.reputation().isEmpty()) {
                 warnings.add("Quest '" + def.id() + "' pays nothing on completion (no rewards, no template "
                         + "rewards, no reputation). Intended for a chain step; otherwise add a rewards block.");
+            }
+        }
+    }
+
+    /**
+     * Non-fatal (1.7.1): {@code unlock} and {@code hearts_with_participants} are project rewards. Both parse
+     * in a quest, because every reward shares one codec, and both then pay nothing there: their work is done
+     * by the project reward distributor, which a quest turn-in never reaches. The author hears about it
+     * rather than shipping a reward line that silently does nothing.
+     */
+    static void warnOnProjectOnlyRewards(Map<ResourceLocation, QuestDefinition> quests, List<String> warnings) {
+        for (QuestDefinition def : quests.values()) {
+            List<dev.otectus.mcaquests.quest.reward.QuestReward> rewards = def.rewards();
+            for (int i = 0; i < rewards.size(); i++) {
+                dev.otectus.mcaquests.quest.reward.QuestReward reward = rewards.get(i);
+                if (reward instanceof dev.otectus.mcaquests.quest.reward.UnlockReward
+                        || reward instanceof dev.otectus.mcaquests.quest.reward.HeartsWithParticipantsReward) {
+                    warnings.add("Quest '" + def.id() + "' reward " + i + " ('" + reward.type().id()
+                            + "') is a project reward and pays nothing in a quest. Use it in a project's "
+                            + "shared rewards, or use 'mcaquests:hearts' for hearts with the giver.");
+                }
             }
         }
     }

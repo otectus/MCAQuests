@@ -1,6 +1,8 @@
 package dev.otectus.mcaquests.state;
 
+import dev.otectus.mcaquests.quest.reward.QuestReward;
 import dev.otectus.mcaquests.support.TestBootstrap;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,38 @@ class HeldQuestRewardTest {
         reloaded.load(data.save());
         assertEquals(1, reloaded.heldRewards().size());
         assertEquals(held(2), reloaded.heldRewards().get(0));
+    }
+
+    @Test
+    @DisplayName("the giver context a retry pays through survives the save (1.7.1)")
+    void contextRoundTrip() {
+        QuestReward.RewardContext context = new QuestReward.RewardContext(new UUID(3L, 4L),
+                Component.literal("Anna"), ResourceLocation.fromNamespaceAndPath("minecraft", "overworld"), OptionalInt.of(0),
+                ResourceLocation.fromNamespaceAndPath("test", "quest"), Optional.of(new UUID(1L, 2L)));
+        HeldQuestReward withContext = new HeldQuestReward(ResourceLocation.fromNamespaceAndPath("test", "quest"),
+                Optional.of(new UUID(1L, 2L)), 1, "mcaquests:hearts", "0123456789abcdef", OptionalInt.empty(),
+                100L, "boom", Optional.of(context));
+        PlayerQuestData data = new PlayerQuestData();
+        data.holdReward(withContext);
+        PlayerQuestData reloaded = new PlayerQuestData();
+        reloaded.load(data.save());
+        QuestReward.RewardContext loaded = reloaded.heldRewards().get(0).context().orElseThrow();
+        assertEquals(context.giverUuid(), loaded.giverUuid());
+        assertEquals("Anna", loaded.giverName().getString());
+        assertEquals(context.dimension(), loaded.dimension());
+        assertEquals(OptionalInt.of(0), loaded.villageId(), "village 0 is a real MCA village, not 'none'");
+        assertEquals(context.questId(), loaded.questId());
+        assertEquals(context.instance(), loaded.instance());
+    }
+
+    @Test
+    @DisplayName("a reward held before 1.7.1 loads with no context and retries as it did")
+    void legacyEntryHasNoContext() {
+        PlayerQuestData data = new PlayerQuestData();
+        data.holdReward(held(0));
+        PlayerQuestData reloaded = new PlayerQuestData();
+        reloaded.load(data.save());
+        assertTrue(reloaded.heldRewards().get(0).context().isEmpty());
     }
 
     @Test

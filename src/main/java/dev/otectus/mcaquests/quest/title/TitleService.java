@@ -89,6 +89,7 @@ public final class TitleService {
      */
     private static void postGranted(ServerPlayer player, ResourceLocation title, TitleScope scope, OptionalInt villageId) {
         NeoForge.EVENT_BUS.post(new TitleGrantedEvent(player, title, scope, villageId));
+        dev.otectus.mcaquests.quest.JournalService.markDirty(player.getUUID());
     }
 
     private static OptionalInt resolveVillage(ServerPlayer player, @Nullable Entity giver) {

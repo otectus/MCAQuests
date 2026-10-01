@@ -1,9 +1,21 @@
 {
   "id": "mcaqrt:rt_receipt",
+  "title": {
+    "text": "RT Receipt"
+  },
   "giver": {},
   "dialogue": {},
   "objectives": [
-    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:cartographer", "count": 1 }
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:cartographer",
+      "count": 1
+    }
   ],
-  "rewards": [ { "type": "mcaquests:xp", "amount": 5 } ]
+  "rewards": [
+    {
+      "type": "mcaquests:xp",
+      "amount": 5
+    }
+  ]
 }

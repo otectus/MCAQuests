@@ -617,6 +617,8 @@ public final class QuestProgressEvents {
      */
     @SubscribeEvent
     public static void onServerTickFlushGuidance(ServerTickEvent.Post event) {
+        // The journal's counterpart: standing, titles and the archive, pushed once per marked player.
+        dev.otectus.mcaquests.quest.JournalService.flushDirty(event.getServer());
         Set<UUID> dirty = GuidanceService.drainDirty();
         if (dirty.isEmpty()) {
             return;

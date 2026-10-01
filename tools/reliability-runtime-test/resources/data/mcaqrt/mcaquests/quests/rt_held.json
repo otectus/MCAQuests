@@ -1,12 +1,24 @@
 {
   "id": "mcaqrt:rt_held",
+  "title": {
+    "text": "RT Held"
+  },
   "giver": {},
   "dialogue": {},
   "objectives": [
-    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:cartographer", "count": 1 }
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:cartographer",
+      "count": 1
+    }
   ],
   "rewards": [
-    { "type": "mcaqrt:explode" },
-    { "type": "mcaquests:xp", "amount": 5 }
+    {
+      "type": "mcaqrt:explode"
+    },
+    {
+      "type": "mcaquests:xp",
+      "amount": 5
+    }
   ]
 }

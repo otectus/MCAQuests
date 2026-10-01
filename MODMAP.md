@@ -29,9 +29,10 @@ dev.otectus.mcaquests.client.gui                     7 files
 dev.otectus.mcaquests.client.map                     11 files
 dev.otectus.mcaquests.client.marker                  18 files
 dev.otectus.mcaquests.command                        6 files
-dev.otectus.mcaquests.compat                         68 files
+dev.otectus.mcaquests.compat                         70 files
 dev.otectus.mcaquests.compat.bountiful               15 files
 dev.otectus.mcaquests.compat.capitals                10 files
+dev.otectus.mcaquests.compat.crime                   2 files
 dev.otectus.mcaquests.compat.ftbq                    23 files
 dev.otectus.mcaquests.compat.iceandfire              5 files
 dev.otectus.mcaquests.compat.journeymap              2 files
@@ -59,18 +60,18 @@ dev.otectus.mcaquests.project.state                  7 files
 dev.otectus.mcaquests.quest                          26 files
 dev.otectus.mcaquests.quest.condition                6 files
 dev.otectus.mcaquests.quest.condition.composite      3 files
-dev.otectus.mcaquests.quest.condition.leaf           49 files
+dev.otectus.mcaquests.quest.condition.leaf           50 files
 dev.otectus.mcaquests.quest.delivery                 6 files
 dev.otectus.mcaquests.quest.dialogue                 3 files
 dev.otectus.mcaquests.quest.escort                   2 files
-dev.otectus.mcaquests.quest.guidance                 10 files
+dev.otectus.mcaquests.quest.guidance                 11 files
 dev.otectus.mcaquests.quest.objective                49 files
 dev.otectus.mcaquests.quest.reputation               8 files
 dev.otectus.mcaquests.quest.reward                   32 files
 dev.otectus.mcaquests.quest.situation                22 files
 dev.otectus.mcaquests.quest.situation.state          6 files
 dev.otectus.mcaquests.quest.situation.trigger        18 files
-dev.otectus.mcaquests.quest.target                   10 files
+dev.otectus.mcaquests.quest.target                   11 files
 dev.otectus.mcaquests.quest.template                 9 files
 dev.otectus.mcaquests.quest.title                    4 files
 dev.otectus.mcaquests.quest.turnin                   1 file
@@ -102,13 +103,14 @@ _No datagen providers detected — assets and data JSON are hand-written._
 | recipes | 0 |
 | block loot tables | 0 |
 | block tags | 0 |
-| item tags | 2 |
+| item tags | 0 |
 | biome modifiers | 0 |
 | lang files | en_us.json, pt_br.json |
 
 Run `check_mod.py` for a full consistency check (missing models, lang keys, textures).
 
 <!-- MODMAP:AUTO:END — everything below is hand-maintained and preserved -->
+
 
 
 
@@ -124,9 +126,18 @@ _What you are working on right now. One or two lines._
 
 ## Decisions
 
-_Choices that should not be re-litigated every session (why a system was built a
-certain way, APIs deliberately avoided, balance rules, naming rules)._
+- A quest outcome's standing goes to the village the villager in hand lives in, else the giver's
+  village frozen at accept, else a resident scan (`QuestManager.reputationCommunity`). Every reward that
+  needs a village falls back the same way through `QuestReward.RewardContext`.
+- A copy whose definition drifted is paused everywhere: no progress, no deliveries, not complete, until
+  `/mcaquests quest rebase … confirm`.
+- The journal is pushed (once per player per tick, from `ServerTickEvent.Post`) when standing, a title
+  or the completion archive changes, and requested on open; it is never polled.
+- This port mirrors the Forge line; every deliberate difference (Ultima Kingdoms, commissions, 1.21
+  data directories, Bountiful's 1.21 hook) is recorded in `docs/PORT_PARITY.md`.
 
 ## Known issues
 
-_Bugs you know about but have not fixed, with the symptom and any lead._
+- `McaHandles.rewardHearts` swallows an invocation failure without logging (relies on the binding probe).
+- The journal lists villages in the player's current dimension only, and with MCA: Reputation installed
+  names tiers from Quests' ladder (open questions in the Forge line's `AUDIT.md`).

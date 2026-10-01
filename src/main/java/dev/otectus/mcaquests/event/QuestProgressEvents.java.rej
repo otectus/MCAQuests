@@ -1,0 +1,14 @@
+--- src/main/java/dev/otectus/mcaquests/event/QuestProgressEvents.java
++++ src/main/java/dev/otectus/mcaquests/event/QuestProgressEvents.java
+@@ -884,8 +887,9 @@ public final class QuestProgressEvents {
+                 }
+                 QuestDefinitions.resolve(active.questId()).ifPresentOrElse(base -> {
+                     QuestDefinition def = active.resolve(base);
+-                    if (KingdomQuestLifecycle.activeStatus(def, active, player,
+-                            QuestManager.resolveGiverForLifecycle(player, active))
++                    if (jailed
++                            || KingdomQuestLifecycle.activeStatus(def, active, player,
++                                    QuestManager.resolveGiverForLifecycle(player, active))
+                             == KingdomQuestLifecycle.ActiveStatus.WAIT
+                             || QuestManager.isSuspended(player, def, active)) {
+                         active.addSuspendedTicks(POLL_INTERVAL_TICKS);

@@ -26,6 +26,16 @@ Reputation seam (mirrored from the Forge 1.7.1 line).
 - **Capability-string drift check.** `CanonicalReputationBackend` now compares its
   `ReputationFeatures` literals with Reputation's `ReputationCapabilities` constants at startup and
   logs one ERROR on drift, as MCA: Crime and MCA: Conversations already did.
+- **A load warning for a project reward in a quest.** `mcaquests:unlock` and
+  `mcaquests:hearts_with_participants` are paid by the project reward distributor, which a quest turn-in
+  never reaches; both parse in a quest and paid nothing there, silently. The quest loader now names the
+  quest and the reward (`QuestDataLoader.warnOnProjectOnlyRewards`). No built-in quest uses either.
+- **`/mcaquests validate` reports an untitled quest or situation whose fallback title key is undefined.**
+  A quest with no `title` uses `mcaquests.quest.<path>.title` (`DATAPACK.md`), and when no language file
+  defines it the player reads the raw key ("Quest complete: mcaquests.quest.rt_deliver.title").
+  `TranslationKeyValidator` only checked keys written in the file, so this, the commonest way to reach a
+  raw key, went unreported. The key's format now lives in `QuestDefinition.titleKeyOf`. The three
+  built-in quests without a `title` all have their fallback key in both locales.
 
 ### Changed
 
@@ -47,6 +57,67 @@ Reputation seam (mirrored from the Forge 1.7.1 line).
   MCA: Conversations now carries that text under its own keys.
 - `docs/PORT_PARITY.md` lists what this port deliberately leaves to the Forge line (the Ultima Kingdoms
   integration) and how it adapts the rest.
+
+### Fixed — standing, rewards and pauses that did not land (2026-09-30 quest audit, mirrored from Forge)
+
+- **A finished quest's standing was lost when its giver lived in no village at turn-in.** The award
+  resolved the village from the villager in hand and used the village frozen at accept only when that
+  villager was absent, so a homeless giver who had wandered out of `defaultScopeFallbackRadius` cost the
+  quest its standing although the quest knew exactly which village it came from. Reproduced on a
+  production dedicated server (standing 0 → 0 where +4 was due). The order is now: the villager's current
+  village, then the frozen one, then the resident scan for quests from before 1.5.1
+  (`QuestManager.reputationCommunity`). Completion, failure and abandonment outcomes all use it.
+  Datapack-visible: authored and default standing now lands in that case.
+- **`record_incident` and `resolve_incident` rewards fall back to the frozen village too.** Both
+  resolved only from the giver entity, so a self-completed quest or a homeless giver dropped the deed or
+  the atonement while the quest's own standing and a village-scoped title from the same turn-in landed.
+  A recorded deed with no giver entity now names the giver from the quest. Datapack-visible: these
+  rewards now land in that case.
+- **`/mcaquests rewards retry` paid nothing for a reward that pays through the giver, and said "Paid".**
+  It called the reward with no giver, which is a no-op for `hearts`, a village-scoped `grant_title` and
+  the Capitals rewards, then removed the held entry. A held reward now records the giver's UUID, name,
+  dimension and frozen village, and the retry grants with that context and the giver if loaded. Entries
+  held before 1.7.1 have no context and retry as they did.
+- **A quest paused because its definition changed could still be completed.** Every progress path
+  skipped a drifted copy, and the log showed it as paused, but `QuestManager.isComplete` did not ask:
+  old counts could be read against the edited objectives, the ready toast fired, and the turn-in paid
+  out. A drifted copy is now not complete until `/mcaquests quest rebase … confirm`, takes no goods from
+  the Deliver button or Gift (`OBJECTIVE_PAUSED`), and takes no progress from an add-on's
+  `notifyExternalObjective`.
+- **`failure_hearts` was skipped whenever the giver was unloaded**, which is when a deadline usually runs
+  out. The penalty now goes through the pending-hearts ledger a `hearts` reward uses and is applied when
+  the giver next loads; a giver recorded as dead is owed nothing. Datapack-visible: the authored penalty
+  now applies in that case, as `DATAPACK.md` already said it did.
+- **The journal showed the standing it opened with.** It was sent only when its screen asked, so a
+  journal left open did not see a project pay out, a quest complete itself, a title arrive or MCA:
+  Reputation move a score. A change to standing, a title or the completion archive now marks the player,
+  and the end of the tick sends one snapshot per marked player (`JournalService.markDirty`/`flushDirty`;
+  marked from the built-in standing store, the MCA: Reputation mirror, `TitleService` and completion).
+  The packet is unchanged, so the network protocol stays at 18.
+
+### Compatibility
+
+- `HeldQuestReward` (in `state`, not the add-on API) gained a `context` component, saved under a new
+  `context` compound on each held entry (the giver's name through `NbtComponents`, as `ActiveQuest`
+  does). The 1.7.0 constructor remains, and a save without the compound loads as before.
+- `RecordIncidentReward` and `ResolveIncidentReward` now override the context-aware
+  `grant(player, villager, context)`. New public helper `QuestDefinition.titleKeyOf(ResourceLocation)`.
+- No config keys, translation keys, mixins or packet shapes changed.
+
+### Tests
+
+- `QuestOutcomeRoutingTest`: the standing's village order, and a drifted copy that is not complete
+  until rebased.
+- `IncidentRewardVillageFallbackTest`: both incident rewards with no giver entity, with and without a
+  frozen village.
+- `HeldQuestRewardTest`: the giver context round-trips (village 0 included), and an older entry loads
+  with none.
+- `ProjectOnlyRewardWarningTest` and `MissingTitleKeyWarningTest` for the two new warnings.
+- The reliability runtime fixture gained the Forge line's `delivery` and `client` phases, translated to
+  this port's events, and its quests now carry titles. It compiles here; it was run on Forge only (MCA
+  7.6.26, 7.7.1-beta.2, and 7.6.26 with MCA: Reputation 0.6.1, plus a production client), not on a
+  NeoForge server.
+
 
 ## [1.7.0] - 2026-09-22
 

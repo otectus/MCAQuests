@@ -1,8 +1,15 @@
 {
   "id": "mcaqrt:rt_talk",
+  "title": {
+    "text": "RT Talk"
+  },
   "giver": {},
   "dialogue": {},
   "objectives": [
-    { "type": "mcaquests:talk_to_profession", "profession": "minecraft:cartographer", "count": 2 }
+    {
+      "type": "mcaquests:talk_to_profession",
+      "profession": "minecraft:cartographer",
+      "count": 2
+    }
   ]
 }

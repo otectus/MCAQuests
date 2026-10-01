@@ -68,6 +68,7 @@ import dev.otectus.mcaquests.quest.turnin.GiverPresence;
 import dev.otectus.mcaquests.state.ActiveQuest;
 import dev.otectus.mcaquests.state.CompletionReceiptDurability;
 import dev.otectus.mcaquests.state.OfferSession;
+import dev.otectus.mcaquests.state.DeadGiversData;
 import dev.otectus.mcaquests.state.HeldQuestReward;
 import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -977,7 +978,8 @@ public final class QuestManager {
             QuestCapabilities.get(player).ifPresent(data -> data.holdReward(new HeldQuestReward(def.id(),
                     Optional.ofNullable(active.instance()), rewardIndex, rewardName(reward),
                     DefinitionFingerprint.of(dev.otectus.mcaquests.quest.reward.RewardTypes.CODEC, reward).orElse(""),
-                    frozen, player.level().getGameTime(), String.valueOf(t))));
+                    frozen, player.level().getGameTime(), String.valueOf(t),
+                    Optional.of(rewardContext(active, def)))));
             // The quest has already been claimed and its delivery items consumed, so the player would
             // otherwise see a turn-in that quietly paid less than it promised. Name the reward: only an
             // admin can fix an add-on's broken grant, and only if someone tells them.
@@ -1080,6 +1082,14 @@ public final class QuestManager {
                 currency.grantAmount(player, held.frozen().getAsInt());
             } else if (reward instanceof ItemPoolReward pool && held.frozen().isPresent()) {
                 pool.grantChoice(player, pool.clamp(held.frozen().getAsInt()));
+            } else if (held.context().isPresent()) {
+                // The giver as the turn-in knew them (1.7.1). The two-argument grant with no giver, which
+                // is all a pre-1.7.1 entry has, pays nothing for hearts, a village title or a Capitals
+                // reward -- and this method then reported the reward paid and dropped it.
+                QuestReward.RewardContext context = held.context().get();
+                ServerLevel level = context.level(player);
+                Entity giver = level == null ? null : level.getEntity(context.giverUuid());
+                reward.grant(player, giver, context);
             } else {
                 reward.grant(player, null);
             }
@@ -1201,6 +1211,8 @@ public final class QuestManager {
         TownsteadLifecycle.dispatch(player, active, grantVillager, TownsteadLifecycle.Phase.COMPLETED);
 
         data.history().recordCompletion(def.id(), active.villagerUuid());
+        // The journal's archive counts completions; one left open now shows this one (1.7.1).
+        JournalService.markDirty(player.getUUID());
         switch (def.repeat().type()) {
             case COOLDOWN -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), now + def.cooldownTicks());
             case ONCE -> data.history().setCooldownUntil(def.id(), active.villagerUuid(), Long.MAX_VALUE);
@@ -1279,11 +1291,12 @@ public final class QuestManager {
         }
         // The giver is routinely unloaded when a quest completes in the field, which used to mean no
         // reputation at all. Fall back to the village frozen at accept time, and to a resident scan for
-        // quests accepted before 1.5.1 froze one.
+        // quests accepted before 1.5.1 froze one. The fallback also covers a giver who is loaded but
+        // resolves to no village right now -- homeless and wandered out of the fallback radius -- which
+        // until 1.7.1 recorded nothing although the quest knew exactly which village it came from.
         java.util.Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community> community =
-                grantVillager != null
-                        ? dev.otectus.mcaquests.quest.reputation.QuestReputation.resolve(grantVillager)
-                        : active.community().or(() -> scanForCommunity(server, active));
+                reputationCommunity(dev.otectus.mcaquests.quest.reputation.QuestReputation.resolve(grantVillager),
+                        active, () -> scanForCommunity(server, active));
         if (community.isEmpty()) {
             // No village resolves: nobody to have an opinion (§12.2). Worth a line, because from the
             // outside it is indistinguishable from the award simply not working.
@@ -1346,6 +1359,18 @@ public final class QuestManager {
                         .build());
     }
 
+
+    /**
+     * The village a quest outcome's standing belongs to: the one the villager in hand resolves to, else
+     * the giver's village frozen at accept, else a resident scan for a quest accepted before villages
+     * were frozen. Pure apart from the scan, so the order can be asserted.
+     */
+    static java.util.Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community> reputationCommunity(
+            java.util.Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community> fromVillager,
+            ActiveQuest active,
+            java.util.function.Supplier<java.util.Optional<dev.otectus.mcaquests.quest.reputation.QuestReputation.Community>> scan) {
+        return fromVillager.or(active::community).or(scan);
+    }
 
     /**
      * The standing a completed quest is worth when it says nothing about standing itself, from the
@@ -1487,6 +1512,15 @@ public final class QuestManager {
         def.failure().ifPresent(failure -> {
             if (failure.failureHearts() != 0 && resolvedGiver != null) {
                 McaCompat.addHearts(player, resolvedGiver, failure.failureHearts());
+            } else if (failure.failureHearts() != 0 && player.getServer() != null
+                    && !DeadGiversData.get(player.getServer()).isDead(active.villagerUuid())) {
+                // A deadline usually runs out with the giver's chunk unloaded, and the penalty used to be
+                // skipped then (1.7.1). It goes through the same pending ledger a hearts reward uses, and
+                // is paid when the giver next loads; a giver who has died is owed nothing.
+                ServerLevel givenIn = rewardContext(active, def).level(player);
+                if (givenIn != null) {
+                    McaCompat.awardHearts(givenIn, active.villagerUuid(), player, failure.failureHearts());
+                }
             }
             if (failure.blockRetry()) {
                 data.history().setCooldownUntil(def.id(), active.villagerUuid(), Long.MAX_VALUE);
@@ -1606,6 +1640,13 @@ public final class QuestManager {
     // ---------------------------------------------------------------- helpers
 
     public static boolean isComplete(ServerPlayer player, QuestDefinition def, ActiveQuest active) {
+        // A copy whose definition was edited under it is paused (1.7.0), and a paused quest is not a
+        // finished one. Every progress path already refused it; this answer did not, so a reordered
+        // datapack could still have its old counts read against new objectives and paid out at turn-in,
+        // with a ready toast for a quest the log was showing as paused (1.7.1).
+        if (active != null && QuestDrift.drifted(active, def)) {
+            return false;
+        }
         if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
             return false;
         }
@@ -1864,7 +1905,9 @@ public final class QuestManager {
                 continue;
             }
             QuestDefinition def = active.resolve(base);
-            if (CapitalsQuestRequirements.unavailableReason(def).isPresent()) {
+            // The same gate every in-mod credit passes through (forActiveObjectives): a copy paused by a
+            // definition edit takes no progress from an add-on either (1.7.1).
+            if (CapitalsQuestRequirements.unavailableReason(def).isPresent() || QuestDrift.drifted(active, def)) {
                 continue;
             }
             List<QuestObjective> objectives = def.objectives();

@@ -48,6 +48,20 @@ files now sit under `tags/item` and `tags/entity_type`.
 | Institutional commission rule documented as "exactly one reward", with a test | Not applicable (no commissions on this port) |
 | Tags moved to the 1.21 directories, plus `DataDirectoryLayoutTest` | This port only |
 
+## Changes from the 2026-09-30 quest audit
+
+| Change | Here |
+|---|---|
+| A quest's standing falls back to the village frozen at accept when the giver resolves to none | Mirrored |
+| `record_incident` and `resolve_incident` fall back to the frozen village | Mirrored |
+| Held rewards keep the giver's context, and `/mcaquests rewards retry` grants through it | Mirrored (giver name saved through `NbtComponents`) |
+| A copy whose definition drifted is not complete, takes no goods and takes no add-on signals | Mirrored |
+| `failure_hearts` banked in the pending-hearts ledger when the giver is unloaded | Mirrored |
+| The journal is pushed when standing, a title or the completion archive changes | Mirrored (flushed from `ServerTickEvent.Post`) |
+| Load warning for a project-only reward in a quest; `/mcaquests validate` checks an untitled quest's fallback key | Mirrored |
+| Deliver & complete keeps a commission board's restriction | Not applicable (no commissions on this port) |
+| Reliability fixture `delivery` and `client` phases | Translated and compiled here; run on Forge only |
+
 ## Housekeeping
 
 `src/main/java/dev/otectus/mcaquests/event/QuestProgressEvents.java.rej` is an untracked leftover of a
