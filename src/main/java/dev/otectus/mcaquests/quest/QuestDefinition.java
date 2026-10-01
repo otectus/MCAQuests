@@ -133,6 +133,11 @@ public record QuestDefinition(
 
     /** Translation key for this quest's display title (spec section 32), e.g. {@code mcaquests.quest.<path>.title}. */
     public String titleKey() {
+        return titleKeyOf(id);
+    }
+
+    /** The title key a quest with this id falls back to when it authors no {@code title}. */
+    public static String titleKeyOf(ResourceLocation id) {
         return "mcaquests.quest." + id.getPath() + ".title";
     }
 

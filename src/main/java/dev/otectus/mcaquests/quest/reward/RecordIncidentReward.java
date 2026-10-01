@@ -75,7 +75,23 @@ public record RecordIncidentReward(ResourceLocation incident, Optional<Integer> 
 
     @Override
     public void grant(ServerPlayer player, @Nullable Entity villager) {
-        Optional<QuestReputation.Community> community = QuestReputation.resolve(villager);
+        record(player, villager, null);
+    }
+
+    /**
+     * The same deed, falling back to the village the quest froze at accept when the giver cannot name
+     * one — unloaded, or loaded but homeless and out of range (1.7.1). Until then the deed was dropped
+     * in silence in exactly the case {@link RewardContext} exists for, while the quest's own standing
+     * and a village-scoped title from the same turn-in both landed.
+     */
+    @Override
+    public void grant(ServerPlayer player, @Nullable Entity villager, RewardContext context) {
+        record(player, villager, context);
+    }
+
+    private void record(ServerPlayer player, @Nullable Entity villager, @Nullable RewardContext context) {
+        Optional<QuestReputation.Community> community = QuestReputation.resolve(villager)
+                .or(() -> context == null ? Optional.empty() : context.community());
         if (community.isEmpty()) {
             return;
         }
@@ -93,6 +109,8 @@ public record RecordIncidentReward(ResourceLocation incident, Optional<Integer> 
             award.subject(villager.getUUID(),
                     dev.otectus.mcaquests.compat.McaCompat.getVillagerDisplayName(villager).getString(),
                     "giver");
+        } else if (context != null) {
+            award.subject(context.giverUuid(), context.giverName().getString(), "giver");
         }
         QuestReputation.recordIncident(award.build());
     }

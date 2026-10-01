@@ -321,7 +321,10 @@ public final class DeliveryService {
      */
     private static boolean paused(ServerPlayer player, ServerLevel level, ActiveQuest active,
                                   QuestDefinition def, Obligation obligation, ObjectiveProgress progress) {
-        return CapitalsQuestRequirements.unavailableReason(def).isPresent()
+        // A copy paused because its definition was edited under it takes no goods until an operator
+        // rebases it (1.7.1): its card says it is paused, and every other kind of progress already waits.
+        return dev.otectus.mcaquests.quest.QuestDrift.drifted(active, def)
+                || CapitalsQuestRequirements.unavailableReason(def).isPresent()
                 || obligation.objective().unavailableReason(player, active, progress, level).isPresent();
     }
 

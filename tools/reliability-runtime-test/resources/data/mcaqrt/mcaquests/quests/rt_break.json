@@ -1,9 +1,21 @@
 {
   "id": "mcaqrt:rt_break",
+  "title": {
+    "text": "RT Break"
+  },
   "giver": {},
   "dialogue": {},
   "objectives": [
-    { "type": "mcaquests:break_block", "block": "minecraft:cobblestone", "count": 5 }
+    {
+      "type": "mcaquests:break_block",
+      "block": "minecraft:cobblestone",
+      "count": 5
+    }
   ],
-  "rewards": [ { "type": "mcaquests:xp", "amount": 1 } ]
+  "rewards": [
+    {
+      "type": "mcaquests:xp",
+      "amount": 1
+    }
+  ]
 }

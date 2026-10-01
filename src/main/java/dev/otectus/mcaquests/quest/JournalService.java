@@ -17,6 +17,7 @@ import dev.otectus.mcaquests.state.PlayerQuestData;
 import dev.otectus.mcaquests.state.QuestCapabilities;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -40,7 +42,37 @@ public final class JournalService {
     /** Cap on archive lines sent to the client, so a long history cannot bloat the packet. */
     public static final int ARCHIVE_CAP = 100;
 
+    /**
+     * Players whose journal may be out of date (1.7.1).
+     *
+     * <p>The journal used to be sent only when its screen asked, once per open, so a journal left open
+     * while a project paid out, a quest completed itself in the field or MCA: Reputation moved a score
+     * kept showing the numbers it opened with. Every change to what the journal shows — standing, a
+     * title, the completion archive — now marks its player, and the end of the tick sends each marked
+     * player one fresh snapshot, however many changes landed in between.
+     */
+    private static final dev.otectus.mcaquests.quest.guidance.GuidanceDirtySet DIRTY =
+            new dev.otectus.mcaquests.quest.guidance.GuidanceDirtySet();
+
     private JournalService() {
+    }
+
+    /** Notes that something {@code player}'s journal shows has changed. Repeats in one tick cost nothing. */
+    public static void markDirty(UUID player) {
+        DIRTY.mark(player);
+    }
+
+    /** Sends one snapshot to every marked player still online. Called once at the end of each server tick. */
+    public static void flushDirty(MinecraftServer server) {
+        if (DIRTY.isEmpty()) {
+            return;
+        }
+        for (UUID id : DIRTY.drain()) {
+            ServerPlayer player = server.getPlayerList().getPlayer(id);
+            if (player != null) {
+                sendSnapshot(player);
+            }
+        }
     }
 
     public static void sendSnapshot(ServerPlayer player) {

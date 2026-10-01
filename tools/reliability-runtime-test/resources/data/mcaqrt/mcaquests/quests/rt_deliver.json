@@ -1,0 +1,29 @@
+{
+  "id": "mcaqrt:rt_deliver",
+  "title": {
+    "text": "RT Deliver"
+  },
+  "giver": {},
+  "dialogue": {},
+  "objectives": [
+    {
+      "type": "mcaquests:item_delivery",
+      "item": "minecraft:bread",
+      "count": 3
+    },
+    {
+      "type": "mcaquests:deliver_to_villager",
+      "recipient": {
+        "mode": "self"
+      },
+      "item": "minecraft:apple",
+      "count": 2
+    }
+  ],
+  "rewards": [
+    {
+      "type": "mcaquests:xp",
+      "amount": 5
+    }
+  ]
+}

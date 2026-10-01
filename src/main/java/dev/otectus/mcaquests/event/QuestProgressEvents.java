@@ -618,6 +618,8 @@ public final class QuestProgressEvents {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
+        // The journal's counterpart: standing, titles and the archive, pushed once per marked player.
+        dev.otectus.mcaquests.quest.JournalService.flushDirty(event.getServer());
         Set<UUID> dirty = GuidanceService.drainDirty();
         if (dirty.isEmpty()) {
             return;

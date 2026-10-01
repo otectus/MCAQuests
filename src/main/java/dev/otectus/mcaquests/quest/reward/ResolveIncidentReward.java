@@ -84,7 +84,7 @@ public record ResolveIncidentReward(Optional<ResourceLocation> incident, List<St
 
     @Override
     public void grant(ServerPlayer player, @Nullable Entity villager) {
-        resolve(player, villager, null, null);
+        resolve(player, villager, null, null, Optional.empty());
     }
 
     /**
@@ -99,12 +99,19 @@ public record ResolveIncidentReward(Optional<ResourceLocation> incident, List<St
     @Override
     public void grant(ServerPlayer player, @Nullable Entity villager, RewardContext context) {
         resolve(player, villager, context == null ? null : context.questId(),
-                context == null ? null : context.instance().orElse(null));
+                context == null ? null : context.instance().orElse(null),
+                context == null ? Optional.empty() : context.community());
     }
 
+    /**
+     * {@code frozen} is the village the quest froze at accept, used when the giver cannot name one —
+     * unloaded, or homeless and out of range. Until 1.7.1 the atonement was dropped in that case while
+     * the quest's own standing from the same turn-in landed on that very village.
+     */
     private void resolve(ServerPlayer player, @Nullable Entity villager,
-                         @Nullable ResourceLocation questId, @Nullable UUID instance) {
-        Optional<QuestReputation.Community> community = QuestReputation.resolve(villager);
+                         @Nullable ResourceLocation questId, @Nullable UUID instance,
+                         Optional<QuestReputation.Community> frozen) {
+        Optional<QuestReputation.Community> community = QuestReputation.resolve(villager).or(() -> frozen);
         if (community.isEmpty()) {
             return;
         }

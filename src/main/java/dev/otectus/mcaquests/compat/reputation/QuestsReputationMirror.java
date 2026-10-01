@@ -1,5 +1,6 @@
 package dev.otectus.mcaquests.compat.reputation;
 
+import dev.otectus.mcaquests.quest.JournalService;
 import dev.otectus.mcaquests.project.state.ProjectSavedData;
 import dev.otectus.mcaquests.state.VillageStanding;
 import dev.otectus.mcaquests.state.QuestCapabilities;
@@ -58,6 +59,9 @@ public final class QuestsReputationMirror implements ReputationMirror {
                     highWaterTier);
         }
         data.standingChanged();
+        // Every canonical score change arrives here, whatever caused it, so this is the one place a
+        // journal left open can learn that MCA: Reputation moved a number (1.7.1).
+        JournalService.markDirty(player);
     }
 
     @Override
@@ -66,6 +70,7 @@ public final class QuestsReputationMirror implements ReputationMirror {
         ProjectSavedData data = ProjectSavedData.get(server);
         if (data.standing().grantVillageTitle(player, community.dimension(), community.villageId(), title)) {
             data.standingChanged();
+            JournalService.markDirty(player);
         }
     }
 
@@ -78,6 +83,7 @@ public final class QuestsReputationMirror implements ReputationMirror {
         var online = server.getPlayerList().getPlayer(player);
         if (online != null) {
             QuestCapabilities.get(online).ifPresent(data -> data.titles().grantGlobal(title));
+            JournalService.markDirty(player);
         }
     }
 }

@@ -94,6 +94,7 @@ public final class ReliabilityRuntimeFixture {
     private static final ResourceLocation BREAK_QUEST = new ResourceLocation("mcaqrt", "rt_break");
     private static final ResourceLocation HELD_QUEST = new ResourceLocation("mcaqrt", "rt_held");
     private static final ResourceLocation RECEIPT_QUEST = new ResourceLocation("mcaqrt", "rt_receipt");
+    private static final ResourceLocation DELIVER_QUEST = new ResourceLocation("mcaqrt", "rt_deliver");
     private static final ResourceLocation DRIFT = new ResourceLocation("mcaqrt", "rt_drift");
     private static final ResourceLocation RECEIPT_CONSUMER = new ResourceLocation("mcaqrt", "receipts");
     private static final ResourceLocation WORKING_VILLAGE = new ResourceLocation("mcaquests", "townstead_a_working_village");
@@ -128,6 +129,44 @@ public final class ReliabilityRuntimeFixture {
         ExplodingReward.TYPE = McaQuestsApi.registerReward(new ResourceLocation("mcaqrt", "explode"),
                 MapCodec.unit(new ExplodingReward()).codec());
         MinecraftForge.EVENT_BUS.register(this);
+        if ("client".equals(phase) && net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
+            MinecraftForge.EVENT_BUS.register(new ClientJournalProbe());
+        }
+    }
+
+    /**
+     * Client half of the {@code client} phase (1.7.1): watches the journal cache for the standing the
+     * integrated server awards, without the journal screen ever asking for it. Loaded only on a client.
+     */
+    private static final class ClientJournalProbe {
+        private boolean reported;
+        private boolean published;
+
+        @SubscribeEvent
+        public void onClientTick(TickEvent.ClientTickEvent event) {
+            if (reported || event.phase != TickEvent.Phase.END) {
+                return;
+            }
+            net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+            if (!published && minecraft.player != null && minecraft.getSingleplayerServer() != null) {
+                // MCA keeps its first-join character screen open, which would pause the integrated server.
+                // A server opened to LAN never pauses for a menu, and the journal must arrive by itself.
+                published = minecraft.getSingleplayerServer().publishServer(
+                        net.minecraft.world.level.GameType.SURVIVAL, false, 25640);
+                dev.otectus.mcaquests.McaQuests.LOGGER.info("MCAQ-RT client probe opened to LAN={} (screen {})",
+                        published, minecraft.screen == null ? "none" : minecraft.screen.getClass().getName());
+            }
+            for (dev.otectus.mcaquests.network.JournalVillageEntry village
+                    : dev.otectus.mcaquests.client.ClientJournalData.villages()) {
+                // A fresh player: any standing in the cache arrived with the turn-in's push.
+                if (village.reputation() > 0) {
+                    reported = true;
+                    dev.otectus.mcaquests.McaQuests.LOGGER.info("MCAQ-RT JOURNAL-PUSH PASS the client journal cache"
+                            + " received village {} at {} with no journal request", village.villageId(),
+                            village.reputation());
+                }
+            }
+        }
     }
 
     /** A reward that always throws, so a real turn-in exercises the held-reward path. */
@@ -169,6 +208,10 @@ public final class ReliabilityRuntimeFixture {
         }
         ++ticks;
         MinecraftServer server = event.getServer();
+        if ("client".equals(phase)) {
+            clientPhase(server);
+            return;
+        }
         if (done) {
             haltWhenDue(server);
             return;
@@ -181,8 +224,10 @@ public final class ReliabilityRuntimeFixture {
                     case "restart1" -> restart1(server);
                     case "restart2" -> restart2(server);
                     case "restart3" -> restart3(server);
+                    case "delivery" -> delivery(server);
                     default -> {
                         talk(server);
+                        delivery(server);
                         placement(server);
                         recovery(server);
                         farm(server);
@@ -484,6 +529,221 @@ public final class ReliabilityRuntimeFixture {
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(ground).add(0, 0.5, 0), Direction.UP, ground, false);
         InteractionResult result = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
         return result.consumesAction() ? ground.above() : null;
+    }
+
+    // ------------------------------------------------------------------ a real client (1.7.1)
+
+    private int realPlayerSeenAt = -1;
+
+    /**
+     * On an integrated server, once a real player has been in the world for three seconds: a giver
+     * outside any village, a delivery quest carrying frozen village 515151, the goods, and Deliver &amp;
+     * complete. The standing it earns must reach the client's journal cache by itself.
+     */
+    private void clientPhase(MinecraftServer server) {
+        if (done) {
+            return;
+        }
+        net.minecraft.server.level.ServerPlayer real = server.getPlayerList().getPlayers().stream()
+                .filter(p -> !(p instanceof FakePlayer)).findFirst().orElse(null);
+        if (real == null) {
+            return;
+        }
+        if (realPlayerSeenAt < 0) {
+            realPlayerSeenAt = ticks;
+            return;
+        }
+        if (ticks - realPlayerSeenAt < 60) {
+            return;
+        }
+        done = true;
+        ServerLevel level = real.serverLevel();
+        Villager giver = spawnCartographer(level, real.blockPosition().offset(2, 0, 0), "mca:female_villager");
+        PlayerQuestData data = QuestCapabilities.get(real).orElse(null);
+        if (giver == null || data == null) {
+            record("CLIENT SKIPPED: no MCA villager or no quest data");
+            return;
+        }
+        ActiveQuest active = ActiveQuest.create(DELIVER_QUEST, giver.getUUID(), Component.literal("giver"),
+                new ResourceLocation("minecraft", "cartographer"), level.dimension().location(), level.getGameTime(),
+                java.util.OptionalLong.of(level.getDayTime()), OptionalInt.of(515151), 2, null, null);
+        data.add(active);
+        real.getInventory().add(new ItemStack(Items.BREAD, 3));
+        real.getInventory().add(new ItemStack(Items.APPLE, 2));
+        QuestManager.deliver(real, giver.getUUID(), dev.otectus.mcaquests.quest.delivery.DeliveryRequest.fromMenuPacket(
+                active.instance(), DELIVER_QUEST, 1, giver.getUUID(), dev.otectus.mcaquests.quest.delivery.DeliveryRequest.ALL_UNITS,
+                it.unimi.dsi.fastutil.ints.IntSets.EMPTY_SET, 0, UUID.randomUUID()), true);
+        record("CLIENT server side: questGone=" + !data.active().contains(active) + " standing by village="
+                + dev.otectus.mcaquests.quest.reputation.QuestReputation.villageScores(server, real.getUUID(),
+                level.dimension().location()) + " (the giver's live village wins over the frozen 515151 when"
+                + " one is in range)");
+    }
+
+    // ------------------------------------------------------------------ deliveries and standing (1.7.1)
+
+    /**
+     * Both delivery objective types through every route a player has, then the turn-in's standing.
+     *
+     * <p>Gift goes through MCA's own {@code VillagerCommandHandler#handle(ServerPlayer, "gift")}, so the
+     * real mixin, the real handler and the real villager decide it. The Deliver button goes through the
+     * same {@code QuestManager#deliver} the packet handler calls. The giver is spawned outside any MCA
+     * village, the way a quest finished in the field meets its giver, while the quest carries the village
+     * frozen when it was accepted; the standing it earns must land on that village.
+     */
+    private void delivery(MinecraftServer server) throws Exception {
+        ServerLevel level = server.overworld();
+        BlockPos spawn = level.getSharedSpawnPos();
+        FakePlayer player = FakePlayerFactory.get(level, new GameProfile(UUID.fromString("7a7a7a7a-0000-4000-8000-0000000de11e"), "RTDeliver"));
+        Villager giver = spawnCartographer(level, spawn.offset(8, 0, 0), "mca:female_villager");
+        PlayerQuestData data = QuestCapabilities.get(player).orElse(null);
+        if (giver == null || data == null) {
+            record("DELIVERY SKIPPED: no MCA villager or no quest data");
+            return;
+        }
+        player.moveTo(giver.getX() - 1.5, giver.getY(), giver.getZ(), 0, 0);
+        player.getInventory().clearContent();
+        int frozenVillage = 515151;
+        dev.otectus.mcaquests.quest.reputation.QuestReputation.Community community =
+                new dev.otectus.mcaquests.quest.reputation.QuestReputation.Community(level.dimension().location(), frozenVillage);
+        ActiveQuest active = ActiveQuest.create(DELIVER_QUEST, giver.getUUID(), Component.literal("giver"),
+                new ResourceLocation("minecraft", "cartographer"), level.dimension().location(), level.getGameTime(),
+                java.util.OptionalLong.of(level.getDayTime()), OptionalInt.of(frozenVillage), 2, null, null);
+        data.add(active);
+        dev.otectus.mcaquests.quest.QuestDefinition def = QuestRegistry.get(DELIVER_QUEST).orElseThrow();
+        dev.otectus.mcaquests.quest.objective.ItemDeliveryObjective bread =
+                (dev.otectus.mcaquests.quest.objective.ItemDeliveryObjective) def.objectives().get(0);
+        dev.otectus.mcaquests.quest.objective.DeliverToVillagerObjective apples =
+                (dev.otectus.mcaquests.quest.objective.DeliverToVillagerObjective) def.objectives().get(1);
+        record("delivery giver home village=" + McaCompat.getHomeVillageId(giver) + " frozen=" + frozenVillage
+                + " backend=" + dev.otectus.mcaquests.compat.ReputationBridge.backend().backendName());
+
+        // Gift, twice, through MCA's own command handler: one apple per gesture, no hearts for a payment.
+        Object handler = giver.getClass().getMethod("getInteractions").invoke(giver);
+        java.lang.reflect.Method handle = handler.getClass().getMethod("handle",
+                net.minecraft.server.level.ServerPlayer.class, String.class);
+        int heartsBefore = McaCompat.getHearts(player, giver);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE, 2));
+        Object gift1 = handle.invoke(handler, player, "gift");
+        int afterGift1 = apples.deliveredUnits(active.progress(1));
+        Object gift2 = handle.invoke(handler, player, "gift");
+        int afterGift2 = apples.deliveredUnits(active.progress(1));
+        int applesLeft = player.getMainHandItem().is(Items.APPLE) ? player.getMainHandItem().getCount() : 0;
+        int heartsAfter = McaCompat.getHearts(player, giver);
+        record("gift apple 1 returned=" + gift1 + " units=" + afterGift1 + "/2; gift 2 returned=" + gift2 + " units="
+                + afterGift2 + "/2 applesLeft=" + applesLeft + " hearts " + heartsBefore + "->" + heartsAfter
+                + " hookObserved=" + dev.otectus.mcaquests.compat.mca.McaGiftHookProbe.applied());
+
+        // Gift one loaf to the item_delivery, then the Deliver button pays the rest from the pack.
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD, 1));
+        Object gift3 = handle.invoke(handler, player, "gift");
+        int breadAfterGift = bread.deliveredUnits(active.progress(0));
+        player.getInventory().setItem(9, new ItemStack(Items.BREAD, 5));
+        QuestManager.deliver(player, giver.getUUID(), dev.otectus.mcaquests.quest.delivery.DeliveryRequest.fromMenuPacket(
+                active.instance(), DELIVER_QUEST, 0, giver.getUUID(), dev.otectus.mcaquests.quest.delivery.DeliveryRequest.ALL_UNITS,
+                it.unimi.dsi.fastutil.ints.IntSets.EMPTY_SET, breadAfterGift, UUID.randomUUID()), false);
+        int breadAfterMenu = bread.deliveredUnits(active.progress(0));
+        int breadCarried = player.getInventory().countItem(Items.BREAD);
+        boolean complete = QuestManager.isComplete(player, def, active);
+        record("gift bread returned=" + gift3 + " deposited=" + breadAfterGift + "/3; Deliver button deposited="
+                + breadAfterMenu + "/3 carried=" + breadCarried + " complete=" + complete);
+
+        int scoreBefore = dev.otectus.mcaquests.quest.reputation.QuestReputation.score(player, community);
+        boolean turnedIn = QuestManager.turnIn(player, giver, DELIVER_QUEST);
+        int scoreAfter = dev.otectus.mcaquests.quest.reputation.QuestReputation.score(player, community);
+        java.util.Map<Integer, Integer> known = dev.otectus.mcaquests.quest.reputation.QuestReputation
+                .villageScores(server, player.getUUID(), level.dimension().location());
+        int breadAfterTurnIn = player.getInventory().countItem(Items.BREAD);
+        int expected = dev.otectus.mcaquests.McaQuestsConfig.COMMON.mediumQuestReputation.get();
+        record("turnIn=" + turnedIn + " questGone=" + !data.active().contains(active) + " bread after turn-in="
+                + breadAfterTurnIn + " standing " + scoreBefore + "->" + scoreAfter + " (expected +" + expected
+                + ") journal villages=" + known);
+        record("DELIVERY " + (Boolean.TRUE.equals(gift1) && Boolean.TRUE.equals(gift2) && afterGift1 == 1 && afterGift2 == 2
+                && applesLeft == 0 && heartsAfter == heartsBefore && Boolean.TRUE.equals(gift3) && breadAfterGift == 1
+                && breadAfterMenu == 3 && breadCarried == 3 && complete && turnedIn && breadAfterTurnIn == 3
+                ? "PASS" : "FAIL") + " expected: Gift pays 1/2 then 2/2 with no hearts, one loaf by Gift, the rest by"
+                + " the Deliver button, and a turn-in that charges nothing more");
+        record("STANDING " + (turnedIn && scoreAfter - scoreBefore == expected && known.containsKey(frozenVillage)
+                ? "PASS" : "FAIL") + " expected: the completed quest's standing lands on the village frozen at accept"
+                + " when the giver is standing outside it, and the journal lists that village");
+        villageStanding(server);
+    }
+
+    /**
+     * The ordinary case: a giver who lives in a real MCA village. The village is made the way MCA makes
+     * one — a house with a door and a bed, reported to its {@code VillageManager} — and the villager
+     * finds a home in it through MCA's own {@code Residency#seekHome}.
+     */
+    private void villageStanding(MinecraftServer server) throws Exception {
+        ServerLevel level = server.overworld();
+        BlockPos spawn = level.getSharedSpawnPos();
+        BlockPos floor = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
+                spawn.offset(40, 0, 40)).below();
+        // A 5x5 room, three high, planked, with a door on the south wall and a bed inside.
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    boolean wall = Math.abs(dx) == 3 || Math.abs(dz) == 3 || dy == 0 || dy == 4;
+                    level.setBlockAndUpdate(floor.offset(dx, dy, dz),
+                            wall ? Blocks.OAK_PLANKS.defaultBlockState() : Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+        BlockPos door = floor.offset(0, 1, 3);
+        level.setBlockAndUpdate(door, Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.SOUTH));
+        level.setBlockAndUpdate(door.above(), Blocks.OAK_DOOR.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.DoorBlock.FACING, Direction.SOUTH)
+                .setValue(net.minecraft.world.level.block.DoorBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+        BlockPos bedFoot = floor.offset(-1, 1, 0);
+        net.minecraft.world.level.block.state.BlockState bed = Blocks.RED_BED.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.NORTH);
+        level.setBlockAndUpdate(bedFoot, bed);
+        level.setBlockAndUpdate(bedFoot.north(), bed.setValue(net.minecraft.world.level.block.BedBlock.PART,
+                net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+
+        Villager resident = spawnCartographer(level, floor.offset(1, 1, 0), "mca:male_villager");
+        if (resident == null) {
+            record("VILLAGE-STANDING SKIPPED: no MCA villager");
+            return;
+        }
+        String root = resident.getClass().getName().substring(0, resident.getClass().getName().indexOf(".entity."));
+        Class<?> managerType = Class.forName(root + ".server.world.data.VillageManager", true, resident.getClass().getClassLoader());
+        Object manager = managerType.getMethod("get", ServerLevel.class).invoke(null, level);
+        Object built = managerType.getMethod("processBuilding", BlockPos.class).invoke(manager, door);
+        Object residency = resident.getClass().getMethod("getResidency").invoke(resident);
+        residency.getClass().getMethod("seekHome").invoke(residency);
+        OptionalInt home = McaCompat.getHomeVillageId(resident);
+        record("village building=" + built + " resident home=" + home + " name=" + McaCompat.getHomeVillageName(resident));
+        if (home.isEmpty()) {
+            record("VILLAGE-STANDING SKIPPED: MCA did not house the villager (building " + built + ")");
+            return;
+        }
+
+        FakePlayer player = FakePlayerFactory.get(level, new GameProfile(UUID.fromString("7a7a7a7a-0000-4000-8000-0000000de12e"), "RTVillage"));
+        player.moveTo(resident.getX() - 1.0, resident.getY(), resident.getZ(), 0, 0);
+        player.getInventory().clearContent();
+        PlayerQuestData data = QuestCapabilities.get(player).orElseThrow();
+        ActiveQuest active = ActiveQuest.create(DELIVER_QUEST, resident.getUUID(), Component.literal("giver"),
+                new ResourceLocation("minecraft", "cartographer"), level.dimension().location(), level.getGameTime(),
+                java.util.OptionalLong.of(level.getDayTime()), home, 2, null, null);
+        data.add(active);
+        player.getInventory().setItem(9, new ItemStack(Items.BREAD, 3));
+        player.getInventory().setItem(10, new ItemStack(Items.APPLE, 2));
+        QuestManager.deliver(player, resident.getUUID(), dev.otectus.mcaquests.quest.delivery.DeliveryRequest.fromMenuPacket(
+                active.instance(), DELIVER_QUEST, 1, resident.getUUID(), dev.otectus.mcaquests.quest.delivery.DeliveryRequest.ALL_UNITS,
+                it.unimi.dsi.fastutil.ints.IntSets.EMPTY_SET, 0, UUID.randomUUID()), true);
+        dev.otectus.mcaquests.quest.reputation.QuestReputation.Community community =
+                new dev.otectus.mcaquests.quest.reputation.QuestReputation.Community(level.dimension().location(), home.getAsInt());
+        int score = dev.otectus.mcaquests.quest.reputation.QuestReputation.score(player, community);
+        boolean gone = !data.active().contains(active);
+        java.util.Map<Integer, Integer> known = dev.otectus.mcaquests.quest.reputation.QuestReputation
+                .villageScores(server, player.getUUID(), level.dimension().location());
+        int expected = dev.otectus.mcaquests.McaQuestsConfig.COMMON.mediumQuestReputation.get();
+        record("village deliver-and-complete questGone=" + gone + " bread=" + player.getInventory().countItem(Items.BREAD)
+                + " standing=" + score + " (expected " + expected + ") journal villages=" + known);
+        record("VILLAGE-STANDING " + (gone && score == expected && known.getOrDefault(home.getAsInt(), 0) == expected
+                ? "PASS" : "FAIL") + " expected: Deliver & complete pays the apples, charges the bread at turn-in, and the"
+                + " giver's own village records the standing");
     }
 
     // ------------------------------------------------------------------ held rewards (1.7.0)

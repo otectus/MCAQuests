@@ -122,6 +122,7 @@ public final class LegacyReputationBackend implements ReputationBackend {
         if (newScore == oldScore) {
             return newScore;
         }
+        dev.otectus.mcaquests.quest.JournalService.markDirty(award.player());
 
         ServerPlayer player = server.getPlayerList().getPlayer(award.player());
         applyTierUp(server, data, award, player, oldScore, newScore);
@@ -193,6 +194,7 @@ public final class LegacyReputationBackend implements ReputationBackend {
         boolean added = data.standing().grantVillageTitle(player, dimension, villageId, title);
         if (added) {
             data.standingChanged();
+            dev.otectus.mcaquests.quest.JournalService.markDirty(player);
         }
         if (online != null) {
             boolean legacyAdded =
